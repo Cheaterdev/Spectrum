@@ -17,7 +17,7 @@ import :CommandAllocator;
 import :CommandListRecorder;
 import :ShaderCompiler;
 
-import :Autogen.Tables.DebugStruct;
+import :Autogen.Tables.Dev.DebugStruct;
 
 export{
 

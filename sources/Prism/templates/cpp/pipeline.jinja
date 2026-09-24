@@ -5,9 +5,9 @@
 // Changes will be lost on next generation. Edit the .prism source files instead.
 // ============================================================================
 {% for entry in pipeline.entries %}
-#include "{{entry.name}}.h"
+#include "{{pipeline.ns_up}}{{parsed.passes[entry.name].ns_dir}}{{entry.name}}.h"
 {%- endfor %}
-#include "../pass_defaults.h"
+#include "{{pipeline.ns_up}}../pass_defaults.h"
 
 using namespace FrameGraph;
 

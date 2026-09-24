@@ -5,10 +5,10 @@
 // Changes will be lost on next generation. Edit the .prism source files instead.
 // ============================================================================
 {%set slot = table.slot-%}
-export module HAL:Autogen.Slots.{{table.name}};
+export module HAL:Autogen.Slots.{{table.dqn}};
 import Core;
-import :Autogen.Tables.{{table.name}};
-import :Autogen.Layouts.{{slot.layout}};
+import :Autogen.Tables.{{table.dqn}};
+import :Autogen.Layouts.{{parsed.layouts[slot.layout].dqn}};
 import :SIG;
 import :Types;
 import :Enums;

@@ -66,6 +66,11 @@ struct have_name : public virtual parsed_type
 	// generated C++ names a declaration only through qn, since there is no flat
 	// alias on the C++ side.
 	std::string ns, qn;
+	// Where the declaration's generated C++ lives: dqn is qn with dots, for the
+	// module partition name (HAL:Autogen.Tables.UI.Text.Glyph); ns_dir is the
+	// subfolder ("UI/Text/", or "" at file scope) and ns_up the "../" per level
+	// a file in it needs to reach its category folder, for relative #includes.
+	std::string dqn, ns_dir, ns_up;
 	// Markers a template puts around a definition (set_namespace_text in
 	// Main.cpp); my_stream expands them (layout_namespaces, Parsed.cpp).
 	// ns_close adds the HLSL flat alias `using UI::Text::Name;`, ns_braces
@@ -82,6 +87,9 @@ struct have_name : public virtual parsed_type
 		ar& NVP(source_file);
 		ar& NVP(ns);
 		ar& NVP(qn);
+		ar& NVP(dqn);
+		ar& NVP(ns_dir);
+		ar& NVP(ns_up);
 		ar& NVP(ns_open);
 		ar& NVP(ns_close);
 		ar& NVP(ns_braces);

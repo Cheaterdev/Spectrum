@@ -490,6 +490,15 @@ field C++ types (qualify_field_types) and the owners in conditions/sizes/const
 values (render_expr). Engine C++ was rewritten mechanically to full names.
 HLSL keeps its aliases so shaders are untouched.
 
+Stage 4: generated C++ files live in a folder per namespace and module
+partitions carry it (HAL:Autogen.Tables.UI.Text.Glyph); fields dqn, ns_dir,
+ns_up on have_name drive module names, paths and relative #includes. HLSL
+paths stay flat. Still flat, and blocking duplicate names across namespaces:
+the template data model (containers serialize as maps keyed by bare name),
+the ID enums (SlotID = crc32(name), PSO, Layouts, PassID, IndirectCommands),
+HLSL file paths/aliases/GetX() accessors, runtime name strings (pass names,
+Tables::X), and bare-name lookup in .prism references.
+
 All defs are wrapped (2026-09-24): Frame, Meshes, Raytrace, Shadows::{VSM,
 PSSM,Screen,Denoise}, GI::{DDGI,Voxel}, Reflections, Denoise::NRD,
 Environment, Post::{AA,Upscale}, Utility, UI::Text, Editor, Dev, with debug-only

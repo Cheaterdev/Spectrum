@@ -14,13 +14,13 @@ import HAL;
 export import "../defines.h";
 
 {% for pass in parsed.passes %}
-#include "pass/{{pass.name}}.h"
+#include "pass/{{parsed.passes[pass].ns_dir}}{{pass}}.h"
 {%- endfor %}
 {%- for view in parsed.views %}
-#include "pass/{{view.name}}.h"
+#include "pass/{{parsed.views[view].ns_dir}}{{view}}.h"
 {%- endfor %}
 {%- for pipeline in parsed.pipelines %}
-#include "pass/{{pipeline.name}}.pipeline.h"
+#include "pass/{{parsed.pipelines[pipeline].ns_dir}}{{pipeline}}.pipeline.h"
 {%- endfor %}
 
 export namespace Passes

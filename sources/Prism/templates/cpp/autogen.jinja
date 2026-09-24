@@ -25,15 +25,15 @@ import :Types;
 export import :Autogen.Constants;
 
 {% for l in parsed.layouts -%}
-export import :Autogen.Layouts.{{l.name}};
+export import :Autogen.Layouts.{{parsed.layouts[l].dqn}};
 {% endfor -%}
 
 {%- for v in parsed.tables -%}
 {%- set t =  parsed.tables[v] -%}
 {%- if t.slot is defined -%}
-export import :Autogen.Slots.{{t.name}};
+export import :Autogen.Slots.{{t.dqn}};
 {%endif%}{% if t.options.shader_only is undefined -%}
-export import :Autogen.Tables.{{t.name}};
+export import :Autogen.Tables.{{t.dqn}};
 {%endif-%}
 {%endfor -%}
 
@@ -44,36 +44,36 @@ export import :Autogen.Tables.{{t.name}};
 
 {% for v in parsed.compute_pso -%}
 {%- set t =  parsed.compute_pso[v] -%}
-export import :Autogen.PSO.{{t.name}};
+export import :Autogen.PSO.{{t.dqn}};
 {% endfor -%}
 
 {%- for v in parsed.graphics_pso -%}
 {%- set t =  parsed.graphics_pso[v] -%}
-export import :Autogen.PSO.{{t.name}};
+export import :Autogen.PSO.{{t.dqn}};
 {% endfor -%}
 
 {%- for v in parsed.workgraph_pso -%}
 {%- set t =  parsed.workgraph_pso[v] -%}
 {%- for node_name in t.nodes %}
-export import :Autogen.PSO.{{t.name}}_{{node_name}};
+export import :Autogen.PSO.{{t.dqn}}_{{node_name}};
 {% endfor %}
 {% endfor -%}
 
 {%- for v in parsed.raytrace_pso -%}
 {%- set t =  parsed.raytrace_pso[v] -%}
-export import :Autogen.RTX.{{t.name}};
+export import :Autogen.RTX.{{t.dqn}};
 {% endfor -%}
 
 {%- for v in parsed.tables -%}
 {%- set t = parsed.tables[v] -%}
 {%- if t.options["RenderTarget"] is defined %}
-export import :Autogen.RT.{{t.name}};
+export import :Autogen.RT.{{t.dqn}};
 {%- endif %}
 {%- endfor %}
 
 {%- for v in parsed.rt -%}
 {%- set t = parsed.rt[v] -%}
-export import :Autogen.RT.{{t.name}};
+export import :Autogen.RT.{{t.dqn}};
 {% endfor -%}
 
 export {

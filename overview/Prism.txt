@@ -57,6 +57,13 @@ DO-NOT-EDIT banner and is overwritten on the next run):
                                           work-graph node macros
   workdir/shaders/enums.h                 HLSL enums
 
+Generated C++ files sit in a subfolder per namespace, and module partitions
+carry the namespace too: a struct Glyph in UI::Text is
+sources/HAL/autogen/tables/UI/Text/Glyph.table.ixx, module
+HAL:Autogen.Tables.UI.Text.Glyph (pass headers: autogen/pass/UI/Text/...).
+HLSL files stay flat, since shaders #include them by path. Moving a
+declaration to another namespace moves its files: run generate_project.bat.
+
 
 --------------------------------------------------------------------------------
   WORKFLOW

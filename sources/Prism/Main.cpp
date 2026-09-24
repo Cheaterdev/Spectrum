@@ -388,8 +388,22 @@ static void set_namespace_text(Parsed& parsed)
 	auto set = [](have_name& d)
 	{
 		d.qn = d.ns.empty() ? d.name : d.ns + "::" + d.name;
+		d.dqn = d.name;
+		d.ns_dir.clear();
+		d.ns_up.clear();
 		if (d.ns.empty())
 			return;
+		std::string dotted;
+		for (size_t b = 0; b < d.ns.size();)
+		{
+			size_t e = d.ns.find("::", b);
+			std::string part = d.ns.substr(b, e == std::string::npos ? std::string::npos : e - b);
+			dotted += part + ".";
+			d.ns_dir += part + "/";
+			d.ns_up += "../";
+			b = e == std::string::npos ? d.ns.size() : e + 2;
+		}
+		d.dqn = dotted + d.name;
 		d.ns_open = "/*@ns+" + d.ns + "*/";
 		d.ns_close = "/*@ns-" + d.ns + "|" + d.name + "|*/";
 		d.ns_braces = "/*@ns-" + d.ns + "||*/";
@@ -1555,6 +1569,14 @@ int main(int argc, char** argv)
 		TemplatesLibrary cpp_templates("cpp");
 		TemplatesLibrary hlsl_templates("hlsl");
 
+		// Generated C++ goes into a subfolder per namespace (tables/UI/Text/), so
+		// two declarations of the same name in different namespaces can't share
+		// a file. HLSL stays flat: shaders #include it by path.
+		auto ns_folder = [](const std::string& base, const have_name& d)
+		{
+			return d.ns_dir.empty() ? base : base + "/" + d.ns_dir.substr(0, d.ns_dir.size() - 1);
+		};
+
 		// Tables
 		for (auto& table : parsed.tables)
 		{
@@ -1574,12 +1596,12 @@ int main(int argc, char** argv)
 
 			if (!table.find_option("shader_only"))
 			{
-				my_stream(cpp_path + "/tables", table.name + ".table.ixx") << cpp_templates.generate2(
+				my_stream(ns_folder(cpp_path + "/tables", table), table.name + ".table.ixx") << cpp_templates.generate2(
 					L"table", "table", table);
 
 				if (table.slot)
 				{
-					my_stream(cpp_path + "/slots", table.name + ".ixx") << cpp_templates.generate2(
+					my_stream(ns_folder(cpp_path + "/slots", table), table.name + ".ixx") << cpp_templates.generate2(
 						L"slot", "table", table);
 				}
 			}
@@ -1587,7 +1609,7 @@ int main(int argc, char** argv)
 			if (table.find_option("RenderTarget"))
 			{
 				my_stream(hlsl_path + "/rt", table.name + ".h") << hlsl_templates.generate2(L"rt", "rt", table);
-				my_stream(cpp_path + "/rt", table.name + ".rt.ixx") << cpp_templates.generate2(L"rt", "rt", table);
+				my_stream(ns_folder(cpp_path + "/rt", table), table.name + ".rt.ixx") << cpp_templates.generate2(L"rt", "rt", table);
 				std::filesystem::remove(cpp_path + "/rt/" + table.name + ".h");
 				std::filesystem::remove(cpp_path + "/rt/" + table.name + ".ixx");
 			}
@@ -1598,7 +1620,7 @@ int main(int argc, char** argv)
 		{
 			my_stream(hlsl_path + "/layout", layout.name + ".h") << hlsl_templates.generate2(
 				L"layout", "layout", layout);
-			my_stream(cpp_path + "/layout", layout.name + ".layout.ixx") << cpp_templates.generate2(
+			my_stream(ns_folder(cpp_path + "/layout", layout), layout.name + ".layout.ixx") << cpp_templates.generate2(
 				L"layout", "layout", layout);
 		}
 
@@ -1611,13 +1633,13 @@ int main(int argc, char** argv)
 
 		for (auto& pso : parsed.compute_pso)
 		{
-			my_stream(cpp_path + "/pso", pso.name + ".pso.ixx") << cpp_templates.generate2(L"pso", "pso", pso);
+			my_stream(ns_folder(cpp_path + "/pso", pso), pso.name + ".pso.ixx") << cpp_templates.generate2(L"pso", "pso", pso);
 			remove_old_pso_h(pso.name);
 		}
 
 		for (auto& pso : parsed.graphics_pso)
 		{
-			my_stream(cpp_path + "/pso", pso.name + ".pso.ixx") << cpp_templates.generate2(L"pso", "pso", pso);
+			my_stream(ns_folder(cpp_path + "/pso", pso), pso.name + ".pso.ixx") << cpp_templates.generate2(L"pso", "pso", pso);
 			remove_old_pso_h(pso.name);
 		}
 
@@ -1642,7 +1664,7 @@ int main(int argc, char** argv)
 					{"pso", Reflect(dp)},
 					{"node", Reflect(dn)},
 				};
-				my_stream(cpp_path + "/pso", pso.name + "_" + node.name + ".pso.ixx") << cpp_templates.generate(L"workgraph_node_pso", params);
+				my_stream(ns_folder(cpp_path + "/pso", pso), pso.name + "_" + node.name + ".pso.ixx") << cpp_templates.generate(L"workgraph_node_pso", params);
 			}
 		}
 
@@ -1652,7 +1674,7 @@ int main(int argc, char** argv)
 			auto bind = pso.find_option("Bind");
 			parsed.find_rtx(bind->value_atom.expr)->gens.emplace_back(pso);
 
-			my_stream(cpp_path + "/rtx", pso.name + ".h") << cpp_templates.generate2(L"raygen_pass", "pso", pso);
+			my_stream(ns_folder(cpp_path + "/rtx", pso), pso.name + ".h") << cpp_templates.generate2(L"raygen_pass", "pso", pso);
 		}
 
 		for (auto& pso : parsed.raytrace_pass)
@@ -1661,7 +1683,7 @@ int main(int argc, char** argv)
 			parsed.find_rtx(bind->value_atom.expr)->passes.emplace_back(pso);
 
 
-			my_stream(cpp_path + "/rtx", pso.name + ".h") << cpp_templates.generate2(L"raytrace_pass", "pso", pso);
+			my_stream(ns_folder(cpp_path + "/rtx", pso), pso.name + ".h") << cpp_templates.generate2(L"raytrace_pass", "pso", pso);
 			my_stream(hlsl_path + "/rtx", pso.name + ".h") << hlsl_templates.generate2(L"pass", "pso", pso);
 		}
 
@@ -1688,7 +1710,7 @@ int main(int argc, char** argv)
 				{ "local_slots",    local_slots     },
 			};
 
-			my_stream(cpp_path + "/rtx", pso.name + ".rtx.ixx") << cpp_templates.generate(L"rtx_pso", params);
+			my_stream(ns_folder(cpp_path + "/rtx", pso), pso.name + ".rtx.ixx") << cpp_templates.generate(L"rtx_pso", params);
 			std::filesystem::remove(cpp_path + "/rtx/" + pso.name + ".h");
 			std::filesystem::remove(cpp_path + "/rtx/" + pso.name + ".ixx");
 		}
@@ -1696,15 +1718,15 @@ int main(int argc, char** argv)
 
 		for (auto& pass : parsed.passes)
 		{
-			my_stream(cpp_path_render + "/pass", pass.name + ".h") << cpp_templates.generate2(L"pass", "pass", pass);
+			my_stream(ns_folder(cpp_path_render + "/pass", pass), pass.name + ".h") << cpp_templates.generate2(L"pass", "pass", pass);
 		}
 		for (auto& view : parsed.views)
 		{
-			my_stream(cpp_path_render + "/pass", view.name + ".h") << cpp_templates.generate2(L"pass_view", "view", view);
+			my_stream(ns_folder(cpp_path_render + "/pass", view), view.name + ".h") << cpp_templates.generate2(L"pass_view", "view", view);
 		}
 		for (auto& pipeline : parsed.pipelines)
 		{
-			my_stream(cpp_path_render + "/pass", pipeline.name + ".pipeline.h") << cpp_templates.generate2(L"pipeline", "pipeline", pipeline);
+			my_stream(ns_folder(cpp_path_render + "/pass", pipeline), pipeline.name + ".pipeline.h") << cpp_templates.generate2(L"pipeline", "pipeline", pipeline);
 		}
 
 		my_stream(cpp_path_render, "pass_defaults.h") << cpp_templates.generate(L"pass_defaults");

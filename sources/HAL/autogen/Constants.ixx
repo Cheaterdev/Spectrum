@@ -10,7 +10,7 @@ import Core;
 // Table types a raw (backtick) const value references -- add an import here
 // (not a generic "all tables" import: consts are compiled early, and most
 // never need a Table type at all) whenever a new raw const needs one.
-import :Autogen.Tables.TileRecord;
+import :Autogen.Tables.Dev.TileRecord;
 
 // One `const Name = value;` declaration (Prism.g4's const_definition) per line,
 // in .prism declaration order -- a later constant's raw value may reference an
