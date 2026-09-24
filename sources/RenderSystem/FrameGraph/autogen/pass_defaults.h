@@ -21,7 +21,7 @@ struct PassDefault
 
 
 template<>
-struct PassDefault<Passes::Post::Bloom>
+struct PassDefault<Passes::Post::BloomBuild>
 {
 	static constexpr bool enabled = true;
 	static constexpr FrameGraph::PassFlags flags = FrameGraph::PassFlags::Compute;
@@ -31,8 +31,56 @@ struct PassDefault<Passes::Post::Bloom>
 	// generated into autogen/pass_defaults.cpp instead of a hand-written one
 	// in some .cpp (see that file's own header comment for why it's a
 	// separate translation unit, not inlined here).
-	static FrameGraph::SetupResult setup(Passes::Post::Bloom::Context& data, FrameGraph::TaskBuilder& builder);
-	static void render(Passes::Post::Bloom::Context& data, FrameGraph::FrameContext& context);
+	static FrameGraph::SetupResult setup(Passes::Post::BloomBuild::Context& data, FrameGraph::TaskBuilder& builder);
+	static void render(Passes::Post::BloomBuild::Context& data, FrameGraph::FrameContext& context);
+};
+
+
+template<>
+struct PassDefault<Passes::Post::BloomProcess>
+{
+	static constexpr bool enabled = true;
+	static constexpr FrameGraph::PassFlags flags = FrameGraph::PassFlags::Compute;
+
+	// setup() is declared here regardless -- if this pass carries
+	// [RunAlways]/[SetupCondition]/[RenderCondition], its DEFINITION is
+	// generated into autogen/pass_defaults.cpp instead of a hand-written one
+	// in some .cpp (see that file's own header comment for why it's a
+	// separate translation unit, not inlined here).
+	static FrameGraph::SetupResult setup(Passes::Post::BloomProcess::Context& data, FrameGraph::TaskBuilder& builder);
+	static void render(Passes::Post::BloomProcess::Context& data, FrameGraph::FrameContext& context);
+};
+
+
+template<>
+struct PassDefault<Passes::Post::BloomBuildPost>
+{
+	static constexpr bool enabled = true;
+	static constexpr FrameGraph::PassFlags flags = FrameGraph::PassFlags::Compute;
+
+	// setup() is declared here regardless -- if this pass carries
+	// [RunAlways]/[SetupCondition]/[RenderCondition], its DEFINITION is
+	// generated into autogen/pass_defaults.cpp instead of a hand-written one
+	// in some .cpp (see that file's own header comment for why it's a
+	// separate translation unit, not inlined here).
+	static FrameGraph::SetupResult setup(Passes::Post::BloomBuildPost::Context& data, FrameGraph::TaskBuilder& builder);
+	static void render(Passes::Post::BloomBuildPost::Context& data, FrameGraph::FrameContext& context);
+};
+
+
+template<>
+struct PassDefault<Passes::Post::BloomComposite>
+{
+	static constexpr bool enabled = true;
+	static constexpr FrameGraph::PassFlags flags = FrameGraph::PassFlags::Compute;
+
+	// setup() is declared here regardless -- if this pass carries
+	// [RunAlways]/[SetupCondition]/[RenderCondition], its DEFINITION is
+	// generated into autogen/pass_defaults.cpp instead of a hand-written one
+	// in some .cpp (see that file's own header comment for why it's a
+	// separate translation unit, not inlined here).
+	static FrameGraph::SetupResult setup(Passes::Post::BloomComposite::Context& data, FrameGraph::TaskBuilder& builder);
+	static void render(Passes::Post::BloomComposite::Context& data, FrameGraph::FrameContext& context);
 };
 
 
@@ -97,22 +145,6 @@ struct PassDefault<Passes::Frame::ResultCreation>
 	// separate translation unit, not inlined here).
 	static FrameGraph::SetupResult setup(Passes::Frame::ResultCreation::Context& data, FrameGraph::TaskBuilder& builder);
 	static void render(Passes::Frame::ResultCreation::Context& data, FrameGraph::FrameContext& context);
-};
-
-
-template<>
-struct PassDefault<Passes::Post::LensFlare>
-{
-	static constexpr bool enabled = true;
-	static constexpr FrameGraph::PassFlags flags = FrameGraph::PassFlags::Compute;
-
-	// setup() is declared here regardless -- if this pass carries
-	// [RunAlways]/[SetupCondition]/[RenderCondition], its DEFINITION is
-	// generated into autogen/pass_defaults.cpp instead of a hand-written one
-	// in some .cpp (see that file's own header comment for why it's a
-	// separate translation unit, not inlined here).
-	static FrameGraph::SetupResult setup(Passes::Post::LensFlare::Context& data, FrameGraph::TaskBuilder& builder);
-	static void render(Passes::Post::LensFlare::Context& data, FrameGraph::FrameContext& context);
 };
 
 

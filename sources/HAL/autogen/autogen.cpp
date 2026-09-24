@@ -13,6 +13,8 @@ std::optional<SlotID> get_slot(std::string_view slot_name)
 	if(slot_name == "BloomDownsample") return SlotID::BloomDownsample;
 	if(slot_name == "BloomUpsample") return SlotID::BloomUpsample;
 	if(slot_name == "BloomComposite") return SlotID::BloomComposite;
+	if(slot_name == "BloomTemporal") return SlotID::BloomTemporal;
+	if(slot_name == "BloomCopy") return SlotID::BloomCopy;
 	if(slot_name == "BlueNoise") return SlotID::BlueNoise;
 	if(slot_name == "BRDF") return SlotID::BRDF;
 	if(slot_name == "DDGIInfo") return SlotID::DDGIInfo;
@@ -35,7 +37,6 @@ std::optional<SlotID> get_slot(std::string_view slot_name)
 	if(slot_name == "FSR") return SlotID::FSR;
 	if(slot_name == "LensFlareGhosts") return SlotID::LensFlareGhosts;
 	if(slot_name == "LensFlareStreak") return SlotID::LensFlareStreak;
-	if(slot_name == "LensFlareComposite") return SlotID::LensFlareComposite;
 	if(slot_name == "MaterialInfo") return SlotID::MaterialInfo;
 	if(slot_name == "MaterialPreviewInfo") return SlotID::MaterialPreviewInfo;
 	if(slot_name == "MeshInstanceInfo") return SlotID::MeshInstanceInfo;
@@ -175,6 +176,10 @@ uint get_table_index(SlotID id)
 
 	if(id == SlotID::BloomComposite) return Slots::Post::BloomComposite::Slot::ID;
 
+	if(id == SlotID::BloomTemporal) return Slots::Post::BloomTemporal::Slot::ID;
+
+	if(id == SlotID::BloomCopy) return Slots::Post::BloomCopy::Slot::ID;
+
 	if(id == SlotID::BlueNoise) return Slots::Utility::BlueNoise::Slot::ID;
 
 	if(id == SlotID::BRDF) return Slots::Environment::BRDF::Slot::ID;
@@ -218,8 +223,6 @@ uint get_table_index(SlotID id)
 	if(id == SlotID::LensFlareGhosts) return Slots::Post::LensFlareGhosts::Slot::ID;
 
 	if(id == SlotID::LensFlareStreak) return Slots::Post::LensFlareStreak::Slot::ID;
-
-	if(id == SlotID::LensFlareComposite) return Slots::Post::LensFlareComposite::Slot::ID;
 
 	if(id == SlotID::MaterialInfo) return Slots::Meshes::MaterialInfo::Slot::ID;
 
@@ -479,6 +482,8 @@ std::string get_slot_name(SlotID id)
 	if(id == SlotID::BloomDownsample) return "BloomDownsample";
 	if(id == SlotID::BloomUpsample) return "BloomUpsample";
 	if(id == SlotID::BloomComposite) return "BloomComposite";
+	if(id == SlotID::BloomTemporal) return "BloomTemporal";
+	if(id == SlotID::BloomCopy) return "BloomCopy";
 	if(id == SlotID::BlueNoise) return "BlueNoise";
 	if(id == SlotID::BRDF) return "BRDF";
 	if(id == SlotID::DDGIInfo) return "DDGIInfo";
@@ -501,7 +506,6 @@ std::string get_slot_name(SlotID id)
 	if(id == SlotID::FSR) return "FSR";
 	if(id == SlotID::LensFlareGhosts) return "LensFlareGhosts";
 	if(id == SlotID::LensFlareStreak) return "LensFlareStreak";
-	if(id == SlotID::LensFlareComposite) return "LensFlareComposite";
 	if(id == SlotID::MaterialInfo) return "MaterialInfo";
 	if(id == SlotID::MaterialPreviewInfo) return "MaterialPreviewInfo";
 	if(id == SlotID::MeshInstanceInfo) return "MeshInstanceInfo";

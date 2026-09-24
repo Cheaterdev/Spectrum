@@ -68,7 +68,7 @@ namespace Post
 				// runtime state.
 				static void create_always(Context& data, FrameGraph::TaskBuilder& builder)
 				{
-					builder.need(data.ResultTexture, FrameGraph::ResourceFlags::Read);
+					builder.need(data.ResultTexture, FrameGraph::ResourceFlags::Read | FrameGraph::ResourceFlags::ExclusiveRead);
 					builder.recreate(data.ResultTextureNew, { ivec3(builder.graph->get_context<Table::Frame::ViewportContext>().upscale_size, 0), HAL::Format::R16G16B16A16_FLOAT, 1, 0 }, FrameGraph::ResourceFlags::UnorderedAccess);
 				}
 				// Which chain link each handler field resolved to, one named slot per

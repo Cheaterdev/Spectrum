@@ -534,7 +534,6 @@ public:
 		ddgi_update_selectors(graph);
 		tonemap_update_selectors(graph);
 		bloom_update_selectors(graph);
-		lens_flare_update_selectors(graph);
 		stenciler->update_frame(graph);
 
 		{

@@ -24,8 +24,13 @@ export namespace Table
 			uint additive;
 			float bloom_scale;
 			float intensity;
+			uint use_ghosts;
+			uint use_streaks;
+			float streak_intensity;
 			HLSL::Texture2D<float4> scene;
 			HLSL::Texture2D<float4> bloom;
+			HLSL::Texture2D<float4> flare_ghosts;
+			HLSL::Texture2D<float4> flare_streaks;
 			HLSL::RWTexture2D<float4> target;
 			HLSL::Texture2D<float4>& GetScene() { return scene; }
 			HLSL::Texture2D<float4>& GetBloom() { return bloom; }
@@ -35,6 +40,11 @@ export namespace Table
 			uint& GetAdditive() { return additive; }
 			float& GetBloom_scale() { return bloom_scale; }
 			float& GetIntensity() { return intensity; }
+			HLSL::Texture2D<float4>& GetFlare_ghosts() { return flare_ghosts; }
+			HLSL::Texture2D<float4>& GetFlare_streaks() { return flare_streaks; }
+			uint& GetUse_ghosts() { return use_ghosts; }
+			uint& GetUse_streaks() { return use_streaks; }
+			float& GetStreak_intensity() { return streak_intensity; }
 			static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 			template<class Compiler>
 			void compile(Compiler& compiler) const
@@ -44,8 +54,13 @@ export namespace Table
 				compiler.compile(additive, "BloomComposite::additive");
 				compiler.compile(bloom_scale, "BloomComposite::bloom_scale");
 				compiler.compile(intensity, "BloomComposite::intensity");
+				compiler.compile(use_ghosts, "BloomComposite::use_ghosts");
+				compiler.compile(use_streaks, "BloomComposite::use_streaks");
+				compiler.compile(streak_intensity, "BloomComposite::streak_intensity");
 				compiler.compile(scene, "BloomComposite::scene");
 				compiler.compile(bloom, "BloomComposite::bloom");
+				compiler.compile(flare_ghosts, "BloomComposite::flare_ghosts");
+				compiler.compile(flare_streaks, "BloomComposite::flare_streaks");
 				compiler.compile(target, "BloomComposite::target");
 			}
 			struct Compiled
@@ -55,8 +70,13 @@ export namespace Table
 				uint additive; // uint
 				float bloom_scale; // float
 				float intensity; // float
+				uint use_ghosts; // uint
+				uint use_streaks; // uint
+				float streak_intensity; // float
 				uint scene; // Texture2D<float4>
 				uint bloom; // Texture2D<float4>
+				uint flare_ghosts; // Texture2D<float4>
+				uint flare_streaks; // Texture2D<float4>
 				uint target; // RWTexture2D<float4>
 
 			
@@ -68,6 +88,9 @@ export namespace Table
 					ar& NVP(additive);
 					ar& NVP(bloom_scale);
 					ar& NVP(intensity);
+					ar& NVP(use_ghosts);
+					ar& NVP(use_streaks);
+					ar& NVP(streak_intensity);
 				}
 
 
@@ -85,6 +108,9 @@ export namespace Table
 				ar& NVP(additive);
 				ar& NVP(bloom_scale);
 				ar& NVP(intensity);
+				ar& NVP(use_ghosts);
+				ar& NVP(use_streaks);
+				ar& NVP(streak_intensity);
 			}
 
 		};

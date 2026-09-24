@@ -51,12 +51,14 @@
 #include "../GI/DDGI/Dev/DDGIDebug.h"
 #include "../Environment/Sky.h"
 #include "../Raytrace/TranslucentRTX.h"
+#include "../Post/BloomBuild.h"
+#include "../Post/BloomProcess.h"
 #include "../Post/AA/SMAA.h"
 #include "../Post/Upscale/FSR.h"
 #include "../Post/Upscale/UpscalingDLSS.h"
 #include "../Post/Upscale/UpscalingDLSSRR.h"
-#include "../Post/Bloom.h"
-#include "../Post/LensFlare.h"
+#include "../Post/BloomBuildPost.h"
+#include "../Post/BloomComposite.h"
 #include "../Post/Tonemap.h"
 #include "../Editor/stencil_renderer.h"
 #include "../Raytrace/Dev/RTXColorPass.h"
@@ -169,12 +171,14 @@ namespace Frame
 			Passes::GI::DDGI::Dev::DDGIDebug::Name.ptr,
 			Passes::Environment::Sky::Name.ptr,
 			Passes::Raytrace::TranslucentRTX::Name.ptr,
+			Passes::Post::BloomBuild::Name.ptr,
+			Passes::Post::BloomProcess::Name.ptr,
 			Passes::Post::AA::SMAA::Name.ptr,
 			Passes::Post::Upscale::FSR::Name.ptr,
 			Passes::Post::Upscale::UpscalingDLSS::Name.ptr,
 			Passes::Post::Upscale::UpscalingDLSSRR::Name.ptr,
-			Passes::Post::Bloom::Name.ptr,
-			Passes::Post::LensFlare::Name.ptr,
+			Passes::Post::BloomBuildPost::Name.ptr,
+			Passes::Post::BloomComposite::Name.ptr,
 			Passes::Post::Tonemap::Name.ptr,
 			Passes::Editor::stencil_renderer::Name.ptr,
 			Passes::Raytrace::Dev::RTXColorPass::Name.ptr,
@@ -276,16 +280,19 @@ namespace Frame
 			L"ResultTextureRTXNoise",
 			L"VSM_ShadowDenoised",
 			L"ResultTextureNew",
-			L"SMAA_edges",
-			L"SMAA_blend",
-			L"FSRTemp",
+			L"ExposureState",
+			L"BloomCurrent",
+			L"BloomTAA",
+			L"BloomTAAHistory",
 			L"BloomDown",
 			L"BloomUp",
-			L"ExposureState",
 			L"FlareGhosts",
 			L"FlareStreakA",
 			L"FlareStreakB",
 			L"FlareStreaks",
+			L"SMAA_edges",
+			L"SMAA_blend",
+			L"FSRTemp",
 			L"ExposureHistogram",
 			L"axis_id_buffer",
 			L"ColorOutput",
@@ -521,12 +528,13 @@ namespace Frame
 			{ PassID::RTXShadow, 0 },
 			{ PassID::Sky, 0 },
 			{ PassID::TranslucentRTX, 0 },
+			{ PassID::BloomBuild, 0 },
 			{ PassID::UpscalingDLSS, 0 },
 			{ PassID::UpscalingDLSSRR, 0 },
 		};
 		static inline const FrameGraph::PrecompiledState GBuffer_Depth_c0_states[] = {
 			{ true, { GBuffer_Depth_c0_pass_refs + 0, 1 } },
-			{ false, { GBuffer_Depth_c0_pass_refs + 1, 5 } },
+			{ false, { GBuffer_Depth_c0_pass_refs + 1, 6 } },
 		};
 		static inline const FrameGraph::PassRef GBuffer_Specular_c0_pass_refs[] = {
 			{ PassID::Scene, 0 },
@@ -576,13 +584,14 @@ namespace Frame
 			{ PassID::ReflCombine, 0 },
 			{ PassID::RTXCombine, 0 },
 			{ PassID::NRD_ShadowCombine, 0 },
+			{ PassID::BloomBuild, 0 },
 			{ PassID::UpscalingDLSS, 0 },
 			{ PassID::UpscalingDLSSRR, 0 },
 			{ PassID::VoxelDebug, 0 },
 		};
 		static inline const FrameGraph::PrecompiledState GBuffer_Speed_c0_states[] = {
 			{ true, { GBuffer_Speed_c0_pass_refs + 0, 1 } },
-			{ false, { GBuffer_Speed_c0_pass_refs + 1, 22 } },
+			{ false, { GBuffer_Speed_c0_pass_refs + 1, 23 } },
 		};
 		static inline const FrameGraph::PassRef GBuffer_ObjectID_c0_pass_refs[] = {
 			{ PassID::Scene, 0 },
@@ -1430,11 +1439,98 @@ namespace Frame
 		};
 		static inline const FrameGraph::PassRef ResultTexture_c1_pass_refs[] = {
 			{ PassID::TranslucentRTX, 0 },
+			{ PassID::BloomBuild, 0 },
 			{ PassID::SMAA, 0 },
 		};
 		static inline const FrameGraph::PrecompiledState ResultTexture_c1_states[] = {
 			{ true, { ResultTexture_c1_pass_refs + 0, 1 } },
-			{ false, { ResultTexture_c1_pass_refs + 1, 1 } },
+			{ false, { ResultTexture_c1_pass_refs + 1, 2 } },
+		};
+		static inline const FrameGraph::PassRef ExposureState_c0_pass_refs[] = {
+			{ PassID::BloomBuild, 0 },
+			{ PassID::BloomBuildPost, 0 },
+			{ PassID::Tonemap, 0 },
+		};
+		static inline const FrameGraph::PrecompiledState ExposureState_c0_states[] = {
+			{ true, { ExposureState_c0_pass_refs + 0, 1 } },
+			{ true, { ExposureState_c0_pass_refs + 1, 1 } },
+			{ true, { ExposureState_c0_pass_refs + 2, 1 } },
+		};
+		static inline const FrameGraph::PassRef BloomCurrent_c0_pass_refs[] = {
+			{ PassID::BloomBuild, 0 },
+		};
+		static inline const FrameGraph::PrecompiledState BloomCurrent_c0_states[] = {
+			{ true, { BloomCurrent_c0_pass_refs + 0, 1 } },
+		};
+		static inline const FrameGraph::PassRef BloomTAA_c0_pass_refs[] = {
+			{ PassID::BloomBuild, 0 },
+			{ PassID::BloomProcess, 0 },
+			{ PassID::BloomBuildPost, 0 },
+		};
+		static inline const FrameGraph::PrecompiledState BloomTAA_c0_states[] = {
+			{ true, { BloomTAA_c0_pass_refs + 0, 1 } },
+			{ false, { BloomTAA_c0_pass_refs + 1, 1 } },
+			{ true, { BloomTAA_c0_pass_refs + 2, 1 } },
+		};
+		static inline const FrameGraph::PassRef BloomTAAHistory_c0_pass_refs[] = {
+			{ PassID::BloomBuild, 0 },
+		};
+		static inline const FrameGraph::PrecompiledState BloomTAAHistory_c0_states[] = {
+			{ true, { BloomTAAHistory_c0_pass_refs + 0, 1 } },
+		};
+		static inline const FrameGraph::PassRef BloomDown_c0_pass_refs[] = {
+			{ PassID::BloomProcess, 0 },
+			{ PassID::BloomBuildPost, 0 },
+		};
+		static inline const FrameGraph::PrecompiledState BloomDown_c0_states[] = {
+			{ true, { BloomDown_c0_pass_refs + 0, 1 } },
+			{ true, { BloomDown_c0_pass_refs + 1, 1 } },
+		};
+		static inline const FrameGraph::PassRef BloomUp_c0_pass_refs[] = {
+			{ PassID::BloomProcess, 0 },
+			{ PassID::BloomBuildPost, 0 },
+			{ PassID::BloomComposite, 0 },
+		};
+		static inline const FrameGraph::PrecompiledState BloomUp_c0_states[] = {
+			{ true, { BloomUp_c0_pass_refs + 0, 1 } },
+			{ true, { BloomUp_c0_pass_refs + 1, 1 } },
+			{ false, { BloomUp_c0_pass_refs + 2, 1 } },
+		};
+		static inline const FrameGraph::PassRef FlareGhosts_c0_pass_refs[] = {
+			{ PassID::BloomProcess, 0 },
+			{ PassID::BloomBuildPost, 0 },
+			{ PassID::BloomComposite, 0 },
+		};
+		static inline const FrameGraph::PrecompiledState FlareGhosts_c0_states[] = {
+			{ true, { FlareGhosts_c0_pass_refs + 0, 1 } },
+			{ true, { FlareGhosts_c0_pass_refs + 1, 1 } },
+			{ false, { FlareGhosts_c0_pass_refs + 2, 1 } },
+		};
+		static inline const FrameGraph::PassRef FlareStreakA_c0_pass_refs[] = {
+			{ PassID::BloomProcess, 0 },
+			{ PassID::BloomBuildPost, 0 },
+		};
+		static inline const FrameGraph::PrecompiledState FlareStreakA_c0_states[] = {
+			{ true, { FlareStreakA_c0_pass_refs + 0, 1 } },
+			{ true, { FlareStreakA_c0_pass_refs + 1, 1 } },
+		};
+		static inline const FrameGraph::PassRef FlareStreakB_c0_pass_refs[] = {
+			{ PassID::BloomProcess, 0 },
+			{ PassID::BloomBuildPost, 0 },
+		};
+		static inline const FrameGraph::PrecompiledState FlareStreakB_c0_states[] = {
+			{ true, { FlareStreakB_c0_pass_refs + 0, 1 } },
+			{ true, { FlareStreakB_c0_pass_refs + 1, 1 } },
+		};
+		static inline const FrameGraph::PassRef FlareStreaks_c0_pass_refs[] = {
+			{ PassID::BloomProcess, 0 },
+			{ PassID::BloomBuildPost, 0 },
+			{ PassID::BloomComposite, 0 },
+		};
+		static inline const FrameGraph::PrecompiledState FlareStreaks_c0_states[] = {
+			{ true, { FlareStreaks_c0_pass_refs + 0, 1 } },
+			{ true, { FlareStreaks_c0_pass_refs + 1, 1 } },
+			{ false, { FlareStreaks_c0_pass_refs + 2, 1 } },
 		};
 		static inline const FrameGraph::PassRef ResultTexture_c2_pass_refs[] = {
 			{ PassID::SMAA, 0 },
@@ -1480,15 +1576,15 @@ namespace Frame
 		};
 		static inline const FrameGraph::PassRef ResultTexture_c5_pass_refs[] = {
 			{ PassID::UpscalingDLSSRR, 0 },
-			{ PassID::Bloom, 0 },
+			{ PassID::BloomBuildPost, 0 },
+			{ PassID::BloomComposite, 0 },
 		};
 		static inline const FrameGraph::PrecompiledState ResultTexture_c5_states[] = {
 			{ true, { ResultTexture_c5_pass_refs + 0, 1 } },
-			{ false, { ResultTexture_c5_pass_refs + 1, 1 } },
+			{ false, { ResultTexture_c5_pass_refs + 1, 2 } },
 		};
 		static inline const FrameGraph::PassRef ResultTexture_c6_pass_refs[] = {
-			{ PassID::Bloom, 0 },
-			{ PassID::LensFlare, 0 },
+			{ PassID::BloomComposite, 0 },
 			{ PassID::Tonemap, 0 },
 			{ PassID::stencil_renderer, 0 },
 		};
@@ -1496,53 +1592,6 @@ namespace Frame
 			{ true, { ResultTexture_c6_pass_refs + 0, 1 } },
 			{ true, { ResultTexture_c6_pass_refs + 1, 1 } },
 			{ true, { ResultTexture_c6_pass_refs + 2, 1 } },
-			{ true, { ResultTexture_c6_pass_refs + 3, 1 } },
-		};
-		static inline const FrameGraph::PassRef BloomDown_c0_pass_refs[] = {
-			{ PassID::Bloom, 0 },
-			{ PassID::LensFlare, 0 },
-		};
-		static inline const FrameGraph::PrecompiledState BloomDown_c0_states[] = {
-			{ true, { BloomDown_c0_pass_refs + 0, 1 } },
-			{ false, { BloomDown_c0_pass_refs + 1, 1 } },
-		};
-		static inline const FrameGraph::PassRef BloomUp_c0_pass_refs[] = {
-			{ PassID::Bloom, 0 },
-		};
-		static inline const FrameGraph::PrecompiledState BloomUp_c0_states[] = {
-			{ true, { BloomUp_c0_pass_refs + 0, 1 } },
-		};
-		static inline const FrameGraph::PassRef ExposureState_c0_pass_refs[] = {
-			{ PassID::Bloom, 0 },
-			{ PassID::Tonemap, 0 },
-		};
-		static inline const FrameGraph::PrecompiledState ExposureState_c0_states[] = {
-			{ true, { ExposureState_c0_pass_refs + 0, 1 } },
-			{ true, { ExposureState_c0_pass_refs + 1, 1 } },
-		};
-		static inline const FrameGraph::PassRef FlareGhosts_c0_pass_refs[] = {
-			{ PassID::LensFlare, 0 },
-		};
-		static inline const FrameGraph::PrecompiledState FlareGhosts_c0_states[] = {
-			{ true, { FlareGhosts_c0_pass_refs + 0, 1 } },
-		};
-		static inline const FrameGraph::PassRef FlareStreakA_c0_pass_refs[] = {
-			{ PassID::LensFlare, 0 },
-		};
-		static inline const FrameGraph::PrecompiledState FlareStreakA_c0_states[] = {
-			{ true, { FlareStreakA_c0_pass_refs + 0, 1 } },
-		};
-		static inline const FrameGraph::PassRef FlareStreakB_c0_pass_refs[] = {
-			{ PassID::LensFlare, 0 },
-		};
-		static inline const FrameGraph::PrecompiledState FlareStreakB_c0_states[] = {
-			{ true, { FlareStreakB_c0_pass_refs + 0, 1 } },
-		};
-		static inline const FrameGraph::PassRef FlareStreaks_c0_pass_refs[] = {
-			{ PassID::LensFlare, 0 },
-		};
-		static inline const FrameGraph::PrecompiledState FlareStreaks_c0_states[] = {
-			{ true, { FlareStreaks_c0_pass_refs + 0, 1 } },
 		};
 		static inline const FrameGraph::PassRef ExposureHistogram_c0_pass_refs[] = {
 			{ PassID::Tonemap, 0 },
@@ -1657,6 +1706,16 @@ namespace Frame
 			{ ResourceID::ResultTextureRTXNoise, 0, ResultTextureRTXNoise_c0_states },
 			{ ResourceID::VSM_ShadowDenoised, 0, VSM_ShadowDenoised_c0_states },
 			{ ResourceID::ResultTexture, 1, ResultTexture_c1_states },
+			{ ResourceID::ExposureState, 0, ExposureState_c0_states },
+			{ ResourceID::BloomCurrent, 0, BloomCurrent_c0_states },
+			{ ResourceID::BloomTAA, 0, BloomTAA_c0_states },
+			{ ResourceID::BloomTAAHistory, 0, BloomTAAHistory_c0_states },
+			{ ResourceID::BloomDown, 0, BloomDown_c0_states },
+			{ ResourceID::BloomUp, 0, BloomUp_c0_states },
+			{ ResourceID::FlareGhosts, 0, FlareGhosts_c0_states },
+			{ ResourceID::FlareStreakA, 0, FlareStreakA_c0_states },
+			{ ResourceID::FlareStreakB, 0, FlareStreakB_c0_states },
+			{ ResourceID::FlareStreaks, 0, FlareStreaks_c0_states },
 			{ ResourceID::ResultTexture, 2, ResultTexture_c2_states },
 			{ ResourceID::SMAA_edges, 0, SMAA_edges_c0_states },
 			{ ResourceID::SMAA_blend, 0, SMAA_blend_c0_states },
@@ -1665,13 +1724,6 @@ namespace Frame
 			{ ResourceID::ResultTexture, 4, ResultTexture_c4_states },
 			{ ResourceID::ResultTexture, 5, ResultTexture_c5_states },
 			{ ResourceID::ResultTexture, 6, ResultTexture_c6_states },
-			{ ResourceID::BloomDown, 0, BloomDown_c0_states },
-			{ ResourceID::BloomUp, 0, BloomUp_c0_states },
-			{ ResourceID::ExposureState, 0, ExposureState_c0_states },
-			{ ResourceID::FlareGhosts, 0, FlareGhosts_c0_states },
-			{ ResourceID::FlareStreakA, 0, FlareStreakA_c0_states },
-			{ ResourceID::FlareStreakB, 0, FlareStreakB_c0_states },
-			{ ResourceID::FlareStreaks, 0, FlareStreaks_c0_states },
 			{ ResourceID::ExposureHistogram, 0, ExposureHistogram_c0_states },
 			{ ResourceID::axis_id_buffer, 0, axis_id_buffer_c0_states },
 			{ ResourceID::ColorOutput, 0, ColorOutput_c0_states },
@@ -2366,7 +2418,24 @@ namespace Frame
 			{ PassID::VSM_DebugClassifyOverlay, 0 },
 			{ PassID::VSM_ShadowResolve, 0 },
 		};
+		static inline const FrameGraph::PassRef BloomBuild_0_prev[] = {
+			{ PassID::DDGIDebug, 0 },
+			{ PassID::NRD_IndirectCombine, 0 },
+			{ PassID::NRD_ShadowCombine, 0 },
+			{ PassID::ReflCombine, 0 },
+			{ PassID::ResultCreation, 0 },
+			{ PassID::Scene, 0 },
+			{ PassID::Sky, 0 },
+			{ PassID::TranslucentRTX, 0 },
+			{ PassID::VSM_Combine, 0 },
+			{ PassID::VSM_DebugClassifyOverlay, 0 },
+			{ PassID::VSM_ShadowResolve, 0 },
+		};
+		static inline const FrameGraph::PassRef BloomProcess_0_prev[] = {
+			{ PassID::BloomBuild, 0 },
+		};
 		static inline const FrameGraph::PassRef SMAA_0_prev[] = {
+			{ PassID::BloomBuild, 0 },
 			{ PassID::DDGIDebug, 0 },
 			{ PassID::NRD_IndirectCombine, 0 },
 			{ PassID::NRD_ShadowCombine, 0 },
@@ -2379,6 +2448,7 @@ namespace Frame
 			{ PassID::VSM_ShadowResolve, 0 },
 		};
 		static inline const FrameGraph::PassRef FSR_0_prev[] = {
+			{ PassID::BloomBuild, 0 },
 			{ PassID::DDGIDebug, 0 },
 			{ PassID::NRD_IndirectCombine, 0 },
 			{ PassID::NRD_ShadowCombine, 0 },
@@ -2392,6 +2462,7 @@ namespace Frame
 			{ PassID::VSM_ShadowResolve, 0 },
 		};
 		static inline const FrameGraph::PassRef UpscalingDLSS_0_prev[] = {
+			{ PassID::BloomBuild, 0 },
 			{ PassID::DDGIDebug, 0 },
 			{ PassID::FSR, 0 },
 			{ PassID::NRD_IndirectCombine, 0 },
@@ -2407,6 +2478,7 @@ namespace Frame
 			{ PassID::VSM_ShadowResolve, 0 },
 		};
 		static inline const FrameGraph::PassRef UpscalingDLSSRR_0_prev[] = {
+			{ PassID::BloomBuild, 0 },
 			{ PassID::DDGIDebug, 0 },
 			{ PassID::FSR, 0 },
 			{ PassID::NRD_IndirectCombine, 0 },
@@ -2425,7 +2497,9 @@ namespace Frame
 			{ PassID::VSM_DebugClassifyOverlay, 0 },
 			{ PassID::VSM_ShadowResolve, 0 },
 		};
-		static inline const FrameGraph::PassRef Bloom_0_prev[] = {
+		static inline const FrameGraph::PassRef BloomBuildPost_0_prev[] = {
+			{ PassID::BloomBuild, 0 },
+			{ PassID::BloomProcess, 0 },
 			{ PassID::DDGIDebug, 0 },
 			{ PassID::FSR, 0 },
 			{ PassID::NRD_IndirectCombine, 0 },
@@ -2441,8 +2515,10 @@ namespace Frame
 			{ PassID::VSM_DebugClassifyOverlay, 0 },
 			{ PassID::VSM_ShadowResolve, 0 },
 		};
-		static inline const FrameGraph::PassRef LensFlare_0_prev[] = {
-			{ PassID::Bloom, 0 },
+		static inline const FrameGraph::PassRef BloomComposite_0_prev[] = {
+			{ PassID::BloomBuild, 0 },
+			{ PassID::BloomBuildPost, 0 },
+			{ PassID::BloomProcess, 0 },
 			{ PassID::DDGIDebug, 0 },
 			{ PassID::FSR, 0 },
 			{ PassID::NRD_IndirectCombine, 0 },
@@ -2459,10 +2535,11 @@ namespace Frame
 			{ PassID::VSM_ShadowResolve, 0 },
 		};
 		static inline const FrameGraph::PassRef Tonemap_0_prev[] = {
-			{ PassID::Bloom, 0 },
+			{ PassID::BloomBuild, 0 },
+			{ PassID::BloomBuildPost, 0 },
+			{ PassID::BloomComposite, 0 },
 			{ PassID::DDGIDebug, 0 },
 			{ PassID::FSR, 0 },
-			{ PassID::LensFlare, 0 },
 			{ PassID::NRD_IndirectCombine, 0 },
 			{ PassID::NRD_ShadowCombine, 0 },
 			{ PassID::ReflCombine, 0 },
@@ -2477,10 +2554,11 @@ namespace Frame
 			{ PassID::VSM_ShadowResolve, 0 },
 		};
 		static inline const FrameGraph::PassRef stencil_renderer_0_prev[] = {
-			{ PassID::Bloom, 0 },
+			{ PassID::BloomBuild, 0 },
+			{ PassID::BloomBuildPost, 0 },
+			{ PassID::BloomComposite, 0 },
 			{ PassID::DDGIDebug, 0 },
 			{ PassID::FSR, 0 },
-			{ PassID::LensFlare, 0 },
 			{ PassID::NRD_IndirectCombine, 0 },
 			{ PassID::NRD_ShadowCombine, 0 },
 			{ PassID::ReflCombine, 0 },
@@ -2573,12 +2651,14 @@ namespace Frame
 			{ PassID::DDGIDebug, 0, false, DDGIDebug_0_prev },
 			{ PassID::Sky, 0, true, Sky_0_prev },
 			{ PassID::TranslucentRTX, 0, false, TranslucentRTX_0_prev },
+			{ PassID::BloomBuild, 0, false, BloomBuild_0_prev },
+			{ PassID::BloomProcess, 0, true, BloomProcess_0_prev },
 			{ PassID::SMAA, 0, true, SMAA_0_prev },
 			{ PassID::FSR, 0, true, FSR_0_prev },
 			{ PassID::UpscalingDLSS, 0, false, UpscalingDLSS_0_prev },
 			{ PassID::UpscalingDLSSRR, 0, false, UpscalingDLSSRR_0_prev },
-			{ PassID::Bloom, 0, false, Bloom_0_prev },
-			{ PassID::LensFlare, 0, false, LensFlare_0_prev },
+			{ PassID::BloomBuildPost, 0, false, BloomBuildPost_0_prev },
+			{ PassID::BloomComposite, 0, false, BloomComposite_0_prev },
 			{ PassID::Tonemap, 0, false, Tonemap_0_prev },
 			{ PassID::stencil_renderer, 0, false, stencil_renderer_0_prev },
 			{ PassID::RTXColorPass, 0, false, RTXColorPass_0_prev },
@@ -2735,6 +2815,8 @@ namespace Frame
 			if (sky.render_func)
 				graph.add_library_pass<Passes::Environment::Sky>(PassSetupDefault<Passes::Environment::Sky>::setup, sky.render_func, (sky.flags));
 			graph.add_library_pass<Passes::Raytrace::TranslucentRTX>(PassDefault<Passes::Raytrace::TranslucentRTX>::setup, PassDefault<Passes::Raytrace::TranslucentRTX>::render, (PassDefault<Passes::Raytrace::TranslucentRTX>::flags & ~FrameGraph::PassFlags::Compute));
+			graph.add_library_pass<Passes::Post::BloomBuild>(PassDefault<Passes::Post::BloomBuild>::setup, PassDefault<Passes::Post::BloomBuild>::render, (PassDefault<Passes::Post::BloomBuild>::flags & ~FrameGraph::PassFlags::Compute));
+			graph.add_library_pass<Passes::Post::BloomProcess>(PassDefault<Passes::Post::BloomProcess>::setup, PassDefault<Passes::Post::BloomProcess>::render, (PassDefault<Passes::Post::BloomProcess>::flags));
 			// Setup is generated (PassSetupDefault<T>, pass_defaults.h); the owner
 			// only supplies render_func, so that is what gates registration.
 			if (sMAA.render_func)
@@ -2742,8 +2824,8 @@ namespace Frame
 			graph.add_library_pass<Passes::Post::Upscale::FSR>(PassDefault<Passes::Post::Upscale::FSR>::setup, PassDefault<Passes::Post::Upscale::FSR>::render, (PassDefault<Passes::Post::Upscale::FSR>::flags));
 			graph.add_library_pass<Passes::Post::Upscale::UpscalingDLSS>(PassDefault<Passes::Post::Upscale::UpscalingDLSS>::setup, PassDefault<Passes::Post::Upscale::UpscalingDLSS>::render, (PassDefault<Passes::Post::Upscale::UpscalingDLSS>::flags & ~FrameGraph::PassFlags::Compute));
 			graph.add_library_pass<Passes::Post::Upscale::UpscalingDLSSRR>(PassDefault<Passes::Post::Upscale::UpscalingDLSSRR>::setup, PassDefault<Passes::Post::Upscale::UpscalingDLSSRR>::render, (PassDefault<Passes::Post::Upscale::UpscalingDLSSRR>::flags & ~FrameGraph::PassFlags::Compute));
-			graph.add_library_pass<Passes::Post::Bloom>(PassDefault<Passes::Post::Bloom>::setup, PassDefault<Passes::Post::Bloom>::render, (PassDefault<Passes::Post::Bloom>::flags & ~FrameGraph::PassFlags::Compute));
-			graph.add_library_pass<Passes::Post::LensFlare>(PassDefault<Passes::Post::LensFlare>::setup, PassDefault<Passes::Post::LensFlare>::render, (PassDefault<Passes::Post::LensFlare>::flags & ~FrameGraph::PassFlags::Compute));
+			graph.add_library_pass<Passes::Post::BloomBuildPost>(PassDefault<Passes::Post::BloomBuildPost>::setup, PassDefault<Passes::Post::BloomBuildPost>::render, (PassDefault<Passes::Post::BloomBuildPost>::flags & ~FrameGraph::PassFlags::Compute));
+			graph.add_library_pass<Passes::Post::BloomComposite>(PassDefault<Passes::Post::BloomComposite>::setup, PassDefault<Passes::Post::BloomComposite>::render, (PassDefault<Passes::Post::BloomComposite>::flags & ~FrameGraph::PassFlags::Compute));
 			graph.add_library_pass<Passes::Post::Tonemap>(PassDefault<Passes::Post::Tonemap>::setup, PassDefault<Passes::Post::Tonemap>::render, (PassDefault<Passes::Post::Tonemap>::flags & ~FrameGraph::PassFlags::Compute));
 			// Setup is generated (PassSetupDefault<T>, pass_defaults.h); the owner
 			// only supplies render_func, so that is what gates registration.

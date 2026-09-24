@@ -27,6 +27,7 @@ float3 tent9(Texture2D<float4> tex, float2 uv, float2 texel, float radius)
 
 #ifdef BUILD_FUNC_CS_Downsample
 #include "../autogen/BloomDownsample.h"
+#include "../autogen/FrameInfo.h"
 
 float3 karis_group(float3 a, float3 b, float3 c, float3 d, float weight, inout float total)
 {
@@ -50,6 +51,16 @@ void CS_Downsample(uint3 id : SV_DispatchThreadID)
 	Texture2D<float4> src = data.GetSource();
 	float2 uv = (id.xy + 0.5) / float2(size);
 	float2 t = data.GetSource_texel();
+
+	// camera.jitter is half the NDC projection offset, i.e. already in uv
+	// units, with NDC's +y up; uv +y is down, hence the flip. Content rendered
+	// with the jittered projection sits shifted by that amount, so sampling
+	// shifted by the same amount reads it back on an unjittered grid.
+	if (data.GetUnjitter() != 0)
+	{
+		float2 j = GetFrameInfo().GetCamera().GetJitter().xy;
+		uv += float2(j.x, -j.y);
+	}
 
 	// max(0): the scene can carry negative/NaN values from upstream passes,
 	// and one of them would otherwise smear across the entire chain.
@@ -101,6 +112,85 @@ void CS_Downsample(uint3 id : SV_DispatchThreadID)
 }
 #endif
 
+#ifdef BUILD_FUNC_CS_Temporal
+#include "../autogen/BloomTemporal.h"
+#include "../autogen/FrameInfo.h"
+
+[numthreads(8, 8, 1)]
+void CS_Temporal(uint3 id : SV_DispatchThreadID)
+{
+	const BloomTemporal data = GetBloomTemporal();
+	RWTexture2D<float4> target = data.GetTarget();
+
+	uint2 size;
+	target.GetDimensions(size.x, size.y);
+	if (any(id.xy >= size))
+		return;
+
+	Texture2D<float4> current = data.GetCurrent();
+	float3 cur = current.Load(int3(id.xy, 0)).rgb;
+
+	float3 mn = cur, mx = cur;
+	[unroll]
+	for (int y = -1; y <= 1; y++)
+	[unroll]
+	for (int x = -1; x <= 1; x++)
+	{
+		int2 p = clamp(int2(id.xy) + int2(x, y), 0, int2(size) - 1);
+		float3 c = current.Load(int3(p, 0)).rgb;
+		mn = min(mn, c);
+		mx = max(mx, c);
+	}
+
+	float2 uv = (id.xy + 0.5) / float2(size);
+	float2 prev_uv;
+	if (data.GetDepth().SampleLevel(pointClampSampler, uv, 0) == 0)
+	{
+		// Sky (reversed-Z far plane) has no motion vectors. At infinity only
+		// camera rotation matters: project this pixel's view direction with
+		// last frame's view-projection as a direction (w = 0).
+		const Camera cam = GetFrameInfo().GetCamera();
+		float4 p = mul(cam.GetInvViewProj(), float4(uv * float2(2, -2) + float2(-1, 1), 1, 1));
+		float3 dir = p.xyz / p.w - cam.GetPosition().xyz;
+		float4 prev = mul(GetFrameInfo().GetPrevCamera().GetViewProj(), float4(dir, 0));
+		prev_uv = prev.w > 0 ? (prev.xy / prev.w) * float2(0.5, -0.5) + 0.5 : float2(-1, -1);
+	}
+	else
+	{
+		// GBuffer_Speed holds prev_uv - cur_uv, unjittered.
+		prev_uv = uv + data.GetMotion().SampleLevel(pointClampSampler, uv, 0);
+	}
+
+	float3 result = cur;
+	if (data.GetReset() == 0 && all(prev_uv >= 0) && all(prev_uv <= 1))
+	{
+		float3 hist = data.GetHistory().SampleLevel(linearClampSampler, prev_uv, 0).rgb;
+		if (all(isfinite(hist)))
+			result = lerp(cur, clamp(hist, mn, mx), data.GetHistory_weight());
+	}
+
+	target[id.xy] = float4(result, 1);
+}
+#endif
+
+#ifdef BUILD_FUNC_CS_Copy
+#include "../autogen/BloomCopy.h"
+
+[numthreads(8, 8, 1)]
+void CS_Copy(uint3 id : SV_DispatchThreadID)
+{
+	const BloomCopy data = GetBloomCopy();
+	RWTexture2D<float4> target = data.GetTarget();
+
+	uint2 size;
+	target.GetDimensions(size.x, size.y);
+	if (any(id.xy >= size))
+		return;
+
+	target[id.xy] = data.GetSource().Load(int3(id.xy, 0));
+}
+#endif
+
 #ifdef BUILD_FUNC_CS_Upsample
 #include "../autogen/BloomUpsample.h"
 
@@ -145,6 +235,12 @@ void CS_Composite(uint3 id : SV_DispatchThreadID)
 	float3 result = data.GetAdditive() != 0
 		? scene.rgb + bloom * data.GetIntensity()
 		: lerp(scene.rgb, bloom, data.GetIntensity());
+
+	if (data.GetUse_ghosts() != 0)
+		result += data.GetFlare_ghosts().SampleLevel(linearClampSampler, uv, 0).rgb;
+	if (data.GetUse_streaks() != 0)
+		result += data.GetFlare_streaks().SampleLevel(linearClampSampler, uv, 0).rgb * data.GetStreak_intensity();
+
 	target[id.xy] = float4(result, scene.a);
 }
 #endif

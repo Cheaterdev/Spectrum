@@ -16,17 +16,27 @@ namespace Post
 		uint additive; // uint
 		float bloom_scale; // float
 		float intensity; // float
+		uint use_ghosts; // uint
+		uint use_streaks; // uint
+		float streak_intensity; // float
 		uint scene; // Texture2D<float4>
 		uint bloom; // Texture2D<float4>
+		uint flare_ghosts; // Texture2D<float4>
+		uint flare_streaks; // Texture2D<float4>
 		uint target; // RWTexture2D<float4>
 		float2 GetBloom_texel() { return bloom_texel; }
 		float GetRadius() { return radius; }
 		uint GetAdditive() { return additive; }
 		float GetBloom_scale() { return bloom_scale; }
 		float GetIntensity() { return intensity; }
+		uint GetUse_ghosts() { return use_ghosts; }
+		uint GetUse_streaks() { return use_streaks; }
+		float GetStreak_intensity() { return streak_intensity; }
 		Texture2D<float4> GetScene() { return ResourceDescriptorHeap[scene]; }
 		Texture2D<float4> GetBloom() { return ResourceDescriptorHeap[bloom]; }
 		RWTexture2D<float4> GetTarget() { return ResourceDescriptorHeap[target]; }
+		Texture2D<float4> GetFlare_ghosts() { return ResourceDescriptorHeap[flare_ghosts]; }
+		Texture2D<float4> GetFlare_streaks() { return ResourceDescriptorHeap[flare_streaks]; }
 	};
 }
 using Post::BloomComposite;

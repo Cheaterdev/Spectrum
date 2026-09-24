@@ -40,6 +40,8 @@ void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 	tasks.emplace_back(PSOBase::create<PSOS::Post::BloomDownsample>(device, pso[PSO::BloomDownsample]));
 	tasks.emplace_back(PSOBase::create<PSOS::Post::BloomUpsample>(device, pso[PSO::BloomUpsample]));
 	tasks.emplace_back(PSOBase::create<PSOS::Post::BloomComposite>(device, pso[PSO::BloomComposite]));
+	tasks.emplace_back(PSOBase::create<PSOS::Post::BloomTemporal>(device, pso[PSO::BloomTemporal]));
+	tasks.emplace_back(PSOBase::create<PSOS::Post::BloomCopy>(device, pso[PSO::BloomCopy]));
 	tasks.emplace_back(PSOBase::create<PSOS::Utility::BlueNoise>(device, pso[PSO::BlueNoise]));
 	tasks.emplace_back(PSOBase::create<PSOS::Environment::BRDF>(device, pso[PSO::BRDF]));
 	tasks.emplace_back(PSOBase::create<PSOS::GI::DDGI::DDGIProbeSelect>(device, pso[PSO::DDGIProbeSelect]));
@@ -54,7 +56,6 @@ void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 	tasks.emplace_back(PSOBase::create<PSOS::Post::Upscale::RCAS>(device, pso[PSO::RCAS]));
 	tasks.emplace_back(PSOBase::create<PSOS::Post::LensFlareGhosts>(device, pso[PSO::LensFlareGhosts]));
 	tasks.emplace_back(PSOBase::create<PSOS::Post::LensFlareStreak>(device, pso[PSO::LensFlareStreak]));
-	tasks.emplace_back(PSOBase::create<PSOS::Post::LensFlareComposite>(device, pso[PSO::LensFlareComposite]));
 	tasks.emplace_back(PSOBase::create<PSOS::Meshes::GatherPipeline>(device, pso[PSO::GatherPipeline]));
 	tasks.emplace_back(PSOBase::create<PSOS::Meshes::GatherBoxes>(device, pso[PSO::GatherBoxes]));
 	tasks.emplace_back(PSOBase::create<PSOS::Meshes::InitDispatch>(device, pso[PSO::InitDispatch]));

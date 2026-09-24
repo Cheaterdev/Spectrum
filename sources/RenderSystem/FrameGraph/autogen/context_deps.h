@@ -35,7 +35,7 @@ namespace FrameGraph
 // .prism edit renumbers those enums, a plan from before the edit would not fail
 // to load, it would misapply -- wrong resource, wrong barriers. A plan whose
 // header does not carry this exact value must be rejected.
-constexpr unsigned long long generated_id_space_hash = 18142012268222659986ull;
+constexpr unsigned long long generated_id_space_hash = 14562587818486979045ull;
 
 // One bit per context field, in (struct, field) declaration order.
 enum class ContextFieldID : unsigned int
@@ -45,7 +45,6 @@ enum class ContextFieldID : unsigned int
 	DDGISelectors_show_probes,
 	ViewportContext_frame_size,
 	ViewportContext_upscale_size,
-	LensFlareSelectors_enabled,
 	IndirectGISelectors_indirect_source,
 	IndirectGISelectors_reflection_source,
 	RenderDeviceCapabilities_rtx_supported,
@@ -97,7 +96,6 @@ namespace ContextField
 	constexpr ContextFieldMask DDGISelectors_show_probes = context_field_bit(ContextFieldID::DDGISelectors_show_probes);
 	constexpr ContextFieldMask ViewportContext_frame_size = context_field_bit(ContextFieldID::ViewportContext_frame_size);
 	constexpr ContextFieldMask ViewportContext_upscale_size = context_field_bit(ContextFieldID::ViewportContext_upscale_size);
-	constexpr ContextFieldMask LensFlareSelectors_enabled = context_field_bit(ContextFieldID::LensFlareSelectors_enabled);
 	constexpr ContextFieldMask IndirectGISelectors_indirect_source = context_field_bit(ContextFieldID::IndirectGISelectors_indirect_source);
 	constexpr ContextFieldMask IndirectGISelectors_reflection_source = context_field_bit(ContextFieldID::IndirectGISelectors_reflection_source);
 	constexpr ContextFieldMask RenderDeviceCapabilities_rtx_supported = context_field_bit(ContextFieldID::RenderDeviceCapabilities_rtx_supported);
@@ -165,7 +163,25 @@ static inline const PassContextDeps pass_context_deps[] = {
 		  ContextField::None,
 		  ContextField::None,
 		true },
-	{ PassID::Bloom,
+	{ PassID::BloomBuild,
+		  ContextField::BloomSelectors_enabled
+		| ContextField::UpscalerSelectors_upscaler_type
+		| ContextField::UpscalerSelectors_upscaling_enabled,
+		  ContextField::None,
+		true },
+	{ PassID::BloomProcess,
+		  ContextField::BloomSelectors_enabled
+		| ContextField::UpscalerSelectors_upscaler_type
+		| ContextField::UpscalerSelectors_upscaling_enabled,
+		  ContextField::None,
+		true },
+	{ PassID::BloomBuildPost,
+		  ContextField::BloomSelectors_enabled
+		| ContextField::UpscalerSelectors_upscaler_type
+		| ContextField::UpscalerSelectors_upscaling_enabled,
+		  ContextField::None,
+		true },
+	{ PassID::BloomComposite,
 		  ContextField::BloomSelectors_enabled,
 		  ContextField::None,
 		true },
@@ -214,11 +230,6 @@ static inline const PassContextDeps pass_context_deps[] = {
 		true },
 	{ PassID::ResultCreation,
 		  ContextField::None,
-		  ContextField::None,
-		true },
-	{ PassID::LensFlare,
-		  ContextField::BloomSelectors_enabled
-		| ContextField::LensFlareSelectors_enabled,
 		  ContextField::None,
 		true },
 	{ PassID::NRD_GBufferPack,

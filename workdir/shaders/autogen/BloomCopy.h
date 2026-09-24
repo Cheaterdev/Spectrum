@@ -11,7 +11,7 @@
 #endif
 
 #include "layout/DefaultLayout.h"
-#include "tables/LensFlareComposite.h"
+#include "tables/BloomCopy.h"
 
 #ifndef CB_DEFINED
 #define CB_DEFINED
@@ -19,17 +19,17 @@ struct CB { uint offset; };
 #endif
 
 #ifdef __spirv__
-struct _CB_LensFlareComposite { uint offset; };
-static _CB_LensFlareComposite pass_LensFlareComposite = { _hal_push.s4 };
+struct _CB_BloomCopy { uint offset; };
+static _CB_BloomCopy pass_BloomCopy = { _hal_push.s4 };
 #else
-ConstantBuffer<CB> pass_LensFlareComposite: register(b4, space4);
+ConstantBuffer<CB> pass_BloomCopy: register(b4, space4);
 #endif
-ConstantBuffer<LensFlareComposite> CreateLensFlareComposite()
+ConstantBuffer<BloomCopy> CreateBloomCopy()
 {
-	return ResourceDescriptorHeap[pass_LensFlareComposite.offset];
+	return ResourceDescriptorHeap[pass_BloomCopy.offset];
 }
 
 #ifndef NO_GLOBAL
-static const ConstantBuffer<LensFlareComposite> lensFlareComposite_global = CreateLensFlareComposite();
-ConstantBuffer<LensFlareComposite> GetLensFlareComposite() { return lensFlareComposite_global; }
+static const ConstantBuffer<BloomCopy> bloomCopy_global = CreateBloomCopy();
+ConstantBuffer<BloomCopy> GetBloomCopy() { return bloomCopy_global; }
 #endif

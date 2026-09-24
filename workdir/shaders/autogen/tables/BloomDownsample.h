@@ -15,6 +15,7 @@ namespace Post
 		uint karis; // uint
 		float threshold; // float
 		float knee; // float
+		uint unjitter; // uint
 		uint source; // Texture2D<float4>
 		uint exposure_state; // StructuredBuffer<float4>
 		uint target; // RWTexture2D<float4>
@@ -22,6 +23,7 @@ namespace Post
 		uint GetKaris() { return karis; }
 		float GetThreshold() { return threshold; }
 		float GetKnee() { return knee; }
+		uint GetUnjitter() { return unjitter; }
 		Texture2D<float4> GetSource() { return ResourceDescriptorHeap[source]; }
 		RWTexture2D<float4> GetTarget() { return ResourceDescriptorHeap[target]; }
 		StructuredBuffer<float4> GetExposure_state() { return ResourceDescriptorHeap[exposure_state]; }

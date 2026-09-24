@@ -9,10 +9,12 @@
 #include "enums.h"
 namespace Post
 {
-	struct LensFlareSelectors
+	struct BloomCopy
 	{
-		bool enabled; // bool
-		bool GetEnabled() { return enabled; }
+		uint source; // Texture2D<float4>
+		uint target; // RWTexture2D<float4>
+		Texture2D<float4> GetSource() { return ResourceDescriptorHeap[source]; }
+		RWTexture2D<float4> GetTarget() { return ResourceDescriptorHeap[target]; }
 	};
 }
-using Post::LensFlareSelectors;
+using Post::BloomCopy;

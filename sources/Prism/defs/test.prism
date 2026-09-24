@@ -165,13 +165,22 @@ namespace Frame
 			# and before AA/upscalers so they resolve it with everything else.
 			TranslucentRTX;
 
+		# Before the upscalers so BloomBuild reads the pre-upscale image (see
+		# bloom.prism). Must precede SMAA/FSR/DLSS in this list: they recreate
+		# ResultTexture, and a later entry would read the upscaled version.
+		# BloomProcess only reads BloomBuild's output, so on the async queue it
+		# can overlap DLSS.
+		BloomBuild;
+		[Async]BloomProcess;
+
 		[Async]SMAA;
 		[Async]FSR;
 		UpscalingDLSS;
 		UpscalingDLSSRR;
 
-		Bloom;
-		LensFlare;
+		# DLSS-RR only: its pre-upscale image is the noisy RT signal.
+		BloomBuildPost;
+		BloomComposite;
 		Tonemap;
 
 		stencil_renderer;

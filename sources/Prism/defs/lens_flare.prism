@@ -11,15 +11,13 @@ namespace Post
 		Star8;
 	}
 
-	# Mirrors LensFlare.cpp's Variable<>s for the generated [SetupCondition].
-	struct LensFlareSelectors
-	{
-		bool enabled = true;
-	}
+	# Image-based lens flare, built inside BloomBuild/BloomBuildPost from the
+	# thresholded bloom chain and added by BloomComposite (bloom.prism) -- so
+	# every bright source flares, and it follows Bloom's threshold.
 
-	# Ghosts + halo (image-based, Chapman-style): the thresholded bloom level
-	# mirrored through the screen center at several scales, plus a chromatic
-	# ring sampled toward the center. Every bright source flares.
+	# Ghosts + halo (Chapman-style): the thresholded bloom level mirrored
+	# through the screen center at several scales, plus a chromatic ring
+	# sampled toward the center.
 	[Bind = DefaultLayout::Instance0]
 	struct LensFlareGhosts
 	{
@@ -35,7 +33,7 @@ namespace Post
 		float aspect;
 	}
 
-	# One Kawase iteration: a 4-tap box along direction at `step` texel
+	# One Kawase iteration: tapered taps along direction at `step` texel
 	# spacing, reading the previous iteration, so each level reaches 4x
 	# further. Every level is also summed into accum (like Bloom's Sum mode):
 	# equal energy over 4x the length per level gives a bright core and a tail
@@ -56,17 +54,6 @@ namespace Post
 		uint accumulate;
 	}
 
-	[Bind = DefaultLayout::Instance0]
-	struct LensFlareComposite
-	{
-		Texture2D<float4> ghosts;
-		Texture2D<float4> streaks;
-		RWTexture2D<float4> color;
-		float streak_intensity;
-		# Zero when FlareStreaks::None (streaks texture unused).
-		uint use_streaks;
-	}
-
 	ComputePSO LensFlareGhosts
 	{
 		root = DefaultLayout;
@@ -81,38 +68,5 @@ namespace Post
 
 		[EntryPoint = CS_Streak]
 		compute = "postprocess/lens_flare.hlsl";
-	}
-
-	ComputePSO LensFlareComposite
-	{
-		root = DefaultLayout;
-
-		[EntryPoint = CS_Composite]
-		compute = "postprocess/lens_flare.hlsl";
-	}
-
-	# Image-based lens flare. Reads Bloom's thresholded downsample chain, so it
-	# requires Bloom and follows its threshold; runs at quarter resolution and
-	# adds into the HDR result before Tonemap.
-	[Static]
-	[Compute]
-	[SetupCondition = LensFlareSelectors::enabled && BloomSelectors::enabled]
-	PassNode LensFlare
-	{
-		[Always = Read] Texture BloomDown;
-		[Always = UnorderedAccess] Texture ResultTexture;
-
-		[Always = UnorderedAccess] [Size = ViewportContext::upscale_size / 4] [Format = R16G16B16A16_FLOAT]
-		Texture FlareGhosts;
-
-		# Kawase ping-pong pair and the per-direction accumulator. Created even
-		# with FlareStreaks::None: [Optional] on a sized field means "create,
-		# else need()", not "skip", and they are small transient textures.
-		[Always = UnorderedAccess] [Size = ViewportContext::upscale_size / 4] [Format = R16G16B16A16_FLOAT]
-		Texture FlareStreakA;
-		[Always = UnorderedAccess] [Size = ViewportContext::upscale_size / 4] [Format = R16G16B16A16_FLOAT]
-		Texture FlareStreakB;
-		[Always = UnorderedAccess] [Size = ViewportContext::upscale_size / 4] [Format = R16G16B16A16_FLOAT]
-		Texture FlareStreaks;
 	}
 }

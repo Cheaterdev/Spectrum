@@ -14,17 +14,20 @@ namespace Passes
 namespace Post
 {
 
-	class LensFlare : public PassNodeBase
+	class BloomProcess : public PassNodeBase
 	{
 	public:
 		struct Context
 		{
 
 
+			Handlers::Texture BloomTAA = ResourceID::BloomTAA;
+
+
 			Handlers::Texture BloomDown = ResourceID::BloomDown;
 
 
-			Handlers::Texture ResultTexture = ResourceID::ResultTexture;
+			Handlers::Texture BloomUp = ResourceID::BloomUp;
 
 
 			Handlers::Texture FlareGhosts = ResourceID::FlareGhosts;
@@ -55,8 +58,7 @@ namespace Post
 			// else conditional.
 			static void need_always(Context& data, FrameGraph::TaskBuilder& builder)
 			{
-				builder.need(data.BloomDown, FrameGraph::ResourceFlags::Read);
-				builder.need(data.ResultTexture, FrameGraph::ResourceFlags::UnorderedAccess);
+				builder.need(data.BloomTAA, FrameGraph::ResourceFlags::Read);
 			}
 
 			// Resources this pass always creates with a fixed desc, generated from
@@ -74,6 +76,8 @@ namespace Post
 			// runtime state.
 			static void create_always(Context& data, FrameGraph::TaskBuilder& builder)
 			{
+				builder.create(data.BloomDown, { ivec3(builder.graph->get_context<Table::Frame::ViewportContext>().upscale_size / 8, 0), HAL::Format::R16G16B16A16_FLOAT, 1, 0 }, FrameGraph::ResourceFlags::UnorderedAccess);
+				builder.create(data.BloomUp, { ivec3(builder.graph->get_context<Table::Frame::ViewportContext>().upscale_size / 4, 0), HAL::Format::R16G16B16A16_FLOAT, 1, 0 }, FrameGraph::ResourceFlags::UnorderedAccess);
 				builder.create(data.FlareGhosts, { ivec3(builder.graph->get_context<Table::Frame::ViewportContext>().upscale_size / 4, 0), HAL::Format::R16G16B16A16_FLOAT, 1, 1 }, FrameGraph::ResourceFlags::UnorderedAccess);
 				builder.create(data.FlareStreakA, { ivec3(builder.graph->get_context<Table::Frame::ViewportContext>().upscale_size / 4, 0), HAL::Format::R16G16B16A16_FLOAT, 1, 1 }, FrameGraph::ResourceFlags::UnorderedAccess);
 				builder.create(data.FlareStreakB, { ivec3(builder.graph->get_context<Table::Frame::ViewportContext>().upscale_size / 4, 0), HAL::Format::R16G16B16A16_FLOAT, 1, 1 }, FrameGraph::ResourceFlags::UnorderedAccess);
@@ -86,8 +90,9 @@ namespace Post
 			// the field fixes it.
 			struct Cache
 			{
+				FrameGraph::ChainIndex BloomTAA = FrameGraph::ChainIndex::Unresolved;
 				FrameGraph::ChainIndex BloomDown = FrameGraph::ChainIndex::Unresolved;
-				FrameGraph::ChainIndex ResultTexture = FrameGraph::ChainIndex::Unresolved;
+				FrameGraph::ChainIndex BloomUp = FrameGraph::ChainIndex::Unresolved;
 				FrameGraph::ChainIndex FlareGhosts = FrameGraph::ChainIndex::Unresolved;
 				FrameGraph::ChainIndex FlareStreakA = FrameGraph::ChainIndex::Unresolved;
 				FrameGraph::ChainIndex FlareStreakB = FrameGraph::ChainIndex::Unresolved;
@@ -96,8 +101,9 @@ namespace Post
 
 			static void save_to_cache([[maybe_unused]] const Context& data, [[maybe_unused]] Cache& cache)
 			{
+				cache.BloomTAA = FrameGraph::TaskBuilder::cache_slot(data.BloomTAA, ResourceID::BloomTAA);
 				cache.BloomDown = FrameGraph::TaskBuilder::cache_slot(data.BloomDown, ResourceID::BloomDown);
-				cache.ResultTexture = FrameGraph::TaskBuilder::cache_slot(data.ResultTexture, ResourceID::ResultTexture);
+				cache.BloomUp = FrameGraph::TaskBuilder::cache_slot(data.BloomUp, ResourceID::BloomUp);
 				cache.FlareGhosts = FrameGraph::TaskBuilder::cache_slot(data.FlareGhosts, ResourceID::FlareGhosts);
 				cache.FlareStreakA = FrameGraph::TaskBuilder::cache_slot(data.FlareStreakA, ResourceID::FlareStreakA);
 				cache.FlareStreakB = FrameGraph::TaskBuilder::cache_slot(data.FlareStreakB, ResourceID::FlareStreakB);
@@ -113,8 +119,9 @@ namespace Post
 			// previous link's desc, which LoadGraph does once every pass has loaded.
 			static void load_from_cache([[maybe_unused]] Context& data, [[maybe_unused]] const Cache& cache, [[maybe_unused]] const FrameGraph::TaskBuilder& builder)
 			{
-				builder.load(data.BloomDown, ResourceID::BloomDown, cache.BloomDown);
-				builder.load(data.ResultTexture, ResourceID::ResultTexture, cache.ResultTexture);
+				builder.load(data.BloomTAA, ResourceID::BloomTAA, cache.BloomTAA);
+				builder.create_versioned(data.BloomDown, cache.BloomDown, { ivec3(builder.graph->get_context<Table::Frame::ViewportContext>().upscale_size / 8, 0), HAL::Format::R16G16B16A16_FLOAT, 1, 0 });
+				builder.create_versioned(data.BloomUp, cache.BloomUp, { ivec3(builder.graph->get_context<Table::Frame::ViewportContext>().upscale_size / 4, 0), HAL::Format::R16G16B16A16_FLOAT, 1, 0 });
 				builder.create_versioned(data.FlareGhosts, cache.FlareGhosts, { ivec3(builder.graph->get_context<Table::Frame::ViewportContext>().upscale_size / 4, 0), HAL::Format::R16G16B16A16_FLOAT, 1, 1 });
 				builder.create_versioned(data.FlareStreakA, cache.FlareStreakA, { ivec3(builder.graph->get_context<Table::Frame::ViewportContext>().upscale_size / 4, 0), HAL::Format::R16G16B16A16_FLOAT, 1, 1 });
 				builder.create_versioned(data.FlareStreakB, cache.FlareStreakB, { ivec3(builder.graph->get_context<Table::Frame::ViewportContext>().upscale_size / 4, 0), HAL::Format::R16G16B16A16_FLOAT, 1, 1 });
@@ -125,8 +132,9 @@ namespace Post
 			// whether the pass writes it (own [Write], or the view usage's
 			// [Write] / [Write = {leaves...}] for resources inside a view group).
 			static inline const FrameGraph::ResourceAccess resource_accesses[] = {
-				{ ResourceID::BloomDown, false },
-				{ ResourceID::ResultTexture, true },
+				{ ResourceID::BloomTAA, false },
+				{ ResourceID::BloomDown, true },
+				{ ResourceID::BloomUp, true },
 				{ ResourceID::FlareGhosts, true },
 				{ ResourceID::FlareStreakA, true },
 				{ ResourceID::FlareStreakB, true },
@@ -141,9 +149,9 @@ namespace Post
 			return std::span<const FrameGraph::ResourceAccess>(Context::resource_accesses, Context::resource_count);
 		}
 
-		static constexpr LiteralWStr Name{L"LensFlare"};
+		static constexpr LiteralWStr Name{L"BloomProcess"};
 
-		static constexpr PassID ID = PassID::LensFlare;
+		static constexpr PassID ID = PassID::BloomProcess;
 
 
 		using setup_func_type = std::function<FrameGraph::SetupResult(Context&, FrameGraph::TaskBuilder&)>;

@@ -22,7 +22,10 @@ export
 	
 			Library::AssetGBuffer AssetGBuffer;
 		Library::AssetMip AssetMip;
-		Library::Bloom Bloom;
+		Library::BloomBuild BloomBuild;
+		Library::BloomProcess BloomProcess;
+		Library::BloomBuildPost BloomBuildPost;
+		Library::BloomComposite BloomComposite;
 		Library::BlueNoise BlueNoise;
 		Library::DDGIProbeSelect DDGIProbeSelect;
 		Library::DDGIProbeResidencyMark DDGIProbeResidencyMark;
@@ -33,7 +36,6 @@ export
 		Library::DDGIIndirectDebug DDGIIndirectDebug;
 		Library::FSR FSR;
 		Library::ResultCreation ResultCreation;
-		Library::LensFlare LensFlare;
 		Library::NRD_GBufferPack NRD_GBufferPack;
 		Library::NRD_REBLUR_Execute NRD_REBLUR_Execute;
 		Library::NRD_SIGMA_Execute NRD_SIGMA_Execute;

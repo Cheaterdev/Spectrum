@@ -49,8 +49,35 @@ FrameGraph::SetupResult PassSetupDefault<Passes::Editor::AssetMip>::setup(
 }
 
 
-FrameGraph::SetupResult PassDefault<Passes::Post::Bloom>::setup(
-	Passes::Post::Bloom::Context& data, FrameGraph::TaskBuilder& builder)
+FrameGraph::SetupResult PassDefault<Passes::Post::BloomBuild>::setup(
+	Passes::Post::BloomBuild::Context& data, FrameGraph::TaskBuilder& builder)
+{
+	if (!(builder.graph->get_context<Table::Post::BloomSelectors>().enabled && !(builder.graph->get_context<Table::Post::Upscale::UpscalerSelectors>().upscaling_enabled && builder.graph->get_context<Table::Post::Upscale::UpscalerSelectors>().upscaler_type == ::Post::Upscale::UpscalerType::DLSSRR)))
+		return FrameGraph::SetupResult::Disabled;
+	return FrameGraph::SetupResult::NeedsRender;
+}
+
+
+FrameGraph::SetupResult PassDefault<Passes::Post::BloomProcess>::setup(
+	Passes::Post::BloomProcess::Context& data, FrameGraph::TaskBuilder& builder)
+{
+	if (!(builder.graph->get_context<Table::Post::BloomSelectors>().enabled && !(builder.graph->get_context<Table::Post::Upscale::UpscalerSelectors>().upscaling_enabled && builder.graph->get_context<Table::Post::Upscale::UpscalerSelectors>().upscaler_type == ::Post::Upscale::UpscalerType::DLSSRR)))
+		return FrameGraph::SetupResult::Disabled;
+	return FrameGraph::SetupResult::NeedsRender;
+}
+
+
+FrameGraph::SetupResult PassDefault<Passes::Post::BloomBuildPost>::setup(
+	Passes::Post::BloomBuildPost::Context& data, FrameGraph::TaskBuilder& builder)
+{
+	if (!(builder.graph->get_context<Table::Post::BloomSelectors>().enabled && builder.graph->get_context<Table::Post::Upscale::UpscalerSelectors>().upscaling_enabled && builder.graph->get_context<Table::Post::Upscale::UpscalerSelectors>().upscaler_type == ::Post::Upscale::UpscalerType::DLSSRR))
+		return FrameGraph::SetupResult::Disabled;
+	return FrameGraph::SetupResult::NeedsRender;
+}
+
+
+FrameGraph::SetupResult PassDefault<Passes::Post::BloomComposite>::setup(
+	Passes::Post::BloomComposite::Context& data, FrameGraph::TaskBuilder& builder)
 {
 	if (!(builder.graph->get_context<Table::Post::BloomSelectors>().enabled))
 		return FrameGraph::SetupResult::Disabled;
@@ -139,15 +166,6 @@ FrameGraph::SetupResult PassDefault<Passes::Frame::ResultCreation>::setup(
 	Passes::Frame::ResultCreation::Context& data, FrameGraph::TaskBuilder& builder)
 {
 	return (false) ? FrameGraph::SetupResult::NeedsRender : FrameGraph::SetupResult::IgnoreRender;
-}
-
-
-FrameGraph::SetupResult PassDefault<Passes::Post::LensFlare>::setup(
-	Passes::Post::LensFlare::Context& data, FrameGraph::TaskBuilder& builder)
-{
-	if (!(builder.graph->get_context<Table::Post::LensFlareSelectors>().enabled && builder.graph->get_context<Table::Post::BloomSelectors>().enabled))
-		return FrameGraph::SetupResult::Disabled;
-	return FrameGraph::SetupResult::NeedsRender;
 }
 
 

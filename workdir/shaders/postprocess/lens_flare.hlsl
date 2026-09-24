@@ -128,27 +128,3 @@ void CS_Streak(uint3 id : SV_DispatchThreadID)
 	accum[id.xy] = float4(a, 1);
 }
 #endif
-
-#ifdef BUILD_FUNC_CS_Composite
-#include "../autogen/LensFlareComposite.h"
-
-[numthreads(8, 8, 1)]
-void CS_Composite(uint3 id : SV_DispatchThreadID)
-{
-	const LensFlareComposite data = GetLensFlareComposite();
-	RWTexture2D<float4> color = data.GetColor();
-
-	uint2 size;
-	color.GetDimensions(size.x, size.y);
-	if (any(id.xy >= size))
-		return;
-
-	float2 uv = (id.xy + 0.5) / float2(size);
-	float3 flare = data.GetGhosts().SampleLevel(linearClampSampler, uv, 0).rgb;
-	if (data.GetUse_streaks() != 0)
-		flare += data.GetStreaks().SampleLevel(linearClampSampler, uv, 0).rgb * data.GetStreak_intensity();
-
-	float4 c = color[id.xy];
-	color[id.xy] = float4(c.rgb + flare, c.a);
-}
-#endif

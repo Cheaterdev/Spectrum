@@ -5,9 +5,6 @@ import Graphics;
 import HAL;
 import Core;
 
-#include "../../FrameGraph/autogen/pass_defaults.h"
-
-using namespace FrameGraph;
 using namespace HAL;
 
 namespace
@@ -31,18 +28,20 @@ namespace
 	Variable<float>              g_streak_falloff   = { 1.0f, "Streak falloff", &lens_flare_context(), 0.3f, 1.0f };
 	Variable<float>              g_streak_rotation  = { 15.0f, "Streak rotation (deg)", &lens_flare_context(), 0.0f, 90.0f };
 
-	// Kawase: the 4-tap spacing grows 4x per iteration, so level k reaches
-	// 3 * (1 + 4 + ... + 4^k) texels.
+	// Kawase: the tap spacing grows 4x per iteration; each level's taps span
+	// 3.5 steps (lens_flare.hlsl's CS_Streak), so level k reaches
+	// 3.5 * (1 + 4 + ... + 4^k) texels.
 	constexpr float c_streak_step_base = 4.0f;
+	constexpr float c_streak_level_span = 3.5f;
 
 	// Enough levels that the last one spans the whole flare texture.
 	int streak_iterations(ivec2 size)
 	{
 		int n = 1;
-		float reach = 3.0f;
+		float reach = c_streak_level_span;
 		for (float step = c_streak_step_base; reach < float(std::max(size.x, size.y)); step *= c_streak_step_base)
 		{
-			reach += 3.0f * step;
+			reach += c_streak_level_span * step;
 			n++;
 		}
 		return n;
@@ -61,23 +60,27 @@ namespace
 	}
 }
 
-void lens_flare_update_selectors(FrameGraph::Graph& graph)
+LensFlareCompositeSettings lens_flare_composite_settings()
 {
-	graph.get_context<Table::Post::LensFlareSelectors>().enabled = g_enabled;
+	LensFlareCompositeSettings s;
+	const uint directions = g_enabled ? streak_direction_count(g_streaks) : 0;
+	s.ghosts  = g_enabled;
+	s.streaks = directions > 0;
+	// Normalized to the 2-direction (Anamorphic) case, so switching patterns
+	// keeps overall streak brightness.
+	s.streak_intensity = directions > 0 ? g_streak_intensity * 2.0f / float(directions) : 0.0f;
+	return s;
 }
 
-// setup() is fully generated (lens_flare.prism's own [SetupCondition]).
-void PassDefault<Passes::Post::LensFlare>::render(Passes::Post::LensFlare::Context& data, FrameContext& context)
+void lens_flare_build(HAL::ComputeContext& compute, HAL::CommandList& list,
+	const HAL::Texture2DView& source,
+	HAL::Texture2DView& ghosts, HAL::Texture2DView& streak_a,
+	HAL::Texture2DView& streak_b, HAL::Texture2DView& streaks)
 {
-	auto& compute = context.get_list()->get_compute();
-	auto& list    = context.get_list();
-	compute.set_signature(Layouts::DefaultLayout);
+	if (!g_enabled)
+		return;
 
-	// Quarter resolution: BloomDown's mip 1 (the chain starts at half res).
-	HAL::Texture2DView& bloom_down = *data.BloomDown;
-	const auto source = bloom_down.create_mip(std::min(1u, bloom_down.get_mip_count() - 1), *list).texture2D;
-
-	const ivec2 flare_size = data.FlareGhosts->get_size();
+	const ivec2 flare_size = ghosts.get_size();
 	const float2 texel = float2(1.0f / flare_size.x, 1.0f / flare_size.y);
 
 	{
@@ -85,8 +88,8 @@ void PassDefault<Passes::Post::LensFlare>::render(Passes::Post::LensFlare::Conte
 		compute.set_pipeline<PSOS::Post::LensFlareGhosts>();
 
 		Slots::Post::LensFlareGhosts params;
-		params.GetSource()          = source;
-		params.GetTarget()          = data.FlareGhosts->rwTexture2D;
+		params.GetSource()          = source.texture2D;
+		params.GetTarget()          = ghosts.rwTexture2D;
 		params.GetGhost_intensity() = g_ghost_intensity;
 		params.GetHalo_intensity()  = g_halo_intensity;
 		params.GetHalo_radius()     = g_halo_radius;
@@ -97,57 +100,41 @@ void PassDefault<Passes::Post::LensFlare>::render(Passes::Post::LensFlare::Conte
 	}
 
 	const uint directions = streak_direction_count(g_streaks);
-	if (directions > 0)
-	{
-		PROFILE(L"lens_flare_streaks");
-		compute.set_pipeline<PSOS::Post::LensFlareStreak>();
+	if (directions == 0)
+		return;
 
-		const float rotation   = g_streak_rotation * Math::pi / 180.0f;
-		const int   iterations = streak_iterations(flare_size);
-		for (uint d = 0; d < directions; d++)
+	PROFILE(L"lens_flare_streaks");
+	compute.set_pipeline<PSOS::Post::LensFlareStreak>();
+
+	const float rotation   = g_streak_rotation * Math::pi / 180.0f;
+	const int   iterations = streak_iterations(flare_size);
+	for (uint d = 0; d < directions; d++)
+	{
+		const float angle = rotation + 2.0f * Math::pi * d / directions;
+		const float2 dir = float2(std::cos(angle), std::sin(angle));
+
+		// source -> A -> B -> A -> ... ping-pong; every level is also summed
+		// into `streaks` (the very first write overwrites it).
+		float step   = 1.0f;
+		float weight = 1.0f;
+		for (int it = 0; it < iterations; it++)
 		{
-			const float angle = rotation + 2.0f * Math::pi * d / directions;
-			const float2 dir = float2(std::cos(angle), std::sin(angle));
+			const bool to_a = (it % 2) == 0;
 
-			// source -> A -> B -> A -> ... ping-pong; every level is also
-			// summed into FlareStreaks (the very first write overwrites it).
-			float step   = 1.0f;
-			float weight = 1.0f;
-			for (int it = 0; it < iterations; it++)
-			{
-				const bool to_a = (it % 2) == 0;
+			Slots::Post::LensFlareStreak params;
+			params.GetSource()       = it == 0 ? source.texture2D : (to_a ? streak_b.texture2D : streak_a.texture2D);
+			params.GetTarget()       = to_a ? streak_a.rwTexture2D : streak_b.rwTexture2D;
+			params.GetAccum()        = streaks.rwTexture2D;
+			params.GetDirection()    = dir;
+			params.GetTexel()        = texel;
+			params.GetStep()         = step;
+			params.GetAccum_weight() = weight;
+			params.GetAccumulate()   = (d > 0 || it > 0) ? 1u : 0u;
+			compute.set(params);
+			compute.dispatch(flare_size, ivec2{ 8, 8 });
 
-				Slots::Post::LensFlareStreak params;
-				params.GetSource()       = it == 0 ? source : (to_a ? data.FlareStreakB->texture2D : data.FlareStreakA->texture2D);
-				params.GetTarget()       = to_a ? data.FlareStreakA->rwTexture2D : data.FlareStreakB->rwTexture2D;
-				params.GetAccum()        = data.FlareStreaks->rwTexture2D;
-				params.GetDirection()    = dir;
-				params.GetTexel()        = texel;
-				params.GetStep()         = step;
-				params.GetAccum_weight() = weight;
-				params.GetAccumulate()   = (d > 0 || it > 0) ? 1u : 0u;
-				compute.set(params);
-				compute.dispatch(flare_size, ivec2{ 8, 8 });
-
-				step   *= c_streak_step_base;
-				weight *= g_streak_falloff;
-			}
+			step   *= c_streak_step_base;
+			weight *= g_streak_falloff;
 		}
-	}
-
-	{
-		PROFILE(L"lens_flare_composite");
-		compute.set_pipeline<PSOS::Post::LensFlareComposite>();
-
-		Slots::Post::LensFlareComposite params;
-		params.GetGhosts()           = data.FlareGhosts->texture2D;
-		params.GetStreaks()          = data.FlareStreaks->texture2D;
-		params.GetColor()            = data.ResultTexture->rwTexture2D;
-		// Normalized to the 2-direction (Anamorphic) case, so switching patterns
-		// keeps overall streak brightness.
-		params.GetStreak_intensity() = directions > 0 ? g_streak_intensity * 2.0f / float(directions) : 0.0f;
-		params.GetUse_streaks()      = directions > 0 ? 1u : 0u;
-		compute.set(params);
-		compute.dispatch(data.ResultTexture->get_size(), ivec2{ 8, 8 });
 	}
 }

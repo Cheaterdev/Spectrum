@@ -45,7 +45,11 @@ namespace Post
 			# MipCount=0: full auto mip chain, matching the original manual recreate()
 			# call's omitted 4th Desc field (value-initializes to 0, not the more
 			# common single-mip 1 -- see FrameGraph.cpp's mip_count==0 auto-chain path).
-			[Always = Read] [Recreate = ResultTextureNew] [RecreateFlags = UnorderedAccess]
+			# ExclusiveRead for the same reason as depth/motion above: it's
+			# Streamline's color input, handed off at COMMON. BloomBuild reads
+			# this same version as an SRV; folded into one read window the two
+			# combine into a layout with no D3D12 equivalent.
+			[Always = Read | ExclusiveRead] [Recreate = ResultTextureNew] [RecreateFlags = UnorderedAccess]
 			[Size = ViewportContext::upscale_size] [Format = R16G16B16A16_FLOAT] [MipCount = 0]
 			Texture ResultTexture;
 		}

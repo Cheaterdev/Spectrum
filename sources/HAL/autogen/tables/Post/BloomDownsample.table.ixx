@@ -23,6 +23,7 @@ export namespace Table
 			uint karis;
 			float threshold;
 			float knee;
+			uint unjitter;
 			HLSL::Texture2D<float4> source;
 			HLSL::StructuredBuffer<float4> exposure_state;
 			HLSL::RWTexture2D<float4> target;
@@ -33,6 +34,7 @@ export namespace Table
 			float& GetThreshold() { return threshold; }
 			float& GetKnee() { return knee; }
 			HLSL::StructuredBuffer<float4>& GetExposure_state() { return exposure_state; }
+			uint& GetUnjitter() { return unjitter; }
 			static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 			template<class Compiler>
 			void compile(Compiler& compiler) const
@@ -41,6 +43,7 @@ export namespace Table
 				compiler.compile(karis, "BloomDownsample::karis");
 				compiler.compile(threshold, "BloomDownsample::threshold");
 				compiler.compile(knee, "BloomDownsample::knee");
+				compiler.compile(unjitter, "BloomDownsample::unjitter");
 				compiler.compile(source, "BloomDownsample::source");
 				compiler.compile(exposure_state, "BloomDownsample::exposure_state");
 				compiler.compile(target, "BloomDownsample::target");
@@ -51,6 +54,7 @@ export namespace Table
 				uint karis; // uint
 				float threshold; // float
 				float knee; // float
+				uint unjitter; // uint
 				uint source; // Texture2D<float4>
 				uint exposure_state; // StructuredBuffer<float4>
 				uint target; // RWTexture2D<float4>
@@ -63,6 +67,7 @@ export namespace Table
 					ar& NVP(karis);
 					ar& NVP(threshold);
 					ar& NVP(knee);
+					ar& NVP(unjitter);
 				}
 
 
@@ -79,6 +84,7 @@ export namespace Table
 				ar& NVP(karis);
 				ar& NVP(threshold);
 				ar& NVP(knee);
+				ar& NVP(unjitter);
 			}
 
 		};

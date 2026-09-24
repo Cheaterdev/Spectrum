@@ -16,7 +16,10 @@ export import "../defines.h";
 
 #include "pass/Editor/AssetGBuffer.h"
 #include "pass/Editor/AssetMip.h"
-#include "pass/Post/Bloom.h"
+#include "pass/Post/BloomBuild.h"
+#include "pass/Post/BloomProcess.h"
+#include "pass/Post/BloomBuildPost.h"
+#include "pass/Post/BloomComposite.h"
 #include "pass/Utility/BlueNoise.h"
 #include "pass/GI/DDGI/DDGIProbeSelect.h"
 #include "pass/GI/DDGI/DDGIProbeResidencyMark.h"
@@ -27,7 +30,6 @@ export import "../defines.h";
 #include "pass/GI/DDGI/Dev/DDGIIndirectDebug.h"
 #include "pass/Post/Upscale/FSR.h"
 #include "pass/Frame/ResultCreation.h"
-#include "pass/Post/LensFlare.h"
 #include "pass/Denoise/NRD/NRD_GBufferPack.h"
 #include "pass/Denoise/NRD/NRD_REBLUR_Execute.h"
 #include "pass/Denoise/NRD/NRD_SIGMA_Execute.h"
@@ -96,7 +98,19 @@ export namespace Passes
 	}
 	namespace Post
 	{
-		using ::Passes::Post::Bloom;
+		using ::Passes::Post::BloomBuild;
+	}
+	namespace Post
+	{
+		using ::Passes::Post::BloomProcess;
+	}
+	namespace Post
+	{
+		using ::Passes::Post::BloomBuildPost;
+	}
+	namespace Post
+	{
+		using ::Passes::Post::BloomComposite;
 	}
 	namespace Utility
 	{
@@ -167,10 +181,6 @@ export namespace Passes
 	namespace Frame
 	{
 		using ::Passes::Frame::ResultCreation;
-	}
-	namespace Post
-	{
-		using ::Passes::Post::LensFlare;
 	}
 	namespace Denoise
 	{

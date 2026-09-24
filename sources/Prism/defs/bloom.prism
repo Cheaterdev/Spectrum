@@ -38,6 +38,10 @@ namespace Post
 		float threshold;
 		float knee;
 		StructuredBuffer<float4> exposure_state;
+		# First downsample only, when non-zero: sample the source offset by
+		# the camera's sub-pixel jitter (FrameInfo camera.jitter), so a
+		# pre-upscale (jittered) source lands on a stable grid every frame.
+		uint unjitter;
 	}
 
 	[Bind = DefaultLayout::Instance0]
@@ -70,6 +74,14 @@ namespace Post
 		# Applied to the accumulated chain before compositing (see Bloom.cpp).
 		float bloom_scale;
 		float intensity;
+
+		# Lens flare, built alongside the bloom chain (lens_flare.prism) and
+		# added here in the same pass.
+		Texture2D<float4> flare_ghosts;
+		Texture2D<float4> flare_streaks;
+		uint use_ghosts;
+		uint use_streaks;
+		float streak_intensity;
 	}
 
 	ComputePSO BloomDownsample
@@ -96,25 +108,77 @@ namespace Post
 		compute = "postprocess/bloom.hlsl";
 	}
 
-	# Jimenez 2014 (CoD: Advanced Warfare) filters: 13-tap downsample chain,
-	# 3x3 tent upsample chain, combined per BloomMode. Runs at output
-	# resolution after every AA/upscaler and before Tonemap, on scene-referred
-	# HDR.
+	# Temporal resolve of the pre-upscale level 0: DLSS's sub-pixel jitter and
+	# sub-pixel highlights make a single frame's downsample shimmer; blending
+	# with reprojected history (clamped to the current 3x3 neighborhood so
+	# moving content doesn't ghost) stabilizes it.
+	[Bind = DefaultLayout::Instance0]
+	struct BloomTemporal
+	{
+		Texture2D<float4> current;
+		Texture2D<float4> history;
+		# Render resolution; sampled by uv.
+		Texture2D<float> depth;
+		Texture2D<float2> motion;
+		RWTexture2D<float4> target;
+		# Weight of the reprojected history (e.g. 0.9).
+		float history_weight;
+		# Non-zero: ignore history (first frame, resize, path switch).
+		uint reset;
+	}
+
+	[Bind = DefaultLayout::Instance0]
+	struct BloomCopy
+	{
+		Texture2D<float4> source;
+		RWTexture2D<float4> target;
+	}
+
+	ComputePSO BloomTemporal
+	{
+		root = DefaultLayout;
+
+		[EntryPoint = CS_Temporal]
+		compute = "postprocess/bloom.hlsl";
+	}
+
+	ComputePSO BloomCopy
+	{
+		root = DefaultLayout;
+
+		[EntryPoint = CS_Copy]
+		compute = "postprocess/bloom.hlsl";
+	}
+
+	# Bloom + lens flare pipeline. Everything is sized from the OUTPUT
+	# resolution (level 0 = a quarter of it), so quality doesn't depend on the
+	# upscaler's render scale. Filters: Jimenez 2014 (CoD: Advanced Warfare)
+	# 13-tap downsample and 3x3 tent upsample, combined per BloomMode.
+	#
+	#   BloomBuild      -- before the upscalers, graphics queue, short: the only
+	#                      pass that touches the pre-upscale ResultTexture.
+	#                      Unjittered, thresholded downsample to level 0, then
+	#                      a temporal resolve into BloomTAA.
+	#   BloomProcess    -- async: everything else, reading only BloomTAA, so it
+	#                      can overlap DLSS (which holds ResultTexture for its
+	#                      Streamline hand-off).
+	#   BloomBuildPost  -- DLSS-RR only: its pre-upscale input is the noisy RT
+	#                      signal (RTXCombine), denoised only inside DLSS-RR, so
+	#                      level 0 comes from the upscaled image (no temporal
+	#                      step) and the processing runs right after.
+	#   BloomComposite  -- after the upscalers: adds bloom + flare.
+	#
+	# BloomBuild/BloomProcess and BloomBuildPost are mutually exclusive and
+	# create the same resources, so BloomComposite and Tonemap don't care which
+	# ran.
 	[Static]
 	[Compute]
-	[SetupCondition = BloomSelectors::enabled]
-	PassNode Bloom
+	[SetupCondition = BloomSelectors::enabled && !(UpscalerSelectors::upscaling_enabled && UpscalerSelectors::upscaler_type == UpscalerType::DLSSRR)]
+	PassNode BloomBuild
 	{
-		[Always = Read] [Recreate = ResultTextureNew] [RecreateFlags = UnorderedAccess]
-		Texture ResultTexture;
-
-		# MipCount = 0: full chain for whatever the viewport size is; Bloom.cpp
-		# uses only the first "Levels" of it. A fixed count would exceed the
-		# legal mip count of a small viewport and fail texture creation.
-		[Always = UnorderedAccess] [Size = ViewportContext::upscale_size / 2] [Format = R16G16B16A16_FLOAT] [MipCount = 0]
-		Texture BloomDown;
-		[Always = UnorderedAccess] [Size = ViewportContext::upscale_size / 2] [Format = R16G16B16A16_FLOAT] [MipCount = 0]
-		Texture BloomUp;
+		[Always = Read] Texture ResultTexture;
+		[Always = Read] Texture GBuffer_Depth;
+		[Always = Read] Texture GBuffer_Speed;
 
 		# Tonemap's adapted exposure, read here from the previous frame (Static)
 		# for the threshold. Created here rather than in Tonemap because this
@@ -123,5 +187,88 @@ namespace Post
 		# can write it.
 		[Always = UnorderedAccess | Static] [Size = 1]
 		StructuredBuffer<float4> ExposureState;
+
+		# This frame's downsample, before the temporal resolve.
+		[Always = UnorderedAccess] [Size = ViewportContext::upscale_size / 4] [Format = R16G16B16A16_FLOAT]
+		Texture BloomCurrent;
+		[Always = UnorderedAccess] [Size = ViewportContext::upscale_size / 4] [Format = R16G16B16A16_FLOAT]
+		Texture BloomTAA;
+		# Copy of BloomTAA kept for next frame. Separate from BloomTAA because the
+		# resolve reads neighboring history texels while writing its output.
+		[Always = UnorderedAccess | Static] [Size = ViewportContext::upscale_size / 4] [Format = R16G16B16A16_FLOAT]
+		Texture BloomTAAHistory;
+	}
+
+	[Static]
+	[Compute]
+	[SetupCondition = BloomSelectors::enabled && !(UpscalerSelectors::upscaling_enabled && UpscalerSelectors::upscaler_type == UpscalerType::DLSSRR)]
+	PassNode BloomProcess
+	{
+		[Always = Read] Texture BloomTAA;
+
+		# Levels 1+ (level 0 is BloomTAA). MipCount = 0: full chain for whatever
+		# the viewport size is; Bloom.cpp uses only the first "Levels" of it. A
+		# fixed count would exceed the legal mip count of a small viewport and
+		# fail texture creation.
+		[Always = UnorderedAccess] [Size = ViewportContext::upscale_size / 8] [Format = R16G16B16A16_FLOAT] [MipCount = 0]
+		Texture BloomDown;
+		[Always = UnorderedAccess] [Size = ViewportContext::upscale_size / 4] [Format = R16G16B16A16_FLOAT] [MipCount = 0]
+		Texture BloomUp;
+
+		# Lens flare targets (lens_flare.prism), same size as level 0.
+		# Created even with the flare off: [Optional] on a sized field means
+		# "create, else need()", not "skip", and they are small and transient.
+		[Always = UnorderedAccess] [Size = ViewportContext::upscale_size / 4] [Format = R16G16B16A16_FLOAT]
+		Texture FlareGhosts;
+		[Always = UnorderedAccess] [Size = ViewportContext::upscale_size / 4] [Format = R16G16B16A16_FLOAT]
+		Texture FlareStreakA;
+		[Always = UnorderedAccess] [Size = ViewportContext::upscale_size / 4] [Format = R16G16B16A16_FLOAT]
+		Texture FlareStreakB;
+		[Always = UnorderedAccess] [Size = ViewportContext::upscale_size / 4] [Format = R16G16B16A16_FLOAT]
+		Texture FlareStreaks;
+	}
+
+	# DLSS-RR path (see above): level 0 straight from the upscaled image, then
+	# the same processing as BloomProcess.
+	[Static]
+	[Compute]
+	[SetupCondition = BloomSelectors::enabled && UpscalerSelectors::upscaling_enabled && UpscalerSelectors::upscaler_type == UpscalerType::DLSSRR]
+	PassNode BloomBuildPost
+	{
+		[Always = Read] Texture ResultTexture;
+
+		[Always = UnorderedAccess | Static] [Size = 1]
+		StructuredBuffer<float4> ExposureState;
+
+		[Always = UnorderedAccess] [Size = ViewportContext::upscale_size / 4] [Format = R16G16B16A16_FLOAT]
+		Texture BloomTAA;
+		[Always = UnorderedAccess] [Size = ViewportContext::upscale_size / 8] [Format = R16G16B16A16_FLOAT] [MipCount = 0]
+		Texture BloomDown;
+		[Always = UnorderedAccess] [Size = ViewportContext::upscale_size / 4] [Format = R16G16B16A16_FLOAT] [MipCount = 0]
+		Texture BloomUp;
+
+		[Always = UnorderedAccess] [Size = ViewportContext::upscale_size / 4] [Format = R16G16B16A16_FLOAT]
+		Texture FlareGhosts;
+		[Always = UnorderedAccess] [Size = ViewportContext::upscale_size / 4] [Format = R16G16B16A16_FLOAT]
+		Texture FlareStreakA;
+		[Always = UnorderedAccess] [Size = ViewportContext::upscale_size / 4] [Format = R16G16B16A16_FLOAT]
+		Texture FlareStreakB;
+		[Always = UnorderedAccess] [Size = ViewportContext::upscale_size / 4] [Format = R16G16B16A16_FLOAT]
+		Texture FlareStreaks;
+	}
+
+	# Adds bloom + flare onto the upscaled image. After every upscaler and
+	# BloomBuild/BloomBuildPost, before Tonemap.
+	[Static]
+	[Compute]
+	[SetupCondition = BloomSelectors::enabled]
+	PassNode BloomComposite
+	{
+		[Always = Read] [Recreate = ResultTextureNew] [RecreateFlags = UnorderedAccess]
+		Texture ResultTexture;
+
+		[Always = Read] Texture BloomUp;
+		[Always = Read] Texture FlareGhosts;
+		[Always = Read] Texture FlareStreaks;
 	}
 }
