@@ -21,6 +21,22 @@ struct PassDefault
 
 
 template<>
+struct PassDefault<Passes::Post::Bloom>
+{
+	static constexpr bool enabled = true;
+	static constexpr FrameGraph::PassFlags flags = FrameGraph::PassFlags::Compute;
+
+	// setup() is declared here regardless -- if this pass carries
+	// [RunAlways]/[SetupCondition]/[RenderCondition], its DEFINITION is
+	// generated into autogen/pass_defaults.cpp instead of a hand-written one
+	// in some .cpp (see that file's own header comment for why it's a
+	// separate translation unit, not inlined here).
+	static FrameGraph::SetupResult setup(Passes::Post::Bloom::Context& data, FrameGraph::TaskBuilder& builder);
+	static void render(Passes::Post::Bloom::Context& data, FrameGraph::FrameContext& context);
+};
+
+
+template<>
 struct PassDefault<Passes::GI::DDGI::Dev::DDGIDebug>
 {
 	static constexpr bool enabled = true;

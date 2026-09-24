@@ -170,6 +170,7 @@ namespace Frame
 		UpscalingDLSS;
 		UpscalingDLSSRR;
 
+		Bloom;
 		Tonemap;
 
 		stencil_renderer;

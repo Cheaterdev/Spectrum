@@ -16,6 +16,7 @@ export import "../defines.h";
 
 #include "pass/Editor/AssetGBuffer.h"
 #include "pass/Editor/AssetMip.h"
+#include "pass/Post/Bloom.h"
 #include "pass/Utility/BlueNoise.h"
 #include "pass/GI/DDGI/DDGIProbeSelect.h"
 #include "pass/GI/DDGI/DDGIProbeResidencyMark.h"
@@ -91,6 +92,10 @@ export namespace Passes
 	namespace Editor
 	{
 		using ::Passes::Editor::AssetMip;
+	}
+	namespace Post
+	{
+		using ::Passes::Post::Bloom;
 	}
 	namespace Utility
 	{

@@ -66,6 +66,8 @@ namespace
 
 void capture_context_snapshot(Graph& graph, ContextSnapshot& out)
 {
+	out.values[(unsigned int)ContextFieldID::BloomSelectors_enabled] =
+		encode_context_field(graph.get_context<Table::Post::BloomSelectors>().enabled);
 	out.values[(unsigned int)ContextFieldID::DDGISelectors_enabled] =
 		encode_context_field(graph.get_context<Table::GI::DDGI::DDGISelectors>().enabled);
 	out.values[(unsigned int)ContextFieldID::DDGISelectors_show_probes] =

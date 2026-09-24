@@ -1,0 +1,127 @@
+namespace Post
+{
+	# How the levels are combined -- each is a different look:
+	#   Sum     -- CheEngine: unnormalized sum added onto the scene. Every level
+	#              carries the same energy over 4x the area, so the glow falls
+	#              off steeply from the core and extra levels only lengthen the
+	#              tail. Adds energy.
+	#   Average -- Jimenez 2014: the same sum divided by the level count and
+	#              lerped in. Energy-conserving; more levels dilute the core.
+	#   Scatter -- Unity HDRP: each upsample is lerp(level, wider, scatter), so
+	#              level k weighs (1 - s) * s^k. Energy-conserving, geometric
+	#              falloff.
+	enum BloomMode
+	{
+		Sum;
+		Average;
+		Scatter;
+	}
+
+	# Mirrors Bloom.cpp's Variable<>s for the generated [SetupCondition].
+	struct BloomSelectors
+	{
+		bool enabled = true;
+	}
+
+	[Bind = DefaultLayout::Instance0]
+	struct BloomDownsample
+	{
+		Texture2D<float4> source;
+		RWTexture2D<float4> target;
+		float2 source_texel;
+		# First downsample only, when enabled: Karis-weighted average against
+		# single-pixel fireflies (see Bloom.cpp's g_karis for why it's optional).
+		uint karis;
+		# First downsample only, when non-zero: soft-knee bright pass. threshold
+		# is in exposed units (1.0 = SDR white on screen), using last frame's
+		# exposure from exposure_state (Tonemap's adapted value, .y).
+		float threshold;
+		float knee;
+		StructuredBuffer<float4> exposure_state;
+	}
+
+	[Bind = DefaultLayout::Instance0]
+	struct BloomUpsample
+	{
+		# The next-smaller level (already accumulated, or the last downsample).
+		Texture2D<float4> low;
+		# This level's own downsample, same size as target.
+		Texture2D<float4> high;
+		RWTexture2D<float4> target;
+		float2 low_texel;
+		float radius;
+		BloomMode mode;
+		# Scatter mode only.
+		float scatter;
+	}
+
+	[Bind = DefaultLayout::Instance0]
+	struct BloomComposite
+	{
+		Texture2D<float4> scene;
+		Texture2D<float4> bloom;
+		RWTexture2D<float4> target;
+		float2 bloom_texel;
+		float radius;
+		# Non-zero: scene + bloom * intensity (Sum mode, or any mode with a
+		# threshold -- the bloom then only holds the excess above it). Zero:
+		# lerp(scene, bloom, intensity), energy-conserving.
+		uint additive;
+		# Applied to the accumulated chain before compositing (see Bloom.cpp).
+		float bloom_scale;
+		float intensity;
+	}
+
+	ComputePSO BloomDownsample
+	{
+		root = DefaultLayout;
+
+		[EntryPoint = CS_Downsample]
+		compute = "postprocess/bloom.hlsl";
+	}
+
+	ComputePSO BloomUpsample
+	{
+		root = DefaultLayout;
+
+		[EntryPoint = CS_Upsample]
+		compute = "postprocess/bloom.hlsl";
+	}
+
+	ComputePSO BloomComposite
+	{
+		root = DefaultLayout;
+
+		[EntryPoint = CS_Composite]
+		compute = "postprocess/bloom.hlsl";
+	}
+
+	# Jimenez 2014 (CoD: Advanced Warfare) filters: 13-tap downsample chain,
+	# 3x3 tent upsample chain, combined per BloomMode. Runs at output
+	# resolution after every AA/upscaler and before Tonemap, on scene-referred
+	# HDR.
+	[Static]
+	[Compute]
+	[SetupCondition = BloomSelectors::enabled]
+	PassNode Bloom
+	{
+		[Always = Read] [Recreate = ResultTextureNew] [RecreateFlags = UnorderedAccess]
+		Texture ResultTexture;
+
+		# MipCount = 0: full chain for whatever the viewport size is; Bloom.cpp
+		# uses only the first "Levels" of it. A fixed count would exceed the
+		# legal mip count of a small viewport and fail texture creation.
+		[Always = UnorderedAccess] [Size = ViewportContext::upscale_size / 2] [Format = R16G16B16A16_FLOAT] [MipCount = 0]
+		Texture BloomDown;
+		[Always = UnorderedAccess] [Size = ViewportContext::upscale_size / 2] [Format = R16G16B16A16_FLOAT] [MipCount = 0]
+		Texture BloomUp;
+
+		# Tonemap's adapted exposure, read here from the previous frame (Static)
+		# for the threshold. Created here rather than in Tonemap because this
+		# pass runs first; Tonemap creates it only when Bloom is off (its own
+		# [Optional]). Only read here, but created UnorderedAccess so Tonemap
+		# can write it.
+		[Always = UnorderedAccess | Static] [Size = 1]
+		StructuredBuffer<float4> ExposureState;
+	}
+}

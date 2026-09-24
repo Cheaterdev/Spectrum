@@ -22,6 +22,7 @@ export
 	
 			Library::AssetGBuffer AssetGBuffer;
 		Library::AssetMip AssetMip;
+		Library::Bloom Bloom;
 		Library::BlueNoise BlueNoise;
 		Library::DDGIProbeSelect DDGIProbeSelect;
 		Library::DDGIProbeResidencyMark DDGIProbeResidencyMark;

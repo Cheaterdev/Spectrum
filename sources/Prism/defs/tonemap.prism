@@ -108,8 +108,10 @@ namespace Post
 		[Always = UnorderedAccess] [Size = 256]
 		StructuredBuffer<uint> ExposureHistogram;
 
-		# Static: adaptation integrates over frames.
-		[Always = UnorderedAccess | Static] [Size = 1]
+		# Static: adaptation integrates over frames. Bloom runs earlier and
+		# reads last frame's value for its threshold, so it is the creator
+		# whenever it runs; this pass creates it only when Bloom is off.
+		[Always = UnorderedAccess | Static] [Size = 1] [Optional = !BloomSelectors::enabled]
 		StructuredBuffer<float4> ExposureState;
 	}
 }

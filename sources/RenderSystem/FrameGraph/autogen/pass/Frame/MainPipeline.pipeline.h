@@ -55,6 +55,7 @@
 #include "../Post/Upscale/FSR.h"
 #include "../Post/Upscale/UpscalingDLSS.h"
 #include "../Post/Upscale/UpscalingDLSSRR.h"
+#include "../Post/Bloom.h"
 #include "../Post/Tonemap.h"
 #include "../Editor/stencil_renderer.h"
 #include "../Raytrace/Dev/RTXColorPass.h"
@@ -171,6 +172,7 @@ namespace Frame
 			Passes::Post::Upscale::FSR::Name.ptr,
 			Passes::Post::Upscale::UpscalingDLSS::Name.ptr,
 			Passes::Post::Upscale::UpscalingDLSSRR::Name.ptr,
+			Passes::Post::Bloom::Name.ptr,
 			Passes::Post::Tonemap::Name.ptr,
 			Passes::Editor::stencil_renderer::Name.ptr,
 			Passes::Raytrace::Dev::RTXColorPass::Name.ptr,
@@ -275,8 +277,10 @@ namespace Frame
 			L"SMAA_edges",
 			L"SMAA_blend",
 			L"FSRTemp",
-			L"ExposureHistogram",
+			L"BloomDown",
+			L"BloomUp",
 			L"ExposureState",
+			L"ExposureHistogram",
 			L"axis_id_buffer",
 			L"ColorOutput",
 			L"VoxelDebug",
@@ -1470,25 +1474,47 @@ namespace Frame
 		};
 		static inline const FrameGraph::PassRef ResultTexture_c5_pass_refs[] = {
 			{ PassID::UpscalingDLSSRR, 0 },
-			{ PassID::Tonemap, 0 },
-			{ PassID::stencil_renderer, 0 },
+			{ PassID::Bloom, 0 },
 		};
 		static inline const FrameGraph::PrecompiledState ResultTexture_c5_states[] = {
 			{ true, { ResultTexture_c5_pass_refs + 0, 1 } },
-			{ true, { ResultTexture_c5_pass_refs + 1, 1 } },
-			{ true, { ResultTexture_c5_pass_refs + 2, 1 } },
+			{ false, { ResultTexture_c5_pass_refs + 1, 1 } },
+		};
+		static inline const FrameGraph::PassRef ResultTexture_c6_pass_refs[] = {
+			{ PassID::Bloom, 0 },
+			{ PassID::Tonemap, 0 },
+			{ PassID::stencil_renderer, 0 },
+		};
+		static inline const FrameGraph::PrecompiledState ResultTexture_c6_states[] = {
+			{ true, { ResultTexture_c6_pass_refs + 0, 1 } },
+			{ true, { ResultTexture_c6_pass_refs + 1, 1 } },
+			{ true, { ResultTexture_c6_pass_refs + 2, 1 } },
+		};
+		static inline const FrameGraph::PassRef BloomDown_c0_pass_refs[] = {
+			{ PassID::Bloom, 0 },
+		};
+		static inline const FrameGraph::PrecompiledState BloomDown_c0_states[] = {
+			{ true, { BloomDown_c0_pass_refs + 0, 1 } },
+		};
+		static inline const FrameGraph::PassRef BloomUp_c0_pass_refs[] = {
+			{ PassID::Bloom, 0 },
+		};
+		static inline const FrameGraph::PrecompiledState BloomUp_c0_states[] = {
+			{ true, { BloomUp_c0_pass_refs + 0, 1 } },
+		};
+		static inline const FrameGraph::PassRef ExposureState_c0_pass_refs[] = {
+			{ PassID::Bloom, 0 },
+			{ PassID::Tonemap, 0 },
+		};
+		static inline const FrameGraph::PrecompiledState ExposureState_c0_states[] = {
+			{ true, { ExposureState_c0_pass_refs + 0, 1 } },
+			{ true, { ExposureState_c0_pass_refs + 1, 1 } },
 		};
 		static inline const FrameGraph::PassRef ExposureHistogram_c0_pass_refs[] = {
 			{ PassID::Tonemap, 0 },
 		};
 		static inline const FrameGraph::PrecompiledState ExposureHistogram_c0_states[] = {
 			{ true, { ExposureHistogram_c0_pass_refs + 0, 1 } },
-		};
-		static inline const FrameGraph::PassRef ExposureState_c0_pass_refs[] = {
-			{ PassID::Tonemap, 0 },
-		};
-		static inline const FrameGraph::PrecompiledState ExposureState_c0_states[] = {
-			{ true, { ExposureState_c0_pass_refs + 0, 1 } },
 		};
 		static inline const FrameGraph::PassRef axis_id_buffer_c0_pass_refs[] = {
 			{ PassID::stencil_renderer, 0 },
@@ -1604,8 +1630,11 @@ namespace Frame
 			{ ResourceID::FSRTemp, 0, FSRTemp_c0_states },
 			{ ResourceID::ResultTexture, 4, ResultTexture_c4_states },
 			{ ResourceID::ResultTexture, 5, ResultTexture_c5_states },
-			{ ResourceID::ExposureHistogram, 0, ExposureHistogram_c0_states },
+			{ ResourceID::ResultTexture, 6, ResultTexture_c6_states },
+			{ ResourceID::BloomDown, 0, BloomDown_c0_states },
+			{ ResourceID::BloomUp, 0, BloomUp_c0_states },
 			{ ResourceID::ExposureState, 0, ExposureState_c0_states },
+			{ ResourceID::ExposureHistogram, 0, ExposureHistogram_c0_states },
 			{ ResourceID::axis_id_buffer, 0, axis_id_buffer_c0_states },
 			{ ResourceID::ColorOutput, 0, ColorOutput_c0_states },
 			{ ResourceID::VoxelDebug, 0, VoxelDebug_c0_states },
@@ -2358,7 +2387,24 @@ namespace Frame
 			{ PassID::VSM_DebugClassifyOverlay, 0 },
 			{ PassID::VSM_ShadowResolve, 0 },
 		};
+		static inline const FrameGraph::PassRef Bloom_0_prev[] = {
+			{ PassID::DDGIDebug, 0 },
+			{ PassID::FSR, 0 },
+			{ PassID::NRD_IndirectCombine, 0 },
+			{ PassID::NRD_ShadowCombine, 0 },
+			{ PassID::ReflCombine, 0 },
+			{ PassID::ResultCreation, 0 },
+			{ PassID::SMAA, 0 },
+			{ PassID::Sky, 0 },
+			{ PassID::TranslucentRTX, 0 },
+			{ PassID::UpscalingDLSS, 0 },
+			{ PassID::UpscalingDLSSRR, 0 },
+			{ PassID::VSM_Combine, 0 },
+			{ PassID::VSM_DebugClassifyOverlay, 0 },
+			{ PassID::VSM_ShadowResolve, 0 },
+		};
 		static inline const FrameGraph::PassRef Tonemap_0_prev[] = {
+			{ PassID::Bloom, 0 },
 			{ PassID::DDGIDebug, 0 },
 			{ PassID::FSR, 0 },
 			{ PassID::NRD_IndirectCombine, 0 },
@@ -2375,6 +2421,7 @@ namespace Frame
 			{ PassID::VSM_ShadowResolve, 0 },
 		};
 		static inline const FrameGraph::PassRef stencil_renderer_0_prev[] = {
+			{ PassID::Bloom, 0 },
 			{ PassID::DDGIDebug, 0 },
 			{ PassID::FSR, 0 },
 			{ PassID::NRD_IndirectCombine, 0 },
@@ -2473,6 +2520,7 @@ namespace Frame
 			{ PassID::FSR, 0, true, FSR_0_prev },
 			{ PassID::UpscalingDLSS, 0, false, UpscalingDLSS_0_prev },
 			{ PassID::UpscalingDLSSRR, 0, false, UpscalingDLSSRR_0_prev },
+			{ PassID::Bloom, 0, false, Bloom_0_prev },
 			{ PassID::Tonemap, 0, false, Tonemap_0_prev },
 			{ PassID::stencil_renderer, 0, false, stencil_renderer_0_prev },
 			{ PassID::RTXColorPass, 0, false, RTXColorPass_0_prev },
@@ -2636,6 +2684,7 @@ namespace Frame
 			graph.add_library_pass<Passes::Post::Upscale::FSR>(PassDefault<Passes::Post::Upscale::FSR>::setup, PassDefault<Passes::Post::Upscale::FSR>::render, (PassDefault<Passes::Post::Upscale::FSR>::flags));
 			graph.add_library_pass<Passes::Post::Upscale::UpscalingDLSS>(PassDefault<Passes::Post::Upscale::UpscalingDLSS>::setup, PassDefault<Passes::Post::Upscale::UpscalingDLSS>::render, (PassDefault<Passes::Post::Upscale::UpscalingDLSS>::flags & ~FrameGraph::PassFlags::Compute));
 			graph.add_library_pass<Passes::Post::Upscale::UpscalingDLSSRR>(PassDefault<Passes::Post::Upscale::UpscalingDLSSRR>::setup, PassDefault<Passes::Post::Upscale::UpscalingDLSSRR>::render, (PassDefault<Passes::Post::Upscale::UpscalingDLSSRR>::flags & ~FrameGraph::PassFlags::Compute));
+			graph.add_library_pass<Passes::Post::Bloom>(PassDefault<Passes::Post::Bloom>::setup, PassDefault<Passes::Post::Bloom>::render, (PassDefault<Passes::Post::Bloom>::flags & ~FrameGraph::PassFlags::Compute));
 			graph.add_library_pass<Passes::Post::Tonemap>(PassDefault<Passes::Post::Tonemap>::setup, PassDefault<Passes::Post::Tonemap>::render, (PassDefault<Passes::Post::Tonemap>::flags & ~FrameGraph::PassFlags::Compute));
 			// Setup is generated (PassSetupDefault<T>, pass_defaults.h); the owner
 			// only supplies render_func, so that is what gates registration.

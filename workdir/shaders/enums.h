@@ -6,6 +6,16 @@
 // ============================================================================
 #ifndef SIG_ENUMS_H
 #define SIG_ENUMS_H
+namespace Post
+{
+	enum class BloomMode : uint
+	{
+		Sum,
+		Average,
+		Scatter
+	};
+}
+using Post::BloomMode;
 namespace GI
 {
 	namespace DDGI

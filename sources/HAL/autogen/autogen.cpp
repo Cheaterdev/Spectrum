@@ -10,6 +10,9 @@ import HAL;
 std::optional<SlotID> get_slot(std::string_view slot_name)
 {
 	if(slot_name == "TextureRenderer") return SlotID::TextureRenderer;
+	if(slot_name == "BloomDownsample") return SlotID::BloomDownsample;
+	if(slot_name == "BloomUpsample") return SlotID::BloomUpsample;
+	if(slot_name == "BloomComposite") return SlotID::BloomComposite;
 	if(slot_name == "BlueNoise") return SlotID::BlueNoise;
 	if(slot_name == "BRDF") return SlotID::BRDF;
 	if(slot_name == "DDGIInfo") return SlotID::DDGIInfo;
@@ -162,6 +165,12 @@ uint get_table_index(SlotID id)
 {
 
 	if(id == SlotID::TextureRenderer) return Slots::Editor::TextureRenderer::Slot::ID;
+
+	if(id == SlotID::BloomDownsample) return Slots::Post::BloomDownsample::Slot::ID;
+
+	if(id == SlotID::BloomUpsample) return Slots::Post::BloomUpsample::Slot::ID;
+
+	if(id == SlotID::BloomComposite) return Slots::Post::BloomComposite::Slot::ID;
 
 	if(id == SlotID::BlueNoise) return Slots::Utility::BlueNoise::Slot::ID;
 
@@ -458,6 +467,9 @@ uint get_table_index(SlotID id)
 std::string get_slot_name(SlotID id)
 {
 	if(id == SlotID::TextureRenderer) return "TextureRenderer";
+	if(id == SlotID::BloomDownsample) return "BloomDownsample";
+	if(id == SlotID::BloomUpsample) return "BloomUpsample";
+	if(id == SlotID::BloomComposite) return "BloomComposite";
 	if(id == SlotID::BlueNoise) return "BlueNoise";
 	if(id == SlotID::BRDF) return "BRDF";
 	if(id == SlotID::DDGIInfo) return "DDGIInfo";

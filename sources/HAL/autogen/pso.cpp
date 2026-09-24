@@ -37,6 +37,9 @@ void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 	std::vector<task<void>> tasks;
 
 
+	tasks.emplace_back(PSOBase::create<PSOS::Post::BloomDownsample>(device, pso[PSO::BloomDownsample]));
+	tasks.emplace_back(PSOBase::create<PSOS::Post::BloomUpsample>(device, pso[PSO::BloomUpsample]));
+	tasks.emplace_back(PSOBase::create<PSOS::Post::BloomComposite>(device, pso[PSO::BloomComposite]));
 	tasks.emplace_back(PSOBase::create<PSOS::Utility::BlueNoise>(device, pso[PSO::BlueNoise]));
 	tasks.emplace_back(PSOBase::create<PSOS::Environment::BRDF>(device, pso[PSO::BRDF]));
 	tasks.emplace_back(PSOBase::create<PSOS::GI::DDGI::DDGIProbeSelect>(device, pso[PSO::DDGIProbeSelect]));

@@ -29,6 +29,9 @@ export
 
 	enum class PSO: int
 	{
+		BloomDownsample,
+		BloomUpsample,
+		BloomComposite,
 		BlueNoise,
 		BRDF,
 		DDGIProbeSelect,
@@ -170,6 +173,10 @@ export
 	enum class SlotID: unsigned int
 	{
 		TextureRenderer = "TextureRenderer"_crc32,
+		BloomSelectors = "BloomSelectors"_crc32,
+		BloomDownsample = "BloomDownsample"_crc32,
+		BloomUpsample = "BloomUpsample"_crc32,
+		BloomComposite = "BloomComposite"_crc32,
 		BlueNoise = "BlueNoise"_crc32,
 		BRDF = "BRDF"_crc32,
 		DDGIInfo = "DDGIInfo"_crc32,
@@ -371,10 +378,19 @@ export
 		WorkGR_ClassifyPixels_NodeEmulation = "WorkGR_ClassifyPixels_NodeEmulation"_crc32,
 		WorkGR_Shadows_NodeEmulation = "WorkGR_Shadows_NodeEmulation"_crc32
 	};
-	namespace GI
+	namespace Post
 	{
-		namespace DDGI
+		enum class BloomMode : uint
 		{
+			Sum,
+			Average,
+			Scatter
+		};
+	}
+namespace GI
+{
+	namespace DDGI
+	{
 			enum class DDGIControlFlags : uint
 			{
 				CullCoarsestCascade = 1,
@@ -382,8 +398,8 @@ export
 				JitterRays = 4,
 				DisableTraceFeedback = 8
 			};
-		}
 	}
+}
 namespace GI
 {
 	namespace DDGI

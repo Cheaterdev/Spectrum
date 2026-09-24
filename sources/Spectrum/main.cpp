@@ -533,6 +533,7 @@ public:
 		voxel_gi->update_frame(graph);
 		ddgi_update_selectors(graph);
 		tonemap_update_selectors(graph);
+		bloom_update_selectors(graph);
 		stenciler->update_frame(graph);
 
 		{

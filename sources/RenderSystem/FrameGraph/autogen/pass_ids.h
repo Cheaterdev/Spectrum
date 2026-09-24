@@ -12,6 +12,7 @@ namespace FrameGraph
 	{
 		AssetGBuffer,
 		AssetMip,
+		Bloom,
 		BlueNoise,
 		DDGIProbeSelect,
 		DDGIProbeResidencyMark,

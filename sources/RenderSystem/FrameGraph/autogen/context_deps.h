@@ -35,11 +35,12 @@ namespace FrameGraph
 // .prism edit renumbers those enums, a plan from before the edit would not fail
 // to load, it would misapply -- wrong resource, wrong barriers. A plan whose
 // header does not carry this exact value must be rejected.
-constexpr unsigned long long generated_id_space_hash = 6589506129085929180ull;
+constexpr unsigned long long generated_id_space_hash = 6405578004985767924ull;
 
 // One bit per context field, in (struct, field) declaration order.
 enum class ContextFieldID : unsigned int
 {
+	BloomSelectors_enabled,
 	DDGISelectors_enabled,
 	DDGISelectors_show_probes,
 	ViewportContext_frame_size,
@@ -90,6 +91,7 @@ constexpr ContextFieldMask context_field_bit(ContextFieldID f)
 namespace ContextField
 {
 	constexpr ContextFieldMask None = ContextFieldMask{};
+	constexpr ContextFieldMask BloomSelectors_enabled = context_field_bit(ContextFieldID::BloomSelectors_enabled);
 	constexpr ContextFieldMask DDGISelectors_enabled = context_field_bit(ContextFieldID::DDGISelectors_enabled);
 	constexpr ContextFieldMask DDGISelectors_show_probes = context_field_bit(ContextFieldID::DDGISelectors_show_probes);
 	constexpr ContextFieldMask ViewportContext_frame_size = context_field_bit(ContextFieldID::ViewportContext_frame_size);
@@ -159,6 +161,10 @@ static inline const PassContextDeps pass_context_deps[] = {
 		true },
 	{ PassID::AssetMip,
 		  ContextField::None,
+		  ContextField::None,
+		true },
+	{ PassID::Bloom,
+		  ContextField::BloomSelectors_enabled,
 		  ContextField::None,
 		true },
 	{ PassID::BlueNoise,
@@ -307,7 +313,7 @@ static inline const PassContextDeps pass_context_deps[] = {
 		true },
 	{ PassID::Tonemap,
 		  ContextField::TonemapSelectors_enabled,
-		  ContextField::None,
+		  ContextField::BloomSelectors_enabled,
 		true },
 	{ PassID::UI_PreDraw,
 		  ContextField::UIState_UI_Passes_needed,

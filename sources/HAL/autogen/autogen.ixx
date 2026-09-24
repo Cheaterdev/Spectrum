@@ -29,6 +29,13 @@ export import :Autogen.Layouts.Frame.DefaultLayout;
 export import :Autogen.Layouts.Frame.NoneLayout;
 export import :Autogen.Slots.Editor.TextureRenderer;
 export import :Autogen.Tables.Editor.TextureRenderer;
+export import :Autogen.Tables.Post.BloomSelectors;
+export import :Autogen.Slots.Post.BloomDownsample;
+export import :Autogen.Tables.Post.BloomDownsample;
+export import :Autogen.Slots.Post.BloomUpsample;
+export import :Autogen.Tables.Post.BloomUpsample;
+export import :Autogen.Slots.Post.BloomComposite;
+export import :Autogen.Tables.Post.BloomComposite;
 export import :Autogen.Slots.Utility.BlueNoise;
 export import :Autogen.Tables.Utility.BlueNoise;
 export import :Autogen.Slots.Environment.BRDF;
@@ -375,6 +382,9 @@ export import :Autogen.Tables.Dev.WorkGR_Shadows_NodeEmulation;
 // re-exported. A bare `import` here compiles HAL fine and fails only in the
 // importing layer, with "RT is not a class or namespace name".
 
+export import :Autogen.PSO.Post.BloomDownsample;
+export import :Autogen.PSO.Post.BloomUpsample;
+export import :Autogen.PSO.Post.BloomComposite;
 export import :Autogen.PSO.Utility.BlueNoise;
 export import :Autogen.PSO.Environment.BRDF;
 export import :Autogen.PSO.GI.DDGI.DDGIProbeSelect;

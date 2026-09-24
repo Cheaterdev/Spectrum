@@ -49,6 +49,15 @@ FrameGraph::SetupResult PassSetupDefault<Passes::Editor::AssetMip>::setup(
 }
 
 
+FrameGraph::SetupResult PassDefault<Passes::Post::Bloom>::setup(
+	Passes::Post::Bloom::Context& data, FrameGraph::TaskBuilder& builder)
+{
+	if (!(builder.graph->get_context<Table::Post::BloomSelectors>().enabled))
+		return FrameGraph::SetupResult::Disabled;
+	return FrameGraph::SetupResult::NeedsRender;
+}
+
+
 FrameGraph::SetupResult PassSetupDefault<Passes::Utility::BlueNoise>::setup(
 	Passes::Utility::BlueNoise::Context& data, FrameGraph::TaskBuilder& builder)
 {

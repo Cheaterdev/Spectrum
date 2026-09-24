@@ -14,7 +14,7 @@ namespace Passes
 namespace Post
 {
 
-	class Tonemap : public PassNodeBase
+	class Bloom : public PassNodeBase
 	{
 	public:
 		struct Context
@@ -23,33 +23,16 @@ namespace Post
 
 			Handlers::Texture ResultTexture = ResourceID::ResultTexture;
 
+			Handlers::Texture ResultTextureNew = ResultTexture;
 
-			Handlers::StructuredBuffer<uint> ExposureHistogram = ResourceID::ExposureHistogram;
+			Handlers::Texture BloomDown = ResourceID::BloomDown;
+
+
+			Handlers::Texture BloomUp = ResourceID::BloomUp;
 
 
 			Handlers::StructuredBuffer<float4> ExposureState = ResourceID::ExposureState;
 
-
-			// Resources this pass always needs whenever it runs, generated from
-			// each field's own [Always=X] annotation (further gated by [Optional=X]
-			// when present -- a raw bool expression, e.g. builder.exists(...) or a
-			// context-read flag, deciding whether this specific field is actually
-			// needed this frame), or, for a View-typed field (e.g. `GBuffer
-			// gbuffer;`), every leaf the View itself marks [Always=X] that this
-			// pass's own [Write=...] on that field doesn't already cover. A field
-			// that ALSO carries [Size]/[Format] (so create_always() below creates
-			// it under its own [Optional] condition) gets the negated condition
-			// here instead -- "need what some other instance/frame already
-			// created" is the complement of "create it this time." Called by
-			// TypedPass::setup() after setup_func returns true - not a
-			// substitute for setup_func's own need()/create() calls for anything
-			// else conditional.
-			static void need_always(Context& data, FrameGraph::TaskBuilder& builder)
-			{
-				builder.need(data.ResultTexture, FrameGraph::ResourceFlags::UnorderedAccess);
-				if (!(!builder.graph->get_context<Table::Post::BloomSelectors>().enabled))
-					builder.need(data.ExposureState, FrameGraph::ResourceFlags::UnorderedAccess | FrameGraph::ResourceFlags::Static);
-			}
 
 			// Resources this pass always creates with a fixed desc, generated from
 			// each field's own [Size]/[Format] annotation (plus [Always] for the
@@ -66,11 +49,11 @@ namespace Post
 			// runtime state.
 			static void create_always(Context& data, FrameGraph::TaskBuilder& builder)
 			{
-				builder.create(data.ExposureHistogram, { 256 }, FrameGraph::ResourceFlags::UnorderedAccess);
-				if (!builder.graph->get_context<Table::Post::BloomSelectors>().enabled)
-				{
+				builder.need(data.ResultTexture, FrameGraph::ResourceFlags::Read);
+				builder.recreate(data.ResultTextureNew, FrameGraph::ResourceFlags::UnorderedAccess);
+				builder.create(data.BloomDown, { ivec3(builder.graph->get_context<Table::Frame::ViewportContext>().upscale_size / 2, 0), HAL::Format::R16G16B16A16_FLOAT, 1, 0 }, FrameGraph::ResourceFlags::UnorderedAccess);
+				builder.create(data.BloomUp, { ivec3(builder.graph->get_context<Table::Frame::ViewportContext>().upscale_size / 2, 0), HAL::Format::R16G16B16A16_FLOAT, 1, 0 }, FrameGraph::ResourceFlags::UnorderedAccess);
 				builder.create(data.ExposureState, { 1 }, FrameGraph::ResourceFlags::UnorderedAccess | FrameGraph::ResourceFlags::Static);
-				}
 			}
 			// Which chain link each handler field resolved to, one named slot per
 			// field. Filled from a live frame's finished Context and applied on a
@@ -80,14 +63,18 @@ namespace Post
 			struct Cache
 			{
 				FrameGraph::ChainIndex ResultTexture = FrameGraph::ChainIndex::Unresolved;
-				FrameGraph::ChainIndex ExposureHistogram = FrameGraph::ChainIndex::Unresolved;
+				FrameGraph::ChainIndex ResultTextureNew = FrameGraph::ChainIndex::Unresolved;
+				FrameGraph::ChainIndex BloomDown = FrameGraph::ChainIndex::Unresolved;
+				FrameGraph::ChainIndex BloomUp = FrameGraph::ChainIndex::Unresolved;
 				FrameGraph::ChainIndex ExposureState = FrameGraph::ChainIndex::Unresolved;
 			};
 
 			static void save_to_cache([[maybe_unused]] const Context& data, [[maybe_unused]] Cache& cache)
 			{
 				cache.ResultTexture = FrameGraph::TaskBuilder::cache_slot(data.ResultTexture, ResourceID::ResultTexture);
-				cache.ExposureHistogram = FrameGraph::TaskBuilder::cache_slot(data.ExposureHistogram, ResourceID::ExposureHistogram);
+				cache.ResultTextureNew = FrameGraph::TaskBuilder::cache_slot(data.ResultTextureNew, ResourceID::ResultTexture);
+				cache.BloomDown = FrameGraph::TaskBuilder::cache_slot(data.BloomDown, ResourceID::BloomDown);
+				cache.BloomUp = FrameGraph::TaskBuilder::cache_slot(data.BloomUp, ResourceID::BloomUp);
 				cache.ExposureState = FrameGraph::TaskBuilder::cache_slot(data.ExposureState, ResourceID::ExposureState);
 			}
 
@@ -101,19 +88,20 @@ namespace Post
 			static void load_from_cache([[maybe_unused]] Context& data, [[maybe_unused]] const Cache& cache, [[maybe_unused]] const FrameGraph::TaskBuilder& builder)
 			{
 				builder.load(data.ResultTexture, ResourceID::ResultTexture, cache.ResultTexture);
-				builder.create_versioned(data.ExposureHistogram, cache.ExposureHistogram, { 256 });
-				if (!builder.graph->get_context<Table::Post::BloomSelectors>().enabled)
+				builder.load(data.ResultTextureNew, ResourceID::ResultTexture, cache.ResultTextureNew);
+				builder.create_versioned(data.BloomDown, cache.BloomDown, { ivec3(builder.graph->get_context<Table::Frame::ViewportContext>().upscale_size / 2, 0), HAL::Format::R16G16B16A16_FLOAT, 1, 0 });
+				builder.create_versioned(data.BloomUp, cache.BloomUp, { ivec3(builder.graph->get_context<Table::Frame::ViewportContext>().upscale_size / 2, 0), HAL::Format::R16G16B16A16_FLOAT, 1, 0 });
 				builder.create_versioned(data.ExposureState, cache.ExposureState, { 1 });
-				else
-					builder.load(data.ExposureState, ResourceID::ExposureState, cache.ExposureState);
 			}
 
 			// Resources this pass touches, in declaration order, each paired with
 			// whether the pass writes it (own [Write], or the view usage's
 			// [Write] / [Write = {leaves...}] for resources inside a view group).
 			static inline const FrameGraph::ResourceAccess resource_accesses[] = {
+				{ ResourceID::ResultTexture, false },
 				{ ResourceID::ResultTexture, true },
-				{ ResourceID::ExposureHistogram, true },
+				{ ResourceID::BloomDown, true },
+				{ ResourceID::BloomUp, true },
 				{ ResourceID::ExposureState, true },
 			};
 			static constexpr uint resource_count = std::size(resource_accesses);
@@ -125,9 +113,9 @@ namespace Post
 			return std::span<const FrameGraph::ResourceAccess>(Context::resource_accesses, Context::resource_count);
 		}
 
-		static constexpr LiteralWStr Name{L"Tonemap"};
+		static constexpr LiteralWStr Name{L"Bloom"};
 
-		static constexpr PassID ID = PassID::Tonemap;
+		static constexpr PassID ID = PassID::Bloom;
 
 
 		using setup_func_type = std::function<FrameGraph::SetupResult(Context&, FrameGraph::TaskBuilder&)>;
