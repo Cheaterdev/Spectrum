@@ -2022,6 +2022,53 @@ public:
 					add->add_item("Material");
 					add->add_item("Sound");
 					//->get_menu()->add_item("12454");
+
+					// Text-stack playground: an unfiltered edit_text (full Unicode, undo,
+					// word selection) plus a label mirroring what's typed into it.
+					auto test = menu->add_item("Test")->get_menu();
+					test->add_item("Editor")->on_click = [this](GUI::Elements::menu_list_element::ptr elem)
+						{
+							GUI::base::ptr page(new GUI::base());
+							page->docking = GUI::dock::FILL;
+							page->padding = { 10, 10, 10, 10 };
+
+							auto hint = std::make_shared<GUI::Elements::label>();
+							hint->docking = GUI::dock::TOP;
+							hint->text = "Type anything. Double-click selects a word, triple-click the line; Ctrl+Z / Ctrl+Y undo and redo.";
+							page->add_child(hint);
+
+							auto editor = std::make_shared<GUI::Elements::edit_text>();
+							editor->docking = GUI::dock::TOP;
+							editor->size = { 420, 30 };
+							editor->margin = { 0, 8, 0, 8 };
+							editor->placeholder = "Type here...";
+							editor->set_text("Hello, \xD0\x9F\xD1\x80\xD0\xB8\xD0\xB2\xD0\xB5\xD1\x82, \xD9\x85\xD8\xB1\xD8\xAD\xD8\xA8\xD8\xA7 \xF0\x9F\x98\x80");
+							page->add_child(editor);
+
+							auto mirror = std::make_shared<GUI::Elements::label>();
+							mirror->docking = GUI::dock::TOP;
+							mirror->font_size = 20;
+							mirror->text = editor->get_text();
+							page->add_child(mirror);
+
+							GUI::Elements::label::wptr mirror_weak = mirror;
+							editor->on_change = [mirror_weak](const std::string& text)
+								{
+									if (auto m = mirror_weak.lock())
+										m->text = text;
+								};
+
+							// Second field: a target for dragging text between fields.
+							auto second = std::make_shared<GUI::Elements::edit_text>();
+							second->docking = GUI::dock::TOP;
+							second->size = { 420, 30 };
+							second->margin = { 0, 8, 0, 8 };
+							second->placeholder = "Drag selected text here (hold Ctrl to copy)";
+							page->add_child(second);
+
+							docker->get_tabs()->add_page("Editor test", page);
+						};
+
 					add_child(menu);
 				}
 				{

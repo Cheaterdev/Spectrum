@@ -32,6 +32,7 @@ export namespace Text
     {
         float4   rect;     // pixels, relative to the layout's top-left
         float4   uv;       // normalized (u0, v0, u1, v1)
+        float4   color;    // the run's own paint; multiplied by the draw() tint
         uint32_t atlas;    // index into the engine's atlas textures
         bool     is_color;
     };
@@ -48,9 +49,12 @@ export namespace Text
         float height;
     };
 
+    class Editor;
+
     class Engine : public Singleton<Engine>
     {
         friend class Singleton<Engine>;
+        friend class Editor;
 
         struct Impl;
         std::unique_ptr<Impl> impl;
@@ -78,5 +82,71 @@ export namespace Text
 
         // pos is the layout's top-left in window pixels; quads are clipped to clip.
         void draw(HAL::CommandList::ptr& list, const Layout& layout, vec2 pos, float4 color, sizer clip, vec2 window_size);
+    };
+
+    // Editable rich text (skb_editor): Unicode input, bidi-aware caret movement,
+    // mouse selection with double/triple click, undo/redo. Every call must come
+    // from the UI tree-walk thread, like Engine::build. Positions are logical
+    // units relative to the editor's top-left; offsets are codepoints.
+    class Editor
+    {
+        struct Impl;
+        std::unique_ptr<Impl> impl;
+
+    public:
+        enum class Key { Left, Right, Up, Down, Home, End, Backspace, Delete, Enter };
+
+        explicit Editor(Style style);
+        ~Editor();
+
+        // Skribidi's input filter callback holds the address of `filter`.
+        Editor(const Editor&) = delete;
+        Editor& operator=(const Editor&) = delete;
+
+        // Replaces the text and clears undo history. Does not count as a change.
+        void        set_text(std::string_view utf8);
+        std::string get_text() const;
+
+        // True once after the text changed through editing (typing, paste, undo...).
+        bool take_changed();
+
+        void key(Key key, bool shift, bool ctrl);
+        void insert(char32_t codepoint);
+        void insert(std::string_view utf8);
+
+        bool        has_selection() const;
+        std::string get_selected_text() const;
+        void        delete_selection();
+        void        select_all();
+        void        select_none();
+
+        void undo();
+        void redo();
+        bool can_undo() const;
+        bool can_redo() const;
+
+        // time_seconds lets the editor detect double and triple clicks.
+        void mouse_click(vec2 pos, bool shift, double time_seconds);
+        void mouse_drag(vec2 pos);
+
+        // Drag-and-drop of the selection (skb_editor only does drag-to-select).
+        bool  selection_contains(vec2 pos) const;
+        Caret caret_at(vec2 pos) const;
+        // Moves (or copies) the selected text to the caret position under pos,
+        // as one undo step, and leaves the dropped text selected.
+        void  move_selection(vec2 pos, bool copy);
+        // Inserts utf8 (dropped from elsewhere) at the caret position under pos,
+        // as one undo step, and leaves it selected.
+        void  drop_text(vec2 pos, std::string_view utf8);
+
+        // Codepoints for which this returns false never enter the text, whether
+        // typed or pasted.
+        std::function<bool(char32_t)> filter;
+
+        // Glyph quads at scale pixels per logical unit; requests missing glyphs.
+        void build(float scale, Layout& out);
+
+        Caret              caret() const;
+        std::vector<float4> selection_rects() const;   // (x0, y0, x1, y1)
     };
 }

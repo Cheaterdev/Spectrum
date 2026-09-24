@@ -81,6 +81,83 @@ namespace Text
             return skb_layout_cache_get_utf8(layouts, temp, &params, utf8.data(), (int32_t)utf8.size(), attribute_set);
         }
 
+        // Appends glyph quads for layout, placed at offset (logical units) and
+        // rasterized at scale pixels per logical unit. Caller holds m.
+        void emit_layout(const skb_layout_t* layout, vec2 offset, float scale, std::vector<Quad>& out)
+        {
+            PROFILE(L"text_request_glyphs");
+            const skb_layout_params_t* params = skb_layout_get_params(layout);
+            const skb_layout_line_t*   lines  = skb_layout_get_lines(layout);
+            const skb_layout_run_t*    runs   = skb_layout_get_layout_runs(layout);
+            const skb_glyph_t*         glyphs = skb_layout_get_glyphs(layout);
+
+            for (int32_t li = 0; li < skb_layout_get_lines_count(layout); li++)
+            {
+                const auto& line = lines[li];
+                for (int32_t ri = line.layout_run_range.start; ri < line.layout_run_range.end; ri++)
+                {
+                    const auto& run = runs[ri];
+                    if (run.type != SKB_CONTENT_RUN_UTF8 && run.type != SKB_CONTENT_RUN_UTF32)
+                        continue;
+
+                    // A run with no paint attribute of its own draws in the draw() tint.
+                    float4 run_color(1, 1, 1, 1);
+                    const skb_attribute_paint_t paint = skb_attributes_get_paint(SKB_PAINT_TEXT, SKB_PAINT_STATE_DEFAULT,
+                        skb_layout_get_layout_run_attributes(layout, &run), params->attribute_collection);
+                    if (paint.paint_tag == SKB_PAINT_TEXT)
+                        run_color = float4(paint.color.r, paint.color.g, paint.color.b, paint.color.a) / 255.0f;
+
+                    for (int32_t gi = run.glyph_range.start; gi < run.glyph_range.end; gi++)
+                    {
+                        const auto& glyph = glyphs[gi];
+                        const skb_quad_t q = skb_image_atlas_get_glyph_quad(atlas,
+                            glyph.offset_x + offset.x, glyph.offset_y + offset.y, scale,
+                            fonts, run.font_handle, glyph.gid, run.font_size,
+                            skb_color_t{ 255, 255, 255, 255 }, SKB_RASTERIZE_ALPHA_MASK);
+
+                        if (q.flags & SKB_QUAD_IS_EMPTY)
+                            continue;
+
+                        const skb_image_t* image = skb_image_atlas_get_texture(atlas, q.texture_idx);
+                        if (!image) continue;
+
+                        const float w = (float)image->width;
+                        const float h = (float)image->height;
+
+                        // geom is in logical units; the bitmap was rasterized for scale.
+                        float x0 = q.geom.x * scale, y0 = q.geom.y * scale;
+                        const float gw = q.geom.width * scale, gh = q.geom.height * scale;
+
+                        // Glyphs sit at subpixel pen positions: snap the ones drawn 1:1
+                        // with their bitmap to whole pixels so they sample texel centers.
+                        // Scaled ones (non-integer size) stay fractional and rely on
+                        // bilinear filtering instead.
+                        if (std::abs(gw - q.texture.width) < 0.01f && std::abs(gh - q.texture.height) < 0.01f)
+                        {
+                            x0 = std::round(x0);
+                            y0 = std::round(y0);
+                        }
+
+                        Quad quad;
+                        quad.rect     = float4(x0, y0, x0 + gw, y0 + gh);
+                        quad.uv       = float4(q.texture.x / w, q.texture.y / h, (q.texture.x + q.texture.width) / w, (q.texture.y + q.texture.height) / h);
+                        quad.color    = run_color;
+                        quad.atlas    = q.texture_idx;
+                        quad.is_color = (q.flags & SKB_QUAD_IS_COLOR) != 0;
+                        out.push_back(quad);
+                    }
+                }
+            }
+        }
+
+        // Caller holds m.
+        void rasterize_missing()
+        {
+            PROFILE(L"text_rasterize");
+            if (skb_image_atlas_rasterize_missing_items(atlas, temp, rasterizer))
+                pending_upload = true;
+        }
+
         // Called by Skribidi from inside atlas requests, so already under m.
         static void on_create_texture(skb_image_atlas_t* atlas, uint8_t texture_idx, void* context)
         {
@@ -193,68 +270,11 @@ namespace Text
         const skb_layout_t* layout = impl->get_layout(utf8, style);
         if (!layout) return;
 
-        {
-            PROFILE(L"text_request_glyphs");
-            const skb_rect2_t bounds = skb_layout_get_bounds(layout);
-            out.size = vec2(bounds.width, bounds.height);
+        const skb_rect2_t bounds = skb_layout_get_bounds(layout);
+        out.size = vec2(bounds.width, bounds.height);
 
-            const skb_layout_line_t* lines  = skb_layout_get_lines(layout);
-            const skb_layout_run_t*  runs   = skb_layout_get_layout_runs(layout);
-            const skb_glyph_t*       glyphs = skb_layout_get_glyphs(layout);
-
-            for (int32_t li = 0; li < skb_layout_get_lines_count(layout); li++)
-            {
-                const auto& line = lines[li];
-                for (int32_t ri = line.layout_run_range.start; ri < line.layout_run_range.end; ri++)
-                {
-                    const auto& run = runs[ri];
-                    if (run.type != SKB_CONTENT_RUN_UTF8 && run.type != SKB_CONTENT_RUN_UTF32)
-                        continue;
-
-                    for (int32_t gi = run.glyph_range.start; gi < run.glyph_range.end; gi++)
-                    {
-                        const auto& glyph = glyphs[gi];
-                        const skb_quad_t q = skb_image_atlas_get_glyph_quad(impl->atlas,
-                            glyph.offset_x - bounds.x, glyph.offset_y - bounds.y, 1.0f,
-                            impl->fonts, run.font_handle, glyph.gid, run.font_size,
-                            skb_color_t{ 255, 255, 255, 255 }, SKB_RASTERIZE_ALPHA_MASK);
-
-                        if (q.flags & SKB_QUAD_IS_EMPTY)
-                            continue;
-
-                        const skb_image_t* image = skb_image_atlas_get_texture(impl->atlas, q.texture_idx);
-                        if (!image) continue;
-
-                        const float w = (float)image->width;
-                        const float h = (float)image->height;
-
-                        // Glyphs placed at subpixel pen positions: snap the ones drawn
-                        // 1:1 with their bitmap to whole pixels so they sample texel
-                        // centers. Scaled ones (non-integer font size) stay fractional
-                        // and rely on bilinear filtering instead.
-                        float x0 = q.geom.x, y0 = q.geom.y;
-                        if (std::abs(q.geom.width - q.texture.width) < 0.01f && std::abs(q.geom.height - q.texture.height) < 0.01f)
-                        {
-                            x0 = std::round(x0);
-                            y0 = std::round(y0);
-                        }
-
-                        Quad quad;
-                        quad.rect     = float4(x0, y0, x0 + q.geom.width, y0 + q.geom.height);
-                        quad.uv       = float4(q.texture.x / w, q.texture.y / h, (q.texture.x + q.texture.width) / w, (q.texture.y + q.texture.height) / h);
-                        quad.atlas    = q.texture_idx;
-                        quad.is_color = (q.flags & SKB_QUAD_IS_COLOR) != 0;
-                        out.quads.push_back(quad);
-                    }
-                }
-            }
-        }
-
-        {
-            PROFILE(L"text_rasterize");
-            if (skb_image_atlas_rasterize_missing_items(impl->atlas, impl->temp, impl->rasterizer))
-                impl->pending_upload = true;
-        }
+        impl->emit_layout(layout, vec2(-bounds.x, -bounds.y), 1.0f, out.quads);
+        impl->rasterize_missing();
     }
 
     bool Engine::has_pending_upload()
@@ -340,7 +360,7 @@ namespace Text
                 Table::UI::Text::GlyphQuad g;
                 g.pos      = float4(to_ndc_x(x0), to_ndc_y(y0), to_ndc_x(x1), to_ndc_y(y1));
                 g.uv       = float4(u0, v0, u1, v1);
-                g.color    = color;
+                g.color    = color * q.color;
                 g.atlas    = q.atlas;
                 g.is_color = q.is_color ? 1 : 0;
                 gpu_quads.push_back(g);
@@ -371,5 +391,364 @@ namespace Text
 
             graphics.draw(UINT(gpu_quads.size() * 6), 0);
         }
+    }
+
+    // ------------------------------------------------------------------------
+    //  Editor
+    // ------------------------------------------------------------------------
+
+    namespace
+    {
+        // SKB_CURRENT_SELECTION / SKB_CURRENT_SELECTION_END are macros and don't
+        // cross the module boundary; these are their values.
+        constexpr skb_text_position_t current_selection_end = { std::numeric_limits<int32_t>::min(), SKB_AFFINITY_NONE };
+        constexpr skb_text_range_t    current_selection     = { current_selection_end, current_selection_end };
+    }
+
+    struct Editor::Impl
+    {
+        skb_editor_t* editor = nullptr;
+
+        // Referenced by the editor's attribute sets, so they live as long as it does.
+        skb_attribute_t paragraph_attributes[2];
+
+        bool changed         = false;
+        bool suppress_change = false;
+
+        static void on_text_change(skb_editor_t*, skb_editor_text_change_reason_t, void* context)
+        {
+            auto self = static_cast<Editor::Impl*>(context);
+            if (!self->suppress_change)
+                self->changed = true;
+        }
+
+        static bool rejects(uint32_t codepoint, int32_t, int32_t, void* context)
+        {
+            return !(*static_cast<std::function<bool(char32_t)>*>(context))(codepoint);
+        }
+
+        static void on_input(skb_editor_t*, skb_rich_text_t* input_text, skb_text_range_t, void* context)
+        {
+            auto filter = static_cast<std::function<bool(char32_t)>*>(context);
+            if (*filter)
+                skb_rich_text_remove_if(input_text, &Impl::rejects, filter);
+        }
+    };
+
+    Editor::Editor(Style style) : impl(std::make_unique<Impl>())
+    {
+        auto& engine = *Engine::get().impl;
+        std::lock_guard<std::mutex> lock(engine.m);
+
+        impl->paragraph_attributes[0] = skb_attribute_make_font_size(style.size);
+        impl->paragraph_attributes[1] = skb_attribute_make_font_weight(to_skb(style.weight));
+
+        skb_editor_params_t params = {};
+        params.font_collection = engine.fonts;
+        params.paragraph_attributes.attributes       = impl->paragraph_attributes;
+        params.paragraph_attributes.attributes_count = (int32_t)std::size(impl->paragraph_attributes);
+        params.caret_mode      = SKB_CARET_MODE_SIMPLE;   // Windows-style: one grapheme per step
+        params.max_undo_levels = 100;
+
+        impl->editor = skb_editor_create(&params);
+        skb_editor_set_on_text_change_callback(impl->editor, &Impl::on_text_change, impl.get());
+        skb_editor_set_input_filter_callback(impl->editor, &Impl::on_input, &filter);
+
+        // A new editor has zero paragraphs, and skb_rich_layout_get_text_range_bounds
+        // (unlike its siblings) doesn't guard that case: it reads paragraphs[-1].
+        // set_text always creates one, even for empty text.
+        impl->suppress_change = true;
+        skb_editor_set_text_utf8(impl->editor, engine.temp, "", 0);
+        impl->suppress_change = false;
+    }
+
+    Editor::~Editor()
+    {
+        auto& engine = *Engine::get().impl;
+        std::lock_guard<std::mutex> lock(engine.m);
+        skb_editor_destroy(impl->editor);
+    }
+
+    void Editor::set_text(std::string_view utf8)
+    {
+        auto& engine = *Engine::get().impl;
+        std::lock_guard<std::mutex> lock(engine.m);
+
+        impl->suppress_change = true;
+        skb_editor_set_text_utf8(impl->editor, engine.temp, utf8.data(), (int32_t)utf8.size());
+        impl->suppress_change = false;
+    }
+
+    std::string Editor::get_text() const
+    {
+        auto& engine = *Engine::get().impl;
+        std::lock_guard<std::mutex> lock(engine.m);
+
+        std::string text(skb_editor_get_text_utf8_count(impl->editor), '\0');
+        skb_editor_get_text_utf8(impl->editor, text.data(), (int32_t)text.size());
+        return text;
+    }
+
+    bool Editor::take_changed()
+    {
+        return std::exchange(impl->changed, false);
+    }
+
+    void Editor::key(Key key, bool shift, bool ctrl)
+    {
+        skb_editor_key_t skb_key = SKB_KEY_NONE;
+        switch (key)
+        {
+        case Key::Left:      skb_key = SKB_KEY_LEFT; break;
+        case Key::Right:     skb_key = SKB_KEY_RIGHT; break;
+        case Key::Up:        skb_key = SKB_KEY_UP; break;
+        case Key::Down:      skb_key = SKB_KEY_DOWN; break;
+        case Key::Home:      skb_key = SKB_KEY_HOME; break;
+        case Key::End:       skb_key = SKB_KEY_END; break;
+        case Key::Backspace: skb_key = SKB_KEY_BACKSPACE; break;
+        case Key::Delete:    skb_key = SKB_KEY_DELETE; break;
+        case Key::Enter:     skb_key = SKB_KEY_ENTER; break;
+        }
+
+        const uint32_t mods = (shift ? SKB_MOD_SHIFT : 0) | (ctrl ? SKB_MOD_CONTROL : 0);
+
+        auto& engine = *Engine::get().impl;
+        std::lock_guard<std::mutex> lock(engine.m);
+        skb_editor_process_key_pressed(impl->editor, engine.temp, skb_key, mods);
+    }
+
+    void Editor::insert(char32_t codepoint)
+    {
+        auto& engine = *Engine::get().impl;
+        std::lock_guard<std::mutex> lock(engine.m);
+        skb_editor_insert_codepoint(impl->editor, engine.temp, current_selection, codepoint);
+    }
+
+    void Editor::insert(std::string_view utf8)
+    {
+        auto& engine = *Engine::get().impl;
+        std::lock_guard<std::mutex> lock(engine.m);
+        skb_editor_insert_text_utf8(impl->editor, engine.temp, current_selection, utf8.data(), (int32_t)utf8.size());
+    }
+
+    bool Editor::has_selection() const
+    {
+        auto& engine = *Engine::get().impl;
+        std::lock_guard<std::mutex> lock(engine.m);
+
+        const skb_text_range_t selection = skb_editor_get_current_selection(impl->editor);
+        return skb_editor_get_text_offset_from_text_position(impl->editor, selection.start)
+            != skb_editor_get_text_offset_from_text_position(impl->editor, selection.end);
+    }
+
+    std::string Editor::get_selected_text() const
+    {
+        auto& engine = *Engine::get().impl;
+        std::lock_guard<std::mutex> lock(engine.m);
+
+        const skb_text_range_t selection = skb_editor_get_current_selection(impl->editor);
+        std::string text(skb_editor_get_text_utf8_count_in_range(impl->editor, selection), '\0');
+        skb_editor_get_text_utf8_in_range(impl->editor, selection, text.data(), (int32_t)text.size());
+        return text;
+    }
+
+    void Editor::delete_selection()
+    {
+        auto& engine = *Engine::get().impl;
+        std::lock_guard<std::mutex> lock(engine.m);
+        skb_editor_remove(impl->editor, engine.temp, current_selection);
+    }
+
+    void Editor::select_all()
+    {
+        auto& engine = *Engine::get().impl;
+        std::lock_guard<std::mutex> lock(engine.m);
+        skb_editor_select_all(impl->editor);
+    }
+
+    void Editor::select_none()
+    {
+        auto& engine = *Engine::get().impl;
+        std::lock_guard<std::mutex> lock(engine.m);
+        skb_editor_select_none(impl->editor);
+    }
+
+    void Editor::undo()
+    {
+        auto& engine = *Engine::get().impl;
+        std::lock_guard<std::mutex> lock(engine.m);
+        skb_editor_undo(impl->editor, engine.temp);
+    }
+
+    void Editor::redo()
+    {
+        auto& engine = *Engine::get().impl;
+        std::lock_guard<std::mutex> lock(engine.m);
+        skb_editor_redo(impl->editor, engine.temp);
+    }
+
+    bool Editor::can_undo() const
+    {
+        auto& engine = *Engine::get().impl;
+        std::lock_guard<std::mutex> lock(engine.m);
+        return skb_editor_can_undo(impl->editor);
+    }
+
+    bool Editor::can_redo() const
+    {
+        auto& engine = *Engine::get().impl;
+        std::lock_guard<std::mutex> lock(engine.m);
+        return skb_editor_can_redo(impl->editor);
+    }
+
+    void Editor::mouse_click(vec2 pos, bool shift, double time_seconds)
+    {
+        auto& engine = *Engine::get().impl;
+        std::lock_guard<std::mutex> lock(engine.m);
+        skb_editor_process_mouse_click(impl->editor, pos.x, pos.y, shift ? SKB_MOD_SHIFT : 0, time_seconds);
+    }
+
+    void Editor::mouse_drag(vec2 pos)
+    {
+        auto& engine = *Engine::get().impl;
+        std::lock_guard<std::mutex> lock(engine.m);
+        skb_editor_process_mouse_drag(impl->editor, pos.x, pos.y);
+    }
+
+    bool Editor::selection_contains(vec2 pos) const
+    {
+        const auto rects = selection_rects();
+        return std::any_of(rects.begin(), rects.end(), [&](const float4& r)
+            {
+                return pos.x >= r.x && pos.x < r.z && pos.y >= r.y && pos.y < r.w;
+            });
+    }
+
+    Caret Editor::caret_at(vec2 pos) const
+    {
+        auto& engine = *Engine::get().impl;
+        std::lock_guard<std::mutex> lock(engine.m);
+
+        const skb_text_position_t at = skb_editor_hit_test(impl->editor, SKB_MOVEMENT_CARET, pos.x, pos.y);
+        const skb_caret_info_t info = skb_editor_get_caret_info_at(impl->editor, at);
+
+        Caret caret;
+        caret.center = vec2(info.x, info.y + (info.ascender + info.descender) * 0.5f);
+        caret.height = info.descender - info.ascender;
+        return caret;
+    }
+
+    void Editor::move_selection(vec2 pos, bool copy)
+    {
+        auto& engine = *Engine::get().impl;
+        std::lock_guard<std::mutex> lock(engine.m);
+        skb_editor_t* e = impl->editor;
+
+        const skb_text_range_t selection = skb_editor_get_current_selection(e);
+        int32_t start = skb_editor_get_text_offset_from_text_position(e, selection.start);
+        int32_t end   = skb_editor_get_text_offset_from_text_position(e, selection.end);
+        if (start > end) std::swap(start, end);
+        if (start == end) return;
+
+        int32_t drop = skb_editor_get_text_offset_from_text_position(e,
+            skb_editor_hit_test(e, SKB_MOVEMENT_CARET, pos.x, pos.y));
+
+        // Dropping a move back into its own span changes nothing.
+        if (!copy && drop >= start && drop <= end) return;
+
+        std::string moved(skb_editor_get_text_utf8_count_in_range(e, selection), '\0');
+        skb_editor_get_text_utf8_in_range(e, selection, moved.data(), (int32_t)moved.size());
+
+        const int32_t moved_count = end - start;
+        auto at = [](int32_t offset) { return skb_text_position_t{ offset, SKB_AFFINITY_TRAILING }; };
+
+        const int32_t transaction = skb_editor_undo_transaction_begin(e);
+
+        if (!copy)
+        {
+            skb_editor_remove(e, engine.temp, current_selection);
+            // Removal shifts everything after the old span left.
+            if (drop > end)
+                drop -= moved_count;
+        }
+
+        skb_editor_select(e, skb_text_range_t{ at(drop), at(drop) });
+        skb_editor_insert_text_utf8(e, engine.temp, current_selection, moved.data(), (int32_t)moved.size());
+        skb_editor_select(e, skb_text_range_t{ at(drop), at(drop + moved_count) });
+
+        skb_editor_undo_transaction_end(e, transaction);
+    }
+
+    void Editor::drop_text(vec2 pos, std::string_view utf8)
+    {
+        auto& engine = *Engine::get().impl;
+        std::lock_guard<std::mutex> lock(engine.m);
+        skb_editor_t* e = impl->editor;
+
+        const int32_t drop = skb_editor_get_text_offset_from_text_position(e,
+            skb_editor_hit_test(e, SKB_MOVEMENT_CARET, pos.x, pos.y));
+        auto at = [](int32_t offset) { return skb_text_position_t{ offset, SKB_AFFINITY_TRAILING }; };
+
+        const int32_t count_before = skb_editor_get_text_utf32_count(e);
+        const int32_t transaction  = skb_editor_undo_transaction_begin(e);
+
+        skb_editor_select(e, skb_text_range_t{ at(drop), at(drop) });
+        skb_editor_insert_text_utf8(e, engine.temp, current_selection, utf8.data(), (int32_t)utf8.size());
+
+        // Measured rather than counted from utf8: the input filter may have
+        // dropped some of it.
+        const int32_t inserted = skb_editor_get_text_utf32_count(e) - count_before;
+        skb_editor_select(e, skb_text_range_t{ at(drop), at(drop + inserted) });
+
+        skb_editor_undo_transaction_end(e, transaction);
+    }
+
+    void Editor::build(float scale, Layout& out)
+    {
+        auto& engine = *Engine::get().impl;
+        std::lock_guard<std::mutex> lock(engine.m);
+
+        out.quads.clear();
+        out.size = {};
+
+        for (int32_t pi = 0; pi < skb_editor_get_paragraph_count(impl->editor); pi++)
+        {
+            const skb_vec2_t offset = skb_editor_get_paragraph_offset(impl->editor, pi);
+            engine.emit_layout(skb_editor_get_paragraph_layout(impl->editor, pi), vec2(offset.x, offset.y), scale, out.quads);
+        }
+
+        engine.rasterize_missing();
+    }
+
+    Caret Editor::caret() const
+    {
+        auto& engine = *Engine::get().impl;
+        std::lock_guard<std::mutex> lock(engine.m);
+
+        const skb_caret_info_t info = skb_editor_get_caret_info_at(impl->editor, current_selection_end);
+
+        // ascender is negative (above the baseline), descender positive.
+        Caret caret;
+        caret.center = vec2(info.x, info.y + (info.ascender + info.descender) * 0.5f);
+        caret.height = info.descender - info.ascender;
+        return caret;
+    }
+
+    std::vector<float4> Editor::selection_rects() const
+    {
+        auto& engine = *Engine::get().impl;
+        std::lock_guard<std::mutex> lock(engine.m);
+
+        std::vector<float4> rects;
+        if (skb_editor_get_paragraph_count(impl->editor) == 0)
+            return rects;
+
+        skb_editor_iterate_text_range_bounds(impl->editor, current_selection,
+            [](skb_rect2_t r, void* context)
+            {
+                static_cast<std::vector<float4>*>(context)->emplace_back(r.x, r.y, r.x + r.width, r.y + r.height);
+            },
+            &rects);
+        return rects;
     }
 }

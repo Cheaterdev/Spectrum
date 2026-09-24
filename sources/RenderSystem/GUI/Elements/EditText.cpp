@@ -8,17 +8,68 @@ import GUI;
 
 namespace
 {
-	// This class indexes text in bytes while label's caret queries count
-	// codepoints; ASCII keeps the two equal until editing moves to skb_editor.
-	bool is_insertable(char32_t ch)
+	std::string utf16_to_utf8(std::wstring_view s)
 	{
-		return ch >= 0x20 && ch <= 0x7E;
+		if (s.empty()) return {};
+		const int n = WideCharToMultiByte(CP_UTF8, 0, s.data(), (int)s.size(), nullptr, 0, nullptr, nullptr);
+		std::string out(n, '\0');
+		WideCharToMultiByte(CP_UTF8, 0, s.data(), (int)s.size(), out.data(), n, nullptr, nullptr);
+		return out;
 	}
 
-	bool is_word_char(char c)
+	std::wstring utf8_to_utf16(std::string_view s)
 	{
-		return std::isalnum(static_cast<unsigned char>(c)) || c == '_';
+		if (s.empty()) return {};
+		const int n = MultiByteToWideChar(CP_UTF8, 0, s.data(), (int)s.size(), nullptr, 0);
+		std::wstring out(n, L'\0');
+		MultiByteToWideChar(CP_UTF8, 0, s.data(), (int)s.size(), out.data(), n);
+		return out;
 	}
+
+	double now_seconds()
+	{
+		using namespace std::chrono;
+		return duration<double>(steady_clock::now().time_since_epoch()).count();
+	}
+
+	const Text::Style edit_style = { 16, Text::Weight::Light };
+}
+
+GUI::Elements::edit_text::edit_text() : editor(edit_style)
+{
+	clickable = true;
+
+	// Single line: control characters (newlines and tabs included, e.g. from a
+	// paste) never enter the text, whatever the user filter says.
+	editor.filter = [this](char32_t ch) { return ch >= 0x20 && ch != 0x7F && (!filter || filter(ch)); };
+
+	padding = { 5, 5, 5, 5 };
+
+	// Text drags show a preview in the drag holder (generate_container) rather
+	// than a live copy of the whole field.
+	set_package("text");
+	drag_n_drop_copy = false;
+}
+
+// Mouse positions arrive in window pixels, the same space as render bounds;
+// the editor's origin is the content box.
+vec2 GUI::Elements::edit_text::to_editor(vec2 window_pos, float scale)
+{
+	const vec2 origin = vec2(get_render_bounds().pos) + vec2(padding->left, padding->top) * scale;
+	return (window_pos - origin) / scale;
+}
+
+void GUI::Elements::edit_text::set_text(const std::string& t)
+{
+	std::lock_guard<std::mutex> guard(m);
+	editor.set_text(t);
+	text = t;
+}
+
+std::string GUI::Elements::edit_text::get_text()
+{
+	std::lock_guard<std::mutex> guard(m);
+	return text;
 }
 
 void GUI::Elements::edit_text::on_key_action(key_action action, long key, key_mods mods)
@@ -30,18 +81,11 @@ void GUI::Elements::edit_text::on_key_action(key_action action, long key, key_mo
 
 void GUI::Elements::edit_text::on_char(char32_t ch)
 {
+	// Ctrl+letter arrives as a control character too; shortcuts are handled
+	// from the key event instead.
+	if (ch < 0x20 || ch == 0x7F) return;
 	std::lock_guard<std::mutex> guard(m);
 	events.emplace_back(ch);
-}
-
-void GUI::Elements::edit_text::set_text(const std::string& t)
-{
-	std::lock_guard<std::mutex> guard(m);
-	text       = t;
-	cursor_pos = (unsigned int)text.size();
-	anchor_pos = cursor_pos;
-	label_text->text           = text;
-	placeholder_label->visible = text.empty();
 }
 
 bool GUI::Elements::edit_text::on_mouse_action(mouse_action action, mouse_button button, vec2 pos)
@@ -49,15 +93,31 @@ bool GUI::Elements::edit_text::on_mouse_action(mouse_action action, mouse_button
 	std::lock_guard<std::mutex> guard(m);
 	base::on_mouse_action(action, button, pos);
 
+	if (button == mouse_button::RIGHT && action == mouse_action::UP)
+		open_context_menu(pos);
+
 	if (button == mouse_button::LEFT)
 	{
+		using Kind = mouse_input::Kind;
+		const bool was_selecting = mouse_selecting;
+		mouse_selecting = action == mouse_action::DOWN;
+
 		if (action == mouse_action::DOWN)
 		{
-			move_cursor(label_text->get_index(to_text_local(pos)), false);
-			mouse_selecting = true;
+			drag_candidate = editor.selection_contains(to_editor(pos, result_scale));
+			drag_started   = false;
+
+			mouse_input down{ Kind::Down, pos, now_seconds() };
+			down.in_selection = drag_candidate;
+			events.emplace_back(down);
 		}
-		else
-			mouse_selecting = false;
+		else if (was_selecting)
+		{
+			mouse_input up{ action == mouse_action::UP ? Kind::Up : Kind::Cancel, pos };
+			up.after_drag = drag_started;
+			events.emplace_back(up);
+			drag_candidate = false;
+		}
 	}
 
 	focus();
@@ -67,57 +127,338 @@ bool GUI::Elements::edit_text::on_mouse_action(mouse_action action, mouse_button
 bool GUI::Elements::edit_text::on_mouse_move(vec2 pos)
 {
 	std::lock_guard<std::mutex> guard(m);
-	if (mouse_selecting)
-		move_cursor(label_text->get_index(to_text_local(pos)), true);
+	// A press held for drag-and-drop doesn't extend the selection.
+	if (mouse_selecting && !drag_candidate)
+		events.emplace_back(mouse_input{ mouse_input::Kind::Drag, pos });
 	return base::on_mouse_move(pos);
 }
 
-// Mouse positions arrive in window pixels, the same space as render bounds.
-vec2 GUI::Elements::edit_text::to_text_local(vec2 window_pos)
+bool GUI::Elements::edit_text::need_drag_drop()
 {
-	return (window_pos - vec2(label_text->get_render_bounds().pos)) / result_scale;
+	std::lock_guard<std::mutex> guard(m);
+	return drag_candidate;
 }
 
-GUI::Elements::edit_text::edit_text()
+void GUI::Elements::edit_text::on_drag_start()
 {
-	text = "";
-	clickable = true;
-	cursor_pos = 0;
-	anchor_pos = 0;
+	std::lock_guard<std::mutex> guard(m);
+	drag_started = true;
+}
 
-	// Children draw in insertion order; this must precede the labels so the
-	// highlight sits under the text.
-	selection_layer.reset(new base());
-	selection_layer->docking = dock::FILL;
-	add_child(selection_layer);
+// UI thread, at drag start: a faded copy of the dragged text follows the cursor.
+void GUI::Elements::edit_text::generate_container(base::ptr holder)
+{
+	auto preview = std::make_shared<label>();
+	preview->text  = editor.get_selected_text();
+	preview->color = float4(text_color.x, text_color.y, text_color.z, 0.6f);
+	holder->add_child(preview);
+}
 
-	placeholder_label.reset(new label());
-	placeholder_label->text    = placeholder;
-	placeholder_label->color   = rgba8(120, 120, 120, 180);
-	placeholder_label->docking = dock::FILL;
-	placeholder_label->visible = true; // text starts empty, so placeholder is visible
-	add_child(placeholder_label);
+bool GUI::Elements::edit_text::can_accept(drag_n_drop_package::ptr package)
+{
+	return package && package->name == "text";
+}
 
-	label_text.reset(new label());
-	label_text->text    = text;
-	label_text->color   = rgba8(40, 40, 40, 255);
-	label_text->docking = dock::FILL;
-	add_child(label_text);
+void GUI::Elements::edit_text::on_drop_move(drag_n_drop_package::ptr package, vec2 pos)
+{
+	std::lock_guard<std::mutex> guard(m);
+	drop_hover = true;
+	drop_pos   = pos;
+	cursor     = cursor_style::ALL;
+}
 
-	label_cursor.reset(new edit_cursor());
-	add_child(label_cursor);
-	padding = { 5, 5, 5, 5 };
+void GUI::Elements::edit_text::on_drop_leave(drag_n_drop_package::ptr package)
+{
+	std::lock_guard<std::mutex> guard(m);
+	drop_hover = false;
+	cursor     = cursor_style::BEAM;
+}
+
+bool GUI::Elements::edit_text::on_drop(drag_n_drop_package::ptr package, vec2 pos)
+{
+	auto source = std::dynamic_pointer_cast<edit_text>(package->element.lock());
+	if (!source) return false;
+
+	// Mouse events carry no modifiers, and this runs on the UI thread rather
+	// than the window thread GetKeyState() tracks.
+	const bool copy = (GetAsyncKeyState(VK_CONTROL) & 0x8000) != 0;
+
+	std::lock_guard<std::mutex> guard(m);
+	events.emplace_back(drop_input{ pos, source, copy });
+	drop_hover = false;
+	cursor     = cursor_style::BEAM;
+	return true;
+}
+
+// Runs on the UI thread from on_mouse_action, with m held. Items don't edit
+// directly: they queue the same key events their shortcuts produce, so edits
+// still happen on the tree-walk thread through process_key.
+void GUI::Elements::edit_text::open_context_menu(vec2 pos)
+{
+	user_ui->close_menus();
+
+	auto menu = std::make_shared<menu_list>();
+	w_ptr<edit_text> weak = get_ptr<edit_text>();
+
+	auto add = [&](const char* name, long key, bool ctrl)
+		{
+			menu->add_item(name)->on_click = [weak, key, ctrl](menu_list_element::ptr)
+				{
+					if (auto self = weak.lock())
+					{
+						std::lock_guard<std::mutex> guard(self->m);
+						key_mods mods;
+						mods.ctrl = ctrl;
+						self->events.emplace_back(key_input{ key, mods });
+					}
+				};
+		};
+
+	const bool selection = editor.has_selection();
+
+	if (editor.can_undo()) add("Undo", 'Z', true);
+	if (editor.can_redo()) add("Redo", 'Y', true);
+	if (selection)         add("Cut", 'X', true);
+	if (selection)         add("Copy", 'C', true);
+	add("Paste", 'V', true);
+	if (selection)         add("Delete", VK_DELETE, false);
+	add("Select All", 'A', true);
+
+	menu->pos = pos;
+	menu->self_open(user_ui);
+}
+
+void GUI::Elements::edit_text::copy_selection()
+{
+	if (!editor.has_selection() || !user_ui || !user_ui->set_clipboard) return;
+	user_ui->set_clipboard(utf8_to_utf16(editor.get_selected_text()));
+}
+
+void GUI::Elements::edit_text::process_key(long key, key_mods mods)
+{
+	// AltGr arrives as Ctrl+Alt and produces printable WM_CHARs on many layouts,
+	// so it must not be taken for a Ctrl shortcut.
+	const bool ctrl  = mods.ctrl && !mods.alt;
+	const bool shift = mods.shift;
+
+	using Key = Text::Editor::Key;
+	switch (key)
+	{
+	case VK_LEFT:   editor.key(Key::Left, shift, ctrl); return;
+	case VK_RIGHT:  editor.key(Key::Right, shift, ctrl); return;
+	case VK_UP:     editor.key(Key::Up, shift, ctrl); return;
+	case VK_DOWN:   editor.key(Key::Down, shift, ctrl); return;
+	case VK_HOME:   editor.key(Key::Home, shift, ctrl); return;
+	case VK_END:    editor.key(Key::End, shift, ctrl); return;
+	case VK_BACK:   editor.key(Key::Backspace, shift, ctrl); return;
+	case VK_DELETE: editor.key(Key::Delete, shift, ctrl); return;
+	}
+
+	if (!ctrl) return;
+
+	switch (key)
+	{
+	case 'A':
+		editor.select_all();
+		break;
+
+	case 'C':
+		copy_selection();
+		break;
+
+	case 'X':
+		copy_selection();
+		editor.delete_selection();
+		break;
+
+	case 'V':
+		if (user_ui && user_ui->get_clipboard)
+			editor.insert(utf16_to_utf8(user_ui->get_clipboard()));
+		break;
+
+	case 'Z':
+		if (shift) editor.redo(); else editor.undo();
+		break;
+
+	case 'Y':
+		editor.redo();
+		break;
+	}
+}
+
+// The content box in window pixels, without the scroll offset: mouse input
+// arrives in that space, and draw_color adds the offset itself.
+rect GUI::Elements::edit_text::content_rect(Context& c)
+{
+	rect r = get_render_bounds();
+	r.x += padding->left * c.scale;
+	r.y += padding->top * c.scale;
+	r.w -= (padding->left + padding->right) * c.scale;
+	r.h -= (padding->top + padding->bottom) * c.scale;
+	return r;
+}
+
+void GUI::Elements::edit_text::process_events(Context& c)
+{
+	for (auto& e : events)
+	{
+		if (auto k = std::get_if<key_input>(&e))
+			process_key(k->key, k->mods);
+		else if (auto ms = std::get_if<mouse_input>(&e))
+			process_mouse(*ms, to_editor(ms->pos, c.scale));
+		else if (auto d = std::get_if<drop_input>(&e))
+			process_drop(*d, to_editor(d->pos, c.scale));
+		else
+			editor.insert(std::get<char32_t>(e));
+	}
+	events.clear();
+}
+
+void GUI::Elements::edit_text::process_mouse(const mouse_input& e, vec2 pos)
+{
+	using Kind = mouse_input::Kind;
+
+	switch (e.kind)
+	{
+	case Kind::Down:
+		press_held = e.in_selection;
+		press_pos  = pos;
+		press_time = e.time;
+		if (!press_held)
+			editor.mouse_click(pos, false, e.time);
+		break;
+
+	case Kind::Drag:
+		editor.mouse_drag(pos);
+		break;
+
+	case Kind::Up:
+		// Released without a drag-and-drop: replayed with its original time,
+		// so it still counts toward a double-click with the next press.
+		if (press_held && !e.after_drag)
+			editor.mouse_click(press_pos, false, press_time);
+		press_held = false;
+		break;
+
+	case Kind::Cancel:
+		press_held = false;
+		break;
+	}
+}
+
+// Tree-walk thread, like every other editor mutation. The source field is
+// touched from here too, which is safe because both run on this one thread.
+void GUI::Elements::edit_text::process_drop(const drop_input& e, vec2 pos)
+{
+	auto source = e.source.lock();
+	if (!source) return;
+
+	if (source.get() == this)
+	{
+		editor.move_selection(pos, e.copy);
+		return;
+	}
+
+	const std::string dropped = source->editor.get_selected_text();
+	if (dropped.empty()) return;
+
+	editor.drop_text(pos, dropped);
+	if (!e.copy)
+		source->editor.delete_selection();
+}
+
+void GUI::Elements::edit_text::on_pre_render(Context& c)
+{
+	PROFILE(L"edit_text_build");
+
+	bool        changed = false;
+	std::string changed_text;
+	{
+		std::lock_guard<std::mutex> guard(m);
+		process_events(c);
+
+		if (editor.take_changed())
+		{
+			text         = editor.get_text();
+			changed      = true;
+			changed_text = text;
+		}
+
+		showing_placeholder = text.empty() && !placeholder.empty();
+		if (showing_placeholder)
+		{
+			Text::Style s = edit_style;
+			s.size *= c.scale;
+			Text::Engine::get().build(placeholder, s, layout);
+		}
+		else
+			editor.build(c.scale, layout);
+
+		selection     = editor.selection_rects();
+		caret         = editor.caret();
+		caret_visible = is_focused();
+
+		if (drop_hover)
+			drop_caret = editor.caret_at(to_editor(drop_pos, c.scale));
+	}
+
+	if (Text::Engine::get().has_pending_upload())
+		user_ui->pre_draw_infos.emplace_back(this);
+
+	// Outside the lock: handlers commonly write back through set_text().
+	if (changed)
+		on_change(changed_text);
+}
+
+void GUI::Elements::edit_text::pre_draw(HAL::CommandList::ptr list)
+{
+	Text::Engine::get().upload(list);
 }
 
 void GUI::Elements::edit_text::draw(Context& c)
 {
-	process_events();
-	{
-		std::lock_guard<std::mutex> guard(m);
-		update_caret();
-		update_selection();
-	}
 	c.renderer->draw(c, Skin::get().DefaultEditBox.Normal, get_render_bounds());
+
+	std::lock_guard<std::mutex> guard(m);
+	const rect content = content_rect(c);
+	for (auto& s : selection)
+	{
+		rect r;
+		r.pos  = content.pos + vec2(s.x, s.y) * c.scale;
+		r.size = vec2(s.z - s.x, s.w - s.y) * c.scale;
+		c.renderer->draw_color(c, selection_color, r);
+	}
+}
+
+// After draw: the text goes over the selection highlight, the caret over the text.
+void GUI::Elements::edit_text::draw_after(Context& c)
+{
+	std::lock_guard<std::mutex> guard(m);
+
+	const rect content = content_rect(c);
+	rect on_screen = content;
+	on_screen.x += c.offset.x;
+	on_screen.y += c.offset.y;
+
+	const sizer clip = intersect(c.ui_clipping, math::convert(on_screen));
+	if (clip.left >= clip.right || clip.top >= clip.bottom)
+		return;
+
+	// Text is issued directly, not through the batched NinePatch path, so
+	// anything queued ahead of it must reach the list first.
+	c.renderer->flush(c);
+	Text::Engine::get().draw(c.command_list, layout, content.pos + c.offset,
+		showing_placeholder ? placeholder_color : text_color, clip, c.window_size);
+
+	// While dragging a selection the caret shows where it would drop.
+	const Text::Caret& shown = drop_hover ? drop_caret : caret;
+	if (caret_visible || drop_hover)
+	{
+		rect r;
+		r.pos  = content.pos + (shown.center - vec2(1, shown.height / 2)) * c.scale;
+		r.size = vec2(2, shown.height) * c.scale;
+		c.renderer->draw_color(c, caret_color, r);
+	}
 }
 
 void GUI::Elements::edit_text::on_mouse_enter(vec2 pos)
@@ -128,240 +469,4 @@ void GUI::Elements::edit_text::on_mouse_enter(vec2 pos)
 void GUI::Elements::edit_text::on_mouse_leave(vec2 pos)
 {
 	cursor = cursor_style::ARROW;
-}
-
-void GUI::Elements::edit_text::update_caret()
-{
-	label_cursor->visible = is_focused();
-
-	// The label is docked FILL at the top-left of this element's content box,
-	// which is also the origin of child positions, so text-local caret
-	// coordinates are used as-is.
-	label_cursor->pos = label_text->get_caret_pos(cursor_pos) - label_cursor->size.get() / 2;
-}
-
-void GUI::Elements::edit_text::update_selection()
-{
-	size_t used = 0;
-
-	if (has_selection())
-	{
-		const unsigned int end  = std::min<unsigned int>(selection_end(), (unsigned int)text.size());
-		const float        line = label_text->get_line_height();
-
-		// One rect per visual line: the label may have wrapped the selected span.
-		unsigned int run = selection_start();
-		while (run < end)
-		{
-			const vec2 from = label_text->get_caret_pos(run);
-
-			unsigned int next = run + 1;
-			while (next < end && label_text->get_caret_pos(next).y == from.y)
-				++next;
-
-			const vec2 to    = label_text->get_caret_pos(next);
-			const float to_x = (to.y == from.y) ? to.x : label_text->get_caret_pos(next - 1).x + line * 0.5f;
-
-			if (used == selection_rects.size())
-			{
-				auto r = std::make_shared<colored_rect>();
-				r->color = float4(0.25f, 0.5f, 1.0f, 0.35f);
-				selection_layer->add_child(r);
-				selection_rects.push_back(r);
-			}
-
-			auto& r   = selection_rects[used++];
-			r->pos     = vec2(from.x, from.y - line * 0.5f);
-			r->size    = vec2(to_x - from.x, line);
-			r->visible = true;
-
-			run = next;
-		}
-	}
-
-	for (size_t i = used; i < selection_rects.size(); ++i)
-		selection_rects[i]->visible = false;
-}
-
-void GUI::Elements::edit_text::move_cursor(unsigned int pos, bool extend)
-{
-	cursor_pos = std::min<unsigned int>(pos, (unsigned int)text.size());
-	if (!extend)
-		anchor_pos = cursor_pos;
-}
-
-unsigned int GUI::Elements::edit_text::word_left(unsigned int pos) const
-{
-	while (pos > 0 && !is_word_char(text[pos - 1])) --pos;
-	while (pos > 0 && is_word_char(text[pos - 1])) --pos;
-	return pos;
-}
-
-unsigned int GUI::Elements::edit_text::word_right(unsigned int pos) const
-{
-	const unsigned int n = (unsigned int)text.size();
-	while (pos < n && is_word_char(text[pos])) ++pos;
-	while (pos < n && !is_word_char(text[pos])) ++pos;
-	return pos;
-}
-
-void GUI::Elements::edit_text::erase_selection()
-{
-	if (!has_selection()) return;
-
-	const unsigned int start = selection_start();
-	text.erase(start, selection_end() - start);
-	cursor_pos = anchor_pos = start;
-}
-
-void GUI::Elements::edit_text::insert(std::string_view str)
-{
-	std::string accepted;
-	for (char ch : str)
-		if (is_insertable(static_cast<unsigned char>(ch)) && (!filter || filter(ch)))
-			accepted.push_back(ch);
-
-	if (accepted.empty()) return;
-
-	erase_selection();
-	text.insert(cursor_pos, accepted);
-	cursor_pos += (unsigned int)accepted.size();
-	anchor_pos = cursor_pos;
-}
-
-void GUI::Elements::edit_text::copy_selection()
-{
-	if (!has_selection() || !user_ui || !user_ui->set_clipboard) return;
-
-	const unsigned int start = selection_start();
-	user_ui->set_clipboard(convert(std::string_view(text).substr(start, selection_end() - start)));
-}
-
-void GUI::Elements::edit_text::process_key(long key, key_mods mods)
-{
-	// AltGr arrives as Ctrl+Alt and produces printable WM_CHARs on many layouts,
-	// so it must not be taken for a Ctrl shortcut.
-	const bool ctrl  = mods.ctrl && !mods.alt;
-	const bool shift = mods.shift;
-
-	switch (key)
-	{
-	case VK_LEFT:
-		if (has_selection() && !shift)
-			move_cursor(selection_start(), false);
-		else
-			move_cursor(ctrl ? word_left(cursor_pos) : (cursor_pos ? cursor_pos - 1 : 0), shift);
-		return;
-
-	case VK_RIGHT:
-		if (has_selection() && !shift)
-			move_cursor(selection_end(), false);
-		else
-			move_cursor(ctrl ? word_right(cursor_pos) : cursor_pos + 1, shift);
-		return;
-
-	case VK_HOME:
-		move_cursor(0, shift);
-		return;
-
-	case VK_END:
-		move_cursor((unsigned int)text.size(), shift);
-		return;
-
-	case VK_UP:
-	case VK_DOWN:
-	{
-		const float step = key == VK_UP ? -label_text->get_line_height() : label_text->get_line_height();
-		move_cursor(label_text->get_index(label_text->get_caret_pos(cursor_pos) + vec2(0, step)), shift);
-		return;
-	}
-
-	case VK_BACK:
-		if (!has_selection() && cursor_pos > 0)
-			anchor_pos = ctrl ? word_left(cursor_pos) : cursor_pos - 1;
-		erase_selection();
-		return;
-
-	case VK_DELETE:
-		if (!has_selection() && cursor_pos < text.size())
-			anchor_pos = ctrl ? word_right(cursor_pos) : cursor_pos + 1;
-		erase_selection();
-		return;
-	}
-
-	if (!ctrl) return;
-
-	switch (key)
-	{
-	case 'A':
-		anchor_pos = 0;
-		cursor_pos = (unsigned int)text.size();
-		break;
-
-	case 'C':
-		copy_selection();
-		break;
-
-	case 'X':
-		copy_selection();
-		erase_selection();
-		break;
-
-	case 'V':
-		if (user_ui && user_ui->get_clipboard)
-			insert(convert(std::wstring_view(user_ui->get_clipboard())));
-		break;
-	}
-}
-
-void GUI::Elements::edit_text::process_events()
-{
-	bool        changed = false;
-	std::string changed_text;
-
-	{
-		std::lock_guard<std::mutex> guard(m);
-
-		for (auto& e : events)
-		{
-			if (auto k = std::get_if<key_input>(&e))
-				process_key(k->key, k->mods);
-			else
-			{
-				const char32_t ch = std::get<char32_t>(e);
-				if (is_insertable(ch))
-				{
-					const char narrow = static_cast<char>(ch);
-					insert(std::string_view(&narrow, 1));
-				}
-			}
-		}
-		events.clear();
-
-		changed = (label_text->text.get() != text);
-		label_text->text           = text;
-		placeholder_label->text    = placeholder;
-		placeholder_label->visible = text.empty();
-
-		if (changed)
-			changed_text = text;
-	}
-
-	// Outside the lock: handlers commonly write back through set_text().
-	if (changed)
-		on_change(changed_text);
-}
-
-void GUI::Elements::edit_cursor::draw(Context& c)
-{
-	if (!test_local_visible())
-		return;
-
-	c.renderer->draw_color(c, float4(0, 0, 0, 1), get_render_bounds());
-}
-
-GUI::Elements::edit_cursor::edit_cursor()
-{
-	size = { 4, 20 };
-	time = 0;
 }

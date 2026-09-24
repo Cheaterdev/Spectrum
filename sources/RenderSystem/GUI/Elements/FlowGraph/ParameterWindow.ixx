@@ -92,7 +92,7 @@ export namespace GUI
 				// fires per keystroke (edit_text has no commit-on-enter), so an
 				// in-progress partial value like "-" or "1." is expected and just
 				// silently skipped below rather than applied.
-				edit->filter = [](char ch) { return (ch >= '0' && ch <= '9') || ch == '.' || ch == '-'; };
+				edit->filter = [](char32_t ch) { return (ch >= '0' && ch <= '9') || ch == '.' || ch == '-'; };
 				edit->on_change = [&elem](const std::string& text)
 				{
 					try { elem = std::stof(text); } catch (...) {}

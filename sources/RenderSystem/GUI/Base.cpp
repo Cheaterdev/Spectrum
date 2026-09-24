@@ -1609,10 +1609,12 @@ namespace GUI
         for (auto c : dragdrop)
             c->on_dragdrop_start(package);
 
+        // generate_container decides what the holder shows; the default and
+        // tab_button re-parent the element itself (and reset its pos), while
+        // e.g. edit_text only puts a preview of the dragged text there.
         if (!elem->drag_n_drop_copy)
         {
             elem->generate_container(holder);
-            elem->pos = {0, 0};
             holder->size = { 300, 300 };
             user_ui->add_child(holder);
         }
@@ -1708,6 +1710,7 @@ namespace GUI
     void base::generate_container(base::ptr obj)
     {
         obj->add_child(get_ptr());
+        pos = { 0, 0 };
     }
 
     void base::on_pre_render(Context& context)

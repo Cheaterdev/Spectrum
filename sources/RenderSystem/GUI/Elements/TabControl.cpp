@@ -23,6 +23,7 @@ namespace GUI
         {
             obj->add_child(get_ptr());
             obj->add_child(page);
+            pos = { 0, 0 };
         }
 
         void tab_strip::recalculate_tabs()
