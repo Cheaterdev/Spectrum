@@ -20,6 +20,7 @@ export namespace GUI
             bool allow_y = true;
             bool draw_color = false;
             dragger();
+            bool is_dragging() const { return dragging; }
             using ptr = s_ptr<dragger>;
             using wptr = w_ptr<dragger>;
             std::function<void(vec2, vec2)> on_move;

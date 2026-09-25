@@ -11,7 +11,7 @@ export namespace GUI
         class scroll_bar : public base
         {
                 dragger::ptr drag;
-                float track_length();   // room the thumb moves in, inside the padding
+                float track_length();   // room the thumb moves in, inside the padding, logical units
 
             public:
 

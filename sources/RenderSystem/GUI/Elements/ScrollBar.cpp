@@ -3,10 +3,14 @@ import :Renderer;
 
 namespace GUI
 {
+	// In the thumb's logical units, like its pos and size. render_bounds is in
+	// window pixels (logical * result_scale): mixing the two made the thumb
+	// lag the mouse by the UI scale (1.5-2x on a high-DPI display).
 	float Elements::scroll_bar::track_length()
 	{
-		return type == scroll_type::HORIZONTAL ? render_bounds->w - padding->left - padding->right
-		                                       : render_bounds->h - padding->top - padding->bottom;
+		const float scale = drag->result_scale > 0 ? drag->result_scale : 1.0f;
+		return type == scroll_type::HORIZONTAL ? render_bounds->w / scale - padding->left - padding->right
+		                                       : render_bounds->h / scale - padding->top - padding->bottom;
 	}
 
 	// The thumb travels track - thumb, both here and in on_move: with a long
@@ -30,15 +34,22 @@ namespace GUI
 		const float thumb = std::min(track, std::max(minimal, track * fraction));
 		const float pos   = (track - thumb) * t;
 
+		// While the thumb is held, the drag owns its position. The dragger moves
+		// it incrementally (pos += mouse delta), and an owner that reports back
+		// a frame later (edit_text syncs through run_on_ui) would set it to
+		// where it was a move ago, dropping part of every delta: the thumb
+		// fell behind the mouse.
+		const bool held = drag->is_dragging();
+
 		if (horizontal)
 		{
 			drag->size = { thumb, drag->size->y };
-			drag->pos  = { pos, drag->pos->y };
+			if (!held) drag->pos = { pos, drag->pos->y };
 		}
 		else
 		{
 			drag->size = { drag->size->x, thumb };
-			drag->pos  = { drag->pos->x, pos };
+			if (!held) drag->pos = { drag->pos->x, pos };
 		}
 
 		visible = fraction < 1;
