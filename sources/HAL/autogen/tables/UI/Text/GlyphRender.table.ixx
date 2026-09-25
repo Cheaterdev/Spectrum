@@ -22,19 +22,23 @@ export namespace Table
 			struct GlyphRender
 			{
 				static constexpr SlotID ID = SlotID::GlyphRender;
+				uint raw_output;
 				HLSL::StructuredBuffer<Table::UI::Text::GlyphQuad> quads;
 				std::vector<HLSL::Texture2D<float4>> textures;
 				HLSL::StructuredBuffer<Table::UI::Text::GlyphQuad>& GetQuads() { return quads; }
+				uint& GetRaw_output() { return raw_output; }
 				std::vector<HLSL::Texture2D<float4>>& GetTextures() { return textures; }
 				static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 				template<class Compiler>
 				void compile(Compiler& compiler) const
 				{
+					compiler.compile(raw_output, "GlyphRender::raw_output");
 					compiler.compile(quads, "GlyphRender::quads");
 					compiler.compile_auto(textures, "GlyphRender::textures");
 				}
 				struct Compiled
 				{
+					uint raw_output; // uint
 					uint quads; // StructuredBuffer<GlyphQuad>
 					uint textures; // Texture2D<float4>
 
@@ -42,6 +46,7 @@ export namespace Table
 					private:
 					SERIALIZE()
 					{
+						ar& NVP(raw_output);
 					}
 
 
@@ -54,6 +59,7 @@ export namespace Table
 				private:
 				SERIALIZE()
 				{
+					ar& NVP(raw_output);
 				}
 
 			};

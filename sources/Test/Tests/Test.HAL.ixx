@@ -15,7 +15,6 @@ import Core;
 import HAL;
 import Graphics;
 import GUI;
-import TextSystem;
 SETUP_CATEGORY(Core.HAL, []() {
 	if (!GraphicsSystem::create())
 		Test::TestRegistry::Instance().SkipCategory("Core.HAL", "no suitable GPU device found");

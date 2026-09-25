@@ -122,7 +122,12 @@ export namespace Text
         void upload(HAL::CommandList::ptr& list);
 
         // pos is the layout's top-left in window pixels; quads are clipped to clip.
-        void draw(HAL::CommandList::ptr& list, const Layout& layout, vec2 pos, float4 color, sizer clip, vec2 window_size);
+        // Draws into whatever render target is bound (any blendable format).
+        // raw_output writes the sRGB color as is, for off-screen targets such as
+        // asset previews; otherwise it goes through ui_output() for the scRGB
+        // swapchain, which needs the UI pass's DisplayOutput bound.
+        void draw(HAL::CommandList::ptr& list, const Layout& layout, vec2 pos, float4 color, sizer clip, vec2 window_size,
+                  bool raw_output = false);
     };
 
     // A compiler message pinned to the text: drawn as a wavy underline plus an

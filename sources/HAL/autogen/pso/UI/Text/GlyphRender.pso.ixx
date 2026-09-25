@@ -21,18 +21,22 @@ export namespace PSOS
 			struct GlyphRender: public PSOBase
 			{
 				struct Keys {
+					KeyValue<Underlying<HAL::Format>, NonNullable, ALL_RT_BLENDING_FORMATS> Format;
 					GEN_DEF_COMP(Keys);
 				private:
 					SERIALIZE()
 					{
+						ar&NVP(Format);
 					}
 				};
 
-				GEN_GRAPHICS_PSO(GlyphRender)
+				GEN_GRAPHICS_PSO(GlyphRender, Format)
+				GEN_KEY(Format, true);
 
 
 				SimplePSO init_pso(Keys & key, std::function<void(SimplePSO&, Keys&)> f)
 				{
+					static const ShaderDefine<&Keys::Format,&SimpleGraphicsPSO::pixel> Format = "Format";
 
 
 					SimplePSO mpso("GlyphRender");
@@ -48,8 +52,9 @@ export namespace PSOS
 					mpso.pixel.entry_point = "PS";
 					mpso.pixel.flags = HAL::ShaderOptions::None;
 			
+					Format.Apply(mpso, key);
 
-					mpso.rtv_formats = { HAL::Format::R16G16B16A16_FLOAT };	
+					mpso.rtv_formats = { Format.get_value(mpso, key) };	
 					mpso.blend = { HAL::Blends::AlphaBlend };
 
 					mpso.cull =HAL::CullMode::None;

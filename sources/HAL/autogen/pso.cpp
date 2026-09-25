@@ -150,7 +150,6 @@ void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 
 
 	tasks.emplace_back(PSOBase::create<PSOS::UI::Text::GlyphRender>(device, pso[PSO::GlyphRender]));
-	tasks.emplace_back(PSOBase::create<PSOS::UI::Text::FontRender>(device, pso[PSO::FontRender]));
 	tasks.emplace_back(PSOBase::create<PSOS::Meshes::RenderBoxes>(device, pso[PSO::RenderBoxes]));
 	tasks.emplace_back(PSOBase::create<PSOS::Utility::RenderToDS>(device, pso[PSO::RenderToDS]));
 	tasks.emplace_back(PSOBase::create<PSOS::Utility::QualityColor>(device, pso[PSO::QualityColor]));
@@ -205,7 +204,7 @@ void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 //decltype(PSOS::Lighting::SecondBounce) PSOS::Lighting::SecondBounce;
 //decltype(PSOS::VoxelDownsample::Count) PSOS::VoxelDownsample::Count;
 //decltype(PSOS::VSMShadowBlur::VsmRtxVerify) PSOS::VSMShadowBlur::VsmRtxVerify;
-//decltype(PSOS::FontRender::Format) PSOS::FontRender::Format;
+//decltype(PSOS::GlyphRender::Format) PSOS::GlyphRender::Format;
 //decltype(PSOS::CopyTexture::Format) PSOS::CopyTexture::Format;
 //decltype(PSOS::GBufferDraw::HiZOcclusion) PSOS::GBufferDraw::HiZOcclusion;
 //decltype(PSOS::DepthDraw::HiZOcclusion) PSOS::DepthDraw::HiZOcclusion;

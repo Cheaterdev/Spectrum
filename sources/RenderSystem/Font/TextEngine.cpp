@@ -574,7 +574,7 @@ namespace Text
         impl->pending_upload = false;
     }
 
-    void Engine::draw(HAL::CommandList::ptr& list, const Layout& layout, vec2 pos, float4 color, sizer clip, vec2 window_size)
+    void Engine::draw(HAL::CommandList::ptr& list, const Layout& layout, vec2 pos, float4 color, sizer clip, vec2 window_size, bool raw_output)
     {
         if (layout.quads.empty()) return;
 
@@ -631,11 +631,14 @@ namespace Text
         {
             PROFILE(L"text_draw");
             auto& graphics = list->get_graphics();
-            graphics.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::LIST);
-            graphics.set_pipeline<PSOS::UI::Text::GlyphRender>();
+            auto formats = graphics.get_formats();
+            if (formats.empty()) return;
 
-            // Same alignment rule as the old font path: the struct stride and
-            // Vulkan's minStorageBufferOffsetAlignment must both hold.
+            graphics.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::LIST);
+            graphics.set_pipeline<PSOS::UI::Text::GlyphRender>(PSOS::UI::Text::GlyphRender::Format(formats[0]));
+
+            // The struct stride and Vulkan's minStorageBufferOffsetAlignment
+            // must both hold.
             using GlyphQuad = Table::UI::Text::GlyphQuad;
             const uint32_t align = std::lcm<uint32_t>(sizeof(GlyphQuad), RenderSystem::get().device().get_properties().min_storage_buffer_offset_alignment);
             auto data = list->place_data(sizeof(GlyphQuad) * gpu_quads.size(), align);
@@ -647,6 +650,7 @@ namespace Text
             Slots::UI::Text::GlyphRender slot;
             slot.GetQuads()    = view;
             slot.GetTextures() = atlas_handles;
+            slot.GetRaw_output() = raw_output ? 1 : 0;
             graphics.set(slot);
 
             graphics.draw(UINT(gpu_quads.size() * 6), 0);

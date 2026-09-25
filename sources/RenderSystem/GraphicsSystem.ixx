@@ -9,7 +9,6 @@ import :Materials.UniversalMaterial;
 import :MeshAsset;
 import GUI;
 import Core;
-import TextSystem;
 import TextEngine;
 
 // Manages the lifecycle of all graphics singletons in the correct order.
@@ -61,7 +60,6 @@ public:
         HAL::compute_shader::reset_manager();
         GUI::Elements::FlowGraph::manager::reset();
         Profiler::reset();
-        Fonts::FontSystem::reset();
         Text::Engine::reset();
         RTX::reset();
         TextureAssetRenderer::reset();

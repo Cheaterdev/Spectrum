@@ -14,8 +14,10 @@ namespace UI
 	{
 		struct GlyphRender
 		{
+			uint raw_output; // uint
 			uint quads; // StructuredBuffer<GlyphQuad>
 			uint textures; // Texture2D<float4>
+			uint GetRaw_output() { return raw_output; }
 			StructuredBuffer<GlyphQuad> GetQuads() { return ResourceDescriptorHeap[quads]; }
 			Texture2D<float4> GetTextures(int i)
 			{

@@ -10,7 +10,7 @@ import HAL;
 import RenderSystem;
 import GUI;
 import FrameGraph;
-import TextSystem;
+import TextEngine;
 
 // -----------------------------------------------------------------------
 // Clipping/culling helpers shared by the NinePatch clip tests.
@@ -426,7 +426,6 @@ export namespace Test
 
 		list->execute_and_wait();
 
-		ASSERT_TEXTURE(Fonts::FontSystem::get_atlas_texture(), "font_atlas");
 		ASSERT_TEXTURE(tex.get(), "gui_element_label");
 	}
 
@@ -756,10 +755,10 @@ export namespace Test
 		ASSERT_TEXTURE(rt.get(), "gui_nine_patch_clip_center");
 	}
 
-	// Raw Font::draw() directly on a command list — no label element, no FrameGraph.
-	// Exercises the draw_vertices path in isolation: glyph raster → atlas flush →
-	// vertex upload → point-list GS draw, all driven from the immediate Font API.
-	TEST(Core.HAL, FontDirect_Draw)
+	// Text::Engine directly on a command list — no label element, no FrameGraph.
+	// Exercises the text path in isolation: layout → glyph raster → atlas
+	// upload → glyph quad draw, raw output into a plain UNORM target.
+	TEST(Core.HAL, TextEngineDirect_Draw)
 	{
 		THREAD_SCOPE(GUI);
 
@@ -773,7 +772,11 @@ export namespace Test
 
 		auto& queue = device.get_queue(HAL::CommandListType::DIRECT);
 		auto  list  = queue->get_free_list();
-		list->begin(L"FontDirect_Draw");
+		list->begin(L"TextEngineDirect_Draw");
+
+		Text::Layout text;
+		Text::Engine::get().build("Hello Direct", { 20.0f, Text::Weight::Light }, text);
+		Text::Engine::get().upload(list);
 
 		HAL::Texture2DView view(tex, *list);
 		HAL::CompiledRT compiled;
@@ -782,11 +785,10 @@ export namespace Test
 			HAL::RTOptions::Default | HAL::RTOptions::ClearColor, 0, 0,
 			vec4(0.05f, 0.05f, 0.1f, 1.0f));
 
-		auto font = Fonts::FontSystem::get().get_font("Segoe UI Light");
-		font->draw(list, std::string("Hello Direct"), 20.0f, vec2(8.0f, 10.0f),
-			float4(1.0f, 1.0f, 1.0f, 1.0f));
+		Text::Engine::get().draw(list, text, vec2(8.0f, 10.0f), float4(1.0f, 1.0f, 1.0f, 1.0f),
+			sizer{ 0, 0, float(W), float(H) }, vec2(float(W), float(H)), true);
 
 		list->execute_and_wait();
-		ASSERT_TEXTURE(tex.get(), "font_direct_draw");
+		ASSERT_TEXTURE(tex.get(), "text_engine_direct_draw");
 	}
 }

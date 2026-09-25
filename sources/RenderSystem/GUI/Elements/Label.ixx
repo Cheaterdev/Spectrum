@@ -3,9 +3,34 @@ import :Base;
 
 import :ScrollContainer;
 
-// FW1_TEXT_FLAG is label's alignment API (magnet_text), so callers get it from here.
-export import TextSystem;
 import TextEngine;
+
+// label::magnet_text alignment flags. Names and values are the ones the
+// original FW1FontWrapper API used, which call sites across the UI are
+// written against; label reads only the alignment bits.
+export enum FW1_TEXT_FLAG : unsigned int
+{
+    FW1_LEFT              = 0x0,
+    FW1_CENTER            = 0x1,
+    FW1_RIGHT             = 0x2,
+    FW1_TOP               = 0x0,
+    FW1_VCENTER           = 0x4,
+    FW1_BOTTOM            = 0x8,
+    FW1_NOWORDWRAP        = 0x10,
+    FW1_ALIASED           = 0x20,
+    FW1_CLIPRECT          = 0x40,
+    FW1_NOGEOMETRYSHADER  = 0x80,
+    FW1_CONSTANTSPREPARED = 0x100,
+    FW1_BUFFERSPREPARED   = 0x200,
+    FW1_STATEPREPARED     = 0x400,
+    FW1_IMMEDIATECALL     = FW1_CONSTANTSPREPARED | FW1_BUFFERSPREPARED | FW1_STATEPREPARED,
+    FW1_RESTORESTATE      = 0x800,
+    FW1_NOFLUSH           = 0x1000,
+    FW1_CACHEONLY         = 0x2000,
+    FW1_NONEWGLYPHS       = 0x4000,
+    FW1_ANALYZEONLY       = 0x8000,
+    FW1_UNUSED            = 0xffffffff
+};
 
 
 export namespace GUI

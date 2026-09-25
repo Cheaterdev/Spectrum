@@ -2,7 +2,6 @@
   "name": "spectrum",
   "version-string": "1.0.0",
   "dependencies": [
-    "freetype",
     "skribidi",
     "zlib",
     "directxtex",

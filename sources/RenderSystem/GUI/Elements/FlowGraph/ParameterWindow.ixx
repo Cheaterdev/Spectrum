@@ -11,7 +11,7 @@ import :Label;
 import :Button;
 import :HorizontalLayout;
 import :FlowGraph.Canvas;
-import TextSystem;
+import TextEngine;
 
 
 
@@ -217,10 +217,9 @@ export namespace GUI
 				// "Quad-shared blocker search" aren't clipped in the closed box or the
 				// open dropdown, which mirrors this same width for its own items.
 				{
-					auto font = Fonts::FontSystem::get().get_font("Segoe UI Light");
 					float max_text_w = 0;
 					for (auto& name : enum_names)
-						max_text_w = std::max(max_text_w, font->measure(name, 16).x);
+						max_text_w = std::max(max_text_w, Text::Engine::get().measure(name, { 16, Text::Weight::Light }).x);
 
 					const float combo_padding = 5 + 30; // combo_box's own padding.left + padding.right
 					combo->size = { max_text_w + combo_padding, combo->size->y };

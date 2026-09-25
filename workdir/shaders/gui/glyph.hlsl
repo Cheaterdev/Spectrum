@@ -62,6 +62,6 @@ float4 PS(glyph_output i) : SV_TARGET0
 		result.a = s.r * i.color.a;
 	}
 
-	return ui_output(result);
+	return GetGlyphRender().GetRaw_output() ? result : ui_output(result);
 }
 #endif

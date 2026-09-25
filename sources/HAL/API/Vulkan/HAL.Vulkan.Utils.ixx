@@ -76,7 +76,6 @@ export
     // --- D3D12CalcSubresource stub ---
     // Utility from d3dx12.h: computes a flat subresource index from
     // (MipSlice, ArraySlice, PlaneSlice, MipLevels, ArraySize).
-    // Used in RenderSystem/Font/TextSystem.cpp.
     // TODO (REFACTOR_TODO §2): replace call-site with
     // TextureDesc::CalcSubresource() which already exists in HAL::TextureDesc.
     inline constexpr unsigned D3D12CalcSubresource(

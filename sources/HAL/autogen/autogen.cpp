@@ -30,9 +30,6 @@ std::optional<SlotID> get_slot(std::string_view slot_name)
 	if(slot_name == "DenoiserShadow_Filter") return SlotID::DenoiserShadow_Filter;
 	if(slot_name == "DenoiserShadow_FilterLocal") return SlotID::DenoiserShadow_FilterLocal;
 	if(slot_name == "DenoiserShadow_FilterLast") return SlotID::DenoiserShadow_FilterLast;
-	if(slot_name == "FontRendering") return SlotID::FontRendering;
-	if(slot_name == "FontRenderingConstants") return SlotID::FontRenderingConstants;
-	if(slot_name == "FontRenderingGlyphs") return SlotID::FontRenderingGlyphs;
 	if(slot_name == "GlyphRender") return SlotID::GlyphRender;
 	if(slot_name == "FrameInfo") return SlotID::FrameInfo;
 	if(slot_name == "FSR") return SlotID::FSR;
@@ -210,12 +207,6 @@ uint get_table_index(SlotID id)
 	if(id == SlotID::DenoiserShadow_FilterLocal) return Slots::Shadows::Denoise::DenoiserShadow_FilterLocal::Slot::ID;
 
 	if(id == SlotID::DenoiserShadow_FilterLast) return Slots::Shadows::Denoise::DenoiserShadow_FilterLast::Slot::ID;
-
-	if(id == SlotID::FontRendering) return Slots::UI::Text::FontRendering::Slot::ID;
-
-	if(id == SlotID::FontRenderingConstants) return Slots::UI::Text::FontRenderingConstants::Slot::ID;
-
-	if(id == SlotID::FontRenderingGlyphs) return Slots::UI::Text::FontRenderingGlyphs::Slot::ID;
 
 	if(id == SlotID::GlyphRender) return Slots::UI::Text::GlyphRender::Slot::ID;
 
@@ -502,9 +493,6 @@ std::string get_slot_name(SlotID id)
 	if(id == SlotID::DenoiserShadow_Filter) return "DenoiserShadow_Filter";
 	if(id == SlotID::DenoiserShadow_FilterLocal) return "DenoiserShadow_FilterLocal";
 	if(id == SlotID::DenoiserShadow_FilterLast) return "DenoiserShadow_FilterLast";
-	if(id == SlotID::FontRendering) return "FontRendering";
-	if(id == SlotID::FontRenderingConstants) return "FontRenderingConstants";
-	if(id == SlotID::FontRenderingGlyphs) return "FontRenderingGlyphs";
 	if(id == SlotID::GlyphRender) return "GlyphRender";
 	if(id == SlotID::FrameInfo) return "FrameInfo";
 	if(id == SlotID::FSR) return "FSR";

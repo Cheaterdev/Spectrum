@@ -4,7 +4,7 @@ import RenderSystem;
 
 
 import :MipMapGenerator;
-import TextSystem;
+import TextEngine;
 import Core;
 void removeme2() // TODO: VS issue - make dummy unused func to compile entire cpp =[
 {
@@ -89,12 +89,11 @@ void BinaryAsset::update_preview(HAL::Texture::ptr preview)
 
 	auto list = (RenderSystem::get().device().get_frame_manager().begin_frame()->start_list(L"BinaryAsset", HAL::CommandListType::DIRECT, true));
 
-	auto font = Fonts::FontSystem::get().get_font("Segoe UI Light");
-	auto 	geomerty = std::make_shared<Fonts::FontGeometry>();
-	sizer layout = { 0,0,256,256 };
-
-	geomerty->set(list, convert(data), font, 14, layout, float4(1, 1, 1, 1), FW1_LEFT);
-
+	// The glyphs are uploaded in this same list, ahead of the draw. Text is
+	// laid out unwrapped and clipped to the preview.
+	Text::Layout text;
+	Text::Engine::get().build(data, { 14, Text::Weight::Light }, text);
+	Text::Engine::get().upload(list);
 
 	{
 				RT::Frame::SingleColor rt;
@@ -102,9 +101,8 @@ void BinaryAsset::update_preview(HAL::Texture::ptr preview)
 				list->get_graphics().set_rtv(rt, HAL::RTOptions::Default| HAL::RTOptions::ClearColor);
 	}
 
-
-
-	geomerty->draw(list, layout, 0, { 0,0 });
+	// raw_output: an R8G8B8A8_UNORM preview texture, not the scRGB swapchain.
+	Text::Engine::get().draw(list, text, { 0, 0 }, float4(1, 1, 1, 1), sizer{ 0, 0, 256, 256 }, { 256, 256 }, true);
 
 
 	MipMapGenerator::get().generate(list->get_compute(), preview->texture_2d());
