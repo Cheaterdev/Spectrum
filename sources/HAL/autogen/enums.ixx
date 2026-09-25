@@ -202,6 +202,8 @@ export
 		DebugLineSegment = "DebugLineSegment"_crc32,
 		DebugLines = "DebugLines"_crc32,
 		DebugViewGather = "DebugViewGather"_crc32,
+		DebugViewTint = "DebugViewTint"_crc32,
+		DebugViewFrustum = "DebugViewFrustum"_crc32,
 		DebugViewState = "DebugViewState"_crc32,
 		DebugStruct = "DebugStruct"_crc32,
 		DebugInfo = "DebugInfo"_crc32,
@@ -244,6 +246,7 @@ export
 		MaterialCommandData = "MaterialCommandData"_crc32,
 		GatherPipelineGlobal = "GatherPipelineGlobal"_crc32,
 		GatherPipeline = "GatherPipeline"_crc32,
+		CullCaptureWrite = "CullCaptureWrite"_crc32,
 		BoxInfo = "BoxInfo"_crc32,
 		GatherBoxes = "GatherBoxes"_crc32,
 		DrawBoxes = "DrawBoxes"_crc32,
@@ -425,6 +428,16 @@ namespace GI
 				RTXRay = 2
 			};
 	}
+}
+namespace Dev
+{
+		enum class DebugViewSource : uint
+		{
+			All,
+			Status,
+			Rendered,
+			Culled
+		};
 }
 namespace Dev
 {

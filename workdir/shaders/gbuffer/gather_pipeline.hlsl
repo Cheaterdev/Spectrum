@@ -70,18 +70,23 @@ int intersect(Frustum f, AABB aabb, float4x4 mat)
 #include "../autogen/GatherPipeline.h"
 static const GatherPipeline pipi = GetGatherPipeline();
 static const uint ids[8] = (uint[8])pipi.pip_ids;
-void get_index(uint id, in CommandData command)
+bool get_index(uint id, in CommandData command)
 {
-#define CHECK(x)    if (ids[x] == id) { pipi.GetCommands(x).Append(command); }
+#define CHECK(x)    if (ids[x] == id) { pipi.GetCommands(x).Append(command); return true; }
     CHECK(0)
-else CHECK(1)
-    else CHECK(2)
-    else CHECK(3)
-    else CHECK(4)
-    else CHECK(5)
-    else CHECK(6)
-    else CHECK(7)
+    CHECK(1)
+    CHECK(2)
+    CHECK(3)
+    CHECK(4)
+    CHECK(5)
+    CHECK(6)
+    CHECK(7)
+    return false;
 }
+
+#ifdef CAPTURE_VISIBILITY
+#include "../autogen/CullCaptureWrite.h"
+#endif
 
 
 [numthreads(64, 1, 1)]
@@ -115,7 +120,13 @@ void CS(
          command.meshinstance_cb = mesh.meshinstance_cb;
         command.draw_commands = mesh.draw_commands;
        
-        get_index(material.pipeline_id, command);
+        // Stamped only where appended: this dispatch runs once per batch of 8
+        // pipelines over the same mesh list, and only one batch owns each mesh.
+        bool appended = get_index(material.pipeline_id, command);
+#ifdef CAPTURE_VISIBILITY
+        if (appended)
+            GetCullCaptureWrite().GetStamps()[id] = GetCullCaptureWrite().GetStamp();
+#endif
     //    GetDebugInfo().Log(dispatchID.x, uint4(dispatchID.x, id, 5, 5));
 
      //   pipi.GetCommands(0).Append(command);

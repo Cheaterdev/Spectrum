@@ -199,6 +199,7 @@ void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 //decltype(PSOS::DenoiserShadow_Filter::Pass) PSOS::DenoiserShadow_Filter::Pass;
 //decltype(PSOS::RCAS::cas) PSOS::RCAS::cas;
 //decltype(PSOS::GatherPipeline::CheckFrustum) PSOS::GatherPipeline::CheckFrustum;
+//decltype(PSOS::GatherPipeline::CaptureVisibility) PSOS::GatherPipeline::CaptureVisibility;
 //decltype(PSOS::GatherBoxes::CheckFrustum) PSOS::GatherBoxes::CheckFrustum;
 //decltype(PSOS::InitDispatch::CheckFrustum) PSOS::InitDispatch::CheckFrustum;
 //decltype(PSOS::GatherMeshes::Invisible) PSOS::GatherMeshes::Invisible;

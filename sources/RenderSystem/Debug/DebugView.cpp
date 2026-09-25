@@ -10,6 +10,15 @@ namespace
 {
 	constexpr uint max_debug_meshes = 1024 * 1024;
 	constexpr uint max_debug_lines  = 1024 * 1024;
+
+	// Per DebugViewGather bucket: rgb blended over the object colour by a.
+	const float4 bucket_tints[] =
+	{
+		{ 0.0f, 0.0f, 0.0f, 0.0f },   // drawn: object colour
+		{ 1.0f, 0.55f, 0.1f, 0.6f },  // rescued by the stage-2 retest
+		{ 0.85f, 0.1f, 0.1f, 0.85f }, // culled
+		{ 0.2f, 0.8f, 1.0f, 0.6f },   // never rasterized (translucent)
+	};
 }
 
 debug_view::debug_view() : VariableContext(L"Debug View")
@@ -24,12 +33,17 @@ debug_view::debug_view() : VariableContext(L"Debug View")
 	texture.linear_source = true;
 
 	auto& device = RenderSystem::get().device();
-	commands = std::make_shared<virtual_gpu_buffer<Table::Meshes::CommandData>>(device, max_debug_meshes, counterType::HELP_BUFFER,
-		HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess);
+	for (int i = 0; i < bucket_count; i++)
+	{
+		commands[i] = std::make_shared<virtual_gpu_buffer<Table::Meshes::CommandData>>(device, max_debug_meshes, counterType::HELP_BUFFER,
+			HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess);
+		commands[i]->buffer.resource->set_name("DebugView_Commands" + std::to_string(i));
+	}
 	lines = std::make_shared<virtual_gpu_buffer<Table::Dev::DebugLineSegment>>(device, max_debug_lines, counterType::NONE,
 		HAL::ResFlags::ShaderResource);
-	commands->buffer.resource->set_name("DebugView_Commands");
 	lines->buffer.resource->set_name("DebugView_Lines");
+
+	capture = std::make_shared<CullCapture>();
 
 	m_render = [this](Passes::Dev::DebugView::Context& data, FrameGraph::FrameContext& context)
 	{
@@ -49,12 +63,20 @@ debug_view::debug_view() : VariableContext(L"Debug View")
 		if (mesh_count)
 		{
 			PROFILE(L"debug_view_gather");
-			commands->reserve(list, mesh_count);
-			compute.clear_counter(commands->buffer);
+			for (auto& c : commands)
+			{
+				c->reserve(list, mesh_count);
+				compute.clear_counter(c->buffer);
+			}
+			capture->prepare(list);
 
 			{
 				Slots::Dev::DebugViewGather gather;
-				gather.GetCommands() = commands->buffer;
+				for (int i = 0; i < bucket_count; i++)
+					gather.GetCommands()[i] = commands[i]->buffer;
+				gather.GetStamps()        = capture->stamps->buffer;
+				gather.GetCapture_frame() = frame_capture;
+				gather.GetSource()        = frame_source;
 				compute.set(gather);
 			}
 			compute.set(scene->compiledGather[(int)MESH_TYPE::ALL]);
@@ -105,7 +127,19 @@ debug_view::debug_view() : VariableContext(L"Debug View")
 			graphics.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::LIST);
 			graphics.set_index_buffer(HAL::Views::IndexBuffer());
 			graphics.set(scene->compiledScene);
-			graphics.exec_indirect(commands->buffer, mesh_count);
+			{
+				Slots::Dev::DebugViewFrustum frustum;
+				frustum.GetFrustum() = captured_frustum;
+				frustum.GetOutside_brightness() = has_captured_camera ? (float)outside_frustum_brightness : 1.0f;
+				graphics.set(frustum);
+			}
+			for (int i = 0; i < bucket_count; i++)
+			{
+				Slots::Dev::DebugViewTint tint;
+				tint.GetTint() = bucket_tints[i];
+				graphics.set(tint);
+				graphics.exec_indirect(commands[i]->buffer, mesh_count);
+			}
 		}
 
 		if (!frame_lines.empty())
@@ -145,6 +179,21 @@ void debug_view::update_frame(FrameGraph::Graph& graph)
 	seen_draw_count = drawn;
 
 	graph.get_context<Table::Dev::DebugViewState>().enabled = on_screen;
+
+	// The main view's Scene pass later this frame reads capture->capturing.
+	capture->capturing = on_screen && source != Dev::DebugViewSource::All && !freeze;
+	if (capture->capturing)
+		capture->next_frame();
+	frame_source  = source;
+	frame_capture = capture->frame;
+
+	if (main_cam && (!freeze || !has_captured_camera))
+	{
+		captured_inv_view_proj = main_cam->get_inv_view_proj();
+		captured_eye           = main_cam->camera_cb.current.position.xyz;
+		captured_frustum       = main_cam->camera_cb.current.frustum;
+		has_captured_camera    = true;
+	}
 
 	if (on_screen && draw_main_frustum)
 		submit_main_camera();
@@ -187,17 +236,16 @@ void debug_view::update_frame(FrameGraph::Graph& graph)
 
 void debug_view::submit_main_camera()
 {
-	if (!main_cam)
+	if (!has_captured_camera)
 		return;
 
-	auto& inv_view_proj = main_cam->get_inv_view_proj();
 	auto unproject = [&](vec3 ndc)
 	{
-		vec4 t = vec4(ndc, 1) * inv_view_proj;
+		vec4 t = vec4(ndc, 1) * captured_inv_view_proj;
 		return vec3(t.xyz) / t.w;
 	};
 
-	vec3 eye = main_cam->camera_cb.current.position.xyz;
+	vec3 eye = captured_eye;
 
 	// The main camera's far plane is ~1500 units away, which dwarfs everything
 	// near it; cut the frustum at frustum_length along each corner ray instead.

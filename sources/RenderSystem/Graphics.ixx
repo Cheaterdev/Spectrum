@@ -29,6 +29,7 @@ export import :MipMapGenerator;
 export import :MeshRenderer;
 export import :StencilRenderer;
 export import :DebugDraw;
+export import :CullCapture;
 export import :DebugView;
 export import :FrameGraphContext;
 export import :AssetExplorer;

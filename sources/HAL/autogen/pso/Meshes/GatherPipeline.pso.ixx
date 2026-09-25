@@ -20,21 +20,25 @@ export namespace PSOS
 		{
 			struct Keys {
 				KeyValue<int, Nullable> CheckFrustum;
+				KeyValue<int, Nullable> CaptureVisibility;
 				GEN_DEF_COMP(Keys);
 			private:
 				SERIALIZE()
 				{
 					ar&NVP(CheckFrustum);
+					ar&NVP(CaptureVisibility);
 				}
 			};
 
-			GEN_COMPUTE_PSO(GatherPipeline, CheckFrustum)
+			GEN_COMPUTE_PSO(GatherPipeline, CheckFrustum, CaptureVisibility)
 			GEN_KEY(CheckFrustum, true);
+			GEN_KEY(CaptureVisibility, true);
 
 
 			SimplePSO init_pso(Keys & key, std::function<void(SimplePSO&, Keys&)> f)
 			{
 				static const ShaderDefine<&Keys::CheckFrustum,&SimpleComputePSO::compute> CheckFrustum = "CHECK_FRUSTUM";
+				static const ShaderDefine<&Keys::CaptureVisibility,&SimpleComputePSO::compute> CaptureVisibility = "CAPTURE_VISIBILITY";
 
 
 				SimplePSO mpso("GatherPipeline");
@@ -47,6 +51,7 @@ export namespace PSOS
 				mpso.compute.flags = HAL::ShaderOptions::None;
 			
 				CheckFrustum.Apply(mpso, key);
+				CaptureVisibility.Apply(mpso, key);
 				return mpso;
 			}
 

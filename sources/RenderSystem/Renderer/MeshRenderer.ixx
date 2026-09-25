@@ -7,6 +7,7 @@ import :Scene;
 import :SceneObject;
 import :TextureAsset;
 import :MeshAsset;
+import :CullCapture;
 
 using namespace HAL;
 export
@@ -65,7 +66,9 @@ class mesh_renderer : public renderer, public Events::prop_handler, VariableCont
 		// gatherData supplies the shader-side bound check; dispatch_args (when
 		// non-null) drives an indirect dispatch, otherwise direct_count is used
 		// for a CPU-sized direct dispatch (count known on CPU — no indirect).
-		void  render_meshes(MeshRenderContext::ptr mesh_render_context, Scene::ptr scene, std::map<size_t, materials::Pipeline::ptr>& pipelines, Slots::Meshes::GatherPipelineGlobal::Compiled& gatherData, bool needCulling, HAL::StructuredBufferView<DispatchArguments>* dispatch_args, UINT direct_count, bool hiz_occlusion);
+		// capture_stage: when non-null, the gather stamps every mesh it draws into
+		// `capture` with this stage.
+		void  render_meshes(MeshRenderContext::ptr mesh_render_context, Scene::ptr scene, std::map<size_t, materials::Pipeline::ptr>& pipelines, Slots::Meshes::GatherPipelineGlobal::Compiled& gatherData, bool needCulling, HAL::StructuredBufferView<DispatchArguments>* dispatch_args, UINT direct_count, bool hiz_occlusion, std::optional<CullCapture::Stage> capture_stage = std::nullopt);
 		void  draw_boxes(MeshRenderContext::ptr mesh_render_context, Scene::ptr scene);
 		void  generate_boxes(MeshRenderContext::ptr mesh_render_context, Scene::ptr scene, Slots::Meshes::GatherPipelineGlobal::Compiled& gatherData, HAL::StructuredBufferView<DispatchArguments>* dispatch_args, UINT direct_count);
 		void  gather_rendered_boxes(MeshRenderContext::ptr mesh_render_context, Scene::ptr scene, bool invisibleToo);
@@ -114,6 +117,10 @@ class mesh_renderer : public renderer, public Events::prop_handler, VariableCont
 		Variable<bool> clear_depth = Variable<bool>(true, "clear_depth", this);*/
 	
        // HAL::RootSignature::ptr my_signature;
+
+        // Set only on the main view's renderer: its GBuffer draws record what
+        // they drew here while capture->capturing (see CullCapture).
+        CullCapture::ptr capture;
 
         using ptr = s_ptr<mesh_renderer>;
         mesh_renderer();

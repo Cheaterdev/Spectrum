@@ -48,10 +48,20 @@ void mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, Scene::pt
 	graphics.set(compiledScene);
 	compute.set(compiledScene);
 
+	// Only the GBuffer draw is "what the main view rendered"; the same renderer
+	// also runs voxelization and depth-only passes.
+	bool capturing = capture && capture->capturing && gbuffer && mesh_render_context->render_type == RENDER_TYPE::PIXEL;
+	if (capturing)
+	{
+		PROFILE_GPU(L"cull_capture_prepare");
+		capture->prepare(list);
+	}
+	auto capture_stage = [&](CullCapture::Stage stage) { return capturing ? std::optional(stage) : std::nullopt; };
+
 	if (!gbuffer || !use_gpu_occlusion)
 	{
 		// Scene mesh count is CPU-known — direct dispatch, no indirect args.
-		render_meshes(mesh_render_context, scene, pipelines, scene->compiledGather[(int)mesh_render_context->render_mesh], (mesh_render_context->render_type != RENDER_TYPE::VOXEL), nullptr, meshes_count, false);
+		render_meshes(mesh_render_context, scene, pipelines, scene->compiledGather[(int)mesh_render_context->render_mesh], (mesh_render_context->render_type != RENDER_TYPE::VOXEL), nullptr, meshes_count, false, capture_stage(CullCapture::First));
 		return;
 	}
 
@@ -79,7 +89,7 @@ void mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, Scene::pt
 		draw_boxes(mesh_render_context, scene);
 		gather_rendered_boxes(mesh_render_context, scene, true);
 
-		render_meshes(mesh_render_context, scene, pipelines, gather_visible, false, &render_args, 0, false);
+		render_meshes(mesh_render_context, scene, pipelines, gather_visible, false, &render_args, 0, false, capture_stage(CullCapture::First));
 		MipMapGenerator::get().downsample_depth(compute, gbuffer->depth, gbuffer->HalfBuffer.hiZ_depth_uav);
 		// Coarser mips on top of mip 0, for the AS's per-meshlet test below.
 		// Skipped with the toggle off so disabling it is a clean baseline.
@@ -101,7 +111,7 @@ void mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, Scene::pt
 		draw_boxes(mesh_render_context, scene);
 		gather_rendered_boxes(mesh_render_context, scene, false);
 
-		render_meshes(mesh_render_context, scene, pipelines, gather_visible, false, &render_args, 0, use_meshlet_hiz_occlusion);
+		render_meshes(mesh_render_context, scene, pipelines, gather_visible, false, &render_args, 0, use_meshlet_hiz_occlusion, capture_stage(CullCapture::Retest));
 
 		MipMapGenerator::get().downsample_depth(compute, gbuffer->depth, gbuffer->HalfBuffer.hiZ_depth_uav);
 		// Coarser mips on top of mip 0, for the AS's per-meshlet test below.
@@ -228,7 +238,7 @@ void  mesh_renderer::draw_boxes(MeshRenderContext::ptr mesh_render_context, Scen
 
 	graphics.set_rtv(gbuffer->compiled);
 }
-void  mesh_renderer::render_meshes(MeshRenderContext::ptr mesh_render_context, Scene::ptr scene, std::map<size_t, materials::Pipeline::ptr>& pipelines, Slots::Meshes::GatherPipelineGlobal::Compiled& gatherData, bool needCulling, HAL::StructuredBufferView<DispatchArguments>* dispatch_args, UINT direct_count, bool hiz_occlusion)
+void  mesh_renderer::render_meshes(MeshRenderContext::ptr mesh_render_context, Scene::ptr scene, std::map<size_t, materials::Pipeline::ptr>& pipelines, Slots::Meshes::GatherPipelineGlobal::Compiled& gatherData, bool needCulling, HAL::StructuredBufferView<DispatchArguments>* dispatch_args, UINT direct_count, bool hiz_occlusion, std::optional<CullCapture::Stage> capture_stage)
 {
 	PROFILE_GPU(L"render_meshes");
 
@@ -284,9 +294,18 @@ void  mesh_renderer::render_meshes(MeshRenderContext::ptr mesh_render_context, S
 		{
 			PROFILE_GPU(L"GatherMats");
 
-			compute.set_pipeline<PSOS::Meshes::GatherPipeline>(PSOS::Meshes::GatherPipeline::CheckFrustum.Use(needCulling));
+			compute.set_pipeline<PSOS::Meshes::GatherPipeline>(
+				PSOS::Meshes::GatherPipeline::CheckFrustum.Use(needCulling) |
+				PSOS::Meshes::GatherPipeline::CaptureVisibility.Use(capture_stage.has_value()));
 			compute.set(gatherData);
 			compute.set(gather);
+			if (capture_stage)
+			{
+				Slots::Meshes::CullCaptureWrite write;
+				write.GetStamps() = capture->stamps->buffer;
+				write.GetStamp()  = capture->stamp(*capture_stage);
+				compute.set(write);
+			}
 
 			{
 				PROFILE_GPU(L"dispatch");

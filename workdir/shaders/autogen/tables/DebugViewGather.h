@@ -12,8 +12,15 @@ namespace Dev
 {
 	struct DebugViewGather
 	{
-		uint commands; // AppendStructuredBuffer<CommandData>
-		AppendStructuredBuffer<CommandData> GetCommands() { return ResourceDescriptorHeap[commands]; }
+		uint capture_frame; // uint
+		DebugViewSource source; // DebugViewSource
+		uint stamps; // StructuredBuffer<uint>
+		uint commands[4]; // AppendStructuredBuffer<CommandData>
+		uint GetCapture_frame() { return capture_frame; }
+		DebugViewSource GetSource() { return source; }
+		AppendStructuredBuffer<CommandData> GetCommands(int i) { return ResourceDescriptorHeap[commands[i]]; }
+
+		StructuredBuffer<uint> GetStamps() { return ResourceDescriptorHeap[stamps]; }
 	};
 }
 using Dev::DebugViewGather;

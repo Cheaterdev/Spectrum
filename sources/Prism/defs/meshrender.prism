@@ -207,6 +207,16 @@ namespace Meshes
 		AppendStructuredBuffer<CommandData> commands[8];
 	}
 
+	# Debug view culling capture (Graphics:CullCapture): every mesh this gather
+	# sends to a draw gets stamps[mesh id] = stamp, (frame << 2) | stage. Only the
+	# main view's GBuffer draws set it -- see mesh_renderer::capture.
+	[Bind = DefaultLayout::Instance2]
+	struct CullCaptureWrite
+	{
+		RWStructuredBuffer<uint> stamps;
+		uint stamp;
+	}
+
 	struct BoxInfo
 	{
 		uint node_offset;
@@ -280,6 +290,11 @@ namespace Meshes
 		[rename = CHECK_FRUSTUM]
 		[CS, nullable]
 		define CheckFrustum;
+
+		# Writes CullCaptureWrite for every mesh it appends.
+		[rename = CAPTURE_VISIBILITY]
+		[CS, nullable]
+		define CaptureVisibility;
 	}
 
 

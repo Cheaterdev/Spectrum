@@ -189,9 +189,12 @@ public:
 
 		gpu_scene_renderer = std::make_shared<main_renderer>();
 
+		// The renderer the Scene pass draws the GBuffer with (sceneinfo.renderer
+		// below) -- the one whose draws the debug view's capture records.
+		mesh_renderer::ptr main_view_renderer;
 		{
 			VariableContext::Scope scope(main_view_gpu_context);
-			gpu_scene_renderer->register_renderer(std::make_shared<mesh_renderer>());
+			gpu_scene_renderer->register_renderer(main_view_renderer = std::make_shared<mesh_renderer>());
 		}
 
 
@@ -211,6 +214,7 @@ public:
 		debug_window = std::make_shared<debug_view>(pipeline);
 		debug_window->scene    = scene;
 		debug_window->main_cam = &cam;
+		main_view_renderer->capture = debug_window->capture;
 
 		// VSM is a class member (wired at construction, before scene exists
 		// above) -- its Phase 2 invalidation tracker registers scene event

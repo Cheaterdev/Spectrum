@@ -61,12 +61,52 @@ namespace Dev
 		cull = None;
 	}
 
-	# Every scene mesh, gathered into one indirect list: the debug view draws with
-	# a single flat-shaded PSO, so there are no per-material batches.
+	# What the debug view draws. Everything but All reads the culling capture: what
+	# the main view's GBuffer drew on the captured frame (CullCaptureWrite).
+	enum DebugViewSource
+	{
+		# Every mesh, coloured by object.
+		All;
+		# Every mesh, tinted by what the main view did with it.
+		Status;
+		# Only what the main view drew.
+		Rendered;
+		# Only what the main view culled.
+		Culled;
+	}
+
+	# Every scene mesh, gathered into indirect lists by class so each list can be
+	# drawn with its own DebugViewTint -- the PS can't tell which mesh it's
+	# shading. The debug view draws with a single flat-shaded PSO, so there are
+	# no per-material batches.
+	#   commands[0]  drawn by the main view (stage 1, or the direct path); All
+	#   commands[1]  drawn by the occlusion culler's stage-2 retest
+	#   commands[2]  culled
+	#   commands[3]  never rasterized by the main view (translucent)
 	[Bind = DefaultLayout::Instance1]
 	struct DebugViewGather
 	{
-		AppendStructuredBuffer<CommandData> commands;
+		AppendStructuredBuffer<CommandData> commands[4];
+		StructuredBuffer<uint> stamps;
+		uint capture_frame;
+		DebugViewSource source;
+	}
+
+	[Bind = DefaultLayout::Instance3]
+	struct DebugViewTint
+	{
+		# rgb blended over the per-object colour by a.
+		float4 tint;
+	}
+
+	# The captured main-camera frustum: pixels outside it are darkened, so what
+	# the main view could see stands out. Same planes the culling tests.
+	[Bind = DefaultLayout::Instance4]
+	struct DebugViewFrustum
+	{
+		Frustum frustum;
+		# Brightness multiplier outside the frustum; 1 turns the highlight off.
+		float outside_brightness = 1;
 	}
 
 	ComputePSO DebugViewGather
@@ -106,7 +146,9 @@ namespace Dev
 
 	# Renders the debug camera's view into the debug window's own textures, which
 	# the FrameGraph doesn't track -- hence [Required]. `scene` orders it after
-	# PreScene's upload of the scene buffers the draws read.
+	# PreScene's upload of the scene buffers the draws read. The capture buffer is
+	# external too, so nothing orders this after the Scene pass that writes it
+	# except the pipeline listing: keep it after Scene and off the async queues.
 	[Required]
 	[SetupCondition = DebugViewState::enabled]
 	PassNode DebugView

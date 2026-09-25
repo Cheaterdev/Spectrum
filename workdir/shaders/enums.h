@@ -45,6 +45,17 @@ namespace GI
 using GI::DDGI::DDGIOcclusionMode;
 namespace Dev
 {
+	enum class DebugViewSource : uint
+	{
+		All,
+		Status,
+		Rendered,
+		Culled
+	};
+}
+using Dev::DebugViewSource;
+namespace Dev
+{
 	enum class RTXDebugFlags : uint
 	{
 		DisableSkyFallback = 1

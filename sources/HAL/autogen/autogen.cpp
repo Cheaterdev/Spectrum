@@ -26,6 +26,8 @@ std::optional<SlotID> get_slot(std::string_view slot_name)
 	if(slot_name == "DDGIIndirectDebugData") return SlotID::DDGIIndirectDebugData;
 	if(slot_name == "DebugLines") return SlotID::DebugLines;
 	if(slot_name == "DebugViewGather") return SlotID::DebugViewGather;
+	if(slot_name == "DebugViewTint") return SlotID::DebugViewTint;
+	if(slot_name == "DebugViewFrustum") return SlotID::DebugViewFrustum;
 	if(slot_name == "DebugInfo") return SlotID::DebugInfo;
 	if(slot_name == "DenoiserShadow_Prepare") return SlotID::DenoiserShadow_Prepare;
 	if(slot_name == "DenoiserShadow_TileClassification") return SlotID::DenoiserShadow_TileClassification;
@@ -43,6 +45,7 @@ std::optional<SlotID> get_slot(std::string_view slot_name)
 	if(slot_name == "MeshInfo") return SlotID::MeshInfo;
 	if(slot_name == "GatherPipelineGlobal") return SlotID::GatherPipelineGlobal;
 	if(slot_name == "GatherPipeline") return SlotID::GatherPipeline;
+	if(slot_name == "CullCaptureWrite") return SlotID::CullCaptureWrite;
 	if(slot_name == "GatherBoxes") return SlotID::GatherBoxes;
 	if(slot_name == "DrawBoxes") return SlotID::DrawBoxes;
 	if(slot_name == "InitDispatch") return SlotID::InitDispatch;
@@ -202,6 +205,10 @@ uint get_table_index(SlotID id)
 
 	if(id == SlotID::DebugViewGather) return Slots::Dev::DebugViewGather::Slot::ID;
 
+	if(id == SlotID::DebugViewTint) return Slots::Dev::DebugViewTint::Slot::ID;
+
+	if(id == SlotID::DebugViewFrustum) return Slots::Dev::DebugViewFrustum::Slot::ID;
+
 	if(id == SlotID::DebugInfo) return Slots::Dev::DebugInfo::Slot::ID;
 
 	if(id == SlotID::DenoiserShadow_Prepare) return Slots::Shadows::Denoise::DenoiserShadow_Prepare::Slot::ID;
@@ -235,6 +242,8 @@ uint get_table_index(SlotID id)
 	if(id == SlotID::GatherPipelineGlobal) return Slots::Meshes::GatherPipelineGlobal::Slot::ID;
 
 	if(id == SlotID::GatherPipeline) return Slots::Meshes::GatherPipeline::Slot::ID;
+
+	if(id == SlotID::CullCaptureWrite) return Slots::Meshes::CullCaptureWrite::Slot::ID;
 
 	if(id == SlotID::GatherBoxes) return Slots::Meshes::GatherBoxes::Slot::ID;
 
@@ -495,6 +504,8 @@ std::string get_slot_name(SlotID id)
 	if(id == SlotID::DDGIIndirectDebugData) return "DDGIIndirectDebugData";
 	if(id == SlotID::DebugLines) return "DebugLines";
 	if(id == SlotID::DebugViewGather) return "DebugViewGather";
+	if(id == SlotID::DebugViewTint) return "DebugViewTint";
+	if(id == SlotID::DebugViewFrustum) return "DebugViewFrustum";
 	if(id == SlotID::DebugInfo) return "DebugInfo";
 	if(id == SlotID::DenoiserShadow_Prepare) return "DenoiserShadow_Prepare";
 	if(id == SlotID::DenoiserShadow_TileClassification) return "DenoiserShadow_TileClassification";
@@ -512,6 +523,7 @@ std::string get_slot_name(SlotID id)
 	if(id == SlotID::MeshInfo) return "MeshInfo";
 	if(id == SlotID::GatherPipelineGlobal) return "GatherPipelineGlobal";
 	if(id == SlotID::GatherPipeline) return "GatherPipeline";
+	if(id == SlotID::CullCaptureWrite) return "CullCaptureWrite";
 	if(id == SlotID::GatherBoxes) return "GatherBoxes";
 	if(id == SlotID::DrawBoxes) return "DrawBoxes";
 	if(id == SlotID::InitDispatch) return "InitDispatch";

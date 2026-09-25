@@ -20,22 +20,36 @@ export namespace Table
 		struct DebugViewGather
 		{
 			static constexpr SlotID ID = SlotID::DebugViewGather;
-			HLSL::AppendStructuredBuffer<Table::Meshes::CommandData> commands;
-			HLSL::AppendStructuredBuffer<Table::Meshes::CommandData>& GetCommands() { return commands; }
+			uint capture_frame;
+			::Dev::DebugViewSource source;
+			HLSL::StructuredBuffer<uint> stamps;
+			HLSL::AppendStructuredBuffer<Table::Meshes::CommandData> commands[4];
+			HLSL::AppendStructuredBuffer<Table::Meshes::CommandData>* GetCommands() { return commands; }
+			HLSL::StructuredBuffer<uint>& GetStamps() { return stamps; }
+			uint& GetCapture_frame() { return capture_frame; }
+			::Dev::DebugViewSource& GetSource() { return source; }
 			static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 			template<class Compiler>
 			void compile(Compiler& compiler) const
 			{
+				compiler.compile(capture_frame, "DebugViewGather::capture_frame");
+				compiler.compile(source, "DebugViewGather::source");
+				compiler.compile(stamps, "DebugViewGather::stamps");
 				compiler.compile(commands, "DebugViewGather::commands");
 			}
 			struct Compiled
 			{
-				uint commands; // AppendStructuredBuffer<CommandData>
+				uint capture_frame; // uint
+				::Dev::DebugViewSource source; // DebugViewSource
+				uint stamps; // StructuredBuffer<uint>
+				uint commands[4]; // AppendStructuredBuffer<CommandData>
 
 			
 				private:
 				SERIALIZE()
 				{
+					ar& NVP(capture_frame);
+					ar& NVP(source);
 				}
 
 
@@ -48,6 +62,8 @@ export namespace Table
 			private:
 			SERIALIZE()
 			{
+				ar& NVP(capture_frame);
+				ar& NVP(source);
 			}
 
 		};
