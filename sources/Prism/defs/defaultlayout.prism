@@ -13,6 +13,9 @@ namespace Frame
 		Sampler anisoBordeSampler = SamplerAnisoBorderDesc;
 		Sampler pointBorderSampler = SamplerPointBorderDesc;
 		Sampler vsmShadowSampler = SamplerShadowComparisonDesc;
+		# Linear, border = transparent black: screen-space blurs (bloom, lens
+		# flare) must not smear a bright edge pixel along the border.
+		Sampler linearBorderBlackSampler = SamplerLinearBorderBlackDesc;
 	}
 
 	layout DefaultLayout: FrameLayout 

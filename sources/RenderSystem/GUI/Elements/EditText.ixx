@@ -137,6 +137,12 @@ export namespace GUI
                 void copy_selection();
                 void open_context_menu(vec2 pos);
                 rect content_rect(Context& c);
+                rect gutter_rect(Context& c);
+
+                // Line-number gutter width (logical units), 0 without line_numbers.
+                // Set by the tree walk, read by drawing and mouse mapping.
+                float        gutter_width = 0;
+                Text::Layout gutter_layout;
                 void update_scroll(vec2 view_size);
 
             public:
@@ -153,6 +159,11 @@ export namespace GUI
                 // Enter starts a new line and Tab inserts a tab; newlines and tabs
                 // survive paste. Single-line fields drop them.
                 bool multiline = false;
+
+                // A gutter with 1-based line numbers left of the text (multiline).
+                bool line_numbers = false;
+                float4 gutter_color     = float4(0, 0, 0, 0.06f);
+                float4 line_number_color = float4(120, 120, 120, 255) / 255.0f;
 
                 // Per-codepoint colors from the text (e.g. GUI::Syntax::highlight_hlsl).
                 Text::Highlighter highlighter;

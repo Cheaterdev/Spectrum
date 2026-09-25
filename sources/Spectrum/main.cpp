@@ -2081,6 +2081,7 @@ public:
 
 							auto code = std::make_shared<GUI::Elements::edit_text>(Text::Style{ 14, Text::Weight::Normal, Text::Family::Mono });
 							code->multiline = true;
+							code->line_numbers = true;
 
 							const std::string extension = std::filesystem::path(file_name).extension().string();
 							if (extension == ".hlsl" || extension == ".hlsli" || extension == ".h")

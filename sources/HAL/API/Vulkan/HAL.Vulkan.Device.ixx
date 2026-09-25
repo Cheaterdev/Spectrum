@@ -83,10 +83,10 @@ export namespace HAL
             // Shader set/binding -> heap mapping table, built once in init().
             // Storage must outlive every pipeline (pipelines reference pMappings
             // by pointer at creation), so it is owned here for the device lifetime.
-            // Inline static samplers s0..s4 (Frame::FrameLayout.h) are embedded directly
+            // Inline static samplers s0..s6 (Frame::FrameLayout.h) are embedded directly
             // into the resource heap via pEmbeddedSampler; we keep their
             // VkSamplerCreateInfo alive (pointed at by the mapping table).
-            static constexpr uint32_t NUM_INLINE_SMP = 5;
+            static constexpr uint32_t NUM_INLINE_SMP = 7;
             std::vector<VkSamplerCreateInfo>                 embedded_sampler_cis;
             std::vector<VkDescriptorSetAndBindingMappingEXT> binding_mappings;
             VkShaderDescriptorSetAndBindingMappingInfoEXT    binding_mapping_info{};

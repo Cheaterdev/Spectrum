@@ -41,7 +41,7 @@ float3 sample_scaled(Texture2D<float4> src, float2 uv, float k, float chromatic)
 	for (int ch = 0; ch < 3; ch++)
 	{
 		float2 q = 0.5 + (uv - 0.5) / ks[ch];
-		c[ch] = src.SampleLevel(linearClampSampler, q, 0)[ch] * flare_window(q);
+		c[ch] = src.SampleLevel(linearBorderBlackSampler, q, 0)[ch] * flare_window(q);
 	}
 	return c;
 }
@@ -78,7 +78,7 @@ void CS_Ghosts(uint3 id : SV_DispatchThreadID)
 	for (int ch = 0; ch < 3; ch++)
 	{
 		float2 q = uv + dir * radius[ch] / aspect;
-		halo[ch] = src.SampleLevel(linearClampSampler, q, 0)[ch] * flare_window(q);
+		halo[ch] = src.SampleLevel(linearBorderBlackSampler, q, 0)[ch] * flare_window(q);
 	}
 
 	target[id.xy] = float4(ghosts * data.GetGhost_intensity() + halo * data.GetHalo_intensity(), 1);
@@ -114,7 +114,7 @@ void CS_Streak(uint3 id : SV_DispatchThreadID)
 	for (int s = 0; s < 8; s++)
 	{
 		float w = pow(0.8, s);
-		c += w * src.SampleLevel(linearClampSampler, uv + step_uv * (s * 0.5), 0).rgb;
+		c += w * src.SampleLevel(linearBorderBlackSampler, uv + step_uv * (s * 0.5), 0).rgb;
 		wsum += w;
 	}
 	c /= wsum;

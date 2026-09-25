@@ -488,15 +488,20 @@ namespace HAL
             {
                 constexpr uint32_t SMP_BASE = 384; // s-shift
 
-                // Embedded static samplers s0..s4 — create-infos kept alive so the
+                // Embedded static samplers s0..s6 — create-infos kept alive so the
                 // mapping's pEmbeddedSampler stays valid.  Order matches Frame::FrameLayout.h:
-                //   s0=linearWrap, s1=pointClamp, s2=linearClamp, s3=anisoBorder, s4=pointBorder
+                //   s0=linearWrap, s1=pointClamp, s2=linearClamp, s3=anisoBorder,
+                //   s4=pointBorder, s5=vsmShadow (comparison), s6=linearBorderBlack
+                // Register sN maps to binding SMP_BASE + N, so the list must stay
+                // contiguous and in layout order.
                 const SamplerDesc* descs[NUM_INLINE_SMP] = {
                     &Samplers::SamplerLinearWrapDesc,
                     &Samplers::SamplerPointClampDesc,
                     &Samplers::SamplerLinearClampDesc,
                     &Samplers::SamplerAnisoBorderDesc,
                     &Samplers::SamplerPointBorderDesc,
+                    &Samplers::SamplerShadowComparisonDesc,
+                    &Samplers::SamplerLinearBorderBlackDesc,
                 };
                 embedded_sampler_cis.resize(NUM_INLINE_SMP);
                 for (uint32_t i = 0; i < NUM_INLINE_SMP; ++i)
@@ -542,7 +547,7 @@ namespace HAL
                         VK_DESCRIPTOR_MAPPING_SOURCE_HEAP_WITH_CONSTANT_OFFSET_EXT, d));
                 }
 
-                // set 0, bindings 384..388 — embedded static samplers s0..s4.
+                // set 0, bindings 384..390 — embedded static samplers s0..s6.
                 // Fully baked into the pipeline via pEmbeddedSampler.
                 for (uint32_t i = 0; i < NUM_INLINE_SMP; ++i)
                 {

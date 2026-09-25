@@ -397,8 +397,7 @@ VkSamplerCreateInfo to_native_sampler_ci(const SamplerDesc& desc)
     ci.compareOp        = to_native(desc.ComparisonFunc);
     ci.minLod           = desc.MinLOD;
     ci.maxLod           = desc.MaxLOD;
-    // Border color: Vulkan only supports a fixed set.
-    // All HAL SamplerDesc border colors are (1,1,1,1) → opaque white.
+    // Border color: Vulkan only supports a fixed set, so snap to the nearest.
     const auto& bc = desc.BorderColor;
     if (bc.x == 0.f && bc.y == 0.f && bc.z == 0.f && bc.w == 0.f)
         ci.borderColor = VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK;

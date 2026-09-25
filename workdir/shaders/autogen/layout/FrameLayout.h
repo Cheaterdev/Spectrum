@@ -12,6 +12,7 @@ SamplerState linearClampSampler:register(s2);
 SamplerState anisoBordeSampler:register(s3);
 SamplerState pointBorderSampler:register(s4);
 SamplerComparisonState vsmShadowSampler:register(s5);
+SamplerState linearBorderBlackSampler:register(s6);
 #ifdef __spirv__
 struct _HALPush {
     uint s0;  uint s1;  uint s2;  uint s3;

@@ -13,15 +13,15 @@ float3 tent9(Texture2D<float4> tex, float2 uv, float2 texel, float radius)
 {
 	float2 d = texel * radius;
 	float3 s = 0;
-	s += tex.SampleLevel(linearClampSampler, uv + float2(-d.x, -d.y), 0).rgb;
-	s += tex.SampleLevel(linearClampSampler, uv + float2( 0,   -d.y), 0).rgb * 2;
-	s += tex.SampleLevel(linearClampSampler, uv + float2( d.x, -d.y), 0).rgb;
-	s += tex.SampleLevel(linearClampSampler, uv + float2(-d.x,  0),   0).rgb * 2;
-	s += tex.SampleLevel(linearClampSampler, uv,                      0).rgb * 4;
-	s += tex.SampleLevel(linearClampSampler, uv + float2( d.x,  0),   0).rgb * 2;
-	s += tex.SampleLevel(linearClampSampler, uv + float2(-d.x,  d.y), 0).rgb;
-	s += tex.SampleLevel(linearClampSampler, uv + float2( 0,    d.y), 0).rgb * 2;
-	s += tex.SampleLevel(linearClampSampler, uv + float2( d.x,  d.y), 0).rgb;
+	s += tex.SampleLevel(linearBorderBlackSampler, uv + float2(-d.x, -d.y), 0).rgb;
+	s += tex.SampleLevel(linearBorderBlackSampler, uv + float2( 0,   -d.y), 0).rgb * 2;
+	s += tex.SampleLevel(linearBorderBlackSampler, uv + float2( d.x, -d.y), 0).rgb;
+	s += tex.SampleLevel(linearBorderBlackSampler, uv + float2(-d.x,  0),   0).rgb * 2;
+	s += tex.SampleLevel(linearBorderBlackSampler, uv,                      0).rgb * 4;
+	s += tex.SampleLevel(linearBorderBlackSampler, uv + float2( d.x,  0),   0).rgb * 2;
+	s += tex.SampleLevel(linearBorderBlackSampler, uv + float2(-d.x,  d.y), 0).rgb;
+	s += tex.SampleLevel(linearBorderBlackSampler, uv + float2( 0,    d.y), 0).rgb * 2;
+	s += tex.SampleLevel(linearBorderBlackSampler, uv + float2( d.x,  d.y), 0).rgb;
 	return s / 16;
 }
 
@@ -64,7 +64,7 @@ void CS_Downsample(uint3 id : SV_DispatchThreadID)
 
 	// max(0): the scene can carry negative/NaN values from upstream passes,
 	// and one of them would otherwise smear across the entire chain.
-	#define TAP(x, y) max(src.SampleLevel(linearClampSampler, uv + t * float2(x, y), 0).rgb, 0)
+	#define TAP(x, y) max(src.SampleLevel(linearBorderBlackSampler, uv + t * float2(x, y), 0).rgb, 0)
 	float3 a = TAP(-2, -2), b = TAP(0, -2), c = TAP(2, -2);
 	float3 d = TAP(-2,  0), e = TAP(0,  0), f = TAP(2,  0);
 	float3 g = TAP(-2,  2), h = TAP(0,  2), i = TAP(2,  2);
@@ -164,6 +164,8 @@ void CS_Temporal(uint3 id : SV_DispatchThreadID)
 	float3 result = cur;
 	if (data.GetReset() == 0 && all(prev_uv >= 0) && all(prev_uv <= 1))
 	{
+		// Clamp, not border: prev_uv is already rejected outside [0,1], and a
+		// black border would darken history along the edges.
 		float3 hist = data.GetHistory().SampleLevel(linearClampSampler, prev_uv, 0).rgb;
 		if (all(isfinite(hist)))
 			result = lerp(cur, clamp(hist, mn, mx), data.GetHistory_weight());
@@ -237,9 +239,9 @@ void CS_Composite(uint3 id : SV_DispatchThreadID)
 		: lerp(scene.rgb, bloom, data.GetIntensity());
 
 	if (data.GetUse_ghosts() != 0)
-		result += data.GetFlare_ghosts().SampleLevel(linearClampSampler, uv, 0).rgb;
+		result += data.GetFlare_ghosts().SampleLevel(linearBorderBlackSampler, uv, 0).rgb;
 	if (data.GetUse_streaks() != 0)
-		result += data.GetFlare_streaks().SampleLevel(linearClampSampler, uv, 0).rgb * data.GetStreak_intensity();
+		result += data.GetFlare_streaks().SampleLevel(linearBorderBlackSampler, uv, 0).rgb * data.GetStreak_intensity();
 
 	target[id.xy] = float4(result, scene.a);
 }

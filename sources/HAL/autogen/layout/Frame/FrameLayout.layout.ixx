@@ -53,7 +53,7 @@ namespace Frame
 
 		template<class Processor> static void for_each(Processor& processor)
 		{
-			processor.template process<CameraData, SceneData, PassData, DebugInfo>({ HAL::Samplers::SamplerLinearWrapDesc, HAL::Samplers::SamplerPointClampDesc, HAL::Samplers::SamplerLinearClampDesc, HAL::Samplers::SamplerAnisoBorderDesc, HAL::Samplers::SamplerPointBorderDesc, HAL::Samplers::SamplerShadowComparisonDesc });
+			processor.template process<CameraData, SceneData, PassData, DebugInfo>({ HAL::Samplers::SamplerLinearWrapDesc, HAL::Samplers::SamplerPointClampDesc, HAL::Samplers::SamplerLinearClampDesc, HAL::Samplers::SamplerAnisoBorderDesc, HAL::Samplers::SamplerPointBorderDesc, HAL::Samplers::SamplerShadowComparisonDesc, HAL::Samplers::SamplerLinearBorderBlackDesc });
 		}
 	};
 }

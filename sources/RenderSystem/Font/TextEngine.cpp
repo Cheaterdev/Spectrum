@@ -695,6 +695,7 @@ namespace Text
         std::vector<DiagnosticArea> diagnostic_areas;
 
         float font_size = 16;
+        Style style;
 
         // Image paragraphs carry their id in the paragraph group tag, flagged
         // by the high bit. Each image gets its own tag: Skribidi collapses the
@@ -878,6 +879,7 @@ namespace Text
         std::lock_guard<std::mutex> lock(engine.m);
 
         impl->font_size = style.size;
+        impl->style     = style;
         impl->paragraph_attributes[0] = skb_attribute_make_font_size(style.size);
         impl->paragraph_attributes[1] = skb_attribute_make_font_weight(to_skb(style.weight));
         impl->paragraph_attributes[2] = skb_attribute_make_font_family(to_skb(style.family));
@@ -1323,6 +1325,41 @@ namespace Text
             return all;
         }
         return {};
+    }
+
+    uint32_t Editor::line_count() const
+    {
+        auto& engine = *Engine::get().impl;
+        std::lock_guard<std::mutex> lock(engine.m);
+        return (uint32_t)skb_editor_get_paragraph_count(impl->editor);
+    }
+
+    void Editor::build_line_numbers(float scale, float right_edge, Layout& out)
+    {
+        auto& engine = *Engine::get().impl;
+        std::lock_guard<std::mutex> lock(engine.m);
+        skb_editor_t* e = impl->editor;
+
+        out.quads.clear();
+        out.size = {};
+
+        for (int32_t pi = 0; pi < skb_editor_get_paragraph_count(e); pi++)
+        {
+            const skb_layout_t* line = skb_editor_get_paragraph_layout(e, pi);
+            const skb_layout_t* number = engine.get_layout(std::to_string(pi + 1), impl->style);
+            if (!line || !number || skb_layout_get_lines_count(line) == 0 || skb_layout_get_lines_count(number) == 0)
+                continue;
+
+            // Right-aligned, on the baseline of the line's first row.
+            const skb_vec2_t  offset = skb_editor_get_paragraph_offset(e, pi);
+            const skb_rect2_t bounds = skb_layout_get_bounds(number);
+            const float baseline = offset.y + skb_layout_get_lines(line)[0].baseline;
+            const vec2 pos = vec2(right_edge - bounds.x - bounds.width, baseline - skb_layout_get_lines(number)[0].baseline);
+
+            engine.emit_layout(number, pos, scale, out.quads);
+        }
+
+        engine.rasterize_missing();
     }
 
     vec2 Editor::content_size() const

@@ -54,6 +54,7 @@ export namespace HAL
 		extern SamplerDesc SamplerPointClampDesc;
 		extern SamplerDesc SamplerPointBorderDesc;
 		extern SamplerDesc SamplerLinearBorderDesc;
+		extern SamplerDesc SamplerLinearBorderBlackDesc;
 		extern SamplerDesc SamplerShadowComparisonDesc;
 
 	}
@@ -83,6 +84,10 @@ namespace HAL
 			TextureAddressMode::CLAMP, TextureAddressMode::CLAMP , TextureAddressMode::CLAMP,0.0f,16, ComparisonFunc::NONE, float4(1,1,1,1), 0, std::numeric_limits<float>::max() };
 		SamplerDesc SamplerLinearBorderDesc = SamplerDesc{ Filter::LINEAR, Filter::LINEAR, Filter::LINEAR,
 			TextureAddressMode::BORDER, TextureAddressMode::BORDER , TextureAddressMode::BORDER,0.0f,16, ComparisonFunc::NONE, float4(1,1,1,1), 0, std::numeric_limits<float>::max() };
+		// Off-texture taps read zero: for screen-space blurs (bloom, flare
+		// streaks) where clamping would smear a bright edge pixel along the border.
+		SamplerDesc SamplerLinearBorderBlackDesc = SamplerDesc{ Filter::LINEAR, Filter::LINEAR, Filter::LINEAR,
+			TextureAddressMode::BORDER, TextureAddressMode::BORDER , TextureAddressMode::BORDER,0.0f,16, ComparisonFunc::NONE, float4(0,0,0,0), 0, std::numeric_limits<float>::max() };
 
 		SamplerDesc SamplerAnisoWrapDesc = SamplerDesc{ Filter::ANISOTROPIC, Filter::ANISOTROPIC, Filter::ANISOTROPIC,
 			TextureAddressMode::WRAP, TextureAddressMode::WRAP , TextureAddressMode::WRAP,0.0f,16, ComparisonFunc::NONE, float4(1,1,1,1), 0, std::numeric_limits<float>::max() };

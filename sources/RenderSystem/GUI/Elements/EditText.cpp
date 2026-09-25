@@ -83,10 +83,11 @@ GUI::Elements::edit_text::edit_text(Text::Style style) : style(style), editor(st
 }
 
 // Mouse positions arrive in window pixels, the same space as render bounds;
-// the editor's origin is the content box, shifted by the scroll position.
+// the editor's origin is the text area (right of the gutter), shifted by the
+// scroll position.
 vec2 GUI::Elements::edit_text::to_editor(vec2 window_pos, float scale)
 {
-	const vec2 origin = vec2(get_render_bounds().pos) + vec2(padding->left, padding->top) * scale;
+	const vec2 origin = vec2(get_render_bounds().pos) + vec2(padding->left + gutter_width, padding->top) * scale;
 	return (window_pos - origin) / scale + scroll;
 }
 
@@ -402,19 +403,29 @@ void GUI::Elements::edit_text::process_key(long key, key_mods mods)
 	}
 }
 
-// The content box in window pixels, without the scroll offset: mouse input
-// arrives in that space, and draw_color adds the offset itself.
+// The text area in window pixels, without the scroll offset: mouse input
+// arrives in that space, and draw_color adds the offset itself. Everything
+// laid out by the editor lives here; the gutter is to its left.
 rect GUI::Elements::edit_text::content_rect(Context& c)
 {
 	rect r = get_render_bounds();
-	r.x += padding->left * c.scale;
+	r.x += (padding->left + gutter_width) * c.scale;
 	r.y += padding->top * c.scale;
-	r.w -= (padding->left + padding->right) * c.scale;
+	r.w -= (padding->left + gutter_width + padding->right) * c.scale;
 	r.h -= (padding->top + padding->bottom) * c.scale;
 
 	// Visible scroll bars are docked inside the padding and take their strips.
 	if (vbar->visible.get()) r.w -= vbar->get_render_bounds().w;
 	if (hbar->visible.get()) r.h -= hbar->get_render_bounds().h;
+	return r;
+}
+
+// The strip left of the text area holding line numbers (same height).
+rect GUI::Elements::edit_text::gutter_rect(Context& c)
+{
+	rect r = content_rect(c);
+	r.x -= gutter_width * c.scale;
+	r.w  = gutter_width * c.scale;
 	return r;
 }
 
@@ -604,6 +615,23 @@ void GUI::Elements::edit_text::on_pre_render(Context& c)
 		caret_visible = is_focused();
 		image_boxes   = editor.images();
 
+		// Wide enough for the largest number (at least two digits, so it doesn't
+		// jump at line 10), plus a gap on each side.
+		if (multiline && line_numbers)
+		{
+			const uint32_t lines  = editor.line_count();
+			const int      digits = std::max(2, int(std::to_string(lines).size()));
+			const float    digit  = Text::Engine::get().measure("0", style).x;
+			const float    gap    = style.size * 0.6f;
+			gutter_width = digits * digit + 2 * gap;
+			editor.build_line_numbers(c.scale, -gap, gutter_layout);
+		}
+		else
+		{
+			gutter_width = 0;
+			gutter_layout.quads.clear();
+		}
+
 		const rect content = content_rect(c);
 		const vec2 view    = vec2(content.w, content.h) / c.scale;
 		update_scroll(view);
@@ -709,6 +737,27 @@ void GUI::Elements::edit_text::draw_after(Context& c)
 		c.renderer->draw_color(c, caret_color, r);
 
 		c.ui_clipping = orig_clip;
+	}
+
+	if (gutter_width > 0)
+	{
+		const rect gutter = gutter_rect(c);
+		rect gutter_on_screen = gutter;
+		gutter_on_screen.x += c.offset.x;
+		gutter_on_screen.y += c.offset.y;
+		const sizer gutter_clip = intersect(c.ui_clipping, math::convert(gutter_on_screen));
+
+		if (gutter_clip.left < gutter_clip.right && gutter_clip.top < gutter_clip.bottom)
+		{
+			c.renderer->draw_color(c, gutter_color, gutter);
+
+			// Numbers sit left of the text origin (negative x): they follow the
+			// vertical scroll only.
+			const vec2 numbers_origin = vec2(content.pos.x, content.pos.y - scroll.y * c.scale);
+			c.renderer->flush(c);
+			Text::Engine::get().draw(c.command_list, gutter_layout, numbers_origin + c.offset,
+				line_number_color, gutter_clip, c.window_size);
+		}
 	}
 }
 

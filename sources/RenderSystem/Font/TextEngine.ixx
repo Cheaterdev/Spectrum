@@ -239,6 +239,13 @@ export namespace Text
         // Glyph quads at scale pixels per logical unit; requests missing glyphs.
         void build(float scale, Layout& out);
 
+        // Number of lines (paragraphs).
+        uint32_t line_count() const;
+        // 1-based number of every line, in the editor's style, right-aligned
+        // to x = right_edge and on its line's baseline (editor space; x may be
+        // negative, i.e. left of the text). Drawn with the draw() tint.
+        void build_line_numbers(float scale, float right_edge, Layout& out);
+
         // Extent of all paragraphs, logical units.
         vec2 content_size() const;
 
