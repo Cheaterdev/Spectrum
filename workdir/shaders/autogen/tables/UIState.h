@@ -13,6 +13,11 @@ namespace UI
 	{
 		uint UI_Passes_needed; // uint
 		uint GetUI_Passes_needed() { return UI_Passes_needed; }
+		void init()
+		{
+			UI_Passes_needed = 0;
+		}
+
 	};
 }
 using UI::UIState;

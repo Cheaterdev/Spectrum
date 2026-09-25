@@ -21,6 +21,14 @@ namespace GI
 			bool GetLight_scene() { return light_scene; }
 			bool GetReflection_enabled() { return reflection_enabled; }
 			bool GetDebug_voxel_trace() { return debug_voxel_trace; }
+			void init()
+			{
+				voxelize_scene = true;
+				light_scene = true;
+				reflection_enabled = true;
+				debug_voxel_trace = false;
+			}
+
 		};
 	}
 }

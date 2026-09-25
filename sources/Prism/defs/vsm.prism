@@ -461,7 +461,7 @@ namespace Shadows
 			# dispatch -- tiles that resolve directly in stage 1 (lit_tiles/
 			# dark_tiles) never reach this pass at all, so they rely on that clear,
 			# not an explicit write here, to read back as "not ambiguous".
-			[Write] RWTexture2D<float> ambiguous_mask;
+			RWTexture2D<float> ambiguous_mask;
 		}
 
 		# Stage 2's own output -- VSM_BlockerSearch (INDIRECT, over search_tiles
@@ -651,7 +651,7 @@ namespace Shadows
 			root = DefaultLayout;
 
 			[Erase]
-			pixel = null;
+			pixel = None;
 
 			[EntryPoint = VS]
 			mesh = "shadows/vsm/mesh_shader_vsm.hlsl";
@@ -699,7 +699,7 @@ namespace Shadows
 			root = DefaultLayout;
 
 			[Erase]
-			pixel = null;
+			pixel = None;
 
 			[EntryPoint = VS]
 			mesh = "shadows/vsm/mesh_shader_vsm.hlsl";
@@ -1086,7 +1086,7 @@ namespace Shadows
 			# contact shadow reads as is sensitive enough to scene depth scale that
 			# it needs to be tunable without a rebuild.
 			float surface_thickness;
-			[Write] RWTexture2D<float> output;
+			RWTexture2D<float> output;
 		}
 
 		ComputePSO VSMScreenSpaceShadow

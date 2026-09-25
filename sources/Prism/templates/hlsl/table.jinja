@@ -75,5 +75,5 @@ struct {{"[raypayload]" if table.options.raypayload is defined}}{{table.name}}
 {%-endif-%}
 {%-endif-%}
 {%-endfor%}
-{{-table.hlsl}}
+{{-table.hlsl}}{{ table.hlsl_init }}
 };{{ table.ns_close }}

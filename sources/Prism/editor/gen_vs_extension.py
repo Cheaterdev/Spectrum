@@ -515,7 +515,9 @@ def build_grammar(rules, a):
             # , is coloured; whether it's a real flag is the language server's
             # squiggle (option_enum in Validate.cpp has the list). Listed before
             # the option-name rule below, which would otherwise win the tie.
-            {"begin": r"(?<=" + re_escape(osb) + r"|,)\s*(Always|RecreateFlags)\s*(=)",
+            # [Access = ClosestHit | Caller] (payload stages) too; not [Read]/
+            # [Write], which on a pass field name resources, not stages.
+            {"begin": r"(?<=" + re_escape(osb) + r"|,)\s*(Always|RecreateFlags|Access)\s*(=)",
              "end": r"(?=" + re_escape(csb) + r"|,)",
              "beginCaptures": {"1": {"name": "entity.other.attribute-name.prism"},
                                "2": {"name": "keyword.operator.prism"}},

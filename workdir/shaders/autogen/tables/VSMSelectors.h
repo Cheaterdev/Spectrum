@@ -21,6 +21,14 @@ namespace Shadows
 			bool GetUse_vsm_contact_shadow() { return use_vsm_contact_shadow; }
 			VSMDebugView GetVsm_debug_view() { return vsm_debug_view; }
 			ShadowSource GetShadow_source() { return shadow_source; }
+			void init()
+			{
+				use_vsm_penumbra = true;
+				use_vsm_contact_shadow = true;
+				vsm_debug_view = VSMDebugView::None;
+				shadow_source = ShadowSource::VSM;
+			}
+
 		};
 	}
 }

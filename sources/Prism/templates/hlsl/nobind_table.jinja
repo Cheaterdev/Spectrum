@@ -14,9 +14,7 @@
 
 {%- macro declare_func(type) -%}
 {%- for v in (table.values|unique|selectattr('value_type','==', type)|selectattr('bindless','==', False)) %}
-{%set read = v.options.read.value_atom.expr | replace("{", "(")| replace("}", ")") -%}
-{%-set write = v.options.write.value_atom.expr | replace("{", "(")| replace("}", ")") -%}
-	{{v.type}} {{v.name}}{{": SV_DispatchGrid" if v.options.DispatchSize }}{{ " : read" + read if read }}{{ " : write" + write if write }};
+	{{v.type}} {{v.name}}{{": SV_DispatchGrid" if v.options.DispatchSize }}{{ " : read" + v.stage_read if v.stage_read }}{{ " : write" + v.stage_write if v.stage_write }};
 {%- endfor -%}
 
 
@@ -49,5 +47,5 @@
 	{%- endif %}
 {%-endif-%}
 {%-endfor-%}
-	{{- table.hlsl }}
+	{{- table.hlsl }}{{ table.hlsl_init }}
 };{{ table.ns_close }}

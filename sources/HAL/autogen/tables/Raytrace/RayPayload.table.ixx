@@ -20,12 +20,12 @@ export namespace Table
 		struct RayPayload
 		{
 			static constexpr SlotID ID = SlotID::RayPayload;
-			float4 color;
+			float4 color = 0;
 			float3 hit_normal;
-			float3 albedo;
-			uint recursion;
-			float dist;
-			uint use_vsm_shadow;
+			float3 albedo = 0;
+			uint recursion = 0;
+			float dist = 0;
+			uint use_vsm_shadow = 0;
 			Table::Raytrace::RayCone cone;
 			float4& GetColor() { return color; }
 			float3& GetHit_normal() { return hit_normal; }

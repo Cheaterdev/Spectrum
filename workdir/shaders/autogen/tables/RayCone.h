@@ -25,6 +25,12 @@ namespace Raytrace
 				return result;
 			}
 
+		void init()
+		{
+			width = 0;
+			angle = 0;
+		}
+
 	};
 }
 using Raytrace::RayCone;

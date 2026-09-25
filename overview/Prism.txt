@@ -165,9 +165,10 @@ Struct options
   [RenderTarget]          a render-target set: fields are
                           RenderTarget<T>/DepthStencil<T>; also generates RT::X.
   [IndirectCommand]       layout of an ExecuteIndirect argument record.
-  [raypayload]            DXR payload struct; fields need access qualifiers:
-                          [read = {anyhit,closesthit,miss,caller}]
-                          [write = {anyhit,closesthit,miss,caller}]
+  [raypayload]            DXR payload struct; each value field needs the stages
+                          that read and write it (see PAYLOADS below).
+  [Access = A | B]        on a [raypayload] struct: the default stages for its
+                          fields.
   [Template = T]          a C++/HLSL template struct parameterised on T.
   [serialize]             with [RenderTarget]: generates serialization of the
                           set's constant/struct members.
@@ -180,7 +181,31 @@ Field options
                           view's own mip/array range (same layout, different
                           barrier scope).
   [DispatchSize]          HLSL SV_DispatchGrid (work-graph records).
-  read / write            DXR payload access qualifiers (see [raypayload]).
+  [Access] [Read] [Write] payload stage access (see PAYLOADS below); only in a
+                          [raypayload] struct.
+
+Field defaults
+  `float4 color = 0;` sets the field's default: the C++ struct gets it as an
+  initializer, and the HLSL struct gets a generated `void init()` assigning
+  every default (HLSL rejects default member values). A struct-typed field
+  whose type has an init() is initialised with it too (`cone.init();`).
+  Structs without defaults get no init(); writing your own parameterless
+  init() next to defaults is an error.
+
+PAYLOADS
+    [nobind] [raypayload] [Access = ClosestHit | Miss | Caller]
+    struct ShadowPayload
+    {
+        [Access = AnyHit | ClosestHit | Miss | Caller]
+        bool hit;
+        float dist;                 # takes the struct's [Access]
+    }
+
+  Stages: Caller, ClosestHit, Miss, AnyHit (DXR's caller, closesthit, miss,
+  anyhit). Per field and per side, the field's [Read]/[Write] wins, else its
+  [Access], else the struct's [Access]; every value field must end up with
+  both sides. A defaulted payload field needs Caller in its write stages,
+  since init() runs in the caller before TraceRay.
 
 HLSL functions
   A function inside a struct body is written out into the struct's generated
@@ -314,7 +339,7 @@ Shaders   <stage> = "path.hlsl";   path relative to workdir/shaders, extension
           pixel, geometry, hull, domain, mesh, amplification.
           Options: [EntryPoint = fn] (required), [Enable16bits] (FP16),
                    [Erase] (remove a stage inherited from a parent PSO; used
-                   with the sentinel `pixel = null;`).
+                   with the sentinel `pixel = None;`).
 
 Defines   `define Name;` is an on/off permutation key.
           `define Name = {0,1,2,3};` has one variant per listed value.
@@ -356,8 +381,8 @@ registered), [ExcludeVulkan] (D3D12 only). Inheritance: `ComputePSO B : A`.
     RaytracePass ColorPass
     {
         [EntryPoint = MyMissShader]        miss = "rtx/raytracing.hlsl";
-        [EntryPoint = MyClosestHitShader]  closest_hit = none;
-        [EntryPoint = MyAnyHitShader]      any_hit = none;
+        [EntryPoint = MyClosestHitShader]  closest_hit = None;
+        [EntryPoint = MyAnyHitShader]      any_hit = None;
         payload = RayPayload;
         local = MaterialInfo;
         per_material = true;
@@ -366,7 +391,7 @@ registered), [ExcludeVulkan] (D3D12 only). Inheritance: `ComputePSO B : A`.
 A RaytracePSO collects every raygen and pass whose [Bind] names it (required,
 and checked). Raygens/passes get their ::ID from their position within that
 PSO, across all .prism files, so they can live in any file.
-`closest_hit = none;` / `any_hit = none;` declare a per-material hit shader
+`closest_hit = None;` / `any_hit = None;` declare a per-material hit shader
 (compiled per material rather than from one file). Pass params: payload
 (the [raypayload] struct), local (local root-signature struct),
 per_material, recursion_depth.

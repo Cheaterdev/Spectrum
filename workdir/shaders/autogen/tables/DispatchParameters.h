@@ -51,6 +51,22 @@ namespace Shadows
 			float2 GetInvDepthTextureSize() { return InvDepthTextureSize; }
 			Texture2D<float> GetDepthTexture() { return ResourceDescriptorHeap[DepthTexture]; }
 			RWTexture2D<float4> GetOutputTexture() { return ResourceDescriptorHeap[OutputTexture]; }
+			void init()
+			{
+				SurfaceThickness = 0.005;
+				BilinearThreshold = 0.02;
+				ShadowContrast = 4;
+				IgnoreEdgePixels = false;
+				UsePrecisionOffset = false;
+				BilinearSamplingOffsetMode = false;
+				DebugOutputEdgeMask = false;
+				DebugOutputThreadIndex = false;
+				DebugOutputWaveIndex = false;
+				DepthBounds = float2(0,1);
+				UseEarlyOut = false;
+				PixelStepScale = 1;
+			}
+
 		};
 	}
 }

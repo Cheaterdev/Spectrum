@@ -446,6 +446,66 @@ static void qualify_field_types(Parsed& parsed)
 		}
 }
 
+// Per [raypayload] field, its DXR qualifiers as HLSL text, "(closesthit,caller)",
+// in the order the stages were listed. Per struct, the HLSL init() built from
+// field defaults (`float4 color = 0;`): HLSL rejects default member values
+// outright, so the defaults become assignments, plus a nested init() call for
+// a struct-typed field whose type has one. validate() has already checked
+// every name and that a payload's defaulted fields are writable by the caller.
+static void resolve_payloads(Parsed& parsed)
+{
+	auto stages = [](const std::vector<std::string>& names)
+	{
+		std::string out;
+		for (const auto& n : names)
+			out += (out.empty() ? "(" : ",") + payload_stages().at(n);
+		return out.empty() ? out : out + ")";
+	};
+
+	std::map<std::string, bool> has_init;
+	std::function<bool(const Table&)> needs_init = [&](const Table& t) -> bool
+	{
+		if (auto it = has_init.find(t.name); it != has_init.end())
+			return it->second;
+		has_init[t.name] = false; // a struct can't contain itself, but don't recurse forever on bad input
+		bool any = false;
+		for (const auto& v : t.values)
+			if (!v.expr.empty())
+				any = true;
+			else if (v.value_type == ValueType::STRUCT && !v.as_array)
+				if (const Table* inner = parsed.tables.find(v.get_type()); inner && needs_init(*inner))
+					any = true;
+		return has_init[t.name] = any;
+	};
+
+	for (auto& t : parsed.tables)
+	{
+		if (t.find_option("raypayload"))
+			for (auto& v : t.values)
+				if (v.value_type != ValueType::STRUCT)
+				{
+					v.stage_read = stages(payload_access(t, v, false));
+					v.stage_write = stages(payload_access(t, v, true));
+				}
+
+		if (!needs_init(t))
+			continue;
+		std::string body;
+		for (const auto& v : t.values)
+		{
+			if (!v.expr.empty())
+			{
+				bool is_enum = parsed.enums.find(v.get_type()) != nullptr && v.expr.find("::") == std::string::npos;
+				body += "\t\t" + v.name + " = " + (is_enum ? v.get_type() + "::" : "") + v.expr + ";\n";
+			}
+			else if (v.value_type == ValueType::STRUCT && !v.as_array)
+				if (const Table* inner = parsed.tables.find(v.get_type()); inner && needs_init(*inner))
+					body += "\t\t" + v.name + ".init();\n";
+		}
+		t.hlsl_init = "\n\tvoid init()\n\t{\n" + body + "\t}\n";
+	}
+}
+
 // RaytraceRaygen/RaytracePass ::ID must equal the item's position in its
 // RaytracePSO's gens/passes list -- RTX.ixx static_asserts it against the
 // Typelist index. Counting per bound PSO over the merged model is what makes
@@ -527,6 +587,7 @@ int main(int argc, char** argv)
 		set_namespace_text(parsed);
 		parsed.setup();
 		qualify_field_types(parsed);
+		resolve_payloads(parsed);
 
 		// Turns parsed condition terms into the C++ the templates paste, and
 		// collects each condition's Table:: field dependencies on the way.

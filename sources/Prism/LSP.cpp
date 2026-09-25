@@ -1548,7 +1548,14 @@ namespace
 			else if (auto option = option_value_at(*text, offset))
 			{
 				const CppEnum* e = option_enum(*option, uri_to_path(uri));
-				if (e && !e->names.empty())
+				// [Read]/[Write] on a pass field mean something else (resource
+				// writes, view leaves); only a struct field's are shader stages.
+				bool stages = *option == "Access"
+					|| ((*option == "Read" || *option == "Write") && option_kind_at(*text, offset) == "struct field");
+				if (stages)
+					for (const auto& [name, dxr] : payload_stages())
+						items.push_back({ name, "payload stage (" + dxr + ")", K_Constant, {} });
+				else if (e && !e->names.empty())
 					for (const auto& v : e->names)
 						items.push_back({ v, e->cpp_name, K_Constant, {} });
 				else

@@ -484,6 +484,9 @@ struct Value : public have_name, have_options, have_type, have_expr, have_array,
 	int size = 0;
 	std::string cpp_type;
 	std::string qtype; // get_type() with table/enum names fully qualified, for C++ (qualify_field_types)
+	// A [raypayload] field's DXR qualifiers, e.g. "(closesthit,caller)"; empty
+	// elsewhere. Resolved from [Access]/[Read]/[Write] by resolve_payloads.
+	std::string stage_read, stage_write;
 	void detect_type(have_options* options) override;
 
 
@@ -499,6 +502,8 @@ struct Value : public have_name, have_options, have_type, have_expr, have_array,
 		ar& NVP(size);
 		ar& NVP(cpp_type);
 		ar& NVP(qtype);
+		ar& NVP(stage_read);
+		ar& NVP(stage_write);
 	}
 };
 
@@ -957,6 +962,10 @@ struct Table : public inherited, have_options, have_name, have_hlsl
 	void setup(Parsed* all);
 	bool need_compiled = false;
 
+	// The HLSL init() generated from field defaults (resolve_payloads); empty
+	// when no field has one. HLSL has no default member values.
+	std::string hlsl_init;
+
 	SERIALIZE()
 	{
 		SAVE_PARENT_MERGED(have_options);
@@ -964,6 +973,7 @@ struct Table : public inherited, have_options, have_name, have_hlsl
 		SAVE_PARENT_MERGED(have_hlsl);
 
 		ar& NVP(path);
+		ar& NVP(hlsl_init);
 		ar& NVP(values);
 		ar& NVP(used_tables);
 		ar& NVP(offsets);

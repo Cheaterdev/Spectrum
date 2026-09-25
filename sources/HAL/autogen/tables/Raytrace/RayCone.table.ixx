@@ -19,8 +19,8 @@ export namespace Table
 		struct RayCone
 		{
 			static constexpr SlotID ID = SlotID::RayCone;
-			float width;
-			float angle;
+			float width = 0;
+			float angle = 0;
 			float& GetWidth() { return width; }
 			float& GetAngle() { return angle; }
 			static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;

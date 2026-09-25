@@ -61,7 +61,7 @@ namespace Meshes
 		root = DefaultLayout;
 
 		[Erase]
-		pixel = null;
+		pixel = None;
 
 		[EntryPoint = VS]
 		mesh  = "gbuffer/mesh_shader.hlsl";

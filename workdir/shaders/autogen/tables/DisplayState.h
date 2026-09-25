@@ -17,6 +17,13 @@ namespace UI
 		bool GetHdr() { return hdr; }
 		float GetMax_nits() { return max_nits; }
 		float GetSdr_white_nits() { return sdr_white_nits; }
+		void init()
+		{
+			hdr = false;
+			max_nits = 80;
+			sdr_white_nits = 80;
+		}
+
 	};
 }
 using UI::DisplayState;

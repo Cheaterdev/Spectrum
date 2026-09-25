@@ -135,11 +135,12 @@ error messages that say *what* is wrong but not *where*, which in a 14-file
 Still open: `KNOWN_CPP_SCOPES` is empty, because no current condition
 names a non-Prism scope. Add to it rather than weakening the check.
 
-Three options are accepted but **read by nothing**, and are marked `unread`
-in `KNOWN_OPTIONS`: `[Base]` on GraphicsPSO (`scene.prism`), `nullable` on
-defines (`meshrender.prism`, `scene.prism`, `voxel.prism`), and `[Write]` on struct
-fields (`vsm.prism`). Either give them a consumer or delete them from the
-`.prism` files and the whitelist.
+Two options are accepted but **read by nothing**, and are marked `unread`
+in `KNOWN_OPTIONS`: `[Base]` on GraphicsPSO (`scene.prism`) and `nullable` on
+defines (`meshrender.prism`, `scene.prism`, `voxel.prism`). Either give them a
+consumer or delete them from the `.prism` files and the whitelist. (The third,
+struct-field `[Write]`, was removed from vsm.prism; on struct fields `[Write]`
+now means payload write stages, see check_payload.)
 
 Original notes:
 

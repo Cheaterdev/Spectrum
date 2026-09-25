@@ -21,9 +21,9 @@ namespace
 	};
 
 	const std::map<std::string, std::set<std::string>> KNOWN_OPTIONS = {
-		{ "struct", { "Bind", "IndirectCommand", "RenderTarget", "nobind", "raypayload", "serialize", "shader_only", "Template" } },
-		{ "struct field", { "Auto", "Barrier", "DispatchSize", "dynamic", "read", "write",
-			"Write" /* unread */ } },
+		// [Access] on a [raypayload] struct is its fields' default; see check_payload.
+		{ "struct", { "Access", "Bind", "IndirectCommand", "RenderTarget", "nobind", "raypayload", "serialize", "shader_only", "Template" } },
+		{ "struct field", { "Access", "Auto", "Barrier", "DispatchSize", "dynamic", "Read", "Write" } },
 		// [HLSL] is also the default; [CPP] (emit into the C++ struct) is not implemented yet.
 		{ "function", { "HLSL" } },
 		{ "layout", {} },
@@ -367,6 +367,72 @@ namespace
 			check(atom.expr, atom.terms.empty() ? opt.loc : atom.terms.front().text_loc);
 	}
 
+	// [Access]/[Read]/[Write] on a [raypayload] struct and its fields: stage
+	// names, every value field ending up with both sides (DXC requires a
+	// qualifier on each field once payload qualifiers are on), and the generated
+	// init() being legal in the caller. Outside a payload the options are errors.
+	void check_payload(const Table& table)
+	{
+		const bool payload = table.find_option("raypayload") != nullptr;
+		std::vector<std::string> stage_names;
+		for (const auto& [name, dxr] : payload_stages())
+			stage_names.push_back(name);
+
+		auto check = [&](const option& opt, const std::string& where)
+		{
+			if (!payload)
+			{
+				diagnostics().error(opt, std::format("[{}] on '{}': only a [raypayload] struct's fields have stage access", opt.name, where));
+				return;
+			}
+			const auto& atom = opt.value_atom;
+			if (option_flags(opt).empty())
+			{
+				diagnostics().error(opt, std::format("[{}] on '{}' takes stage names, e.g. [{} = ClosestHit | Caller]", opt.name, where, opt.name));
+				return;
+			}
+			auto name_ok = [&](const std::string& n, const SourceLocation& loc)
+			{
+				if (!payload_stages().count(n))
+					unknown_name(loc, std::format("[{}] on '{}': '{}' is not a stage (Caller, ClosestHit, Miss, AnyHit)", opt.name, where, n), n, stage_names);
+			};
+			if (!atom.values.empty())
+				for (const auto& v : atom.values)
+					name_ok(v.expr, v.loc);
+			else
+				name_ok(atom.expr, atom.terms.empty() ? opt.loc : atom.terms.front().text_loc);
+		};
+
+		if (const option* o = table.find_option("Access"))
+			check(*o, table.name);
+
+		bool has_defaults = false;
+		for (const auto& v : table.values)
+		{
+			for (const char* name : { "Access", "Read", "Write" })
+				if (const option* o = v.find_option(name))
+					check(*o, table.name + "." + v.name);
+			has_defaults |= !v.expr.empty();
+
+			if (!payload || v.value_type == ValueType::STRUCT)
+				continue;
+			for (bool write : { false, true })
+				if (payload_access(table, v, write).empty())
+					diagnostics().error(name_loc_of(v), std::format("{}.{}: no {} stages -- give the struct or this field [Access = ...]",
+						table.name, v.name, write ? "write" : "read"));
+			auto w = payload_access(table, v, true);
+			if (!v.expr.empty() && !w.empty() && std::find(w.begin(), w.end(), "Caller") == w.end())
+				diagnostics().error(name_loc_of(v), std::format("{}.{} has a default, which the generated init() writes from the caller, "
+					"so its write stages need Caller", table.name, v.name));
+		}
+
+		if (has_defaults)
+			for (const auto& f : table.functions)
+				if (f.name == "init" && f.params.find_first_not_of(" \t") == std::string::npos)
+					diagnostics().error(name_loc_of(f), std::format("{}: init() is generated from the field defaults; remove this one "
+						"or the defaults", table.name));
+	}
+
 	// A namespace reopened in several blocks has one set of options: a block
 	// either repeats them exactly or writes none, so which block a member is in
 	// can never change how it's treated.
@@ -550,9 +616,12 @@ namespace
 	{
 		if (!s.path_quoted)
 		{
-			if (s.path_literal != "none" && s.path_literal != "null")
+			if (s.path_literal == "none" || s.path_literal == "null")
+				diagnostics().error(s.path_loc, std::format("{}.{}: `{}` is now spelled `None`", owner_name, s.name, s.path_literal),
+					Diagnostics::Fix{ s.path_literal.size(), "None" });
+			else if (s.path_literal != "None")
 				diagnostics().error(s.path_loc, std::format("{}.{}: shader must be a quoted path such as \"dir/file.hlsl\" "
-					"(bare words are only for `none` / `null`)", owner_name, s.name));
+					"(the only bare word is `None`)", owner_name, s.name));
 			return;
 		}
 
@@ -681,6 +750,36 @@ const std::set<std::string>& known_options(const std::string& kind)
 	return it != KNOWN_OPTIONS.end() ? it->second : none;
 }
 
+const std::map<std::string, std::string>& payload_stages()
+{
+	static const std::map<std::string, std::string> stages = {
+		{ "Caller", "caller" }, { "ClosestHit", "closesthit" }, { "Miss", "miss" }, { "AnyHit", "anyhit" },
+	};
+	return stages;
+}
+
+std::vector<std::string> option_flags(const option& opt)
+{
+	const auto& atom = opt.value_atom;
+	if (atom.is_raw || !atom.owner_name.empty() || atom.terms.size() > 1)
+		return {};
+	std::vector<std::string> out;
+	if (!atom.values.empty())
+		for (const auto& v : atom.values)
+			out.push_back(v.expr);
+	else if (!atom.expr.empty())
+		out.push_back(atom.expr);
+	return out;
+}
+
+std::vector<std::string> payload_access(const Table& table, const Value& field, bool write)
+{
+	if (const option* o = field.find_option(write ? "Write" : "Read")) return option_flags(*o);
+	if (const option* o = field.find_option("Access")) return option_flags(*o);
+	if (const option* o = table.find_option("Access")) return option_flags(*o);
+	return {};
+}
+
 const std::map<std::string, std::string>& size_functions()
 {
 	static const std::map<std::string, std::string> functions = {
@@ -722,6 +821,7 @@ void validate(Parsed& parsed)
 	for (const auto& table : parsed.tables)
 	{
 		check_options(table, "struct", table.name);
+		check_payload(table);
 		for (const auto& v : table.values)
 			check_options(v, "struct field", table.name + "." + v.name);
 		check_hlsl_text(table.inserted, table.hlsl_loc, table.name);

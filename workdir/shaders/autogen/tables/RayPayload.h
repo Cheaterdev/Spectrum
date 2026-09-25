@@ -47,16 +47,15 @@ namespace Raytrace
 				return result;
 			}
 
-			void init()
-			{
-				color = 0;
-				albedo = 0;
-				recursion = 0;
-				dist = 0;
-				cone.angle = 0;
-				cone.width = 0;
-				use_vsm_shadow = 0;
-			}
+		void init()
+		{
+			cone.init();
+			color = 0;
+			albedo = 0;
+			recursion = 0;
+			dist = 0;
+			use_vsm_shadow = 0;
+		}
 
 	};
 }

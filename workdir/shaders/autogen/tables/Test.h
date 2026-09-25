@@ -32,6 +32,11 @@ namespace Dev
 			return ResourceDescriptorHeap[NonUniformResourceIndex(id)];
 		}
 
+		void init()
+		{
+			mode = TestEnumMode::None;
+		}
+
 	};
 }
 using Dev::Test;

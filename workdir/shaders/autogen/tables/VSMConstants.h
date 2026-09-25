@@ -37,6 +37,11 @@ namespace Shadows
 			VSMDebugView GetDebug_view() { return debug_view; }
 			float4x4 GetLight_view() { return light_view; }
 			float4 GetLevel_info(int i) { return level_info[i]; }
+			void init()
+			{
+				debug_view = VSMDebugView::None;
+			}
+
 		};
 	}
 }
