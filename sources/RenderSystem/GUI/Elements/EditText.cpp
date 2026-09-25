@@ -52,10 +52,6 @@ GUI::Elements::edit_text::edit_text(Text::Style style) : style(style), editor(st
 			const bool allowed = (ch >= 0x20 && ch != 0x7F) || (multiline && (ch == '\n' || ch == '\t'));
 			return allowed && (!filter || filter(ch));
 		};
-	editor.highlighter = [this](std::u32string_view text, std::vector<uint32_t>& colors)
-		{
-			if (highlighter) highlighter(text, colors);
-		};
 
 	padding = { 5, 5, 5, 5 };
 
@@ -95,12 +91,18 @@ void GUI::Elements::edit_text::set_text(const std::string& t)
 {
 	std::lock_guard<std::mutex> guard(m);
 	editor.set_text(t);
-	text = t;
+	text       = t;
+	text_dirty = false;
 }
 
 std::string GUI::Elements::edit_text::get_text()
 {
 	std::lock_guard<std::mutex> guard(m);
+	if (text_dirty)
+	{
+		text       = editor.get_text();
+		text_dirty = false;
+	}
 	return text;
 }
 
@@ -591,16 +593,63 @@ void GUI::Elements::edit_text::on_pre_render(Context& c)
 	std::string changed_text;
 	{
 		std::lock_guard<std::mutex> guard(m);
-		process_events(c);
-
-		if (editor.take_changed())
 		{
-			text         = editor.get_text();
-			changed      = true;
-			changed_text = text;
+			PROFILE(L"edit_text_input");
+			process_events(c);
 		}
 
-		showing_placeholder = text.empty() && !placeholder.empty();
+		// Serializing the whole document is O(size): done per edit only when
+		// someone listens, otherwise on demand in get_text().
+		if (editor.take_changed())
+		{
+			if (on_change.has_handlers())
+			{
+				text         = editor.get_text();
+				text_dirty   = false;
+				changed      = true;
+				changed_text = text;
+			}
+			else
+				text_dirty = true;
+		}
+
+		caret         = editor.caret();
+		caret_visible = is_focused();
+
+		// Wide enough for the largest number (at least two digits, so it doesn't
+		// jump at line 10), plus a gap on each side. Before the scroll update:
+		// the gutter narrows the text area.
+		float gap = 0;
+		if (multiline && line_numbers)
+		{
+			const int   digits = std::max(2, int(std::to_string(editor.line_count()).size()));
+			const float digit  = Text::Engine::get().measure("0", style).x;
+			gap          = style.size * 0.6f;
+			gutter_width = digits * digit + 2 * gap;
+		}
+		else
+			gutter_width = 0;
+
+		// Scroll first, then build only what is (about to be) on screen; half a
+		// view of margin either side absorbs fast scrolling.
+		const rect content = content_rect(c);
+		const vec2 view    = vec2(content.w, content.h) / c.scale;
+		update_scroll(view);
+		if (multiline)
+			sync_scroll_bars(view, editor.content_size() + vec2(4, 0));
+
+		const float visible_top    = scroll.y - view.y * 0.5f;
+		const float visible_bottom = scroll.y + view.y * 1.5f;
+
+		// Only what is on screen: every rect is a draw call.
+		selection = editor.selection_rects(scroll.y, scroll.y + view.y);
+
+		// Handed over only once set: an editor without one skips the per-line
+		// syntax bookkeeping entirely (single-line fields never have one).
+		if (highlighter && !editor.highlighter)
+			editor.highlighter = highlighter;
+
+		showing_placeholder = !placeholder.empty() && editor.is_empty();
 		if (showing_placeholder)
 		{
 			Text::Style s = style;
@@ -608,35 +657,14 @@ void GUI::Elements::edit_text::on_pre_render(Context& c)
 			Text::Engine::get().build(placeholder, s, layout);
 		}
 		else
-			editor.build(c.scale, layout);
+			editor.build(c.scale, layout, visible_top, visible_bottom);
 
-		selection     = editor.selection_rects();
-		caret         = editor.caret();
-		caret_visible = is_focused();
-		image_boxes   = editor.images();
+		image_boxes = editor.images();
 
-		// Wide enough for the largest number (at least two digits, so it doesn't
-		// jump at line 10), plus a gap on each side.
-		if (multiline && line_numbers)
-		{
-			const uint32_t lines  = editor.line_count();
-			const int      digits = std::max(2, int(std::to_string(lines).size()));
-			const float    digit  = Text::Engine::get().measure("0", style).x;
-			const float    gap    = style.size * 0.6f;
-			gutter_width = digits * digit + 2 * gap;
-			editor.build_line_numbers(c.scale, -gap, gutter_layout);
-		}
+		if (gutter_width > 0)
+			editor.build_line_numbers(c.scale, -gap, gutter_layout, visible_top, visible_bottom);
 		else
-		{
-			gutter_width = 0;
 			gutter_layout.quads.clear();
-		}
-
-		const rect content = content_rect(c);
-		const vec2 view    = vec2(content.w, content.h) / c.scale;
-		update_scroll(view);
-		if (multiline)
-			sync_scroll_bars(view, editor.content_size() + vec2(4, 0));
 
 		if (drop_hover)
 			drop_caret = editor.caret_at(to_editor(drop_pos, c.scale));

@@ -100,6 +100,7 @@ export namespace GUI
                 Text::Style  style;
                 Text::Editor editor;
                 std::string  text;   // mirror of the editor's text, for get_text()
+                bool         text_dirty = false;   // mirror stale; refreshed on demand
 
                 // Scroll position of the content box over the editor's content,
                 // logical units, >= 0. Kept here rather than in skb_editor: its

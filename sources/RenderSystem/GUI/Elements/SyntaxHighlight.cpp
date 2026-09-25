@@ -78,7 +78,7 @@ namespace
 
 namespace GUI::Syntax
 {
-    void highlight_hlsl(std::u32string_view s, std::vector<uint32_t>& colors)
+    uint32_t highlight_hlsl(std::u32string_view s, uint32_t state, std::span<uint32_t> colors)
     {
         const size_t n = s.size();
         auto paint = [&](size_t begin, size_t end, uint32_t color)
@@ -87,19 +87,37 @@ namespace GUI::Syntax
                     colors[i] = color;
             };
 
+        // Index just past the "*/" closing a block comment searched from 'from',
+        // or npos if the comment runs past the end of the line.
+        auto block_comment_end = [&](size_t from)
+            {
+                for (size_t e = from; e + 1 < n; ++e)
+                    if (s[e] == '*' && s[e + 1] == '/')
+                        return e + 2;
+                return std::u32string_view::npos;
+            };
+
         bool   line_start = true;   // only whitespace so far on this line
         size_t i = 0;
+
+        // Still inside a block comment opened on an earlier line.
+        if (state == 1)
+        {
+            const size_t e = block_comment_end(0);
+            if (e == std::u32string_view::npos)
+            {
+                paint(0, n, color_comment);
+                return 1;
+            }
+            paint(0, e, color_comment);
+            i = e;
+            line_start = false;
+        }
 
         while (i < n)
         {
             const char32_t c = s[i];
 
-            if (c == '\n')
-            {
-                line_start = true;
-                ++i;
-                continue;
-            }
             if (c == ' ' || c == '\t' || c == '\r')
             {
                 ++i;
@@ -109,19 +127,20 @@ namespace GUI::Syntax
             // Line comment.
             if (c == '/' && i + 1 < n && s[i + 1] == '/')
             {
-                size_t e = i;
-                while (e < n && s[e] != '\n') ++e;
-                paint(i, e, color_comment);
-                i = e;
-                continue;
+                paint(i, n, color_comment);
+                break;
             }
 
-            // Block comment; spans lines, so it runs over the whole text at once.
+            // Block comment; when it doesn't close on this line, the state
+            // carries it into the next one.
             if (c == '/' && i + 1 < n && s[i + 1] == '*')
             {
-                size_t e = i + 2;
-                while (e + 1 < n && !(s[e] == '*' && s[e + 1] == '/')) ++e;
-                e = std::min(n, e + 2);
+                const size_t e = block_comment_end(i + 2);
+                if (e == std::u32string_view::npos)
+                {
+                    paint(i, n, color_comment);
+                    return 1;
+                }
                 paint(i, e, color_comment);
                 i = e;
                 line_start = false;
@@ -207,5 +226,6 @@ namespace GUI::Syntax
 
             ++i;
         }
+        return 0;
     }
 }

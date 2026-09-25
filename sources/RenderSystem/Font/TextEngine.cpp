@@ -680,9 +680,136 @@ namespace Text
         bool changed         = false;
         bool suppress_change = false;
 
-        // Highlighter output for the current text; rebuilt lazily on change.
-        std::vector<uint32_t> syntax_colors;
-        bool                  syntax_dirty = true;
+        // Highlighter output for the current text, one entry per paragraph.
+        struct LineSyntax
+        {
+            uint32_t              version = 0;      // Skribidi's paragraph version: changes with the paragraph's content
+            bool                  lexed = false;    // colors match the text (not necessarily state_in)
+            uint32_t              state_in = 0;     // lexer state entering the line
+            uint32_t              state_out = 0;
+            std::vector<uint32_t> colors;           // per codepoint of the paragraph
+        };
+        std::vector<LineSyntax> syntax_lines;
+        bool                    syntax_dirty = true;
+        // Lines before lex_from are correct. From there on a line may be
+        // unlexed or lexed with a stale incoming state; last_unlexed bounds
+        // where the unlexed ones can be (-1: none).
+        int32_t                 lex_from = 0;
+        int32_t                 last_unlexed = -1;
+
+        // content_size() walks every paragraph; recomputed only after a change.
+        vec2 cached_content_size;
+        bool content_size_dirty = true;
+
+        // After an edit: lines are matched to the cache from both ends by
+        // paragraph version (Skribidi bumps it on any change to the paragraph),
+        // the changed middle is replaced by unlexed entries. O(lines) integer
+        // compares; no text is read.
+        void sync_syntax_lines()
+        {
+            const int32_t count     = skb_editor_get_paragraph_count(editor);
+            const int32_t old_count = (int32_t)syntax_lines.size();
+            const skb_rich_text_t* rich = skb_editor_get_rich_text(editor);
+
+            int32_t prefix = 0;
+            while (prefix < count && prefix < old_count && syntax_lines[prefix].version == skb_rich_text_get_paragraph_version(rich, prefix))
+                ++prefix;
+            int32_t suffix = 0;
+            while (suffix < count - prefix && suffix < old_count - prefix
+                   && syntax_lines[old_count - 1 - suffix].version == skb_rich_text_get_paragraph_version(rich, count - 1 - suffix))
+                ++suffix;
+
+            const int32_t old_middle_end = old_count - suffix;
+            const int32_t new_middle_end = count - suffix;
+            syntax_lines.erase(syntax_lines.begin() + prefix, syntax_lines.begin() + old_middle_end);
+            syntax_lines.insert(syntax_lines.begin() + prefix, new_middle_end - prefix, LineSyntax{});
+            for (int32_t pi = prefix; pi < new_middle_end; ++pi)
+                syntax_lines[pi].version = skb_rich_text_get_paragraph_version(rich, pi);
+
+            // Old indices into the new numbering: the tail shifts, anything in
+            // the replaced middle falls back to its start (lex_from) or end
+            // (last_unlexed).
+            const int32_t shift = count - old_count;
+            if (lex_from >= old_middle_end) lex_from += shift;
+            lex_from = std::min(lex_from, prefix);
+
+            if (last_unlexed >= old_middle_end) last_unlexed += shift;
+            else if (last_unlexed >= prefix)    last_unlexed = prefix - 1;
+            if (new_middle_end > prefix)
+                last_unlexed = std::max(last_unlexed, new_middle_end - 1);
+        }
+
+        // Lexes forward from lex_from until the lines agree with the state
+        // flowing into them again, but never past last_needed: an opened block
+        // comment at the top of a large file re-lexes only what is on screen,
+        // the rest follows as it scrolls into view. Caller holds the engine lock.
+        void update_syntax(const Highlighter& highlighter, int32_t last_needed)
+        {
+            if (syntax_dirty)
+            {
+                PROFILE(L"text_highlight_sync");
+                syntax_dirty = false;
+                sync_syntax_lines();
+            }
+
+            const int32_t count = (int32_t)syntax_lines.size();
+            if (lex_from >= count) return;
+
+            PROFILE(L"text_highlight");
+            uint32_t state = lex_from > 0 ? syntax_lines[lex_from - 1].state_out : 0;
+            int32_t pi = lex_from;
+            for (; pi < count; ++pi)
+            {
+                LineSyntax& line = syntax_lines[pi];
+
+                // Unchanged text entered in the same state: still correct, and
+                // so is everything after it up to the next unlexed line.
+                if (line.lexed && line.state_in == state)
+                {
+                    if (pi > last_unlexed)
+                    {
+                        pi = count;
+                        break;
+                    }
+                    state = line.state_out;
+                    continue;
+                }
+
+                if (pi > last_needed) break;
+
+                const skb_text_t* text = skb_editor_get_paragraph_text(editor, pi);
+                const uint32_t*   cps  = skb_text_get_utf32(text);
+                const int32_t     n    = skb_text_get_utf32_count(text);
+                int32_t length = n;
+                while (length > 0 && (cps[length - 1] == '\n' || cps[length - 1] == '\r')) --length;
+
+                line.lexed    = true;
+                line.state_in = state;
+                line.colors.assign(n, 0);
+                const std::u32string_view view(reinterpret_cast<const char32_t*>(cps), length);
+                line.state_out = highlighter(view, state, std::span<uint32_t>(line.colors.data(), length));
+                state = line.state_out;
+            }
+
+            lex_from = pi;
+            if (lex_from >= count)
+                last_unlexed = -1;
+        }
+
+        // First paragraph whose extent reaches y (paragraph offsets increase
+        // monotonically). Caller holds the engine lock.
+        int32_t first_paragraph_reaching(float y) const
+        {
+            int32_t lo = 0, hi = skb_editor_get_paragraph_count(editor);
+            while (lo < hi)
+            {
+                const int32_t mid = (lo + hi) / 2;
+                const float bottom = skb_editor_get_paragraph_offset(editor, mid).y + skb_editor_get_paragraph_advance_y(editor, mid);
+                if (bottom < y) lo = mid + 1;
+                else            hi = mid;
+            }
+            return lo;
+        }
 
         std::vector<Diagnostic> diagnostics;
         // Where the last build drew each diagnostic (editor space), for hover.
@@ -703,6 +830,7 @@ namespace Text
         static constexpr uint32_t image_tag_flag = 0x80000000u;
         static constexpr float    image_gap = 4;   // above the image, logical units
         std::vector<ImagePlacement> image_placements;
+        bool                        has_images = false;   // insert_image was ever called; undo can bring them back
 
         // A paragraph split from an image paragraph (Enter, paste or a text drop
         // inside its line) inherits the image's padding and tag, which would
@@ -712,6 +840,10 @@ namespace Text
         // and it would re-apply at once. Caller holds the engine lock.
         void strip_duplicate_images(skb_temp_alloc_t* temp)
         {
+            // Walks every paragraph: not worth it on every Enter in a large
+            // file that never had an image.
+            if (!has_images) return;
+
             std::vector<uint32_t> seen;
             for (int32_t pi = 0; pi < skb_editor_get_paragraph_count(editor); pi++)
             {
@@ -731,12 +863,15 @@ namespace Text
             }
         }
 
-        // Caller holds the engine lock.
-        void collect_images()
+        // Image paragraphs overlapping [top, bottom]. Caller holds the engine lock.
+        void collect_images(float top, float bottom)
         {
             image_placements.clear();
-            for (int32_t pi = 0; pi < skb_editor_get_paragraph_count(editor); pi++)
+            const int32_t count = skb_editor_get_paragraph_count(editor);
+            for (int32_t pi = first_paragraph_reaching(top); pi < count; pi++)
             {
+                if (skb_editor_get_paragraph_offset(editor, pi).y > bottom) break;
+
                 const skb_attribute_set_t attributes = skb_editor_get_paragraph_attributes(editor, pi);
                 const uint32_t tag = skb_attributes_get_group(attributes, nullptr);
                 if (!(tag & image_tag_flag)) continue;
@@ -748,24 +883,28 @@ namespace Text
         }
 
         // Wavy underline under each diagnostic's text, one icon at the end of
-        // each affected line. Caller holds the engine lock.
-        void build_diagnostics(Engine::Impl& engine, float scale, std::vector<Quad>& out)
+        // each affected line, for the paragraphs [first, last) only.
+        // diagnostics is sorted by line. Caller holds the engine lock.
+        void build_diagnostics(Engine::Impl& engine, float scale, std::vector<Quad>& out, int32_t first, int32_t last)
         {
             diagnostic_areas.clear();
             if (diagnostics.empty()) return;
+            PROFILE(L"text_diagnostics");
 
             const float4 error_color   = float4(220, 40, 40, 255) / 255.0f;
             const float4 warning_color = float4(215, 150, 0, 255) / 255.0f;
             auto is_word = [](uint32_t c) { return c == '_' || c > 127 || (c >= '0' && c <= '9') || ((c | 0x20) >= 'a' && (c | 0x20) <= 'z'); };
             auto at = [](int32_t offset) { return skb_text_position_t{ offset, SKB_AFFINITY_TRAILING }; };
+            auto by_line = [](const Diagnostic& d, uint32_t line) { return d.line < line; };
 
-            std::vector<int32_t> lines_with_icon;
+            const auto begin = std::lower_bound(diagnostics.begin(), diagnostics.end(), (uint32_t)first, by_line);
+            const auto end   = std::lower_bound(begin, diagnostics.end(), (uint32_t)last, by_line);
 
-            for (size_t di = 0; di < diagnostics.size(); ++di)
+            for (auto it = begin; it != end; ++it)
             {
-                const Diagnostic& d = diagnostics[di];
-                const int32_t pi = (int32_t)d.line;
-                if (pi >= skb_editor_get_paragraph_count(editor)) continue;
+                const size_t      di = size_t(it - diagnostics.begin());
+                const Diagnostic& d  = *it;
+                const int32_t     pi = (int32_t)d.line;
 
                 const float4 color = d.warning ? warning_color : error_color;
 
@@ -776,8 +915,11 @@ namespace Text
                 while (count > 0 && (cps[count - 1] == '\n' || cps[count - 1] == '\r')) --count;
 
                 // Compilers report a position; underline the word there (at
-                // least one character), or the explicit length.
-                if (count > 0)
+                // least one character), or the explicit length. Once per spot:
+                // a cascade of errors often repeats one position many times.
+                const bool same_spot = it != begin && std::prev(it)->line == d.line
+                                       && std::prev(it)->column == d.column && std::prev(it)->length == d.length;
+                if (count > 0 && !same_spot)
                 {
                     const int32_t start = std::min<int32_t>((int32_t)d.column, count - 1);
                     int32_t end = d.length ? start + (int32_t)d.length : start;
@@ -803,9 +945,9 @@ namespace Text
                     }
                 }
 
-                if (std::find(lines_with_icon.begin(), lines_with_icon.end(), pi) != lines_with_icon.end())
+                // Sorted: the line's first diagnostic places its icon.
+                if (it != begin && std::prev(it)->line == d.line)
                     continue;
-                lines_with_icon.push_back(pi);
 
                 const skb_vec2_t  offset = skb_editor_get_paragraph_offset(editor, pi);
                 const skb_rect2_t bounds = skb_layout_get_bounds(skb_editor_get_paragraph_layout(editor, pi));
@@ -820,7 +962,7 @@ namespace Text
 
                 // The line's first message after the icon (Error Lens style); the
                 // rest are counted, and the tooltip over this area shows them all.
-                const size_t on_line = std::count_if(diagnostics.begin(), diagnostics.end(), [&](const Diagnostic& o) { return o.line == d.line; });
+                const size_t on_line = size_t(std::find_if(it, end, [&](const Diagnostic& o) { return o.line != d.line; }) - it);
                 std::string message = d.message;
                 if (on_line > 1)
                     message += "  (+" + std::to_string(on_line - 1) + " more)";
@@ -855,6 +997,7 @@ namespace Text
         {
             auto self = static_cast<Editor::Impl*>(context);
             self->syntax_dirty = true;
+            self->content_size_dirty = true;
             self->diagnostics.clear();
             if (!self->suppress_change)
                 self->changed = true;
@@ -1117,7 +1260,8 @@ namespace Text
 
     bool Editor::selection_contains(vec2 pos) const
     {
-        const auto rects = selection_rects();
+        // Only the line under pos matters.
+        const auto rects = selection_rects(pos.y - 1, pos.y + 1);
         return std::any_of(rects.begin(), rects.end(), [&](const float4& r)
             {
                 return pos.x >= r.x && pos.x < r.z && pos.y >= r.y && pos.y < r.w;
@@ -1205,7 +1349,7 @@ namespace Text
         skb_editor_undo_transaction_end(e, transaction);
     }
 
-    void Editor::build(float scale, Layout& out)
+    void Editor::build(float scale, Layout& out, float visible_top, float visible_bottom)
     {
         auto& engine = *Engine::get().impl;
         std::lock_guard<std::mutex> lock(engine.m);
@@ -1214,27 +1358,30 @@ namespace Text
         out.size = {};
         skb_editor_t* e = impl->editor;
 
-        if (highlighter && impl->syntax_dirty)
+        const int32_t count   = skb_editor_get_paragraph_count(e);
+        const int32_t first   = impl->first_paragraph_reaching(visible_top);
+        int32_t       last    = first;   // one past the last visible paragraph
+        while (last < count && skb_editor_get_paragraph_offset(e, last).y <= visible_bottom)
+            ++last;
+
+        if (highlighter)
+            impl->update_syntax(highlighter, last - 1);
+
         {
-            PROFILE(L"text_highlight");
-            std::u32string text(skb_editor_get_text_utf32_count(e), U'\0');
-            skb_editor_get_text_utf32(e, reinterpret_cast<uint32_t*>(text.data()), (int32_t)text.size());
+            PROFILE(L"text_visible_lines");
+            for (int32_t pi = first; pi < last; pi++)
+            {
+                const skb_vec2_t offset = skb_editor_get_paragraph_offset(e, pi);
 
-            impl->syntax_colors.assign(text.size(), 0);
-            highlighter(text, impl->syntax_colors);
-            impl->syntax_dirty = false;
-        }
-        const std::vector<uint32_t>* syntax = highlighter ? &impl->syntax_colors : nullptr;
-
-        for (int32_t pi = 0; pi < skb_editor_get_paragraph_count(e); pi++)
-        {
-            const skb_vec2_t offset = skb_editor_get_paragraph_offset(e, pi);
-            engine.emit_layout(skb_editor_get_paragraph_layout(e, pi), vec2(offset.x, offset.y), scale, out.quads,
-                syntax, skb_editor_get_paragraph_global_text_offset(e, pi));
+                // Colors are per paragraph: text offsets start at 0 there.
+                const std::vector<uint32_t>* syntax = highlighter && pi < (int32_t)impl->syntax_lines.size()
+                    ? &impl->syntax_lines[pi].colors : nullptr;
+                engine.emit_layout(skb_editor_get_paragraph_layout(e, pi), vec2(offset.x, offset.y), scale, out.quads, syntax, 0);
+            }
         }
 
-        impl->build_diagnostics(engine, scale, out.quads);
-        impl->collect_images();
+        impl->build_diagnostics(engine, scale, out.quads, first, last);
+        impl->collect_images(visible_top, visible_bottom);
         engine.rasterize_missing();
     }
 
@@ -1261,6 +1408,7 @@ namespace Text
         const int32_t split = skb_editor_get_paragraph_global_text_offset(e, pi) + length;
 
         auto at = [](int32_t offset) { return skb_text_position_t{ offset, SKB_AFFINITY_TRAILING }; };
+        impl->has_images = true;
         const int32_t transaction = skb_editor_undo_transaction_begin(e);
 
         // A line break there makes the next paragraph the image's own (empty)
@@ -1300,6 +1448,10 @@ namespace Text
     {
         auto& engine = *Engine::get().impl;
         std::lock_guard<std::mutex> lock(engine.m);
+
+        // Sorted, so drawing can find the visible lines' diagnostics by binary search.
+        std::stable_sort(diagnostics.begin(), diagnostics.end(), [](const Diagnostic& a, const Diagnostic& b)
+            { return std::tie(a.line, a.column, a.length) < std::tie(b.line, b.column, b.length); });
         impl->diagnostics = std::move(diagnostics);
     }
 
@@ -1317,11 +1469,19 @@ namespace Text
             if (!area.whole_line)
                 return impl->diagnostics[area.index].message;
 
+            // The line's diagnostics are adjacent (sorted); a tooltip taller
+            // than the screen helps nobody, so long lists are cut.
+            constexpr size_t max_listed = 20;
+            const uint32_t line  = impl->diagnostics[area.index].line;
+            auto by_line = [](const Diagnostic& d, uint32_t l) { return d.line < l; };
+            const auto first = std::lower_bound(impl->diagnostics.begin(), impl->diagnostics.end(), line, by_line);
+            const auto last  = std::lower_bound(first, impl->diagnostics.end(), line + 1, by_line);
+
             std::string all;
-            const uint32_t line = impl->diagnostics[area.index].line;
-            for (auto& d : impl->diagnostics)
-                if (d.line == line)
-                    all += (all.empty() ? "" : "\n") + d.message;
+            for (auto it = first; it != last && size_t(it - first) < max_listed; ++it)
+                all += (all.empty() ? "" : "\n") + it->message;
+            if (size_t(last - first) > max_listed)
+                all += "\n... " + std::to_string(size_t(last - first) - max_listed) + " more";
             return all;
         }
         return {};
@@ -1334,7 +1494,15 @@ namespace Text
         return (uint32_t)skb_editor_get_paragraph_count(impl->editor);
     }
 
-    void Editor::build_line_numbers(float scale, float right_edge, Layout& out)
+    bool Editor::is_empty() const
+    {
+        auto& engine = *Engine::get().impl;
+        std::lock_guard<std::mutex> lock(engine.m);
+        const int32_t count = skb_editor_get_paragraph_count(impl->editor);
+        return count == 0 || (count == 1 && skb_editor_get_paragraph_text_count(impl->editor, 0) == 0);
+    }
+
+    void Editor::build_line_numbers(float scale, float right_edge, Layout& out, float visible_top, float visible_bottom)
     {
         auto& engine = *Engine::get().impl;
         std::lock_guard<std::mutex> lock(engine.m);
@@ -1343,8 +1511,11 @@ namespace Text
         out.quads.clear();
         out.size = {};
 
-        for (int32_t pi = 0; pi < skb_editor_get_paragraph_count(e); pi++)
+        const int32_t count = skb_editor_get_paragraph_count(e);
+        for (int32_t pi = impl->first_paragraph_reaching(visible_top); pi < count; pi++)
         {
+            if (skb_editor_get_paragraph_offset(e, pi).y > visible_bottom) break;
+
             const skb_layout_t* line = skb_editor_get_paragraph_layout(e, pi);
             const skb_layout_t* number = engine.get_layout(std::to_string(pi + 1), impl->style);
             if (!line || !number || skb_layout_get_lines_count(line) == 0 || skb_layout_get_lines_count(number) == 0)
@@ -1367,6 +1538,9 @@ namespace Text
         auto& engine = *Engine::get().impl;
         std::lock_guard<std::mutex> lock(engine.m);
 
+        if (!impl->content_size_dirty)
+            return impl->cached_content_size;
+
         vec2 size = {};
         for (int32_t pi = 0; pi < skb_editor_get_paragraph_count(impl->editor); pi++)
         {
@@ -1375,6 +1549,9 @@ namespace Text
             size.x = std::max(size.x, offset.x + bounds.x + bounds.width);
             size.y = std::max(size.y, offset.y + skb_editor_get_paragraph_advance_y(impl->editor, pi));
         }
+
+        impl->cached_content_size = size;
+        impl->content_size_dirty  = false;
         return size;
     }
 
@@ -1426,16 +1603,42 @@ namespace Text
         return caret;
     }
 
-    std::vector<float4> Editor::selection_rects() const
+    std::vector<float4> Editor::selection_rects(float visible_top, float visible_bottom) const
     {
         auto& engine = *Engine::get().impl;
         std::lock_guard<std::mutex> lock(engine.m);
+        skb_editor_t* e = impl->editor;
 
         std::vector<float4> rects;
-        if (skb_editor_get_paragraph_count(impl->editor) == 0)
+        const int32_t count = skb_editor_get_paragraph_count(e);
+        if (count == 0)
             return rects;
 
-        skb_editor_iterate_text_range_bounds(impl->editor, current_selection,
+        // Clip the selection to the visible lines' text before asking for its
+        // bounds: Skribidi walks every cluster of the range it is given.
+        const skb_text_range_t selection = skb_editor_get_current_selection(e);
+        int32_t start = skb_editor_get_text_offset_from_text_position(e, selection.start);
+        int32_t end   = skb_editor_get_text_offset_from_text_position(e, selection.end);
+        if (start > end) std::swap(start, end);
+        if (start == end)
+            return rects;
+
+        const int32_t first = impl->first_paragraph_reaching(visible_top);
+        if (first >= count)
+            return rects;
+        int32_t last = first;
+        while (last + 1 < count && skb_editor_get_paragraph_offset(e, last + 1).y <= visible_bottom)
+            ++last;
+
+        const int32_t visible_start = skb_editor_get_paragraph_global_text_offset(e, first);
+        const int32_t visible_end   = skb_editor_get_paragraph_global_text_offset(e, last) + skb_editor_get_paragraph_text_count(e, last);
+        start = std::max(start, visible_start);
+        end   = std::min(end, visible_end);
+        if (start >= end)
+            return rects;
+
+        const skb_text_range_t range = { { start, SKB_AFFINITY_TRAILING }, { end, SKB_AFFINITY_TRAILING } };
+        skb_editor_iterate_text_range_bounds(e, range,
             [](skb_rect2_t r, void* context)
             {
                 static_cast<std::vector<float4>*>(context)->emplace_back(r.x, r.y, r.x + r.width, r.y + r.height);
@@ -1456,19 +1659,34 @@ namespace Text
                 return a.x <= b.z + 0.5f && b.x <= a.z + 0.5f;
             };
 
-        for (bool merged = true; merged; )
+        // Sorted, not pairwise: a select-all over a large file is thousands of
+        // rects. Group by line (vertical centre), sort each group by x, merge in
+        // one pass.
+        std::sort(rects.begin(), rects.end(), [](const float4& a, const float4& b) { return a.y + a.w < b.y + b.w; });
+
+        std::vector<float4> merged;
+        merged.reserve(rects.size());
+        for (size_t begin = 0; begin < rects.size(); )
         {
-            merged = false;
-            for (size_t i = 0; i < rects.size() && !merged; ++i)
-                for (size_t j = i + 1; j < rects.size() && !merged; ++j)
-                    if (same_line(rects[i], rects[j]) && touching(rects[i], rects[j]))
-                    {
-                        rects[i] = float4(std::min(rects[i].x, rects[j].x), std::min(rects[i].y, rects[j].y),
-                                          std::max(rects[i].z, rects[j].z), std::max(rects[i].w, rects[j].w));
-                        rects.erase(rects.begin() + j);
-                        merged = true;
-                    }
+            size_t end = begin + 1;
+            while (end < rects.size() && same_line(rects[begin], rects[end])) ++end;
+
+            std::sort(rects.begin() + begin, rects.begin() + end, [](const float4& a, const float4& b) { return a.x < b.x; });
+            float4 current = rects[begin];
+            for (size_t i = begin + 1; i < end; ++i)
+            {
+                if (touching(current, rects[i]))
+                    current = float4(std::min(current.x, rects[i].x), std::min(current.y, rects[i].y),
+                                     std::max(current.z, rects[i].z), std::max(current.w, rects[i].w));
+                else
+                {
+                    merged.push_back(current);
+                    current = rects[i];
+                }
+            }
+            merged.push_back(current);
+            begin = end;
         }
-        return rects;
+        return merged;
     }
 }

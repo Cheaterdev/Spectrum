@@ -35,11 +35,14 @@ export namespace Text
         Family family = Family::Sans;
     };
 
-    // Per-codepoint colors computed from the text (syntax highlighting): packed
-    // RGBA8 (r in the low byte), 0 = no color. Applied at render time, so they
+    // Syntax highlighting, one line at a time: fills colors (one packed RGBA8
+    // per codepoint of the line, r in the low byte, 0 = no color) given the
+    // lexer state at the line's start, and returns the state at its end (e.g.
+    // "inside a block comment"). Lines are re-lexed only when they change or
+    // the state flowing into them does. Colors apply at render time, so they
     // never enter the document or its undo history; an explicit color span in
     // the document wins over them.
-    using Highlighter = std::function<void(std::u32string_view text, std::vector<uint32_t>& colors)>;
+    using Highlighter = std::function<uint32_t(std::u32string_view line, uint32_t state, std::span<uint32_t> colors)>;
 
     struct Quad
     {
@@ -236,20 +239,32 @@ export namespace Text
         void insert_image(vec2 pos, uint32_t id, float height);
         std::vector<ImagePlacement> images() const;
 
-        // Glyph quads at scale pixels per logical unit; requests missing glyphs.
-        void build(float scale, Layout& out);
+        // Glyph quads at scale pixels per logical unit, for the lines overlapping
+        // [visible_top, visible_bottom] (editor space) only: lines outside it
+        // cost nothing, and their glyphs age out of the atlas. Requests missing
+        // glyphs.
+        void build(float scale, Layout& out,
+                   float visible_top = -std::numeric_limits<float>::max(), float visible_bottom = std::numeric_limits<float>::max());
 
         // Number of lines (paragraphs).
         uint32_t line_count() const;
-        // 1-based number of every line, in the editor's style, right-aligned
-        // to x = right_edge and on its line's baseline (editor space; x may be
-        // negative, i.e. left of the text). Drawn with the draw() tint.
-        void build_line_numbers(float scale, float right_edge, Layout& out);
+        // No text at all; O(1), unlike get_text().
+        bool is_empty() const;
+        // 1-based numbers of the lines overlapping [visible_top, visible_bottom],
+        // in the editor's style, right-aligned to x = right_edge and on their
+        // line's baseline (editor space; x may be negative, i.e. left of the
+        // text). Drawn with the draw() tint.
+        void build_line_numbers(float scale, float right_edge, Layout& out,
+                                float visible_top = -std::numeric_limits<float>::max(), float visible_bottom = std::numeric_limits<float>::max());
 
         // Extent of all paragraphs, logical units.
         vec2 content_size() const;
 
         Caret              caret() const;
-        std::vector<float4> selection_rects() const;   // (x0, y0, x1, y1)
+        // (x0, y0, x1, y1) of the selection, limited to the lines overlapping
+        // [visible_top, visible_bottom]: a select-all over a large file would
+        // otherwise walk every glyph and yield a rect per line, every frame.
+        std::vector<float4> selection_rects(float visible_top = -std::numeric_limits<float>::max(),
+                                            float visible_bottom = std::numeric_limits<float>::max()) const;
     };
 }
