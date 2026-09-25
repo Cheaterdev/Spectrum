@@ -131,6 +131,7 @@ export class first_person_camera : public camera
         float look_sensitivity = 0.004f;
 
         void add_look(vec2 delta); // mouse-look: rotate by a screen-space drag delta
+        void look_at(vec3 point);  // aims yaw/pitch at point from the current position
         void frame_move(float dt);
 };
 

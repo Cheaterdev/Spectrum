@@ -153,6 +153,15 @@ FrameGraph::SetupResult PassDefault<Passes::GI::DDGI::Dev::DDGIIndirectDebug>::s
 }
 
 
+FrameGraph::SetupResult PassSetupDefault<Passes::Dev::DebugView>::setup(
+	Passes::Dev::DebugView::Context& data, FrameGraph::TaskBuilder& builder)
+{
+	if (!(builder.graph->get_context<Table::Dev::DebugViewState>().enabled))
+		return FrameGraph::SetupResult::Disabled;
+	return FrameGraph::SetupResult::NeedsRender;
+}
+
+
 FrameGraph::SetupResult PassDefault<Passes::Post::Upscale::FSR>::setup(
 	Passes::Post::Upscale::FSR::Context& data, FrameGraph::TaskBuilder& builder)
 {

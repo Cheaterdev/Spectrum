@@ -49,6 +49,7 @@ void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 	tasks.emplace_back(PSOBase::create<PSOS::GI::DDGI::DDGIProbeResidencyMark>(device, pso[PSO::DDGIProbeResidencyMark]));
 	tasks.emplace_back(PSOBase::create<PSOS::GI::DDGI::Dev::DDGIDebug>(device, pso[PSO::DDGIDebug]));
 	tasks.emplace_back(PSOBase::create<PSOS::GI::DDGI::Dev::DDGIIndirectDebug>(device, pso[PSO::DDGIIndirectDebug]));
+	tasks.emplace_back(PSOBase::create<PSOS::Dev::DebugViewGather>(device, pso[PSO::DebugViewGather]));
 	tasks.emplace_back(PSOBase::create<PSOS::Shadows::Denoise::DenoiserShadow_Prepare>(device, pso[PSO::DenoiserShadow_Prepare]));
 	tasks.emplace_back(PSOBase::create<PSOS::Shadows::Denoise::DenoiserShadow_TileClassification>(device, pso[PSO::DenoiserShadow_TileClassification]));
 	tasks.emplace_back(PSOBase::create<PSOS::Shadows::Denoise::DenoiserShadow_Filter>(device, pso[PSO::DenoiserShadow_Filter]));
@@ -149,6 +150,9 @@ void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 	tasks.emplace_back(PSOBase::create<PSOS::Shadows::VSM::VSMDepthAnalysis>(device, pso[PSO::VSMDepthAnalysis]));
 
 
+	tasks.emplace_back(PSOBase::create<PSOS::Dev::DebugLinesDraw>(device, pso[PSO::DebugLinesDraw]));
+	tasks.emplace_back(PSOBase::create<PSOS::Dev::DebugLinesOccluded>(device, pso[PSO::DebugLinesOccluded]));
+	tasks.emplace_back(PSOBase::create<PSOS::Dev::DebugViewMesh>(device, pso[PSO::DebugViewMesh]));
 	tasks.emplace_back(PSOBase::create<PSOS::UI::Text::GlyphRender>(device, pso[PSO::GlyphRender]));
 	tasks.emplace_back(PSOBase::create<PSOS::Meshes::RenderBoxes>(device, pso[PSO::RenderBoxes]));
 	tasks.emplace_back(PSOBase::create<PSOS::Utility::RenderToDS>(device, pso[PSO::RenderToDS]));

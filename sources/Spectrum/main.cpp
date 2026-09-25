@@ -98,6 +98,7 @@ class triangle_drawer : public GUI::Elements::image, public GraphGenerator, Vari
 
 public:
 	first_person_camera cam;
+	debug_view::ptr debug_window;
 
 	using ptr = std::shared_ptr<triangle_drawer>;
 	//	PostProcessGraph::ptr render_graph;
@@ -204,6 +205,12 @@ public:
 		stenciler->player_cam = &cam;
 		stenciler->scene = scene;
 		base::add_child(stenciler);
+
+		// Its own window (GraphRender puts it in the right dock), not a child of
+		// this viewport; it only borrows this pipeline, scene and camera.
+		debug_window = std::make_shared<debug_view>(pipeline);
+		debug_window->scene    = scene;
+		debug_window->main_cam = &cam;
 
 		// VSM is a class member (wired at construction, before scene exists
 		// above) -- its Phase 2 invalidation tracker registers scene event
@@ -537,6 +544,8 @@ public:
 		tonemap_update_selectors(graph);
 		bloom_update_selectors(graph);
 		stenciler->update_frame(graph);
+		// After cam.update() above: draws this frame's main-camera frustum.
+		debug_window->update_frame(graph);
 
 		{
 			PROFILE(L"graph");
@@ -2229,6 +2238,10 @@ public:
 					EVENT("Start Asset Explorer");
 					auto dock = d->get_dock(GUI::dock::RIGHT);
 					GUI::Elements::asset_explorer::ptr cont(new GUI::Elements::asset_explorer());
+					// Before Asset Explorer: the last page added is the one shown,
+					// and the debug view only renders while it's on screen.
+					if (drawer)
+						dock->get_tabs()->add_page("Debug View", drawer->debug_window);
 					dock->get_tabs()->add_page("Asset Explorer", cont);
 					dock->size = { 400, 400 };
 

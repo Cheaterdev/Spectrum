@@ -63,6 +63,7 @@
 #include "../Editor/stencil_renderer.h"
 #include "../Raytrace/Dev/RTXColorPass.h"
 #include "../GI/Voxel/Dev/VoxelDebug.h"
+#include "../Dev/DebugView.h"
 #include "../../pass_defaults.h"
 
 using namespace FrameGraph;
@@ -103,6 +104,7 @@ namespace Frame
 		Passes::Post::AA::SMAA sMAA;
 		Passes::Editor::stencil_renderer stencil_renderer;
 		Passes::GI::Voxel::Dev::VoxelDebug voxelDebug;
+		Passes::Dev::DebugView debugView;
 
 		static inline const wchar_t* const pass_names[] = {
 			Passes::Frame::PreScene::Name.ptr,
@@ -183,6 +185,7 @@ namespace Frame
 			Passes::Editor::stencil_renderer::Name.ptr,
 			Passes::Raytrace::Dev::RTXColorPass::Name.ptr,
 			Passes::GI::Voxel::Dev::VoxelDebug::Name.ptr,
+			Passes::Dev::DebugView::Name.ptr,
 		};
 		static constexpr uint32_t pass_count = std::size(pass_names);
 
@@ -318,10 +321,11 @@ namespace Frame
 			{ PassID::DDGIIndirectDebug, 0 },
 			{ PassID::TranslucentRTX, 0 },
 			{ PassID::RTXColorPass, 0 },
+			{ PassID::DebugView, 0 },
 		};
 		static inline const FrameGraph::PrecompiledState scene_c0_states[] = {
 			{ true, { scene_c0_pass_refs + 0, 1 } },
-			{ false, { scene_c0_pass_refs + 1, 9 } },
+			{ false, { scene_c0_pass_refs + 1, 10 } },
 		};
 		static inline const FrameGraph::PassRef BlueNoise_c0_pass_refs[] = {
 			{ PassID::BlueNoise, 0 },
@@ -2584,6 +2588,9 @@ namespace Frame
 			{ PassID::Mipmapping, 0 },
 			{ PassID::Scene, 0 },
 		};
+		static inline const FrameGraph::PassRef DebugView_0_prev[] = {
+			{ PassID::PreScene, 0 },
+		};
 		static inline const FrameGraph::PrecompiledPass precompiled_passes[] = {
 			{ PassID::PreScene, 0, false, {} },
 			{ PassID::BlueNoise, 0, true, {} },
@@ -2663,6 +2670,7 @@ namespace Frame
 			{ PassID::stencil_renderer, 0, false, stencil_renderer_0_prev },
 			{ PassID::RTXColorPass, 0, false, RTXColorPass_0_prev },
 			{ PassID::VoxelDebug, 0, false, VoxelDebug_0_prev },
+			{ PassID::DebugView, 0, false, DebugView_0_prev },
 		};
 		static constexpr uint32_t precompiled_pass_count = std::size(precompiled_passes);
 
@@ -2836,6 +2844,10 @@ namespace Frame
 			// only supplies render_func, so that is what gates registration.
 			if (voxelDebug.render_func)
 				graph.add_library_pass<Passes::GI::Voxel::Dev::VoxelDebug>(PassSetupDefault<Passes::GI::Voxel::Dev::VoxelDebug>::setup, voxelDebug.render_func, (voxelDebug.flags & ~FrameGraph::PassFlags::Compute));
+			// Setup is generated (PassSetupDefault<T>, pass_defaults.h); the owner
+			// only supplies render_func, so that is what gates registration.
+			if (debugView.render_func)
+				graph.add_library_pass<Passes::Dev::DebugView>(PassSetupDefault<Passes::Dev::DebugView>::setup, debugView.render_func, (debugView.flags & ~FrameGraph::PassFlags::Compute));
 		}
 	};
 }

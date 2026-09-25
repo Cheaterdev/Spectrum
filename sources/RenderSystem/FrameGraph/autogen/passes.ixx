@@ -28,6 +28,7 @@ export import "../defines.h";
 #include "pass/GI/DDGI/DDGIProbeConvolve.h"
 #include "pass/GI/DDGI/Dev/DDGIDebug.h"
 #include "pass/GI/DDGI/Dev/DDGIIndirectDebug.h"
+#include "pass/Dev/DebugView.h"
 #include "pass/Post/Upscale/FSR.h"
 #include "pass/Frame/ResultCreation.h"
 #include "pass/Denoise/NRD/NRD_GBufferPack.h"
@@ -170,6 +171,10 @@ export namespace Passes
 				using ::Passes::GI::DDGI::Dev::DDGIIndirectDebug;
 			}
 		}
+	}
+	namespace Dev
+	{
+		using ::Passes::Dev::DebugView;
 	}
 	namespace Post
 	{

@@ -24,6 +24,7 @@ namespace FrameGraph
 		DDGIProbeConvolve,
 		DDGIDebug,
 		DDGIIndirectDebug,
+		DebugView,
 		FSR,
 		ResultCreation,
 		NRD_GBufferPack,

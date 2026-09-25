@@ -1,0 +1,116 @@
+namespace Dev
+{
+	# One world-space line segment for DebugDraw (Graphics:DebugDraw). a.w is the
+	# thickness in pixels, b.w is unused.
+	[nobind]
+	struct DebugLineSegment
+	{
+		float4 a;
+		float4 b;
+		float4 color;
+	}
+
+	[Bind = DefaultLayout::Instance0]
+	struct DebugLines
+	{
+		StructuredBuffer<DebugLineSegment> segments;
+		float2 viewport_size;
+		# Multiplies every segment's alpha: 1 for the depth-tested draw, lower for
+		# the x-ray draw of the occluded parts.
+		float alpha_scale = 1;
+	}
+
+	# Line segments are expanded to screen-space quads in the VS (6 vertices per
+	# segment, no vertex buffer) instead of LINE topology, which can't do width or
+	# antialiasing.
+	GraphicsPSO DebugLinesDraw
+	{
+		root = DefaultLayout;
+
+		[EntryPoint = VS]
+		vertex = "debug/debug_lines.hlsl";
+
+		[EntryPoint = PS]
+		pixel = "debug/debug_lines.hlsl";
+
+		rtv = { R8G8B8A8_UNORM };
+		blend = { AlphaBlend };
+		ds = D32_FLOAT;
+		depth_write = false;
+		cull = None;
+	}
+
+	# X-ray: only the parts of the lines hidden behind geometry (reversed-Z, so
+	# "behind" is LESS). Written out in full rather than `: DebugLinesDraw` --
+	# prismc doesn't carry a parent PSO's root/shaders/state into a derived one.
+	GraphicsPSO DebugLinesOccluded
+	{
+		root = DefaultLayout;
+
+		[EntryPoint = VS]
+		vertex = "debug/debug_lines.hlsl";
+
+		[EntryPoint = PS]
+		pixel = "debug/debug_lines.hlsl";
+
+		rtv = { R8G8B8A8_UNORM };
+		blend = { AlphaBlend };
+		ds = D32_FLOAT;
+		depth_write = false;
+		depth_func = LESS;
+		cull = None;
+	}
+
+	# Every scene mesh, gathered into one indirect list: the debug view draws with
+	# a single flat-shaded PSO, so there are no per-material batches.
+	[Bind = DefaultLayout::Instance1]
+	struct DebugViewGather
+	{
+		AppendStructuredBuffer<CommandData> commands;
+	}
+
+	ComputePSO DebugViewGather
+	{
+		root = DefaultLayout;
+
+		[EntryPoint = CS]
+		compute = "debug/debug_view_gather.hlsl";
+	}
+
+	# The GBuffer's mesh + amplification shaders with a flat headlight PS. The AS
+	# still frustum/cone-culls meshlets, but against the debug camera bound for this
+	# draw -- that only saves work, it isn't the main view's culling.
+	GraphicsPSO DebugViewMesh
+	{
+		root = DefaultLayout;
+
+		[EntryPoint = VS]
+		mesh = "gbuffer/mesh_shader.hlsl";
+
+		[EntryPoint = AS]
+		amplification = "gbuffer/mesh_shader.hlsl";
+
+		[EntryPoint = PS]
+		pixel = "debug/debug_view_mesh.hlsl";
+
+		rtv = { R8G8B8A8_UNORM };
+		ds = D32_FLOAT;
+		cull = None;
+	}
+
+	# Mirrors whether the debug view window is on screen (debug_view::update_frame).
+	struct DebugViewState
+	{
+		bool enabled = false;
+	}
+
+	# Renders the debug camera's view into the debug window's own textures, which
+	# the FrameGraph doesn't track -- hence [Required]. `scene` orders it after
+	# PreScene's upload of the scene buffers the draws read.
+	[Required]
+	[SetupCondition = DebugViewState::enabled]
+	PassNode DebugView
+	{
+		[Always = Read] StructuredBuffer<uint> scene;
+	}
+}

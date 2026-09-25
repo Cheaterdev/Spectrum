@@ -24,6 +24,8 @@ std::optional<SlotID> get_slot(std::string_view slot_name)
 	if(slot_name == "DDGIProbeResidencyMarkData") return SlotID::DDGIProbeResidencyMarkData;
 	if(slot_name == "DDGIDebugData") return SlotID::DDGIDebugData;
 	if(slot_name == "DDGIIndirectDebugData") return SlotID::DDGIIndirectDebugData;
+	if(slot_name == "DebugLines") return SlotID::DebugLines;
+	if(slot_name == "DebugViewGather") return SlotID::DebugViewGather;
 	if(slot_name == "DebugInfo") return SlotID::DebugInfo;
 	if(slot_name == "DenoiserShadow_Prepare") return SlotID::DenoiserShadow_Prepare;
 	if(slot_name == "DenoiserShadow_TileClassification") return SlotID::DenoiserShadow_TileClassification;
@@ -195,6 +197,10 @@ uint get_table_index(SlotID id)
 	if(id == SlotID::DDGIDebugData) return Slots::GI::DDGI::Dev::DDGIDebugData::Slot::ID;
 
 	if(id == SlotID::DDGIIndirectDebugData) return Slots::GI::DDGI::Dev::DDGIIndirectDebugData::Slot::ID;
+
+	if(id == SlotID::DebugLines) return Slots::Dev::DebugLines::Slot::ID;
+
+	if(id == SlotID::DebugViewGather) return Slots::Dev::DebugViewGather::Slot::ID;
 
 	if(id == SlotID::DebugInfo) return Slots::Dev::DebugInfo::Slot::ID;
 
@@ -487,6 +493,8 @@ std::string get_slot_name(SlotID id)
 	if(id == SlotID::DDGIProbeResidencyMarkData) return "DDGIProbeResidencyMarkData";
 	if(id == SlotID::DDGIDebugData) return "DDGIDebugData";
 	if(id == SlotID::DDGIIndirectDebugData) return "DDGIIndirectDebugData";
+	if(id == SlotID::DebugLines) return "DebugLines";
+	if(id == SlotID::DebugViewGather) return "DebugViewGather";
 	if(id == SlotID::DebugInfo) return "DebugInfo";
 	if(id == SlotID::DenoiserShadow_Prepare) return "DenoiserShadow_Prepare";
 	if(id == SlotID::DenoiserShadow_TileClassification) return "DenoiserShadow_TileClassification";

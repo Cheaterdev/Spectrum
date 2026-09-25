@@ -182,6 +182,17 @@ void first_person_camera::add_look(vec2 delta)
     angles.y = Math::clamp(angles.y, -Math::m_pi_2 + Math::eps2, Math::m_pi_2 - Math::eps2);
 }
 
+void first_person_camera::look_at(vec3 point)
+{
+    vec3 dir = point - position;
+    if (dir.length() < Math::eps2)
+        return;
+    dir.normalize();
+    // Inverse of frame_move's direction from angles.
+    angles.x = std::atan2(dir.x, dir.z);
+    angles.y = std::asin(Math::clamp(dir.y, -1.0f, 1.0f));
+}
+
 void first_person_camera::frame_move(float dt)
 {
     angles.y = Math::clamp(angles.y, -Math::m_pi_2 + Math::eps2, Math::m_pi_2 - Math::eps2);

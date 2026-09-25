@@ -693,6 +693,17 @@ struct PassSetupDefault<Passes::GI::DDGI::DDGIProbeConvolve>
 
 
 template<>
+struct PassSetupDefault<Passes::Dev::DebugView>
+{
+	static constexpr bool enabled = true;
+
+	// Generated from this pass's [RunAlways]/[SetupCondition]/
+	// [RenderCondition]; defined in autogen/pass_defaults.cpp.
+	static FrameGraph::SetupResult setup(Passes::Dev::DebugView::Context& data, FrameGraph::TaskBuilder& builder);
+};
+
+
+template<>
 struct PassSetupDefault<Passes::Shadows::PSSM::PSSM_Cascade>
 {
 	static constexpr bool enabled = true;
