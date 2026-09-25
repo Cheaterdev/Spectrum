@@ -144,6 +144,14 @@ export namespace GUI
                 void set_text(const std::string& t);
                 std::string get_text();
 
+                // Compiler messages shown as wavy underlines and line-end icons;
+                // hovering one shows its message as the tooltip. Cleared by any
+                // edit.
+                void set_diagnostics(std::vector<Text::Diagnostic> diagnostics);
+
+                // Caret to a 0-based line/column, scrolled into view on the next frame.
+                void goto_line(uint32_t line, uint32_t column = 0);
+
                 virtual bool on_mouse_action(mouse_action action, mouse_button button, vec2 pos) override;
                 virtual bool on_mouse_move(vec2 pos) override;
                 virtual bool on_wheel(mouse_wheel type, float value, vec2 pos) override;

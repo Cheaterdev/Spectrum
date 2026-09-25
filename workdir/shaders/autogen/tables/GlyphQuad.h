@@ -16,13 +16,17 @@ namespace UI
 			float4 pos; // float4
 			float4 uv; // float4
 			float4 color; // float4
+			float4 tile; // float4
 			uint atlas; // uint
 			uint is_color; // uint
+			uint is_pattern; // uint
 			float4 GetPos() { return pos; }
 			float4 GetUv() { return uv; }
 			float4 GetColor() { return color; }
+			float4 GetTile() { return tile; }
 			uint GetAtlas() { return atlas; }
 			uint GetIs_color() { return is_color; }
+			uint GetIs_pattern() { return is_pattern; }
 		};
 	}
 }

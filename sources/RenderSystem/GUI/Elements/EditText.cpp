@@ -103,6 +103,18 @@ std::string GUI::Elements::edit_text::get_text()
 	return text;
 }
 
+void GUI::Elements::edit_text::set_diagnostics(std::vector<Text::Diagnostic> diagnostics)
+{
+	editor.set_diagnostics(std::move(diagnostics));
+}
+
+void GUI::Elements::edit_text::goto_line(uint32_t line, uint32_t column)
+{
+	std::lock_guard<std::mutex> guard(m);
+	editor.set_caret(line, column);
+	follow_caret = true;
+}
+
 void GUI::Elements::edit_text::on_key_action(key_action action, long key, key_mods mods)
 {
 	if (action != key_action::DOWN) return;
@@ -161,6 +173,9 @@ bool GUI::Elements::edit_text::on_mouse_move(vec2 pos)
 	// A press held for drag-and-drop doesn't extend the selection.
 	if (mouse_selecting && !drag_candidate)
 		events.emplace_back(mouse_input{ mouse_input::Kind::Drag, pos });
+
+	// The tooltip manager shows whatever this holds while hovered.
+	tooltip = editor.diagnostic_at(to_editor(pos, result_scale));
 	return base::on_mouse_move(pos);
 }
 

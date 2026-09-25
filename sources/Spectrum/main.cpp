@@ -1068,6 +1068,9 @@ class GraphRender : public Window, public GUI::user_interface
 {
 	HAL::SwapChain::ptr swap_chain;
 
+	// Opens a file in a Code editor tab; see where it is assigned (menu setup).
+	std::function<void(std::string file_name, int line, int column)> open_code_editor;
+
 	tick_timer main_timer;
 	ivec2 new_size;
 
@@ -2070,9 +2073,11 @@ public:
 							docker->get_tabs()->add_page("Editor test", page);
 						};
 
-					// Multiline rich text: an HLSL shader with syntax colors, plus
-					// Ctrl+B / Ctrl+I and right-click > Color for formatting.
-					test->add_item("Code editor")->on_click = [this](GUI::Elements::menu_list_element::ptr elem)
+					// Multiline rich text: a source file with syntax colors, plus
+					// Ctrl+B / Ctrl+I and right-click > Color for formatting. Opened
+					// from Test > Code editor and from file links in the output log
+					// (line/column 1-based, 0 = don't move the caret).
+					open_code_editor = [this](std::string file_name, int line, int column)
 						{
 							GUI::base::ptr page(new GUI::base());
 							page->docking = GUI::dock::FILL;
@@ -2085,20 +2090,136 @@ public:
 							page->add_child(hint);
 
 							auto code = std::make_shared<GUI::Elements::edit_text>(Text::Style{ 14, Text::Weight::Normal, Text::Family::Mono });
-							code->docking = GUI::dock::FILL;
 							code->multiline = true;
-							code->highlighter = GUI::Syntax::highlight_hlsl;
 
-							std::ifstream file("shaders/gui/glyph.hlsl");
+							const std::string extension = std::filesystem::path(file_name).extension().string();
+							if (extension == ".hlsl" || extension == ".hlsli" || extension == ".h")
+								code->highlighter = GUI::Syntax::highlight_hlsl;
+
+							std::ifstream file(file_name);
 							std::stringstream source;
 							source << file.rdbuf();
-							code->set_text(file ? source.str() : std::string("// shaders/gui/glyph.hlsl not found\n"));
+							code->set_text(file ? source.str() : "// " + file_name + " not found\n");
+
+							// Compile the buffer exactly as the engine compiles this pixel
+							// shader, and pin DXC's messages to the text.
+							// Fixed sizes, like the viewport toolbar: a MATCH_CHILDREN row
+							// of LEFT-docked children measures to zero height.
+							base::ptr toolbar(new base());
+							toolbar->docking = GUI::dock::TOP;
+							toolbar->height_size = GUI::size_type::FIXED;
+							toolbar->size = { 0, 26 };
+							toolbar->margin = { 0, 0, 0, 6 };
+
+							auto compile = std::make_shared<GUI::Elements::button>();
+							compile->get_label()->text = "Compile";
+							compile->docking = GUI::dock::LEFT;
+							compile->width_size = GUI::size_type::FIXED;
+							compile->size = { 90, 26 };
+							toolbar->add_child(compile);
+
+							auto status = std::make_shared<GUI::Elements::label>();
+							status->docking = GUI::dock::FILL;
+							status->magnet_text = FW1_LEFT | FW1_VCENTER;
+							status->margin = { 10, 0, 0, 0 };
+							status->text = "Press Compile to check the shader";
+							toolbar->add_child(status);
+
+							GUI::Elements::edit_text::wptr code_weak = code;
+							GUI::Elements::label::wptr status_weak = status;
+							compile->on_click = [code_weak, status_weak, file_name](GUI::Elements::button::ptr)
+								{
+									auto code = code_weak.lock();
+									if (!code) return;
+
+									std::string errors;
+									const std::string source_text = code->get_text();
+									auto result = HAL::ShaderCompiler::get().Compile_Shader(source_text, { HAL::shader_macro("BUILD_FUNC_PS") },
+										"ps_6_8", "PS", HAL::ShaderOptions::None, nullptr, file_name, &errors);
+
+									// TEMP (diagnostic-location investigation): raw DXC output and
+									// the exact text it was given (binary, to keep \r visible).
+									std::ofstream("compile_errors.temp") << errors;
+									std::ofstream("compile_source.temp", std::ios::binary) << source_text;
+
+									// DXC (clang-style): "file:line:col: error: message"; the lines in
+									// between (source excerpt, caret) don't match and are skipped.
+									const std::string short_name = std::filesystem::path(file_name).filename().string();
+
+									std::vector<Text::Diagnostic> diagnostics;
+									std::istringstream lines(errors);
+									for (std::string line; std::getline(lines, line); )
+									{
+										if (!line.empty() && line.back() == '\r') line.pop_back();
+
+										Text::Diagnostic d;
+										size_t severity = std::string::npos, text_at = 0;
+										for (auto [tag, warning] : { std::pair{ ": fatal error: ", false }, std::pair{ ": error: ", false }, std::pair{ ": warning: ", true } })
+											if ((severity = line.find(tag)) != std::string::npos)
+											{
+												d.warning = warning;
+												text_at   = severity + std::strlen(tag);
+												break;
+											}
+										if (severity == std::string::npos) continue;
+
+										// "file:line:col" -- split from the right, the path may hold ':'.
+										const std::string location = line.substr(0, severity);
+										const size_t col_sep  = location.rfind(':');
+										const size_t line_sep = col_sep == std::string::npos ? std::string::npos : location.rfind(':', col_sep - 1);
+										if (line_sep == std::string::npos) continue;
+
+										const std::string where = location.substr(0, line_sep);
+										const int line_no = std::atoi(location.c_str() + line_sep + 1);
+										const int col_no  = std::atoi(location.c_str() + col_sep + 1);
+										d.message = line.substr(text_at);
+
+										// Errors inside included files are pinned to the first line.
+										if (std::filesystem::path(where).filename().string() == short_name)
+										{
+											d.line   = std::max(0, line_no - 1);
+											d.column = std::max(0, col_no - 1);
+										}
+										else
+											d.message = where + ":" + std::to_string(line_no) + ": " + d.message;
+
+										diagnostics.push_back(std::move(d));
+									}
+
+									const size_t error_count = std::count_if(diagnostics.begin(), diagnostics.end(), [](auto& d) { return !d.warning; });
+									if (auto s = status_weak.lock())
+										s->text = result ? "Compiled OK" + (diagnostics.empty() ? std::string() : " (" + std::to_string(diagnostics.size()) + " warnings)")
+										                 : std::to_string(error_count) + " error(s), hover the red marks for details";
+
+									code->set_diagnostics(std::move(diagnostics));
+								};
+
+							page->add_child(toolbar);
+
+							code->docking = GUI::dock::FILL;
 							page->add_child(code);
 
-							docker->get_tabs()->add_page("Code editor", page);
+							if (line > 0)
+								code->goto_line(uint32_t(line - 1), uint32_t(std::max(column - 1, 0)));
+
+							docker->get_tabs()->add_page(std::filesystem::path(file_name).filename().string(), page);
+						};
+
+					test->add_item("Code editor")->on_click = [this](GUI::Elements::menu_list_element::ptr)
+						{
+							open_code_editor("shaders/gui/glyph.hlsl", 0, 0);
+						};
+
+					GUI::Elements::Debug::OutputWindow::on_open_file = [this](std::string file, int line, int column)
+						{
+							open_code_editor(std::move(file), line, column);
 						};
 
 					add_child(menu);
+
+					// Shows an element's `tooltip` after a short hover (e.g. the
+					// code editor's compile errors).
+					add_child(std::make_shared<GUI::Elements::tooltip_manager>());
 				}
 				{
 					GUI::Elements::status_bar::ptr bar(new GUI::Elements::status_bar());

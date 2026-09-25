@@ -2,6 +2,7 @@ export module GUI:Button;
 import :Image;
 import :Skin;
 import :Label;
+import :VectorIcon;
 
 export namespace GUI
 {
@@ -13,6 +14,7 @@ export namespace GUI
 
                 label::ptr label_text;
                 image::ptr im;
+                vector_icon::ptr vec_icon;
 
             public:
                 enum class view_style
@@ -45,6 +47,10 @@ export namespace GUI
                 label::ptr get_label();
 
                 image::ptr get_image();
+
+                // Shows a built-in vector icon (see vector_icon) filling the
+                // button instead of the label and image. UI thread.
+                void set_icon(std::string name);
 
         };
     }

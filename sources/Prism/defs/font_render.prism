@@ -36,9 +36,13 @@ namespace UI
 			float4 pos;
 			float4 uv;
 			float4 color;
+			# Repeating patterns (wavy underlines): the atlas rect of one tile;
+			# uv then counts tiles and wraps inside it.
+			float4 tile;
 			uint atlas;
 			# Non-zero: RGBA premultiplied color glyph (emoji); zero: R8 coverage.
 			uint is_color;
+			uint is_pattern;
 		}
 
 		[Bind = DefaultLayout::Instance0]

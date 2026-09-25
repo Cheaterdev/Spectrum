@@ -58,6 +58,74 @@ namespace Text
         {
             return float4(float(c & 0xFF), float((c >> 8) & 0xFF), float((c >> 16) & 0xFF), float(c >> 24)) / 255.0f;
         }
+
+        // UI icons drawn in code on a 16x16 grid: no asset files, and as alpha
+        // masks they tint like text. Filled polygons with nonzero winding, so a
+        // counter-clockwise contour inside a clockwise one is a hole.
+        struct IconBuilder
+        {
+            skb_icon_builder_t b;
+
+            IconBuilder(skb_icon_collection_t* icons, const char* name)
+            {
+                const skb_icon_handle_t handle = skb_icon_collection_add_icon(icons, name, 16, 16);
+                skb_icon_collection_set_is_color(icons, handle, false);
+                b = skb_icon_builder_make(icons, handle);
+                skb_icon_builder_begin_shape(&b);
+            }
+
+            ~IconBuilder()
+            {
+                skb_icon_builder_fill_color(&b, skb_color_t{ 255, 255, 255, 255 });
+                skb_icon_builder_end_shape(&b);
+            }
+
+            void polygon(std::initializer_list<skb_vec2_t> points)
+            {
+                auto it = points.begin();
+                skb_icon_builder_move_to(&b, *it);
+                for (++it; it != points.end(); ++it)
+                    skb_icon_builder_line_to(&b, *it);
+                skb_icon_builder_close_path(&b);
+            }
+
+            // Circle from four cubic arcs; clockwise unless ccw.
+            void circle(float cx, float cy, float r, bool ccw = false)
+            {
+                const float k = 0.5523f * r;   // cubic approximation of a quarter circle
+                const float s = ccw ? -1.0f : 1.0f;
+                skb_icon_builder_move_to(&b, { cx + r, cy });
+                skb_icon_builder_cubic_to(&b, { cx + r, cy + s * k }, { cx + k, cy + s * r }, { cx, cy + s * r });
+                skb_icon_builder_cubic_to(&b, { cx - k, cy + s * r }, { cx - r, cy + s * k }, { cx - r, cy });
+                skb_icon_builder_cubic_to(&b, { cx - r, cy - s * k }, { cx - k, cy - s * r }, { cx, cy - s * r });
+                skb_icon_builder_cubic_to(&b, { cx + k, cy - s * r }, { cx + r, cy - s * k }, { cx + r, cy });
+                skb_icon_builder_close_path(&b);
+            }
+        };
+
+        void add_builtin_icons(skb_icon_collection_t* icons)
+        {
+            { IconBuilder i(icons, "chevron_right"); i.polygon({ {5.5f, 3}, {10.5f, 8}, {5.5f, 13}, {4, 11.5f}, {7.5f, 8}, {4, 4.5f} }); }
+            { IconBuilder i(icons, "chevron_down");  i.polygon({ {3, 5.5f}, {4.5f, 4}, {8, 7.5f}, {11.5f, 4}, {13, 5.5f}, {8, 10.5f} }); }
+            {
+                IconBuilder i(icons, "close");
+                i.polygon({ {3.5f, 4.9f}, {4.9f, 3.5f}, {12.5f, 11.1f}, {11.1f, 12.5f} });
+                i.polygon({ {11.1f, 3.5f}, {12.5f, 4.9f}, {4.9f, 12.5f}, {3.5f, 11.1f} });
+            }
+            {
+                // Disc with a "!" cut out (counter-clockwise inner contours).
+                IconBuilder i(icons, "error");
+                i.circle(8, 8, 7);
+                i.polygon({ {7, 3.5f}, {7, 9.5f}, {9, 9.5f}, {9, 3.5f} });
+                i.circle(8, 11.5f, 1.1f, true);
+            }
+            {
+                IconBuilder i(icons, "warning");
+                i.polygon({ {8, 1}, {15.5f, 14.5f}, {0.5f, 14.5f} });
+                i.polygon({ {7.1f, 5.5f}, {7.1f, 10}, {8.9f, 10}, {8.9f, 5.5f} });
+                i.circle(8, 12.2f, 1, true);
+            }
+        }
     }
 
     struct Engine::Impl
@@ -71,6 +139,7 @@ namespace Text
         std::mutex m;
 
         skb_font_collection_t* fonts      = nullptr;
+        skb_icon_collection_t* icons      = nullptr;
         skb_rasterizer_t*      rasterizer = nullptr;
         skb_image_atlas_t*     atlas      = nullptr;
         skb_layout_cache_t*    layouts    = nullptr;
@@ -80,7 +149,9 @@ namespace Text
         bool pending_upload = false;
 
         // Caller holds m.
-        const skb_layout_t* get_layout(std::string_view utf8, Style style)
+        // With links, the text becomes plain and link runs; a link run's
+        // content_id is its link index + 1 (0 = plain, as Skribidi expects).
+        const skb_layout_t* get_layout(std::string_view utf8, Style style, std::span<const Link> links = {})
         {
             PROFILE(L"text_layout");
             const skb_attribute_t attributes[] = {
@@ -96,7 +167,40 @@ namespace Text
             skb_layout_params_t params = {};
             params.font_collection = fonts;
 
-            return skb_layout_cache_get_utf8(layouts, temp, &params, utf8.data(), (int32_t)utf8.size(), attribute_set);
+            if (links.empty())
+                return skb_layout_cache_get_utf8(layouts, temp, &params, utf8.data(), (int32_t)utf8.size(), attribute_set);
+
+            // Colors suit the UI's dark panels; the underline takes the text paint,
+            // so it follows the hover color too.
+            const skb_attribute_t link_attributes[] = {
+                skb_attribute_make_font_size(style.size),
+                skb_attribute_make_font_weight(to_skb(style.weight)),
+                skb_attribute_make_font_family(to_skb(style.family)),
+                skb_attribute_make_paint_color(SKB_PAINT_TEXT, SKB_PAINT_STATE_DEFAULT, skb_color_t{ 90, 160, 255, 255 }),
+                skb_attribute_make_paint_color(SKB_PAINT_TEXT, SKB_PAINT_STATE_HOVER, skb_color_t{ 170, 210, 255, 255 }),
+                skb_attribute_make_decoration(SKB_DECORATION_LINE_UNDER, SKB_DECORATION_STYLE_SOLID, 1.0f, 0.0f, SKB_PAINT_TEXT),
+            };
+            skb_attribute_set_t link_set = {};
+            link_set.attributes       = link_attributes;
+            link_set.attributes_count = (int32_t)std::size(link_attributes);
+
+            std::vector<skb_content_run_t> runs;
+            uint32_t at = 0;
+            const uint32_t size = (uint32_t)utf8.size();
+            for (size_t li = 0; li < links.size(); ++li)
+            {
+                const uint32_t begin = std::min(links[li].begin, size);
+                const uint32_t end   = std::clamp(links[li].end, begin, size);
+                if (begin > at)
+                    runs.push_back(skb_content_run_make_utf8(utf8.data() + at, int32_t(begin - at), attribute_set, 0));
+                if (end > begin)
+                    runs.push_back(skb_content_run_make_utf8(utf8.data() + begin, int32_t(end - begin), link_set, intptr_t(li + 1)));
+                at = std::max(at, end);
+            }
+            if (at < size)
+                runs.push_back(skb_content_run_make_utf8(utf8.data() + at, int32_t(size - at), attribute_set, 0));
+
+            return skb_layout_cache_get_from_runs(layouts, temp, &params, runs.data(), (int32_t)runs.size());
         }
 
         // Appends glyph quads for layout, placed at offset (logical units) and
@@ -104,8 +208,12 @@ namespace Text
         // per-codepoint colors for the whole document, of which this layout's
         // text starts at text_base. Caller holds m.
         void emit_layout(const skb_layout_t* layout, vec2 offset, float scale, std::vector<Quad>& out,
-                         const std::vector<uint32_t>* syntax = nullptr, int32_t text_base = 0)
+                         const std::vector<uint32_t>* syntax = nullptr, int32_t text_base = 0, intptr_t hovered_content = 0)
         {
+            auto run_state = [&](const skb_layout_run_t& run)
+                {
+                    return run.content_id != 0 && run.content_id == hovered_content ? SKB_PAINT_STATE_HOVER : SKB_PAINT_STATE_DEFAULT;
+                };
             PROFILE(L"text_request_glyphs");
             const skb_layout_params_t* params   = skb_layout_get_params(layout);
             const skb_layout_line_t*   lines    = skb_layout_get_lines(layout);
@@ -125,7 +233,7 @@ namespace Text
                     // Color precedence: the run's own paint attribute, then the
                     // syntax color of the glyph's text, then the draw() tint.
                     float4 run_color(1, 1, 1, 1);
-                    const skb_attribute_paint_t paint = skb_attributes_get_paint(SKB_PAINT_TEXT, SKB_PAINT_STATE_DEFAULT,
+                    const skb_attribute_paint_t paint = skb_attributes_get_paint(SKB_PAINT_TEXT, run_state(run),
                         skb_layout_get_layout_run_attributes(layout, &run), params->attribute_collection);
                     const bool run_painted = paint.paint_tag == SKB_PAINT_TEXT;
                     if (run_painted)
@@ -180,11 +288,70 @@ namespace Text
                         quad.color     = glyph_color;
                         quad.has_color = has_color;
                         quad.atlas    = q.texture_idx;
-                        quad.is_color = (q.flags & SKB_QUAD_IS_COLOR) != 0;
+                        quad.is_color = image->bpp == 4;   // see append_quad
                         out.push_back(quad);
                     }
                 }
+
+                // Underlines and the like from decoration attributes (links),
+                // colored by their run's paint in its current state.
+                const skb_decoration_t* decorations = skb_layout_get_decorations(layout);
+                for (int32_t di = line.decorations_range.start; di < line.decorations_range.end; di++)
+                {
+                    const skb_decoration_t& dec = decorations[di];
+                    if (dec.type != SKB_DECORATION_LINE) continue;
+
+                    const skb_layout_run_t& run = runs[dec.line.layout_run_idx];
+                    const skb_attribute_paint_t paint = skb_attributes_get_paint(dec.line.paint_tag, run_state(run),
+                        skb_layout_get_layout_run_attributes(layout, &run), params->attribute_collection);
+                    if (paint.paint_tag != dec.line.paint_tag) continue;
+
+                    const skb_quad_t q = skb_image_atlas_get_decoration_quad(atlas, offset.x + dec.line.x, offset.y + dec.line.y, scale,
+                        (skb_decoration_position_t)dec.line.position, (skb_decoration_style_t)dec.line.style,
+                        dec.line.length, dec.line.pattern_offset, dec.line.thickness,
+                        skb_color_t{ 255, 255, 255, 255 }, SKB_RASTERIZE_ALPHA_MASK);
+                    append_quad(q, scale, float4(paint.color.r, paint.color.g, paint.color.b, paint.color.a) / 255.0f, out);
+                }
             }
+        }
+
+        // Appends an icon or decoration quad (geometry in logical units, bitmap
+        // rasterized for scale) in its own color. Caller holds m.
+        void append_quad(const skb_quad_t& q, float scale, float4 color, std::vector<Quad>& out)
+        {
+            if (q.flags & SKB_QUAD_IS_EMPTY) return;
+
+            const skb_image_t* image = skb_image_atlas_get_texture(atlas, q.texture_idx);
+            if (!image) return;
+
+            const float tw = (float)image->width, th = (float)image->height;
+            const float4 atlas_rect = float4(q.texture.x / tw, q.texture.y / th, (q.texture.x + q.texture.width) / tw, (q.texture.y + q.texture.height) / th);
+
+            const float x0 = std::round(q.geom.x * scale), y0 = std::round(q.geom.y * scale);
+
+            Quad quad;
+            quad.rect      = float4(x0, y0, x0 + q.geom.width * scale, y0 + q.geom.height * scale);
+            quad.color     = color;
+            quad.atlas     = q.texture_idx;
+            // From the atlas texture, not SKB_QUAD_IS_COLOR: decoration quads
+            // always carry that flag although patterns live in the alpha atlas,
+            // which the color path turns into an opaque black box. Skribidi's own
+            // renderer also goes by the texture's bpp.
+            quad.is_color  = image->bpp == 4;
+            quad.has_color = true;
+
+            // Decoration patterns repeat along the quad: uv counts tiles.
+            const bool repeats = q.pattern.width != 1.0f || q.pattern.height != 1.0f || q.pattern.x != 0.0f || q.pattern.y != 0.0f;
+            if (repeats)
+            {
+                quad.is_pattern = true;
+                quad.tile       = atlas_rect;
+                quad.uv         = float4(q.pattern.x, q.pattern.y, q.pattern.x + q.pattern.width, q.pattern.y + q.pattern.height);
+            }
+            else
+                quad.uv = atlas_rect;
+
+            out.push_back(quad);
         }
 
         // Caller holds m.
@@ -230,6 +397,9 @@ namespace Text
                 Log::get() << Log::LEVEL_WARNING << "Text::Engine: failed to load font " << path << Log::endl;
         }
 
+        impl->icons = skb_icon_collection_create();
+        add_builtin_icons(impl->icons);
+
         skb_rasterizer_config_t raster_config = skb_rasterizer_get_default_config();
         impl->rasterizer = skb_rasterizer_create(&raster_config);
 
@@ -249,7 +419,45 @@ namespace Text
         skb_layout_cache_destroy(impl->layouts);
         skb_image_atlas_destroy(impl->atlas);
         skb_rasterizer_destroy(impl->rasterizer);
+        skb_icon_collection_destroy(impl->icons);
         skb_font_collection_destroy(impl->fonts);
+    }
+
+    void Engine::build_icon(std::string_view name, vec2 size, Layout& out)
+    {
+        std::lock_guard<std::mutex> lock(impl->m);
+
+        out.quads.clear();
+        out.size = size;
+
+        const std::string name_z(name);
+        const skb_icon_handle_t handle = skb_icon_collection_find_icon(impl->icons, name_z.c_str());
+        if (!handle || size.x <= 0 || size.y <= 0) return;
+
+        // Largest aspect-correct fit, centred and snapped to whole pixels.
+        const skb_vec2_t fit = skb_icon_collection_calc_proportional_size(impl->icons, handle, size.x, size.y);
+        const float w = std::floor(fit.x), h = std::floor(fit.y);
+        const float x = std::round((size.x - w) * 0.5f), y = std::round((size.y - h) * 0.5f);
+
+        const skb_quad_t q = skb_image_atlas_get_icon_quad(impl->atlas, x, y, 1.0f, impl->icons, handle, w, h,
+            skb_color_t{ 255, 255, 255, 255 }, SKB_RASTERIZE_ALPHA_MASK);
+        if (q.flags & SKB_QUAD_IS_EMPTY) return;
+
+        const skb_image_t* image = skb_image_atlas_get_texture(impl->atlas, q.texture_idx);
+        if (!image) return;
+
+        const float tw = (float)image->width, th = (float)image->height;
+
+        Quad quad;
+        quad.rect      = float4(q.geom.x, q.geom.y, q.geom.x + q.geom.width, q.geom.y + q.geom.height);
+        quad.uv        = float4(q.texture.x / tw, q.texture.y / th, (q.texture.x + q.texture.width) / tw, (q.texture.y + q.texture.height) / th);
+        quad.color     = float4(1, 1, 1, 1);
+        quad.atlas     = q.texture_idx;
+        quad.is_color  = false;
+        quad.has_color = false;
+        out.quads.push_back(quad);
+
+        impl->rasterize_missing();
     }
 
     void Engine::begin_frame()
@@ -297,21 +505,34 @@ namespace Text
         return (uint32_t)std::max(skb_layout_get_offset_from_text_position(layout, pos), 0);
     }
 
-    void Engine::build(std::string_view utf8, Style style, Layout& out)
+    void Engine::build(std::string_view utf8, Style style, Layout& out, std::span<const Link> links, int hovered_link)
     {
         std::lock_guard<std::mutex> lock(impl->m);
 
         out.quads.clear();
         out.size = {};
 
-        const skb_layout_t* layout = impl->get_layout(utf8, style);
+        const skb_layout_t* layout = impl->get_layout(utf8, style, links);
         if (!layout) return;
 
         const skb_rect2_t bounds = skb_layout_get_bounds(layout);
         out.size = vec2(bounds.width, bounds.height);
 
-        impl->emit_layout(layout, vec2(-bounds.x, -bounds.y), 1.0f, out.quads);
+        impl->emit_layout(layout, vec2(-bounds.x, -bounds.y), 1.0f, out.quads, nullptr, 0, intptr_t(hovered_link + 1));
         impl->rasterize_missing();
+    }
+
+    int Engine::hit_link(std::string_view utf8, Style style, std::span<const Link> links, vec2 at)
+    {
+        if (links.empty()) return -1;
+
+        std::lock_guard<std::mutex> lock(impl->m);
+        const skb_layout_t* layout = impl->get_layout(utf8, style, links);
+        if (!layout) return -1;
+
+        const skb_rect2_t bounds = skb_layout_get_bounds(layout);
+        const skb_layout_content_hit_t hit = skb_layout_hit_test_content(layout, at.x + bounds.x, at.y + bounds.y);
+        return int(hit.content_id) - 1;
     }
 
     bool Engine::has_pending_upload()
@@ -398,8 +619,10 @@ namespace Text
                 g.pos      = float4(to_ndc_x(x0), to_ndc_y(y0), to_ndc_x(x1), to_ndc_y(y1));
                 g.uv       = float4(u0, v0, u1, v1);
                 g.color    = q.has_color ? float4(q.color.x, q.color.y, q.color.z, q.color.w * color.w) : color;
-                g.atlas    = q.atlas;
-                g.is_color = q.is_color ? 1 : 0;
+                g.atlas      = q.atlas;
+                g.is_color   = q.is_color ? 1 : 0;
+                g.is_pattern = q.is_pattern ? 1 : 0;
+                g.tile       = q.tile;
                 gpu_quads.push_back(g);
             }
         }
@@ -457,10 +680,127 @@ namespace Text
         std::vector<uint32_t> syntax_colors;
         bool                  syntax_dirty = true;
 
+        std::vector<Diagnostic> diagnostics;
+        // Where the last build drew each diagnostic (editor space), for hover.
+        struct DiagnosticArea
+        {
+            float4 rect;
+            size_t index;
+            bool   whole_line;   // the line's icon + message: tooltip lists every message on it
+        };
+        std::vector<DiagnosticArea> diagnostic_areas;
+
+        float font_size = 16;
+
+        // Wavy underline under each diagnostic's text, one icon at the end of
+        // each affected line. Caller holds the engine lock.
+        void build_diagnostics(Engine::Impl& engine, float scale, std::vector<Quad>& out)
+        {
+            diagnostic_areas.clear();
+            if (diagnostics.empty()) return;
+
+            const float4 error_color   = float4(220, 40, 40, 255) / 255.0f;
+            const float4 warning_color = float4(215, 150, 0, 255) / 255.0f;
+            auto is_word = [](uint32_t c) { return c == '_' || c > 127 || (c >= '0' && c <= '9') || ((c | 0x20) >= 'a' && (c | 0x20) <= 'z'); };
+            auto at = [](int32_t offset) { return skb_text_position_t{ offset, SKB_AFFINITY_TRAILING }; };
+
+            std::vector<int32_t> lines_with_icon;
+
+            for (size_t di = 0; di < diagnostics.size(); ++di)
+            {
+                const Diagnostic& d = diagnostics[di];
+                const int32_t pi = (int32_t)d.line;
+                if (pi >= skb_editor_get_paragraph_count(editor)) continue;
+
+                const float4 color = d.warning ? warning_color : error_color;
+
+                // The line's text without its paragraph separator.
+                const skb_text_t* text = skb_editor_get_paragraph_text(editor, pi);
+                const uint32_t*   cps  = skb_text_get_utf32(text);
+                int32_t count = skb_text_get_utf32_count(text);
+                while (count > 0 && (cps[count - 1] == '\n' || cps[count - 1] == '\r')) --count;
+
+                // Compilers report a position; underline the word there (at
+                // least one character), or the explicit length.
+                if (count > 0)
+                {
+                    const int32_t start = std::min<int32_t>((int32_t)d.column, count - 1);
+                    int32_t end = d.length ? start + (int32_t)d.length : start;
+                    if (!d.length)
+                        while (end < count && is_word(cps[end])) ++end;
+                    end = std::clamp(end, start + 1, count);
+
+                    const int32_t base = skb_editor_get_paragraph_global_text_offset(editor, pi);
+                    std::vector<skb_rect2_t> rects;
+                    skb_editor_iterate_text_range_bounds(editor, skb_text_range_t{ at(base + start), at(base + end) },
+                        [](skb_rect2_t r, void* context) { static_cast<std::vector<skb_rect2_t>*>(context)->push_back(r); },
+                        &rects);
+
+                    for (auto& r : rects)
+                    {
+                        // UNDER places the wave's top at y: tuck it against the
+                        // bottom of the text's line box.
+                        const skb_quad_t q = skb_image_atlas_get_decoration_quad(engine.atlas, r.x, r.y + r.height - 3.0f, scale,
+                            SKB_DECORATION_LINE_UNDER, SKB_DECORATION_STYLE_WAVY, r.width, 0.0f, 1.0f,
+                            skb_color_t{ 255, 255, 255, 255 }, SKB_RASTERIZE_ALPHA_MASK);
+                        engine.append_quad(q, scale, color, out);
+                        diagnostic_areas.push_back({ float4(r.x, r.y, r.x + r.width, r.y + r.height), di, false });
+                    }
+                }
+
+                if (std::find(lines_with_icon.begin(), lines_with_icon.end(), pi) != lines_with_icon.end())
+                    continue;
+                lines_with_icon.push_back(pi);
+
+                const skb_vec2_t  offset = skb_editor_get_paragraph_offset(editor, pi);
+                const skb_rect2_t bounds = skb_layout_get_bounds(skb_editor_get_paragraph_layout(editor, pi));
+                const float size = std::round(font_size * 0.9f);
+                const float x = offset.x + bounds.x + bounds.width + font_size * 0.5f;
+                const float y = offset.y + bounds.y + (bounds.height - size) * 0.5f;
+
+                const skb_icon_handle_t icon = skb_icon_collection_find_icon(engine.icons, d.warning ? "warning" : "error");
+                const skb_quad_t q = skb_image_atlas_get_icon_quad(engine.atlas, x, y, scale, engine.icons, icon, size, size,
+                    skb_color_t{ 255, 255, 255, 255 }, SKB_RASTERIZE_ALPHA_MASK);
+                engine.append_quad(q, scale, color, out);
+
+                // The line's first message after the icon (Error Lens style); the
+                // rest are counted, and the tooltip over this area shows them all.
+                const size_t on_line = std::count_if(diagnostics.begin(), diagnostics.end(), [&](const Diagnostic& o) { return o.line == d.line; });
+                std::string message = d.message;
+                if (on_line > 1)
+                    message += "  (+" + std::to_string(on_line - 1) + " more)";
+
+                float area_right = x + size;
+                const skb_layout_t* line_layout = skb_editor_get_paragraph_layout(editor, pi);
+                const skb_layout_t* message_layout = engine.get_layout(message, Style{ font_size * 0.9f, Weight::Normal, Family::Sans });
+                if (message_layout && skb_layout_get_lines_count(message_layout) > 0 && skb_layout_get_lines_count(line_layout) > 0)
+                {
+                    // Sit on the code line's baseline: centring the smaller text in
+                    // the line box leaves it visibly off the code's text line.
+                    const skb_rect2_t tb = skb_layout_get_bounds(message_layout);
+                    const float code_baseline    = offset.y + skb_layout_get_lines(line_layout)[0].baseline;
+                    const float message_baseline = skb_layout_get_lines(message_layout)[0].baseline;
+                    const vec2 text_pos = vec2(x + size + font_size * 0.4f - tb.x, code_baseline - message_baseline);
+
+                    const size_t first = out.size();
+                    engine.emit_layout(message_layout, text_pos, scale, out);
+                    for (size_t qi = first; qi < out.size(); ++qi)
+                    {
+                        out[qi].color     = float4(color.x, color.y, color.z, 0.85f);
+                        out[qi].has_color = true;
+                    }
+                    area_right = text_pos.x + tb.x + tb.width;
+                }
+
+                diagnostic_areas.push_back({ float4(x, y, area_right, y + size), di, true });
+            }
+        }
+
         static void on_text_change(skb_editor_t*, skb_editor_text_change_reason_t, void* context)
         {
             auto self = static_cast<Editor::Impl*>(context);
             self->syntax_dirty = true;
+            self->diagnostics.clear();
             if (!self->suppress_change)
                 self->changed = true;
         }
@@ -483,6 +823,7 @@ namespace Text
         auto& engine = *Engine::get().impl;
         std::lock_guard<std::mutex> lock(engine.m);
 
+        impl->font_size = style.size;
         impl->paragraph_attributes[0] = skb_attribute_make_font_size(style.size);
         impl->paragraph_attributes[1] = skb_attribute_make_font_weight(to_skb(style.weight));
         impl->paragraph_attributes[2] = skb_attribute_make_font_family(to_skb(style.family));
@@ -594,6 +935,26 @@ namespace Text
         auto& engine = *Engine::get().impl;
         std::lock_guard<std::mutex> lock(engine.m);
         skb_editor_insert_text_utf8(impl->editor, engine.temp, current_selection, utf8.data(), (int32_t)utf8.size());
+    }
+
+    void Editor::set_caret(uint32_t line, uint32_t column)
+    {
+        auto& engine = *Engine::get().impl;
+        std::lock_guard<std::mutex> lock(engine.m);
+        skb_editor_t* e = impl->editor;
+
+        const int32_t count = skb_editor_get_paragraph_count(e);
+        if (count == 0) return;
+
+        const int32_t pi = std::min<int32_t>((int32_t)line, count - 1);
+        const skb_text_t* text = skb_editor_get_paragraph_text(e, pi);
+        int32_t length = skb_text_get_utf32_count(text);
+        const uint32_t* cps = skb_text_get_utf32(text);
+        while (length > 0 && (cps[length - 1] == '\n' || cps[length - 1] == '\r')) --length;
+
+        const int32_t offset = skb_editor_get_paragraph_global_text_offset(e, pi) + std::min<int32_t>((int32_t)column, length);
+        const skb_text_position_t pos = { offset, SKB_AFFINITY_TRAILING };
+        skb_editor_select(e, skb_text_range_t{ pos, pos });
     }
 
     bool Editor::has_selection() const
@@ -796,7 +1157,39 @@ namespace Text
                 syntax, skb_editor_get_paragraph_global_text_offset(e, pi));
         }
 
+        impl->build_diagnostics(engine, scale, out.quads);
         engine.rasterize_missing();
+    }
+
+    void Editor::set_diagnostics(std::vector<Diagnostic> diagnostics)
+    {
+        auto& engine = *Engine::get().impl;
+        std::lock_guard<std::mutex> lock(engine.m);
+        impl->diagnostics = std::move(diagnostics);
+    }
+
+    std::string Editor::diagnostic_at(vec2 pos) const
+    {
+        auto& engine = *Engine::get().impl;
+        std::lock_guard<std::mutex> lock(engine.m);
+
+        for (auto& area : impl->diagnostic_areas)
+        {
+            const float4& r = area.rect;
+            if (!(pos.x >= r.x && pos.x < r.z && pos.y >= r.y && pos.y < r.w) || area.index >= impl->diagnostics.size())
+                continue;
+
+            if (!area.whole_line)
+                return impl->diagnostics[area.index].message;
+
+            std::string all;
+            const uint32_t line = impl->diagnostics[area.index].line;
+            for (auto& d : impl->diagnostics)
+                if (d.line == line)
+                    all += (all.empty() ? "" : "\n") + d.message;
+            return all;
+        }
+        return {};
     }
 
     vec2 Editor::content_size() const

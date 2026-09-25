@@ -52,12 +52,24 @@ export namespace Text
         // editor tint would otherwise multiply syntax colors to black) and
         // keeps only its alpha.
         bool     has_color;
+        // Repeating pattern (decorations): uv counts tiles, tile is the atlas
+        // rect of one, normalized.
+        bool     is_pattern = false;
+        float4   tile;
     };
 
     struct Layout
     {
         std::vector<Quad> quads;
         vec2              size;
+    };
+
+    // A clickable span, as a byte range of the UTF-8 text: drawn underlined in
+    // the link color, lighter while hovered.
+    struct Link
+    {
+        uint32_t begin = 0;
+        uint32_t end = 0;
     };
 
     struct Caret
@@ -90,8 +102,20 @@ export namespace Text
         uint32_t     hit_test(std::string_view utf8, Style style, vec2 at);
 
         // Lays out utf8, requests its glyphs from the atlas and rasterizes any
-        // that are missing (CPU side only).
-        void build(std::string_view utf8, Style style, Layout& out);
+        // that are missing (CPU side only). links (sorted, non-overlapping)
+        // are drawn as links; hovered_link indexes them, -1 for none.
+        void build(std::string_view utf8, Style style, Layout& out,
+                   std::span<const Link> links = {}, int hovered_link = -1);
+
+        // Index of the link under at (layout-local pixels, like build()'s
+        // quads), or -1.
+        int hit_link(std::string_view utf8, Style style, std::span<const Link> links, vec2 at);
+
+        // Built-in vector icon (chevron_right, chevron_down, close, error,
+        // warning) fitted and centred in size (pixels), aspect kept. Alpha
+        // mask, so it takes the draw() tint like plain text. Same thread rules
+        // as build().
+        void build_icon(std::string_view name, vec2 size, Layout& out);
 
         // True when rasterized glyphs are waiting for upload().
         bool has_pending_upload();
@@ -99,6 +123,17 @@ export namespace Text
 
         // pos is the layout's top-left in window pixels; quads are clipped to clip.
         void draw(HAL::CommandList::ptr& list, const Layout& layout, vec2 pos, float4 color, sizer clip, vec2 window_size);
+    };
+
+    // A compiler message pinned to the text: drawn as a wavy underline plus an
+    // icon at the end of its line.
+    struct Diagnostic
+    {
+        uint32_t    line = 0;     // 0-based
+        uint32_t    column = 0;   // 0-based codepoint within the line
+        uint32_t    length = 0;   // codepoints; 0 = the word starting at column
+        bool        warning = false;
+        std::string message;
     };
 
     // Editable rich text (skb_editor): Unicode input, bidi-aware caret movement,
@@ -130,6 +165,9 @@ export namespace Text
         void key(Key key, bool shift, bool ctrl);
         void insert(char32_t codepoint);
         void insert(std::string_view utf8);
+
+        // Caret to a 0-based line and codepoint column (clamped), no selection.
+        void set_caret(uint32_t line, uint32_t column);
 
         bool        has_selection() const;
         std::string get_selected_text() const;
@@ -169,6 +207,12 @@ export namespace Text
         void toggle_italic();
         void set_color(float4 color);
         void clear_color();
+
+        // Replaces the current diagnostics. Any text change clears them: their
+        // positions would be stale.
+        void        set_diagnostics(std::vector<Diagnostic> diagnostics);
+        // Message of the diagnostic under pos (as of the last build), or empty.
+        std::string diagnostic_at(vec2 pos) const;
 
         // Glyph quads at scale pixels per logical unit; requests missing glyphs.
         void build(float scale, Layout& out);

@@ -292,7 +292,8 @@ namespace HAL
 	// Returns nullopt (having already logged/shown the error, matching
 	// Compile_Shader's existing error path) on failure.
 	static std::optional<std::string> run_preprocess_pass(IDxcCompiler3* compiler, const std::string& text,
-		const std::vector<LPCWSTR>& base_args, IDxcIncludeHandler* include_handler, const std::string& file_name)
+		const std::vector<LPCWSTR>& base_args, IDxcIncludeHandler* include_handler, const std::string& file_name,
+		std::string* errors)
 	{
 		DxcBuffer buffer{ .Ptr = text.data(), .Size = text.size(), .Encoding = CP_UTF8 };
 
@@ -310,6 +311,12 @@ namespace HAL
 
 			std::string infoLog;
 			infoLog.assign(static_cast<const char*>(error->GetBufferPointer()), static_cast<const char*>(error->GetBufferPointer()) + error->GetBufferSize());
+
+			if (errors)
+			{
+				*errors = std::move(infoLog);
+				return std::nullopt;
+			}
 
 			std::string errorMsg = "Shader Preprocess Error:\n";
 			errorMsg += file_name + "\n";
@@ -332,7 +339,7 @@ namespace HAL
 	}
 	//
 
-	std::optional<CompiledShader>  ShaderCompiler::Compile_Shader(std::string shaderText, std::vector < HAL::shader_macro> macros, std::string target, std::string entry_point, ShaderOptions options, HAL::shader_include* includer, std::string file_name)
+	std::optional<CompiledShader>  ShaderCompiler::Compile_Shader(std::string shaderText, std::vector < HAL::shader_macro> macros, std::string target, std::string entry_point, ShaderOptions options, HAL::shader_include* includer, std::string file_name, std::string* errors)
 	{
 
 		if (file_name.empty())
@@ -451,8 +458,15 @@ namespace HAL
 		// text -- get it in there and insert the small forwarding shim
 		// (LogArg/LogWrite4/templated Log(), see insert_debug_log_wrapper)
 		// before the real compile below ever sees the result.
+		//
+		// Skipped when the caller wants the errors (editor diagnostics): the
+		// flattened text carries no #line markers, so DXC would report lines
+		// of the flattened buffer instead of the caller's source. Shaders
+		// using Log("...") strings don't compile unrewritten, so there that
+		// shows up as an error.
+		if (!errors)
 		{
-			auto preprocessed = run_preprocess_pass(compiler, shaderText, nativeCompilationArguments, &dxil_include, file_name);
+			auto preprocessed = run_preprocess_pass(compiler, shaderText, nativeCompilationArguments, &dxil_include, file_name, errors);
 			if (!preprocessed)
 				return {};
 
@@ -475,7 +489,7 @@ namespace HAL
 				// normal way (the same way a shader manually writing that
 				// #include itself already works).
 				std::string augmented = "#include \"autogen/DebugInfo.h\"\n" + original_shader_text;
-				auto reflattened = run_preprocess_pass(compiler, augmented, nativeCompilationArguments, &dxil_include, file_name);
+				auto reflattened = run_preprocess_pass(compiler, augmented, nativeCompilationArguments, &dxil_include, file_name, errors);
 				if (!reflattened)
 					return {};
 
@@ -507,6 +521,21 @@ namespace HAL
 
 			std::string infoLog;
 			infoLog.assign(static_cast<const char*>(error->GetBufferPointer()), static_cast<const char*>(error->GetBufferPointer()) + error->GetBufferSize());
+
+			if (errors)
+			{
+				// DXC names the unnamed source buffer "hlsl.hlsl"; report it
+				// under the caller's file name so locations can be matched.
+				static constexpr std::string_view buffer_name = "hlsl.hlsl:";
+				for (size_t at = infoLog.find(buffer_name); at != std::string::npos; at = infoLog.find(buffer_name, at))
+				{
+					infoLog.replace(at, buffer_name.size() - 1, file_name);
+					at += file_name.size() + 1;
+				}
+
+				*errors = std::move(infoLog);
+				return {};
+			}
 
 			std::string errorMsg = "Shader Compiler Error:\n";
 			errorMsg += file_name + "\n";

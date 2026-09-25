@@ -24,13 +24,17 @@ export namespace Table
 				float4 pos;
 				float4 uv;
 				float4 color;
+				float4 tile;
 				uint atlas;
 				uint is_color;
+				uint is_pattern;
 				float4& GetPos() { return pos; }
 				float4& GetUv() { return uv; }
 				float4& GetColor() { return color; }
+				float4& GetTile() { return tile; }
 				uint& GetAtlas() { return atlas; }
 				uint& GetIs_color() { return is_color; }
+				uint& GetIs_pattern() { return is_pattern; }
 				static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 				template<class Compiler>
 				void compile(Compiler& compiler) const
@@ -38,8 +42,10 @@ export namespace Table
 					compiler.compile(pos, "GlyphQuad::pos");
 					compiler.compile(uv, "GlyphQuad::uv");
 					compiler.compile(color, "GlyphQuad::color");
+					compiler.compile(tile, "GlyphQuad::tile");
 					compiler.compile(atlas, "GlyphQuad::atlas");
 					compiler.compile(is_color, "GlyphQuad::is_color");
+					compiler.compile(is_pattern, "GlyphQuad::is_pattern");
 				}
 				using Compiled = GlyphQuad;
 
@@ -53,8 +59,10 @@ export namespace Table
 					ar& NVP(pos);
 					ar& NVP(uv);
 					ar& NVP(color);
+					ar& NVP(tile);
 					ar& NVP(atlas);
 					ar& NVP(is_color);
+					ar& NVP(is_pattern);
 				}
 
 			};

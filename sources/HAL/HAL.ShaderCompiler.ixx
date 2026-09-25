@@ -82,7 +82,10 @@ export namespace HAL
 
 	struct ShaderCompiler :public Singleton<ShaderCompiler>, public API::ShaderCompiler
 	{
-		std::optional<CompiledShader> Compile_Shader(std::string shaderText, std::vector < shader_macro> macros, std::string target = "lib_6_3", std::string entry_point = "", ShaderOptions options = ShaderOptions::None, shader_include* includer = nullptr, std::string file_name = "");
+		// errors: when given, a failed compile writes DXC's message there
+		// instead of logging it and popping a message box (engine shader loads
+		// rely on the box to pause for a fix before retrying).
+		std::optional<CompiledShader> Compile_Shader(std::string shaderText, std::vector < shader_macro> macros, std::string target = "lib_6_3", std::string entry_point = "", ShaderOptions options = ShaderOptions::None, shader_include* includer = nullptr, std::string file_name = "", std::string* errors = nullptr);
 		std::optional<CompiledShader> Compile_Shader_File(std::string filename, std::vector < shader_macro> macros, std::string target = "lib_6_3", std::string entry_point = "", ShaderOptions options = ShaderOptions::None, shader_include* includer = nullptr);
 
 	private:

@@ -4,6 +4,7 @@ import :Base;
 import :ScrollContainer;
 import :Image;
 import :Label;
+import :VectorIcon;
 
 export namespace GUI
 {
@@ -20,10 +21,10 @@ export namespace GUI
         class line;
 
 
-        class toogle_icon : public GUI::Elements::image
+        // Expand/collapse arrow: chevron_right when collapsed, chevron_down when
+        // expanded (toogle(true) = collapsed, matching the old skin textures).
+        class toogle_icon : public vector_icon
         {
-          //      GUI::Elements::tree_element* owner;
-            GUI::Texture tex_closed, tex_opened;
             public:
 
                 using ptr = s_ptr<toogle_icon>;

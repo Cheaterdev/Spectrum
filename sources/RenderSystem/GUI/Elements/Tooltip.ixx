@@ -28,6 +28,7 @@ export namespace GUI
             base*  last_hovered  = nullptr;
             float  timer         = 0.0f;
             bool   shown         = false;
+            std::string shown_text;
 
             static constexpr float DELAY = 0.6f;
 

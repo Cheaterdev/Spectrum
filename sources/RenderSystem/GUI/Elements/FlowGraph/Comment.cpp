@@ -73,10 +73,7 @@ GUI::Elements::FlowGraph::comment::comment(canvas* canva, ::FlowGraph::window* w
     close_button->size = { 25, 25 };
     close_button->padding = { 0, 0, 0, 0 };
     close_button->background_style = button::view_style::NO_BACKGROUND;
-    close_button->get_label()->visible = false;
-    close_button->get_image()->visible = true;
-    close_button->get_image()->texture = Skin::get().WindowCloseButton;
-    close_button->get_image()->docking = dock::FILL;
+    close_button->set_icon("close");
     close_button->padding = { 5, 5, 5, 5 };
     close_button->docking = dock::RIGHT;
     close_button->on_click = [this, wnd](button::ptr)

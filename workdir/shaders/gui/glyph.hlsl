@@ -8,6 +8,8 @@ struct glyph_output
 	float2 tc : TEXCOORD1;
 	nointerpolation uint texture_index : TEXCOORD2;
 	nointerpolation uint is_color : TEXCOORD3;
+	nointerpolation uint is_pattern : TEXCOORD4;
+	nointerpolation float4 tile : TEXCOORD5;
 };
 
 static const StructuredBuffer<GlyphQuad> quads = GetGlyphRender().GetQuads();
@@ -30,6 +32,8 @@ glyph_output VS(uint index : SV_VERTEXID)
 	o.color = q.GetColor();
 	o.texture_index = q.GetAtlas();
 	o.is_color = q.GetIs_color();
+	o.is_pattern = q.GetIs_pattern();
+	o.tile = q.GetTile();
 	return o;
 }
 #endif
@@ -40,7 +44,10 @@ float4 PS(glyph_output i) : SV_TARGET0
 	// Bilinear: glyphs drawn at a non-integer size are scaled from a bitmap
 	// rasterized at the rounded-up size. Pixel-snapped 1:1 quads sample texel
 	// centers, where bilinear is exact.
-	float4 s = GetGlyphRender().GetTextures(i.texture_index).Sample(linearClampSampler, i.tc);
+	// A pattern's uv counts tiles along the quad; wrap it into the tile's atlas
+	// rect (Skribidi insets the rect a texel, so bilinear stays inside it).
+	float2 tc = i.is_pattern ? i.tile.xy + frac(i.tc) * (i.tile.zw - i.tile.xy) : i.tc;
+	float4 s = GetGlyphRender().GetTextures(i.texture_index).Sample(linearClampSampler, tc);
 
 	float4 result;
 	if (i.is_color)

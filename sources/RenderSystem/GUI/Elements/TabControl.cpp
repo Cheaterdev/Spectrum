@@ -122,10 +122,7 @@ namespace GUI
             close_button->size = { 20, 20 };
             close_button->padding = { 0, 0, 0, 0 };
             close_button->background_style = button::view_style::FLAT;
-            close_button->get_label()->visible = false;
-            close_button->get_image()->visible = true;
-            close_button->get_image()->texture = Skin::get().WindowCloseButton;
-            close_button->get_image()->docking = dock::FILL;
+            close_button->set_icon("close");
             // close_button->padding = { 5, 5, 5, 5 };
             close_button->height_size = size_type::SQUARE;
             close_button->docking = dock::LEFT;

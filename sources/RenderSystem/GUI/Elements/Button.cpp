@@ -99,6 +99,20 @@ namespace GUI
             return im;
         }
 
+        void button::set_icon(std::string name)
+        {
+            label_text->visible = false;
+            im->visible = false;
+
+            if (!vec_icon)
+            {
+                vec_icon = std::make_shared<vector_icon>();
+                vec_icon->docking = dock::FILL;
+                add_child(vec_icon);
+            }
+            vec_icon->set_icon(std::move(name));
+        }
+
     }
 
 }

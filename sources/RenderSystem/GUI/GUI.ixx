@@ -40,6 +40,7 @@ export import :SyntaxHighlight;
 export import :Table;
 export import :TextLabel;
 export import :ValueBox;
+export import :VectorIcon;
 export import :Window;
 
 

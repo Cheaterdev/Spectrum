@@ -28,9 +28,10 @@ namespace GUI
             text_label->docking     = dock::NONE;
             text_label->x_type      = pos_x_type::LEFT;
             text_label->y_type      = pos_y_type::TOP;
-            text_label->width_size  = size_type::MATCH_CHILDREN;
+            // FIXED: label sets its own size from its text; MATCH_CHILDREN would
+            // measure its (nonexistent) children and collapse it to zero width.
+            text_label->width_size  = size_type::FIXED;
             text_label->height_size = size_type::FIXED;
-            text_label->size        = {0, 16};
             text_label->magnet_text = FW1_LEFT | FW1_VCENTER | FW1_NOWORDWRAP;
             add_child(text_label);
         }
@@ -104,10 +105,19 @@ namespace GUI
                     overlay->show(hovered->tooltip, p);
                     overlay->to_front();
                     shown = true;
+                    shown_text = hovered->tooltip;
                 }
             }
             else
             {
+                // An element can change its tooltip while hovered (edit_text
+                // shows the diagnostic under the cursor).
+                if (hovered->tooltip != shown_text)
+                {
+                    overlay->show(hovered->tooltip, ui->get_mouse_pos() + vec2(14, 18));
+                    shown_text = hovered->tooltip;
+                }
+
                 // keep following cursor while shown
                 overlay->pos = ui->get_mouse_pos() + vec2(14, 18);
             }

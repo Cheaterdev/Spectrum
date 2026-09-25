@@ -24,6 +24,15 @@ export namespace GUI
 
                 virtual void on_pre_render(Context& context) override;
                 virtual void pre_draw(HAL::CommandList::ptr list) override;
+
+                // Set on the UI thread, read by the tree walk.
+                std::mutex                  links_m;
+                std::vector<Text::Link>     links;
+                std::function<void(size_t)> on_link;
+                std::atomic<int>            hovered_link = -1;
+
+                // Top-left of the text inside bounds (pixels), from magnet_text.
+                vec2 text_origin(vec2 bounds_size, vec2 text_px) const;
             public:
                 int magnet_text;
                 using ptr = s_ptr<label>;
@@ -42,6 +51,14 @@ export namespace GUI
                 unsigned int get_index(vec2 at);
                 vec2 get_caret_pos(unsigned int index);
                 float get_line_height();
+
+                // Clickable spans (byte ranges of text, sorted): underlined,
+                // highlighted on hover, on_click(link index) on a left click.
+                void set_links(std::vector<Text::Link> links, std::function<void(size_t)> on_click);
+
+                virtual bool on_mouse_move(vec2 pos) override;
+                virtual void on_mouse_leave(vec2 pos) override;
+                virtual bool on_mouse_action(mouse_action action, mouse_button button, vec2 pos) override;
         };
 
         class MultiLineLabel: public scroll_container
