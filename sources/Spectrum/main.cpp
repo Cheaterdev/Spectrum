@@ -1116,25 +1116,25 @@ public:
 		{
 			std::lock_guard<std::mutex> g(m);
 
-			if (GetAsyncKeyState('R'))
-			{
-				RenderSystem::get().device().get_queue(HAL::CommandListType::DIRECT)->signal_and_wait();
-				//	RenderSystem::get().device().get_queue(HAL::CommandListType::COMPUTE)->signal_and_wait();
-				//	RenderSystem::get().device().get_queue(HAL::CommandListType::COPY)->signal_and_wait();
-
-				//   AssetManager::get().reload_resources();
-				HAL::pixel_shader::reload_all();
-				HAL::vertex_shader::reload_all();
-				HAL::geometry_shader::reload_all();
-				HAL::hull_shader::reload_all();
-				HAL::domain_shader::reload_all();
-				HAL::compute_shader::reload_all();
-				HAL::library_shader::reload_all();
-				HAL::mesh_shader::reload_all();
-				HAL::amplification_shader::reload_all();
-
-//				HAL::Texture::reload_all();
-			}
+//			if (GetAsyncKeyState('R'))
+//			{
+//				RenderSystem::get().device().get_queue(HAL::CommandListType::DIRECT)->signal_and_wait();
+//				//	RenderSystem::get().device().get_queue(HAL::CommandListType::COMPUTE)->signal_and_wait();
+//				//	RenderSystem::get().device().get_queue(HAL::CommandListType::COPY)->signal_and_wait();
+//
+//				//   AssetManager::get().reload_resources();
+//				HAL::pixel_shader::reload_all();
+//				HAL::vertex_shader::reload_all();
+//				HAL::geometry_shader::reload_all();
+//				HAL::hull_shader::reload_all();
+//				HAL::domain_shader::reload_all();
+//				HAL::compute_shader::reload_all();
+//				HAL::library_shader::reload_all();
+//				HAL::mesh_shader::reload_all();
+//				HAL::amplification_shader::reload_all();
+//
+////				HAL::Texture::reload_all();
+//			}
 
 			auto f_gc = thread_pool::get().enqueue([]()
 			{
@@ -2133,14 +2133,8 @@ public:
 									if (!code) return;
 
 									std::string errors;
-									const std::string source_text = code->get_text();
-									auto result = HAL::ShaderCompiler::get().Compile_Shader(source_text, { HAL::shader_macro("BUILD_FUNC_PS") },
+									auto result = HAL::ShaderCompiler::get().Compile_Shader(code->get_text(), { HAL::shader_macro("BUILD_FUNC_PS") },
 										"ps_6_8", "PS", HAL::ShaderOptions::None, nullptr, file_name, &errors);
-
-									// TEMP (diagnostic-location investigation): raw DXC output and
-									// the exact text it was given (binary, to keep \r visible).
-									std::ofstream("compile_errors.temp") << errors;
-									std::ofstream("compile_source.temp", std::ios::binary) << source_text;
 
 									// DXC (clang-style): "file:line:col: error: message"; the lines in
 									// between (source excerpt, caret) don't match and are skipped.
@@ -2246,6 +2240,26 @@ public:
 					GUI::Elements::asset_explorer::ptr cont(new GUI::Elements::asset_explorer());
 					dock->get_tabs()->add_page("Asset Explorer", cont);
 					dock->size = { 400, 400 };
+
+					// Texture assets dragged from the explorer into a multiline
+					// edit_text become block images. Lives here because the asset
+					// types sit above the GUI module.
+					GUI::Elements::edit_text::image_from_package = [](const GUI::drag_n_drop_package::ptr& package, GUI::Elements::edit_text::Image& image)
+					{
+						if (package->name != "asset") return false;
+
+						auto item = std::dynamic_pointer_cast<GUI::Elements::asset_item>(package->element.lock());
+						auto asset = item && item->asset ? item->asset->get_asset() : nullptr;
+						auto texture_asset = asset ? asset->get_ptr<TextureAsset>() : nullptr;
+						auto texture = texture_asset ? texture_asset->get_texture() : nullptr;
+						if (!texture) return false;
+
+						const auto dimensions = texture->get_desc().as_texture().Dimensions;
+						image.view  = texture->texture_2d();
+						image.owner = texture_asset;
+						image.size  = vec2(float(dimensions.x), float(dimensions.y));
+						return true;
+					};
 
 					// Open a texture asset in a preview window ("Preview" in the
 					// asset context menu). Lives here (above the Graphics module) so

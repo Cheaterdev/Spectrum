@@ -692,6 +692,56 @@ namespace Text
 
         float font_size = 16;
 
+        // Image paragraphs carry their id in the paragraph group tag, flagged
+        // by the high bit. Each image gets its own tag: Skribidi collapses the
+        // padding between neighbouring paragraphs that share one.
+        static constexpr uint32_t image_tag_flag = 0x80000000u;
+        static constexpr float    image_gap = 4;   // above the image, logical units
+        std::vector<ImagePlacement> image_placements;
+
+        // A paragraph split from an image paragraph (Enter, paste or a text drop
+        // inside its line) inherits the image's padding and tag, which would
+        // draw the image again. Keeps each tag on its first paragraph and
+        // resets the rest. Must run inside the edit's own undo transaction:
+        // done later as a step of its own, undo would revert just this fix
+        // and it would re-apply at once. Caller holds the engine lock.
+        void strip_duplicate_images(skb_temp_alloc_t* temp)
+        {
+            std::vector<uint32_t> seen;
+            for (int32_t pi = 0; pi < skb_editor_get_paragraph_count(editor); pi++)
+            {
+                const uint32_t tag = skb_attributes_get_group(skb_editor_get_paragraph_attributes(editor, pi), nullptr);
+                if (!(tag & image_tag_flag)) continue;
+
+                if (std::find(seen.begin(), seen.end(), tag) == seen.end())
+                {
+                    seen.push_back(tag);
+                    continue;
+                }
+
+                const int32_t offset = skb_editor_get_paragraph_global_text_offset(editor, pi);
+                const skb_text_range_t paragraph = { { offset, SKB_AFFINITY_TRAILING }, { offset, SKB_AFFINITY_TRAILING } };
+                skb_editor_set_paragraph_attribute(editor, temp, paragraph, skb_attribute_make_paragraph_padding(0, 0, 0, 0));
+                skb_editor_set_paragraph_attribute(editor, temp, paragraph, skb_attribute_make_group_tag(0));
+            }
+        }
+
+        // Caller holds the engine lock.
+        void collect_images()
+        {
+            image_placements.clear();
+            for (int32_t pi = 0; pi < skb_editor_get_paragraph_count(editor); pi++)
+            {
+                const skb_attribute_set_t attributes = skb_editor_get_paragraph_attributes(editor, pi);
+                const uint32_t tag = skb_attributes_get_group(attributes, nullptr);
+                if (!(tag & image_tag_flag)) continue;
+
+                const skb_attribute_paragraph_padding_t padding = skb_attributes_get_paragraph_padding(attributes, nullptr);
+                const skb_vec2_t offset = skb_editor_get_paragraph_offset(editor, pi);
+                image_placements.push_back({ tag & ~image_tag_flag, vec2(offset.x + padding.start, offset.y + image_gap), padding.top - image_gap });
+            }
+        }
+
         // Wavy underline under each diagnostic's text, one icon at the end of
         // each affected line. Caller holds the engine lock.
         void build_diagnostics(Engine::Impl& engine, float scale, std::vector<Quad>& out)
@@ -920,6 +970,19 @@ namespace Text
 
         auto& engine = *Engine::get().impl;
         std::lock_guard<std::mutex> lock(engine.m);
+
+        // Enter can split an image paragraph; one undo step with the cleanup.
+        // (Skribidi's Enter inserts without amending undo, so it is safe
+        // inside a fresh transaction, unlike insert_codepoint.)
+        if (key == Key::Enter)
+        {
+            const int32_t transaction = skb_editor_undo_transaction_begin(impl->editor);
+            skb_editor_process_key_pressed(impl->editor, engine.temp, skb_key, mods);
+            impl->strip_duplicate_images(engine.temp);
+            skb_editor_undo_transaction_end(impl->editor, transaction);
+            return;
+        }
+
         skb_editor_process_key_pressed(impl->editor, engine.temp, skb_key, mods);
     }
 
@@ -934,7 +997,12 @@ namespace Text
     {
         auto& engine = *Engine::get().impl;
         std::lock_guard<std::mutex> lock(engine.m);
+
+        // Pasted lines can split an image paragraph; see key().
+        const int32_t transaction = skb_editor_undo_transaction_begin(impl->editor);
         skb_editor_insert_text_utf8(impl->editor, engine.temp, current_selection, utf8.data(), (int32_t)utf8.size());
+        impl->strip_duplicate_images(engine.temp);
+        skb_editor_undo_transaction_end(impl->editor, transaction);
     }
 
     void Editor::set_caret(uint32_t line, uint32_t column)
@@ -1102,6 +1170,7 @@ namespace Text
         skb_editor_insert_text_utf8(e, engine.temp, current_selection, moved.data(), (int32_t)moved.size());
         skb_editor_select(e, skb_text_range_t{ at(drop), at(drop + moved_count) });
 
+        impl->strip_duplicate_images(engine.temp);
         skb_editor_undo_transaction_end(e, transaction);
     }
 
@@ -1126,6 +1195,7 @@ namespace Text
         const int32_t inserted = skb_editor_get_text_utf32_count(e) - count_before;
         skb_editor_select(e, skb_text_range_t{ at(drop), at(drop + inserted) });
 
+        impl->strip_duplicate_images(engine.temp);
         skb_editor_undo_transaction_end(e, transaction);
     }
 
@@ -1158,7 +1228,66 @@ namespace Text
         }
 
         impl->build_diagnostics(engine, scale, out.quads);
+        impl->collect_images();
         engine.rasterize_missing();
+    }
+
+    void Editor::insert_image(vec2 pos, uint32_t id, float height)
+    {
+        auto& engine = *Engine::get().impl;
+        std::lock_guard<std::mutex> lock(engine.m);
+        skb_editor_t* e = impl->editor;
+
+        const int32_t count = skb_editor_get_paragraph_count(e);
+        if (count == 0) return;
+
+        // The paragraph under pos.
+        const int32_t hit = skb_editor_get_text_offset_from_text_position(e, skb_editor_hit_test(e, SKB_MOVEMENT_CARET, pos.x, pos.y));
+        int32_t pi = count - 1;
+        for (int32_t i = 0; i + 1 < count; i++)
+            if (hit < skb_editor_get_paragraph_global_text_offset(e, i + 1)) { pi = i; break; }
+
+        // End of its content, before its own line break.
+        const skb_text_t* text = skb_editor_get_paragraph_text(e, pi);
+        const uint32_t*   cps  = skb_text_get_utf32(text);
+        int32_t length = skb_text_get_utf32_count(text);
+        while (length > 0 && (cps[length - 1] == '\n' || cps[length - 1] == '\r')) --length;
+        const int32_t split = skb_editor_get_paragraph_global_text_offset(e, pi) + length;
+
+        auto at = [](int32_t offset) { return skb_text_position_t{ offset, SKB_AFFINITY_TRAILING }; };
+        const int32_t transaction = skb_editor_undo_transaction_begin(e);
+
+        // A line break there makes the next paragraph the image's own (empty)
+        // one. insert_paragraph, not insert_codepoint: the latter lets undo
+        // amend the previous state, and inside a fresh transaction (no states
+        // yet) Skribidi reads undo_states[-1].
+        // Inserted text takes the paragraph attributes active at the *caret*,
+        // not at the insert position: with the caret still inside an earlier
+        // image paragraph, the split line would come out as a copy of that
+        // image. Put the caret where the break goes first.
+        skb_editor_select(e, skb_text_range_t{ at(split), at(split) });
+
+        // No paragraph attribute here: it would cover both halves of the split,
+        // the dropped-on line included. Set on the new paragraph alone below.
+        skb_editor_insert_paragraph(e, engine.temp, skb_text_range_t{ at(split), at(split) }, skb_attribute_t{});
+
+        const skb_text_range_t image_paragraph = { at(split + 1), at(split + 1) };
+        skb_editor_set_paragraph_attribute(e, engine.temp, image_paragraph,
+            skb_attribute_make_paragraph_padding(0, 0, height + Impl::image_gap, 0));
+        skb_editor_set_paragraph_attribute(e, engine.temp, image_paragraph,
+            skb_attribute_make_group_tag(id | Impl::image_tag_flag));
+
+        // Caret back on the dropped-on line, for the same reason: typing from
+        // inside the image paragraph would carry its attributes along.
+        skb_editor_select(e, skb_text_range_t{ at(split), at(split) });
+        skb_editor_undo_transaction_end(e, transaction);
+    }
+
+    std::vector<ImagePlacement> Editor::images() const
+    {
+        auto& engine = *Engine::get().impl;
+        std::lock_guard<std::mutex> lock(engine.m);
+        return impl->image_placements;
     }
 
     void Editor::set_diagnostics(std::vector<Diagnostic> diagnostics)

@@ -136,6 +136,16 @@ export namespace Text
         std::string message;
     };
 
+    // Where an image paragraph (Editor::insert_image) reserved its box, as of
+    // the last build: editor space, logical units. The box's width is the
+    // widget's to choose (it knows the image's aspect).
+    struct ImagePlacement
+    {
+        uint32_t id;
+        vec2     pos;
+        float    height;
+    };
+
     // Editable rich text (skb_editor): Unicode input, bidi-aware caret movement,
     // mouse selection with double/triple click, undo/redo. Every call must come
     // from the UI tree-walk thread, like Engine::build. Positions are logical
@@ -213,6 +223,13 @@ export namespace Text
         void        set_diagnostics(std::vector<Diagnostic> diagnostics);
         // Message of the diagnostic under pos (as of the last build), or empty.
         std::string diagnostic_at(vec2 pos) const;
+
+        // Block image: a new empty paragraph after the line under pos whose top
+        // padding reserves height, marked with id (< 2^31, unique per inserted
+        // image). One undo step; the image travels with the text like any
+        // paragraph, and deleting the paragraph removes it.
+        void insert_image(vec2 pos, uint32_t id, float height);
+        std::vector<ImagePlacement> images() const;
 
         // Glyph quads at scale pixels per logical unit; requests missing glyphs.
         void build(float scale, Layout& out);

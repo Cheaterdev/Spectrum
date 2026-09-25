@@ -213,7 +213,12 @@ void GUI::Elements::edit_text::generate_container(base::ptr holder)
 
 bool GUI::Elements::edit_text::can_accept(drag_n_drop_package::ptr package)
 {
-	return package && package->name == "text";
+	if (!package) return false;
+	if (package->name == "text") return true;
+
+	// Anything the image hook can turn into a texture becomes a block image.
+	Image image;
+	return multiline && image_from_package && image_from_package(package, image);
 }
 
 void GUI::Elements::edit_text::on_drop_move(drag_n_drop_package::ptr package, vec2 pos)
@@ -233,6 +238,18 @@ void GUI::Elements::edit_text::on_drop_leave(drag_n_drop_package::ptr package)
 
 bool GUI::Elements::edit_text::on_drop(drag_n_drop_package::ptr package, vec2 pos)
 {
+	Image image;
+	if (package->name != "text" && multiline && image_from_package && image_from_package(package, image))
+	{
+		std::lock_guard<std::mutex> guard(m);
+		const uint32_t id = next_image_id++;
+		inserted_images[id] = std::move(image);
+		events.emplace_back(image_input{ pos, id });
+		drop_hover = false;
+		cursor     = cursor_style::BEAM;
+		return true;
+	}
+
 	auto source = std::dynamic_pointer_cast<edit_text>(package->element.lock());
 	if (!source) return false;
 
@@ -444,6 +461,22 @@ void GUI::Elements::edit_text::process_events(Context& c)
 			if (col->color) editor.set_color(*col->color);
 			else            editor.clear_color();
 		}
+		else if (auto img = std::get_if<image_input>(&e))
+		{
+			// Natural size, capped in height and to the view's width.
+			const auto found = inserted_images.find(img->id);
+			if (found == inserted_images.end() || found->second.size.x <= 0 || found->second.size.y <= 0)
+				continue;
+
+			const vec2  size   = found->second.size;
+			const rect  box    = content_rect(c);
+			const float max_w  = std::max(16.0f, box.w / c.scale - 8);
+			float height = std::min(size.y, 240.0f);
+			if (size.x * height / size.y > max_w)
+				height = max_w * size.y / size.x;
+
+			editor.insert_image(to_editor(img->pos, c.scale), img->id, height);
+		}
 		else if (auto bar = std::get_if<scrollbar_input>(&e))
 		{
 			// Same mapping as scroll_container: t spans the scrollable range.
@@ -569,6 +602,7 @@ void GUI::Elements::edit_text::on_pre_render(Context& c)
 		selection     = editor.selection_rects();
 		caret         = editor.caret();
 		caret_visible = is_focused();
+		image_boxes   = editor.images();
 
 		const rect content = content_rect(c);
 		const vec2 view    = vec2(content.w, content.h) / c.scale;
@@ -617,6 +651,24 @@ void GUI::Elements::edit_text::draw(Context& c)
 		r.pos  = origin + vec2(s.x, s.y) * c.scale;
 		r.size = vec2(s.z - s.x, s.w - s.y) * c.scale;
 		c.renderer->draw_color(c, selection_color, r);
+	}
+
+	// Block images, under the text like the selection. Width from the
+	// image's aspect: the editor only reserved the height.
+	for (auto& box : image_boxes)
+	{
+		const auto found = inserted_images.find(box.id);
+		if (found == inserted_images.end() || found->second.size.y <= 0)
+			continue;
+
+		const vec2 size = found->second.size;
+		rect r;
+		r.pos  = origin + box.pos * c.scale;
+		r.size = vec2(size.x * box.height / size.y, box.height) * c.scale;
+
+		GUI::Texture texture;
+		texture = found->second.view;
+		c.renderer->draw(c, texture, r);
 	}
 
 	c.ui_clipping = orig_clip;

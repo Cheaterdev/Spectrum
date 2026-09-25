@@ -7,18 +7,34 @@ export namespace GUI
 {
     namespace Elements
     {
-        // Single-line text field over Text::Editor (skb_editor).
+        // Text field over Text::Editor (skb_editor), single-line or multiline.
         //
         // Input arrives on the UI thread and is queued; it is applied in
         // on_pre_render, on the tree-walk thread, because the editor shares
         // Text::Engine's layout and atlas state with every other text element.
         //
-        // Deliberately has no child elements: on_pre_render can't create them
-        // (add_child is UI-thread only), and a child covering the field would
-        // take the mouse moves a drag-selection needs. Selection, text,
-        // placeholder and caret are all drawn directly.
+        // The only children are the scroll bars at the edges, created in the
+        // constructor: on_pre_render can't create any (add_child is UI-thread
+        // only), and a child covering the text would take the mouse moves a
+        // drag-selection needs. Selection, text, images, placeholder and caret
+        // are all drawn directly.
         class edit_text : public base
         {
+            public:
+                // A block image's texture; owner keeps whatever holds the
+                // texture alive (e.g. the texture asset).
+                struct Image
+                {
+                    HAL::Texture2DView    view;
+                    std::shared_ptr<void> owner;
+                    vec2                  size;   // pixels, for the aspect ratio
+                };
+
+                // Turns a drag-and-drop package into an image, or returns false.
+                // Set by a layer that knows the package's source (texture assets
+                // live above GUI). UI thread.
+                static inline std::function<bool(const drag_n_drop_package::ptr&, Image&)> image_from_package;
+
             private:
                 struct key_input
                 {
@@ -53,7 +69,12 @@ export namespace GUI
                     bool  vertical;
                     float t;         // 0..1 along the scrollable range
                 };
-                using input_event = std::variant<key_input, char32_t, mouse_input, drop_input, wheel_input, color_input, scrollbar_input>;
+                struct image_input
+                {
+                    vec2     pos;    // window pixels
+                    uint32_t id;     // key into inserted_images
+                };
+                using input_event = std::variant<key_input, char32_t, mouse_input, drop_input, wheel_input, color_input, scrollbar_input, image_input>;
 
                 std::vector<input_event> events;
                 std::mutex m;
@@ -101,6 +122,12 @@ export namespace GUI
                 std::vector<float4> selection;
                 Text::Caret         caret;
                 bool                caret_visible = false;
+
+                // Block images: the document holds only ids (Text::Editor image
+                // paragraphs), the textures live here. Guarded by m.
+                std::unordered_map<uint32_t, Image> inserted_images;
+                uint32_t next_image_id = 1;
+                std::vector<Text::ImagePlacement> image_boxes;   // from the last build
 
                 void process_events(Context& c);
                 void process_mouse(const mouse_input& e, vec2 pos);
