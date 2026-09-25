@@ -79,6 +79,7 @@ export namespace GUI
                 std::vector<input_event> events;
                 std::mutex m;
                 bool mouse_selecting = false;
+                vec2 last_mouse_pos;   // window pixels, for scrolling while drag-selecting
 
                 // UI-thread side of dragging selected text: the engine's
                 // drag-and-drop asks need_drag_drop() on the UI thread, so whether
@@ -145,6 +146,7 @@ export namespace GUI
                 float        gutter_width = 0;
                 Text::Layout gutter_layout;
                 void update_scroll(vec2 view_size);
+                void drag_select_scroll(Context& c, rect content, vec2 view, vec2 scroll_before);
 
             public:
                 using ptr = s_ptr<edit_text>;

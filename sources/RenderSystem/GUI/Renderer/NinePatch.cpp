@@ -40,7 +40,7 @@ namespace GUI
 		//owner_device = cur;
 	}
 
-	void NinePatch::draw(base::Context& c, GUI::Texture& item, rect r, HAL::PipelineState::ptr pipeline_state)
+	void NinePatch::draw(base::Context& c, GUI::Texture& item, rect r, HAL::PipelineState::ptr pipeline_state, bool solid)
 	{
 		if (current_state && current_state != pipeline_state)
 		{
@@ -54,7 +54,7 @@ namespace GUI
 			added = true;
 			textures_handles.emplace_back(item.texture.texture2D);
 		}
-		if (!added && current_state == RenderSystem::get().device().get_engine_pso_holder().GetPSO<PSOS::UI::NinePatch>())
+		if (!added && !solid && current_state == RenderSystem::get().device().get_engine_pso_holder().GetPSO<PSOS::UI::NinePatch>())
 		{
 			return;
 		}
@@ -65,6 +65,17 @@ namespace GUI
 
 		}
 		current_state = pipeline_state;
+
+		// Full batch: flushed before this patch goes in, not after, so the
+		// caller (draw_color) can still reach the patch's vertices.
+		if (textures_handles.size() > 512)
+		{
+			auto handle = textures_handles.back();
+			textures_handles.pop_back();
+			flush(c);
+			textures_handles.push_back(handle);
+			current_state = pipeline_state;
+		}
 
 		vertexes.resize(vertexes.size() + 16);
 
@@ -276,9 +287,6 @@ namespace GUI
 			_vertexes[i].addColor = item.add_color;
 			_vertexes[i].linearSource = item.linear_source ? 1.0f : 0.0f;
 		}
-
-		if (textures_handles.size() == 512)
-			flush(c);
 	}
 
 	void NinePatch::flush(base::Context& c)
@@ -311,6 +319,34 @@ namespace GUI
 		current_state = nullptr;
 		vertexes.clear();
 		textures_handles.clear();
+	}
+
+	void NinePatch::draw_color(base::Context& c, float4 left, float4 right, rect r)
+	{
+		// The clipping in draw() trims only edges that cross the clip rect; a
+		// patch entirely outside it would be drawn in full.
+		const auto& clip = c.ui_clipping;
+		const float2 lt = float2(r.pos) + c.offset;
+		const float2 rb = lt + float2(r.size);
+		if (r.size.x <= 0 || r.size.y <= 0
+			|| rb.x <= clip.left_top.x || lt.x >= clip.right_bottom.x
+			|| rb.y <= clip.left_top.y || lt.y >= clip.right_bottom.y)
+			return;
+
+		// Untextured: the null texture samples 0, so the output is add_color.
+		GUI::Texture item;
+		item.mul_color = float4(0, 0, 0, 0);
+		item.add_color = left;
+		draw(c, item, r, RenderSystem::get().device().get_engine_pso_holder().GetPSO<PSOS::UI::NinePatch>(), true);
+
+		// Gradient: color by each vertex's (clipped) x across the unclipped rect.
+		auto* patch = vertexes.data() + vertexes.size() - 16;
+		for (int i = 0; i < 16; i++)
+		{
+			const float x = (patch[i].pos.x + 1) * 0.5f * c.window_size.x;
+			const float t = std::clamp((x - lt.x) / r.size.x, 0.0f, 1.0f);
+			patch[i].addColor = left * (1 - t) + right * t;
+		}
 	}
 
 	void NinePatch::draw(base::Context& c, GUI::Texture& item, rect r)

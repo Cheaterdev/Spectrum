@@ -207,7 +207,7 @@ export namespace Test
 	}
 
 	// Tests colored_rect::draw through the full element dispatch path:
-	// user_interface layout → colored_rect::draw → Renderer::draw_color → PSOS::UI::SimpleRect.
+	// user_interface layout → colored_rect::draw → Renderer::draw_color → the NinePatch batch.
 	TEST(Core.HAL, GUIElement_ColoredRect)
 	{
 			THREAD_SCOPE(GUI);

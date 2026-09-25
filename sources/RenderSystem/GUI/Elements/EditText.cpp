@@ -153,6 +153,13 @@ bool GUI::Elements::edit_text::on_mouse_action(mouse_action action, mouse_button
 			drag_candidate = editor.selection_contains(to_editor(pos, result_scale));
 			drag_started   = false;
 
+			// Drag-selecting keeps the mouse: moves beyond the field still
+			// arrive, to auto-scroll and extend the selection past its edge.
+			if (!drag_candidate)
+				set_movable(true);
+
+			last_mouse_pos = pos;
+
 			mouse_input down{ Kind::Down, pos, now_seconds() };
 			down.in_selection = drag_candidate;
 			events.emplace_back(down);
@@ -163,6 +170,7 @@ bool GUI::Elements::edit_text::on_mouse_action(mouse_action action, mouse_button
 			up.after_drag = drag_started;
 			events.emplace_back(up);
 			drag_candidate = false;
+			set_movable(false);
 		}
 	}
 
@@ -176,6 +184,7 @@ bool GUI::Elements::edit_text::on_mouse_move(vec2 pos)
 	// A press held for drag-and-drop doesn't extend the selection.
 	if (mouse_selecting && !drag_candidate)
 		events.emplace_back(mouse_input{ mouse_input::Kind::Drag, pos });
+	last_mouse_pos = pos;
 
 	// The tooltip manager shows whatever this holds while hovered.
 	tooltip = editor.diagnostic_at(to_editor(pos, result_scale));
@@ -453,19 +462,25 @@ void GUI::Elements::edit_text::process_events(Context& c)
 {
 	for (auto& e : events)
 	{
-		// Everything but the wheel moves the caret or the text under it, and
-		// the view should follow; wheel scrolling must not snap back to it.
+		// Keys, drops and edits move the caret or the text under it, and the
+		// view should follow. The wheel must not snap back to the caret, and
+		// mouse input leaves the caret under the pointer, already on screen:
+		// following it would undo a wheel scroll made mid-drag, or on release
+		// jump to whichever end of the selection Skribidi calls the caret.
+		// drag_select_scroll handles scrolling during a drag.
 		if (auto w = std::get_if<wheel_input>(&e))
 		{
 			const float line = caret.height > 0 ? caret.height : style.size * 1.3f;
 			scroll.y -= w->notches * line * 3;
 			continue;
 		}
-		follow_caret = true;
+		auto ms = std::get_if<mouse_input>(&e);
+		if (!ms)
+			follow_caret = true;
 
 		if (auto k = std::get_if<key_input>(&e))
 			process_key(k->key, k->mods);
-		else if (auto ms = std::get_if<mouse_input>(&e))
+		else if (ms)
 			process_mouse(*ms, to_editor(ms->pos, c.scale));
 		else if (auto d = std::get_if<drop_input>(&e))
 			process_drop(*d, to_editor(d->pos, c.scale));
@@ -532,6 +547,39 @@ void GUI::Elements::edit_text::update_scroll(vec2 view)
 	scroll.y = std::clamp(scroll.y, 0.0f, std::max(0.0f, content.y - view.y));
 }
 
+// While drag-selecting: a pointer held beyond the text area scrolls toward it,
+// faster the further out it is, and whenever the view moved (that or the
+// wheel) the selection is extended to what is now under the pointer -- which
+// may not have moved at all, so no Drag event would do it.
+void GUI::Elements::edit_text::drag_select_scroll(Context& c, rect content, vec2 view, vec2 scroll_before)
+{
+	if (!mouse_selecting || drag_candidate)
+		return;
+
+	const float dt = std::min(c.delta_time, 0.1f);
+	auto speed = [&](float outside) { return (outside / c.scale * 10 + 100) * dt; };
+
+	const vec2 p  = last_mouse_pos;
+	const vec2 lt = vec2(content.pos);
+	const vec2 rb = lt + vec2(content.size);
+	if (multiline)
+	{
+		if (p.y < lt.y)      scroll.y -= speed(lt.y - p.y);
+		else if (p.y > rb.y) scroll.y += speed(p.y - rb.y);
+	}
+	if (p.x < lt.x)      scroll.x -= speed(lt.x - p.x);
+	else if (p.x > rb.x) scroll.x += speed(p.x - rb.x);
+
+	// Clamped before the pointer is mapped through it. Not update_scroll():
+	// its caret-follow would act on the caret from before this frame's input.
+	const vec2 extent = editor.content_size() + vec2(4, 0);
+	scroll.x = std::clamp(scroll.x, 0.0f, std::max(0.0f, extent.x - view.x));
+	scroll.y = std::clamp(scroll.y, 0.0f, std::max(0.0f, extent.y - view.y));
+
+	if (scroll.x != scroll_before.x || scroll.y != scroll_before.y)
+		editor.mouse_drag(to_editor(p, c.scale));
+}
+
 void GUI::Elements::edit_text::process_mouse(const mouse_input& e, vec2 pos)
 {
 	using Kind = mouse_input::Kind;
@@ -593,6 +641,7 @@ void GUI::Elements::edit_text::on_pre_render(Context& c)
 	std::string changed_text;
 	{
 		std::lock_guard<std::mutex> guard(m);
+		const vec2 scroll_before = scroll;
 		{
 			PROFILE(L"edit_text_input");
 			process_events(c);
@@ -613,7 +662,6 @@ void GUI::Elements::edit_text::on_pre_render(Context& c)
 				text_dirty = true;
 		}
 
-		caret         = editor.caret();
 		caret_visible = is_focused();
 
 		// Wide enough for the largest number (at least two digits, so it doesn't
@@ -634,6 +682,8 @@ void GUI::Elements::edit_text::on_pre_render(Context& c)
 		// view of margin either side absorbs fast scrolling.
 		const rect content = content_rect(c);
 		const vec2 view    = vec2(content.w, content.h) / c.scale;
+		drag_select_scroll(c, content, view, scroll_before);
+		caret = editor.caret();
 		update_scroll(view);
 		if (multiline)
 			sync_scroll_bars(view, editor.content_size() + vec2(4, 0));

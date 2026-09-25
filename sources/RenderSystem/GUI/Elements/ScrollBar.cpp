@@ -3,31 +3,45 @@ import :Renderer;
 
 namespace GUI
 {
+	float Elements::scroll_bar::track_length()
+	{
+		return type == scroll_type::HORIZONTAL ? render_bounds->w - padding->left - padding->right
+		                                       : render_bounds->h - padding->top - padding->bottom;
+	}
+
+	// The thumb travels track - thumb, both here and in on_move: with a long
+	// document the proportional thumb is below its minimal size, and placing
+	// it at track * scroll / content (as if it were proportional) put it out
+	// of step with the drag mapping and pushed it off the end near the bottom.
 	void Elements::scroll_bar::set_sizes(float filled_size, float container_size, float container_pos)
 	{
-		float f = container_size;
-		float percent_size = std::min(1.0f, filled_size / f);
-		float _offset = -container_pos / (f /*- filled_size*/);
+		const bool  horizontal = type == scroll_type::HORIZONTAL;
+		const float track      = std::max(0.0f, track_length());
+		const float minimal    = horizontal ? drag->minimal_size.x : drag->minimal_size.y;
 
-		if (f < Math::eps10)
+		float fraction = 1, t = 0;
+		if (container_size > Math::eps10)
 		{
-			percent_size = 1;
-			_offset = 0;
+			fraction = std::min(1.0f, filled_size / container_size);
+			const float range = container_size - filled_size;
+			t = range > 0 ? std::clamp(-container_pos / range, 0.0f, 1.0f) : 0.0f;
 		}
 
-		if (type == scroll_type::HORIZONTAL)
-		{
-			drag->size = {render_bounds->w * percent_size, drag->size->y};
-			drag->pos = { render_bounds->w * _offset, drag->pos->y };
-		}
+		const float thumb = std::min(track, std::max(minimal, track * fraction));
+		const float pos   = (track - thumb) * t;
 
+		if (horizontal)
+		{
+			drag->size = { thumb, drag->size->y };
+			drag->pos  = { pos, drag->pos->y };
+		}
 		else
 		{
-			drag->size = { drag->size->x, render_bounds->h  * percent_size };
-			drag->pos = { drag->pos->x, render_bounds->h  * _offset };
+			drag->size = { drag->size->x, thumb };
+			drag->pos  = { drag->pos->x, pos };
 		}
 
-		visible = percent_size < 1;
+		visible = fraction < 1;
 	}
 
 	void Elements::scroll_bar::draw(Context& c)
@@ -64,25 +78,11 @@ namespace GUI
 		{
 			if (on_move)
 			{
-				if (type == scroll_type::HORIZONTAL)
-				{
-					float w = render_bounds->w - drag->size->x;
+				const bool  horizontal = type == scroll_type::HORIZONTAL;
+				const float travel     = track_length() - (horizontal ? drag->size->x : drag->size->y);
+				const float p          = horizontal ? _pos.x : _pos.y;
 
-					if (w)
-						on_move(Math::clamp(_pos.x / w, 0.0f, 1.0f));
-					else
-						on_move(0.0f);
-				}
-
-				else
-				{
-					float h = (render_bounds->h - drag->size->y);
-
-					if (h)
-						on_move(Math::clamp(_pos.y / h, 0.0f, 1.0f));
-					else
-						on_move(0.0f);
-				}
+				on_move(travel > 0 ? Math::clamp(p / travel, 0.0f, 1.0f) : 0.0f);
 			}
 		};
 		add_child(drag);

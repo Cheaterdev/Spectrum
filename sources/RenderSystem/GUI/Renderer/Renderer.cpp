@@ -27,14 +27,12 @@ namespace GUI
 
     void Renderer::draw_color(base::Context& c, float4 color, rect r)
     {
-		flush(c);
-        simple_rect.draw(c, color, r);
+        nine_patch.draw_color(c, color, color, r);
     }
 
     void Renderer::draw_color(base::Context& c, float4 left, float4 right, rect r)
     {
-        flush(c);
-        simple_rect.draw(c, left, left, right, right, r);
+        nine_patch.draw_color(c, left, right, r);
     }
 
     void Renderer::start()
@@ -64,54 +62,6 @@ namespace GUI
     void Renderer::draw(base::Context& c, GUI::Texture& item, rect r)
     {
         nine_patch.draw(c, item, r);
-    }
-
-    SimpleRect::SimpleRect()
-    {
-    }
-
-    void SimpleRect::draw(base::Context& c, float4 color, rect r)
-    {
-        draw(c, color, color, color, color, r);
-    }
-
-    void SimpleRect::draw(base::Context& c, float4 tl, float4 bl, float4 tr, float4 br, rect r)
-	{
-		Slots::UI::ColorRect color_data;
-
-        auto vertexes = (vec2*)color_data.GetPos();
-
-        // vertex order: TL, BL, TR, BR (matches TRIANGLE_STRIP)
-        vertexes[0] = float2(0, 0);
-        vertexes[1] = float2(0, r.size.y);
-        vertexes[2] = float2(r.size.x, 0);
-        vertexes[3] = float2(r.size.x, r.size.y);
-
-		auto &clip = c.ui_clipping;
-
-		for (int i = 0; i < 4; i++)
-		{
-			vertexes[i] += float2(r.pos) + c.offset;
-			vertexes[i] = float2::max(vertexes[i], float2(clip.left_top));
-			vertexes[i] = float2::min(vertexes[i], float2(clip.right_bottom));
-		}
-
-        for (int i = 0; i < 4; i++)
-        {
-            float2 t = 2 * vertexes[i] / c.window_size - float2(1, 1);
-            vertexes[i] = { t.x, -t.y };
-        }
-
-        color_data.GetColor()[0] = tl;
-        color_data.GetColor()[1] = bl;
-        color_data.GetColor()[2] = tr;
-        color_data.GetColor()[3] = br;
-
-        c.command_list->get_graphics().set(color_data);
-
-        c.command_list->get_graphics().set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::STRIP);
-        c.command_list->get_graphics().set_pipeline<PSOS::UI::SimpleRect>();
-        c.command_list->get_graphics().draw(4);
     }
 
 }

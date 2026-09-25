@@ -19,36 +19,19 @@ export namespace GUI
 		NinePatch();
 		void draw(base::Context& c, HAL::PipelineState::ptr pipeline_state, rect r);
 		void draw(base::Context& c, GUI::Texture& item, rect r);
-		void draw(base::Context& c, GUI::Texture& item, rect r, HAL::PipelineState::ptr pipeline_state);
+		void draw(base::Context& c, GUI::Texture& item, rect r, HAL::PipelineState::ptr pipeline_state, bool solid = false);
+		// Solid rect with a horizontal gradient, as one more instance of the
+		// batch: selection, caret, gutter and scroll bar rects no longer cost
+		// a flush and a draw call each.
+		void draw_color(base::Context& c, float4 left, float4 right, rect r);
 		void flush(base::Context& c);
 
 		static void reset();
 	};
 
-	class SimpleRect
-	{
-		struct Vertex
-		{
-			vec2 pos;
-
-		};
-
-
-	public:
-		using ptr = s_ptr<SimpleRect>;
-		SimpleRect();
-
-
-
-		void draw(base::Context& c, float4 color, rect r);
-		// Per-vertex colors: top-left, bottom-left, top-right, bottom-right
-		void draw(base::Context& c, float4 tl, float4 bl, float4 tr, float4 br, rect r);
-	};
-
 	class Renderer
 	{
 		NinePatch nine_patch;
-		SimpleRect simple_rect;
 
 		Texture area_tex;
 		Texture virtual_tex;

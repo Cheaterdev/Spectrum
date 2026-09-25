@@ -216,7 +216,11 @@ void PassDefault<Passes::Post::BloomBuild>::render(Passes::Post::BloomBuild::Con
 
 void PassDefault<Passes::Post::BloomProcess>::render(Passes::Post::BloomProcess::Context& data, FrameContext& context)
 {
-	context.get_list()->get_compute().set_signature(Layouts::DefaultLayout);
+	auto& compute = context.get_list()->get_compute();
+	compute.set_signature(Layouts::DefaultLayout);
+	// BloomDownsample declares FrameInfo (level 0's unjitter); levels 1+ never
+	// read it, but the PSO's slot check can't know that.
+	context.graph->set_slot(SlotID::FrameInfo, compute);
 	bloom_process(data, context);
 }
 
