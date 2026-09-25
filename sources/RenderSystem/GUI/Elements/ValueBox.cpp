@@ -87,9 +87,9 @@ namespace GUI
                 cur_time = 0;
 
             if (current_value > max_good_value)
-                info->color = rgba8(1, 0, 0, 200);
+                info->color = float4(1, 0, 0, 200 / 255.0f);
             else
-                info->color = rgba8(0, 0, 0, 200);
+                info->color = float4(0, 0, 0, 200 / 255.0f);
         }
 
         value_box::value_box()

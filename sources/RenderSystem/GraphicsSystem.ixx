@@ -10,6 +10,7 @@ import :MeshAsset;
 import GUI;
 import Core;
 import TextSystem;
+import TextEngine;
 
 // Manages the lifecycle of all graphics singletons in the correct order.
 // Calls RenderSystem::create() internally to create the device.
@@ -61,6 +62,7 @@ public:
         GUI::Elements::FlowGraph::manager::reset();
         Profiler::reset();
         Fonts::FontSystem::reset();
+        Text::Engine::reset();
         RTX::reset();
         TextureAssetRenderer::reset();
         AssetManager::reset();

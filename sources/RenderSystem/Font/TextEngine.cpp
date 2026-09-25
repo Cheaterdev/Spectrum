@@ -464,6 +464,15 @@ namespace Text
 
     Editor::~Editor()
     {
+        // An editor outliving Engine::reset() (graphics shutdown) must not
+        // bring it back: get() would re-create the engine and its atlas textures
+        // after the device is gone. The editor owns no engine resources itself.
+        if (!Engine::is_good())
+        {
+            skb_editor_destroy(impl->editor);
+            return;
+        }
+
         auto& engine = *Engine::get().impl;
         std::lock_guard<std::mutex> lock(engine.m);
         skb_editor_destroy(impl->editor);

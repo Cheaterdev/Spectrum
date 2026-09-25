@@ -11,7 +11,7 @@ void GUI::Elements::window::draw(Context& c)
 {
 	// skin->draw(this, c);
 	c.renderer->draw(c, skin.Active, get_render_bounds());
-	label_text->color = pressed ? rgba8(200, 200, 200, 255) : rgba8(255, 255, 255, 255);
+	label_text->color = pressed ? float4(200, 200, 200, 255) / 255.0f : float4(1, 1, 1, 1);
 }
 
 GUI::Elements::window::window() : GUI::Elements::resizable()

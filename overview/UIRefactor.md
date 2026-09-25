@@ -72,54 +72,65 @@ Two child panels separated by a thin draggable `Resizer`. Distributes available 
 **Complexity:** medium-high  
 Timed overlay messages that appear in a corner, stack vertically, and fade out after N seconds. Requires a global manager attached to `user_interface`.
 
-## 17. ~~Context Menu (right-click)~~
-Already covered by `menu_list` — the widget exists, it's just a matter of spawning it at the cursor position on right-click.
+## 17. ~~Context Menu (right-click)~~ ✓ (edit_text has one)
+Already covered by `menu_list`: build it on right-button up, set `menu->pos` to the cursor, `menu->self_open(user_ui)`. `edit_text` now does this (Undo/Redo/Cut/Copy/Paste/Delete/Select All); FlowGraph canvas and AssetExplorer use the same pattern.
 
 ---
 
----
+## Skribidi Text Stack
 
-## Skribidi Integration (Rich Text + Icon Rasterization)
+**Goal:** Replace the FreeType font/label system with Skribidi as the text backend, then build formatting, icons and an HLSL/Prism code editor on top.
 
-**Goal:** Replace the current font/label system with Skribidi as the text backend, and build an HLSL/SIG code editor widget on top.
+**Why:** Skribidi provides shaping, BiDi, font fallback, color emoji, cursor navigation, selection, undo, text attributes (colored/bold spans) and SVG icon rasterization — none of which the old `label` / `edit_text` had.
 
-**Why:** Skribidi provides cursor navigation, selection, line breaking, BiDi, text attributes (colored spans) and PicoSVG icon rasterization — all things the current `label` / `edit_text` lack. Icons would benefit the whole UI, not just the editor.
+### Done (2026-09-25)
 
-### Step 1 — Build the sample *(do this first)*
-Clone Skribidi, build its own examples, understand:
-- How the context is created and torn down
-- How the glyph atlas is structured (format, dirty-region updates)
-- How quads/draw commands are emitted
-- How cursor and selection APIs work
-- How text attributes (color spans) are set per range
-- How PicoSVG icon rasterization works
+**Phase 0 — keyboard input.** `Window.cpp` handles `WM_CHAR` (Unicode window, UTF-16 surrogates joined) and captures `key_mods` with each key message; `InputHandler`/`base` gained `on_char` and a `key_mods` argument on `on_key_action`; clipboard read/write hooks on `user_interface` (`get_clipboard`/`set_clipboard`, wired in `main.cpp`).
 
-### Step 2 — vcpkg dependencies
-Add to `vcpkg.json`: `harfbuzz`, `sheenbidi`, `libunibreak`, `budouxc`.  
-Wrap Skribidi itself as a git submodule or vcpkg overlay in `custom-overlay/`.
+**Phase 1 — sample.** Skribidi built and its tests passing at the pinned commit (`dee63d6`, 2026-08-17). Answered the open questions:
+- Atlas vs FrameGraph: atlas textures are persistent resources outside the graph, like the old `FontAtlas`.
+- API stability: pinned commit + one wrapper module keeps churn contained.
+- `Fonts::Font`: fully replaced (removal still pending, see below).
 
-### Step 3 — D3D12 rendering backend
-- `HAL::Texture2D` for the glyph atlas; upload dirty regions each frame
-- Textured quad pipeline (UV + per-vertex color) — close to the existing NinePatch pipeline, likely reusable
+**Phase 2 — dependencies.** `custom-overlay/skribidi`: own `CMakeLists.txt` (upstream FetchContents its deps and forces the static CRT). SheenBidi, libunibreak 6.1 and budouxc are compiled into `skribidi.lib` at Skribidi's pinned commits; harfbuzz comes from vcpkg (baseline sheenbidi 3.0 / libunibreak 7.0 are major versions ahead of what Skribidi targets).
 
-### Step 4 — C++ module wrapper
-`sources/Modules/skribidi/skribidi.ixx` — thin C++ wrapper over the C API, following the existing Modules pattern.
+**Phase 3 — module wrapper.** `sources/Modules/skribidi/skribidi.ixx` (header-unit re-export). Macros and `static inline` helpers (`SKB_ATTRIBUTE_SET_FROM_STATIC_ARRAY`, `skb_rgba`, `SKB_CURRENT_SELECTION`, `INT32_MIN`) don't cross the module boundary — build those values by hand.
 
-### Step 5 — Replace / extend `label`
-New `rich_label` (or updated `label`) backed by Skribidi. Inline icon support in text comes for free here.
+**Phase 4 — D3D12 backend.** `Text::Engine` (`RenderSystem/Font/TextEngine.*`): Segoe UI Light/Regular/Bold + Symbol + Emoji from `%WINDIR%\Fonts`, 2048² atlas created at full size (never grows), `UI::Text::GlyphRender` PSO (`font_render.prism`, `shaders/gui/glyph.hlsl`). Threading split: layout + glyph requests on the tree walk (`on_pre_render`), uploads in `UI_PreDraw`, draws from the parallel `UI_Render` lists. 1:1 glyphs are pixel-snapped; bilinear sampling for scaled ones.
 
-### Step 6 — `code_editor` widget
-Built on top of Skribidi cursor + selection APIs.
-- HLSL tokenizer: keywords, types, semantics, preprocessor, comments, strings, numbers
-- SIG tokenizer: simpler subset
-- Map token types → Skribidi text attribute colors per span
+**Phase 5 — widgets.**
+- `label` draws through `Text::Engine` (no per-label cache texture); sizes on text/font-size change, since `on_pre_render` never runs for an element with empty bounds.
+- `edit_text` runs on `Text::Editor` (`skb_editor`): full Unicode, bidi-aware caret, double/triple-click, Ctrl+Z/Y, clipboard, context menu, drag-and-drop of selected text within and between fields via the engine DnD system (Ctrl = copy). Childless by design: `add_child` is UI-thread only and a child covering the field would swallow drag moves.
+- Test > Editor menu page in `main.cpp` for trying it.
 
-### Open questions (answer after Step 1)
-- Atlas update pattern vs FrameGraph resource lifetime
-- API stability risk (early stage, 202 commits)
-- Whether existing `Fonts::Font` system is kept alongside or fully replaced
+### Remaining
+
+**Phase 5 cleanup**
+- Remove FreeType + `TextSystem`: move `FW1_*` alignment flags into `GUI:Label`, port the remaining `Fonts::` users (BinaryAsset preview, ParameterWindow, GUI tests), drop the "Skribidi bring-up check" line in `main.cpp`.
+- Button label height: Skribidi line box is taller than the old FreeType measure, so button labels overflow and fall back to top-left anchoring.
+- `edit_text` horizontal scroll for long text (Skribidi `SKB_OVERFLOW_SCROLL` + editor width).
+- Upstream: a fresh `skb_editor` has 0 paragraphs and `skb_rich_layout_get_text_range_bounds` reads `paragraphs[-1]`; worked around by seeding `set_text("")`. Patch in the overlay port or report upstream.
+
+**Formatting** *(requested next)*
+- Bold / italic / color spans in `edit_text` via `skb_editor_toggle_attribute`; Ctrl+B / Ctrl+I.
+- Glyph quads already carry per-run paint color, so colored spans need no renderer change.
+- Drag-and-drop and paste to carry rich text (`get_rich_text_in_range` / `insert_rich_text`) instead of plain UTF-8.
+
+**Portability**
+- Engine-level key enum: `Window.cpp` translates `VK_*` once, so Win32 key codes stop leaking into `edit_text` and other GUI code.
+- Platform-specific font list (Android: `/system/fonts`, Roboto/Noto).
+
+**Phase 6 — built on the new stack**
+- Icons through `skb_icon_collection` (collapsible arrows, tree toggles, button glyphs).
+- Backlog widgets on the new `edit_text`: #8 FloatBox, #13 Vec2/3/4 Input, #14 searchable ComboBox.
+- `code_editor`: HLSL and Prism tokenizers mapping token types to attribute colors.
+- Optional SDF glyphs for zoomable text (FlowGraph canvas).
 
 ---
 
 ## Done
 - [x] ColorPicker (RGB + alpha sliders, hex/rgb display, gradient GPU draw)
+- [x] Keyboard input: WM_CHAR, modifiers, clipboard
+- [x] Skribidi text engine (port, module, D3D12 atlas + glyph PSO)
+- [x] label on Text::Engine
+- [x] edit_text on skb_editor (Unicode, undo, context menu, drag-and-drop)
