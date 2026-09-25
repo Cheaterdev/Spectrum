@@ -1,5 +1,6 @@
 export module GUI:EditText;
 import :Base;
+import :ScrollBar;
 import TextEngine;
 
 export namespace GUI
@@ -39,7 +40,20 @@ export namespace GUI
                     w_ptr<edit_text> source;
                     bool             copy;
                 };
-                using input_event = std::variant<key_input, char32_t, mouse_input, drop_input>;
+                struct wheel_input
+                {
+                    float notches;   // positive scrolls up
+                };
+                struct color_input
+                {
+                    std::optional<float4> color;   // nullopt clears the span color
+                };
+                struct scrollbar_input
+                {
+                    bool  vertical;
+                    float t;         // 0..1 along the scrollable range
+                };
+                using input_event = std::variant<key_input, char32_t, mouse_input, drop_input, wheel_input, color_input, scrollbar_input>;
 
                 std::vector<input_event> events;
                 std::mutex m;
@@ -62,8 +76,23 @@ export namespace GUI
                 vec2        drop_pos;      // window pixels
                 Text::Caret drop_caret;
 
+                Text::Style  style;
                 Text::Editor editor;
                 std::string  text;   // mirror of the editor's text, for get_text()
+
+                // Scroll position of the content box over the editor's content,
+                // logical units, >= 0. Kept here rather than in skb_editor: its
+                // view size comes from creation params, and changing those resets
+                // the text.
+                vec2 scroll;
+                bool follow_caret = false;   // an edit or caret move since the last frame
+
+                // Multiline only. Created in the constructor (UI thread), docked
+                // over the edges of the content box; they take mouse input only
+                // over their own strips, so drag-selection in the text is unaffected.
+                scroll_bar::ptr vbar, hbar;
+                vec2 synced_view = vec2(-1, -1), synced_content, synced_scroll;   // last sent to the bars
+                void sync_scroll_bars(vec2 view, vec2 content);
 
                 // Built by on_pre_render, drawn by draw/draw_after; guarded by m.
                 // Editor-space logical units, relative to the content box.
@@ -81,6 +110,7 @@ export namespace GUI
                 void copy_selection();
                 void open_context_menu(vec2 pos);
                 rect content_rect(Context& c);
+                void update_scroll(vec2 view_size);
 
             public:
                 using ptr = s_ptr<edit_text>;
@@ -93,12 +123,20 @@ export namespace GUI
                 // Codepoints rejected here never enter the text, typed or pasted.
                 std::function<bool(char32_t)> filter;
 
+                // Enter starts a new line and Tab inserts a tab; newlines and tabs
+                // survive paste. Single-line fields drop them.
+                bool multiline = false;
+
+                // Per-codepoint colors from the text (e.g. GUI::Syntax::highlight_hlsl).
+                Text::Highlighter highlighter;
+
                 float4 text_color        = float4(40, 40, 40, 255) / 255.0f;
                 float4 placeholder_color = float4(120, 120, 120, 180) / 255.0f;
                 float4 selection_color   = float4(0.25f, 0.5f, 1.0f, 0.35f);
                 float4 caret_color       = float4(0, 0, 0, 1);
 
                 edit_text();
+                explicit edit_text(Text::Style style);
 
                 // Programmatic set (e.g. seeding a bound value at construction).
                 // Does not fire on_change -- callers seed the initial text before
@@ -108,6 +146,7 @@ export namespace GUI
 
                 virtual bool on_mouse_action(mouse_action action, mouse_button button, vec2 pos) override;
                 virtual bool on_mouse_move(vec2 pos) override;
+                virtual bool on_wheel(mouse_wheel type, float value, vec2 pos) override;
 
                 virtual void on_key_action(key_action action, long key, key_mods mods) override;
                 virtual void on_char(char32_t ch) override;

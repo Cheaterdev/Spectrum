@@ -9,6 +9,7 @@ import ppl;
 import Core;
 import FrameGraph;
 import FrameGraphDebug;
+import TextEngine;
 
 using namespace FrameGraph;
 
@@ -2067,6 +2068,34 @@ public:
 							page->add_child(second);
 
 							docker->get_tabs()->add_page("Editor test", page);
+						};
+
+					// Multiline rich text: an HLSL shader with syntax colors, plus
+					// Ctrl+B / Ctrl+I and right-click > Color for formatting.
+					test->add_item("Code editor")->on_click = [this](GUI::Elements::menu_list_element::ptr elem)
+						{
+							GUI::base::ptr page(new GUI::base());
+							page->docking = GUI::dock::FILL;
+							page->padding = { 10, 10, 10, 10 };
+
+							auto hint = std::make_shared<GUI::Elements::label>();
+							hint->docking = GUI::dock::TOP;
+							hint->text = "Enter, Tab, wheel to scroll. Select text: Ctrl+B / Ctrl+I, right-click > Color. Drag selected text to move it.";
+							hint->margin = { 0, 0, 0, 8 };
+							page->add_child(hint);
+
+							auto code = std::make_shared<GUI::Elements::edit_text>(Text::Style{ 14, Text::Weight::Normal, Text::Family::Mono });
+							code->docking = GUI::dock::FILL;
+							code->multiline = true;
+							code->highlighter = GUI::Syntax::highlight_hlsl;
+
+							std::ifstream file("shaders/gui/glyph.hlsl");
+							std::stringstream source;
+							source << file.rdbuf();
+							code->set_text(file ? source.str() : std::string("// shaders/gui/glyph.hlsl not found\n"));
+							page->add_child(code);
+
+							docker->get_tabs()->add_page("Code editor", page);
 						};
 
 					add_child(menu);

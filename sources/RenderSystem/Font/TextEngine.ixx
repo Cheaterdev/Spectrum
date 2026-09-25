@@ -22,19 +22,36 @@ export namespace Text
         Bold
     };
 
+    enum class Family
+    {
+        Sans,   // Segoe UI
+        Mono    // Consolas
+    };
+
     struct Style
     {
         float  size = 16;   // pixels
         Weight weight = Weight::Normal;
+        Family family = Family::Sans;
     };
+
+    // Per-codepoint colors computed from the text (syntax highlighting): packed
+    // RGBA8 (r in the low byte), 0 = no color. Applied at render time, so they
+    // never enter the document or its undo history; an explicit color span in
+    // the document wins over them.
+    using Highlighter = std::function<void(std::u32string_view text, std::vector<uint32_t>& colors)>;
 
     struct Quad
     {
         float4   rect;     // pixels, relative to the layout's top-left
         float4   uv;       // normalized (u0, v0, u1, v1)
-        float4   color;    // the run's own paint; multiplied by the draw() tint
+        float4   color;    // own color (span paint or syntax), if has_color
         uint32_t atlas;    // index into the engine's atlas textures
         bool     is_color;
+        // With its own color the glyph ignores the draw() tint's rgb (a dark
+        // editor tint would otherwise multiply syntax colors to black) and
+        // keeps only its alpha.
+        bool     has_color;
     };
 
     struct Layout
@@ -143,8 +160,21 @@ export namespace Text
         // typed or pasted.
         std::function<bool(char32_t)> filter;
 
+        // Run over the whole text whenever it changes.
+        Highlighter highlighter;
+
+        // Formatting of the selection; with no selection they set what the
+        // next typed text gets.
+        void toggle_bold();
+        void toggle_italic();
+        void set_color(float4 color);
+        void clear_color();
+
         // Glyph quads at scale pixels per logical unit; requests missing glyphs.
         void build(float scale, Layout& out);
+
+        // Extent of all paragraphs, logical units.
+        vec2 content_size() const;
 
         Caret              caret() const;
         std::vector<float4> selection_rects() const;   // (x0, y0, x1, y1)

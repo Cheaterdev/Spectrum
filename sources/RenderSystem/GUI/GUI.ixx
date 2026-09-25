@@ -36,6 +36,7 @@ export import :TabControl;
 export import :Tooltip;
 export import :ToggleSwitch;
 export import :Tree;
+export import :SyntaxHighlight;
 export import :Table;
 export import :TextLabel;
 export import :ValueBox;

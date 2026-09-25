@@ -35,13 +35,27 @@ namespace
 	const Text::Style edit_style = { 16, Text::Weight::Light };
 }
 
-GUI::Elements::edit_text::edit_text() : editor(edit_style)
+GUI::Elements::edit_text::edit_text() : edit_text(edit_style)
+{
+}
+
+GUI::Elements::edit_text::edit_text(Text::Style style) : style(style), editor(style)
 {
 	clickable = true;
 
-	// Single line: control characters (newlines and tabs included, e.g. from a
-	// paste) never enter the text, whatever the user filter says.
-	editor.filter = [this](char32_t ch) { return ch >= 0x20 && ch != 0x7F && (!filter || filter(ch)); };
+	// Control characters never enter the text, whatever the user filter says;
+	// a multiline field lets newlines and tabs through (typed or pasted). '\r'
+	// from CRLF clipboard text is dropped: Skribidi treats it as a paragraph
+	// break of its own.
+	editor.filter = [this](char32_t ch)
+		{
+			const bool allowed = (ch >= 0x20 && ch != 0x7F) || (multiline && (ch == '\n' || ch == '\t'));
+			return allowed && (!filter || filter(ch));
+		};
+	editor.highlighter = [this](std::u32string_view text, std::vector<uint32_t>& colors)
+		{
+			if (highlighter) highlighter(text, colors);
+		};
 
 	padding = { 5, 5, 5, 5 };
 
@@ -49,14 +63,31 @@ GUI::Elements::edit_text::edit_text() : editor(edit_style)
 	// than a live copy of the whole field.
 	set_package("text");
 	drag_n_drop_copy = false;
+
+	// Hidden until sync_scroll_bars (multiline only) finds content that
+	// doesn't fit. The bars live no longer than this element, so they can hold
+	// a raw this.
+	using scroll_type = scroll_bar::scroll_type;
+	for (auto [bar, type] : { std::pair{ &vbar, scroll_type::VERTICAL }, std::pair{ &hbar, scroll_type::HORIZONTAL } })
+	{
+		*bar = std::make_shared<scroll_bar>(type);
+		(*bar)->docking = type == scroll_type::VERTICAL ? dock::RIGHT : dock::BOTTOM;
+		(*bar)->visible = false;
+		(*bar)->on_move = [this, vertical = type == scroll_type::VERTICAL](float t)
+			{
+				std::lock_guard<std::mutex> guard(m);
+				events.emplace_back(scrollbar_input{ vertical, t });
+			};
+		add_child(*bar);
+	}
 }
 
 // Mouse positions arrive in window pixels, the same space as render bounds;
-// the editor's origin is the content box.
+// the editor's origin is the content box, shifted by the scroll position.
 vec2 GUI::Elements::edit_text::to_editor(vec2 window_pos, float scale)
 {
 	const vec2 origin = vec2(get_render_bounds().pos) + vec2(padding->left, padding->top) * scale;
-	return (window_pos - origin) / scale;
+	return (window_pos - origin) / scale + scroll;
 }
 
 void GUI::Elements::edit_text::set_text(const std::string& t)
@@ -131,6 +162,17 @@ bool GUI::Elements::edit_text::on_mouse_move(vec2 pos)
 	if (mouse_selecting && !drag_candidate)
 		events.emplace_back(mouse_input{ mouse_input::Kind::Drag, pos });
 	return base::on_mouse_move(pos);
+}
+
+bool GUI::Elements::edit_text::on_wheel(mouse_wheel type, float value, vec2 pos)
+{
+	// Single-line fields leave the wheel to whatever scrolls around them
+	// (e.g. the Properties panel).
+	if (!multiline || type != mouse_wheel::VERTICAL) return false;
+
+	std::lock_guard<std::mutex> guard(m);
+	events.emplace_back(wheel_input{ value });
+	return true;
 }
 
 bool GUI::Elements::edit_text::need_drag_drop()
@@ -224,6 +266,31 @@ void GUI::Elements::edit_text::open_context_menu(vec2 pos)
 	if (selection)         add("Delete", VK_DELETE, false);
 	add("Select All", 'A', true);
 
+	if (selection)
+	{
+		add("Bold", 'B', true);
+		add("Italic", 'I', true);
+
+		auto colors = menu->add_item("Color")->get_menu();
+		auto add_color = [&](const char* name, std::optional<float4> color)
+			{
+				colors->add_item(name)->on_click = [weak, color](menu_list_element::ptr)
+					{
+						if (auto self = weak.lock())
+						{
+							std::lock_guard<std::mutex> guard(self->m);
+							self->events.emplace_back(color_input{ color });
+						}
+					};
+			};
+
+		add_color("Red",     float4(200, 30, 30, 255) / 255.0f);
+		add_color("Green",   float4(30, 150, 50, 255) / 255.0f);
+		add_color("Blue",    float4(30, 80, 220, 255) / 255.0f);
+		add_color("Orange",  float4(230, 120, 0, 255) / 255.0f);
+		add_color("Default", std::nullopt);
+	}
+
 	menu->pos = pos;
 	menu->self_open(user_ui);
 }
@@ -252,6 +319,15 @@ void GUI::Elements::edit_text::process_key(long key, key_mods mods)
 	case VK_END:    editor.key(Key::End, shift, ctrl); return;
 	case VK_BACK:   editor.key(Key::Backspace, shift, ctrl); return;
 	case VK_DELETE: editor.key(Key::Delete, shift, ctrl); return;
+
+	case VK_RETURN:
+		if (multiline) editor.key(Key::Enter, shift, ctrl);
+		return;
+
+	case VK_TAB:
+		// Tab arrives only as a key: on_char drops control characters.
+		if (multiline && !ctrl) editor.insert(U'\t');
+		return;
 	}
 
 	if (!ctrl) return;
@@ -260,6 +336,14 @@ void GUI::Elements::edit_text::process_key(long key, key_mods mods)
 	{
 	case 'A':
 		editor.select_all();
+		break;
+
+	case 'B':
+		editor.toggle_bold();
+		break;
+
+	case 'I':
+		editor.toggle_italic();
 		break;
 
 	case 'C':
@@ -295,23 +379,96 @@ rect GUI::Elements::edit_text::content_rect(Context& c)
 	r.y += padding->top * c.scale;
 	r.w -= (padding->left + padding->right) * c.scale;
 	r.h -= (padding->top + padding->bottom) * c.scale;
+
+	// Visible scroll bars are docked inside the padding and take their strips.
+	if (vbar->visible.get()) r.w -= vbar->get_render_bounds().w;
+	if (hbar->visible.get()) r.h -= hbar->get_render_bounds().h;
 	return r;
+}
+
+// Bar properties belong to the UI thread, and this runs on the tree walk:
+// hand the numbers over, only when they changed.
+void GUI::Elements::edit_text::sync_scroll_bars(vec2 view, vec2 content)
+{
+	if (view == synced_view && content == synced_content && scroll == synced_scroll)
+		return;
+
+	synced_view    = view;
+	synced_content = content;
+	synced_scroll  = scroll;
+
+	run_on_ui([v = vbar, h = hbar, view, content, scroll = scroll]()
+		{
+			v->set_sizes(view.y, content.y, -scroll.y);
+			h->set_sizes(view.x, content.x, -scroll.x);
+		});
 }
 
 void GUI::Elements::edit_text::process_events(Context& c)
 {
 	for (auto& e : events)
 	{
+		// Everything but the wheel moves the caret or the text under it, and
+		// the view should follow; wheel scrolling must not snap back to it.
+		if (auto w = std::get_if<wheel_input>(&e))
+		{
+			const float line = caret.height > 0 ? caret.height : style.size * 1.3f;
+			scroll.y -= w->notches * line * 3;
+			continue;
+		}
+		follow_caret = true;
+
 		if (auto k = std::get_if<key_input>(&e))
 			process_key(k->key, k->mods);
 		else if (auto ms = std::get_if<mouse_input>(&e))
 			process_mouse(*ms, to_editor(ms->pos, c.scale));
 		else if (auto d = std::get_if<drop_input>(&e))
 			process_drop(*d, to_editor(d->pos, c.scale));
+		else if (auto col = std::get_if<color_input>(&e))
+		{
+			if (col->color) editor.set_color(*col->color);
+			else            editor.clear_color();
+		}
+		else if (auto bar = std::get_if<scrollbar_input>(&e))
+		{
+			// Same mapping as scroll_container: t spans the scrollable range.
+			const rect content = content_rect(c);
+			const vec2 view  = vec2(content.w, content.h) / c.scale;
+			const vec2 range = vec2::max(vec2(0, 0), editor.content_size() + vec2(4, 0) - view);
+			if (bar->vertical) scroll.y = bar->t * range.y;
+			else               scroll.x = bar->t * range.x;
+			follow_caret = false;   // dragging the thumb must not snap back to the caret
+		}
 		else
 			editor.insert(std::get<char32_t>(e));
 	}
 	events.clear();
+}
+
+// Keeps the caret in view after edits and caret moves, and keeps the view
+// inside the content (which may have shrunk). Logical units.
+void GUI::Elements::edit_text::update_scroll(vec2 view)
+{
+	if (follow_caret)
+	{
+		const float top    = caret.center.y - caret.height / 2;
+		const float bottom = caret.center.y + caret.height / 2;
+		const float x      = caret.center.x;
+		const float margin = 2;
+
+		if (x < scroll.x + margin)               scroll.x = x - margin;
+		else if (x > scroll.x + view.x - margin) scroll.x = x - view.x + margin;
+
+		if (top < scroll.y)                 scroll.y = top;
+		else if (bottom > scroll.y + view.y) scroll.y = bottom - view.y;
+
+		follow_caret = false;
+	}
+
+	// The caret may sit just past the last glyph, hence the extra width.
+	const vec2 content = editor.content_size() + vec2(4, 0);
+	scroll.x = std::clamp(scroll.x, 0.0f, std::max(0.0f, content.x - view.x));
+	scroll.y = std::clamp(scroll.y, 0.0f, std::max(0.0f, content.y - view.y));
 }
 
 void GUI::Elements::edit_text::process_mouse(const mouse_input& e, vec2 pos)
@@ -387,7 +544,7 @@ void GUI::Elements::edit_text::on_pre_render(Context& c)
 		showing_placeholder = text.empty() && !placeholder.empty();
 		if (showing_placeholder)
 		{
-			Text::Style s = edit_style;
+			Text::Style s = style;
 			s.size *= c.scale;
 			Text::Engine::get().build(placeholder, s, layout);
 		}
@@ -397,6 +554,12 @@ void GUI::Elements::edit_text::on_pre_render(Context& c)
 		selection     = editor.selection_rects();
 		caret         = editor.caret();
 		caret_visible = is_focused();
+
+		const rect content = content_rect(c);
+		const vec2 view    = vec2(content.w, content.h) / c.scale;
+		update_scroll(view);
+		if (multiline)
+			sync_scroll_bars(view, editor.content_size() + vec2(4, 0));
 
 		if (drop_hover)
 			drop_caret = editor.caret_at(to_editor(drop_pos, c.scale));
@@ -420,14 +583,28 @@ void GUI::Elements::edit_text::draw(Context& c)
 	c.renderer->draw(c, Skin::get().DefaultEditBox.Normal, get_render_bounds());
 
 	std::lock_guard<std::mutex> guard(m);
+
 	const rect content = content_rect(c);
+	rect on_screen = content;
+	on_screen.x += c.offset.x;
+	on_screen.y += c.offset.y;
+
+	// Scrolled content must not spill over the padding; draw_color clips to
+	// ui_clipping, so narrow it to the content box for these draws.
+	const sizer orig_clip = c.ui_clipping;
+	c.ui_clipping = intersect(orig_clip, math::convert(on_screen));
+
+	// Editor space to window pixels (draw_color adds c.offset itself).
+	const vec2 origin = content.pos - scroll * c.scale;
 	for (auto& s : selection)
 	{
 		rect r;
-		r.pos  = content.pos + vec2(s.x, s.y) * c.scale;
+		r.pos  = origin + vec2(s.x, s.y) * c.scale;
 		r.size = vec2(s.z - s.x, s.w - s.y) * c.scale;
 		c.renderer->draw_color(c, selection_color, r);
 	}
+
+	c.ui_clipping = orig_clip;
 }
 
 // After draw: the text goes over the selection highlight, the caret over the text.
@@ -444,20 +621,27 @@ void GUI::Elements::edit_text::draw_after(Context& c)
 	if (clip.left >= clip.right || clip.top >= clip.bottom)
 		return;
 
+	const vec2 origin = content.pos - scroll * c.scale;
+
 	// Text is issued directly, not through the batched NinePatch path, so
 	// anything queued ahead of it must reach the list first.
 	c.renderer->flush(c);
-	Text::Engine::get().draw(c.command_list, layout, content.pos + c.offset,
+	Text::Engine::get().draw(c.command_list, layout, origin + c.offset,
 		showing_placeholder ? placeholder_color : text_color, clip, c.window_size);
 
 	// While dragging a selection the caret shows where it would drop.
 	const Text::Caret& shown = drop_hover ? drop_caret : caret;
 	if (caret_visible || drop_hover)
 	{
+		const sizer orig_clip = c.ui_clipping;
+		c.ui_clipping = clip;
+
 		rect r;
-		r.pos  = content.pos + (shown.center - vec2(1, shown.height / 2)) * c.scale;
+		r.pos  = origin + (shown.center - vec2(1, shown.height / 2)) * c.scale;
 		r.size = vec2(2, shown.height) * c.scale;
 		c.renderer->draw_color(c, caret_color, r);
+
+		c.ui_clipping = orig_clip;
 	}
 }
 

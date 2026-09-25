@@ -26,9 +26,16 @@ namespace Text
         // Weights are picked by Skribidi from each file's own metadata.
         constexpr FontFile system_fonts[] = {
             { "segoeuil.ttf", SKB_FONT_FAMILY_DEFAULT },
+            { "seguili.ttf",  SKB_FONT_FAMILY_DEFAULT },
             { "segoeui.ttf",  SKB_FONT_FAMILY_DEFAULT },
+            { "segoeuii.ttf", SKB_FONT_FAMILY_DEFAULT },
             { "segoeuib.ttf", SKB_FONT_FAMILY_DEFAULT },
+            { "segoeuiz.ttf", SKB_FONT_FAMILY_DEFAULT },
             { "seguisym.ttf", SKB_FONT_FAMILY_DEFAULT },
+            { "consola.ttf",  SKB_FONT_FAMILY_MONOSPACE },
+            { "consolai.ttf", SKB_FONT_FAMILY_MONOSPACE },
+            { "consolab.ttf", SKB_FONT_FAMILY_MONOSPACE },
+            { "consolaz.ttf", SKB_FONT_FAMILY_MONOSPACE },
             { "seguiemj.ttf", SKB_FONT_FAMILY_EMOJI },
         };
 
@@ -40,6 +47,16 @@ namespace Text
             case Weight::Bold:  return SKB_WEIGHT_BOLD;
             default:            return SKB_WEIGHT_NORMAL;
             }
+        }
+
+        uint8_t to_skb(Family family)
+        {
+            return family == Family::Mono ? SKB_FONT_FAMILY_MONOSPACE : SKB_FONT_FAMILY_DEFAULT;
+        }
+
+        float4 unpack_rgba8(uint32_t c)
+        {
+            return float4(float(c & 0xFF), float((c >> 8) & 0xFF), float((c >> 16) & 0xFF), float(c >> 24)) / 255.0f;
         }
     }
 
@@ -69,6 +86,7 @@ namespace Text
             const skb_attribute_t attributes[] = {
                 skb_attribute_make_font_size(style.size),
                 skb_attribute_make_font_weight(to_skb(style.weight)),
+                skb_attribute_make_font_family(to_skb(style.family)),
             };
 
             skb_attribute_set_t attribute_set = {};
@@ -82,14 +100,18 @@ namespace Text
         }
 
         // Appends glyph quads for layout, placed at offset (logical units) and
-        // rasterized at scale pixels per logical unit. Caller holds m.
-        void emit_layout(const skb_layout_t* layout, vec2 offset, float scale, std::vector<Quad>& out)
+        // rasterized at scale pixels per logical unit. syntax (optional) holds
+        // per-codepoint colors for the whole document, of which this layout's
+        // text starts at text_base. Caller holds m.
+        void emit_layout(const skb_layout_t* layout, vec2 offset, float scale, std::vector<Quad>& out,
+                         const std::vector<uint32_t>* syntax = nullptr, int32_t text_base = 0)
         {
             PROFILE(L"text_request_glyphs");
-            const skb_layout_params_t* params = skb_layout_get_params(layout);
-            const skb_layout_line_t*   lines  = skb_layout_get_lines(layout);
-            const skb_layout_run_t*    runs   = skb_layout_get_layout_runs(layout);
-            const skb_glyph_t*         glyphs = skb_layout_get_glyphs(layout);
+            const skb_layout_params_t* params   = skb_layout_get_params(layout);
+            const skb_layout_line_t*   lines    = skb_layout_get_lines(layout);
+            const skb_layout_run_t*    runs     = skb_layout_get_layout_runs(layout);
+            const skb_glyph_t*         glyphs   = skb_layout_get_glyphs(layout);
+            const skb_cluster_t*       clusters = skb_layout_get_clusters(layout);
 
             for (int32_t li = 0; li < skb_layout_get_lines_count(layout); li++)
             {
@@ -100,16 +122,30 @@ namespace Text
                     if (run.type != SKB_CONTENT_RUN_UTF8 && run.type != SKB_CONTENT_RUN_UTF32)
                         continue;
 
-                    // A run with no paint attribute of its own draws in the draw() tint.
+                    // Color precedence: the run's own paint attribute, then the
+                    // syntax color of the glyph's text, then the draw() tint.
                     float4 run_color(1, 1, 1, 1);
                     const skb_attribute_paint_t paint = skb_attributes_get_paint(SKB_PAINT_TEXT, SKB_PAINT_STATE_DEFAULT,
                         skb_layout_get_layout_run_attributes(layout, &run), params->attribute_collection);
-                    if (paint.paint_tag == SKB_PAINT_TEXT)
+                    const bool run_painted = paint.paint_tag == SKB_PAINT_TEXT;
+                    if (run_painted)
                         run_color = float4(paint.color.r, paint.color.g, paint.color.b, paint.color.a) / 255.0f;
 
                     for (int32_t gi = run.glyph_range.start; gi < run.glyph_range.end; gi++)
                     {
                         const auto& glyph = glyphs[gi];
+
+                        float4 glyph_color = run_color;
+                        bool   has_color   = run_painted;
+                        if (syntax && !run_painted)
+                        {
+                            const size_t text_offset = size_t(text_base + clusters[glyph.cluster_idx].text_offset);
+                            if (text_offset < syntax->size() && (*syntax)[text_offset] != 0)
+                            {
+                                glyph_color = unpack_rgba8((*syntax)[text_offset]);
+                                has_color   = true;
+                            }
+                        }
                         const skb_quad_t q = skb_image_atlas_get_glyph_quad(atlas,
                             glyph.offset_x + offset.x, glyph.offset_y + offset.y, scale,
                             fonts, run.font_handle, glyph.gid, run.font_size,
@@ -141,7 +177,8 @@ namespace Text
                         Quad quad;
                         quad.rect     = float4(x0, y0, x0 + gw, y0 + gh);
                         quad.uv       = float4(q.texture.x / w, q.texture.y / h, (q.texture.x + q.texture.width) / w, (q.texture.y + q.texture.height) / h);
-                        quad.color    = run_color;
+                        quad.color     = glyph_color;
+                        quad.has_color = has_color;
                         quad.atlas    = q.texture_idx;
                         quad.is_color = (q.flags & SKB_QUAD_IS_COLOR) != 0;
                         out.push_back(quad);
@@ -360,7 +397,7 @@ namespace Text
                 Table::UI::Text::GlyphQuad g;
                 g.pos      = float4(to_ndc_x(x0), to_ndc_y(y0), to_ndc_x(x1), to_ndc_y(y1));
                 g.uv       = float4(u0, v0, u1, v1);
-                g.color    = color * q.color;
+                g.color    = q.has_color ? float4(q.color.x, q.color.y, q.color.z, q.color.w * color.w) : color;
                 g.atlas    = q.atlas;
                 g.is_color = q.is_color ? 1 : 0;
                 gpu_quads.push_back(g);
@@ -410,14 +447,20 @@ namespace Text
         skb_editor_t* editor = nullptr;
 
         // Referenced by the editor's attribute sets, so they live as long as it does.
-        skb_attribute_t paragraph_attributes[2];
+        skb_attribute_t paragraph_attributes[3];
+        skb_attribute_t layout_attributes[1];
 
         bool changed         = false;
         bool suppress_change = false;
 
+        // Highlighter output for the current text; rebuilt lazily on change.
+        std::vector<uint32_t> syntax_colors;
+        bool                  syntax_dirty = true;
+
         static void on_text_change(skb_editor_t*, skb_editor_text_change_reason_t, void* context)
         {
             auto self = static_cast<Editor::Impl*>(context);
+            self->syntax_dirty = true;
             if (!self->suppress_change)
                 self->changed = true;
         }
@@ -442,11 +485,24 @@ namespace Text
 
         impl->paragraph_attributes[0] = skb_attribute_make_font_size(style.size);
         impl->paragraph_attributes[1] = skb_attribute_make_font_weight(to_skb(style.weight));
+        impl->paragraph_attributes[2] = skb_attribute_make_font_family(to_skb(style.family));
+
+        // Tab stops every four spaces of this style (Skribidi draws tabs only
+        // with a positive increment). Falls back to a monospace-ish estimate if
+        // the measured layout trims trailing whitespace.
+        float tab_width = 0;
+        if (const skb_layout_t* spaces = engine.get_layout("    ", style))
+            tab_width = skb_layout_get_bounds(spaces).width;
+        if (tab_width <= 0)
+            tab_width = style.size * 0.55f * 4;
+        impl->layout_attributes[0] = skb_attribute_make_tab_stop_increment(tab_width);
 
         skb_editor_params_t params = {};
         params.font_collection = engine.fonts;
         params.paragraph_attributes.attributes       = impl->paragraph_attributes;
         params.paragraph_attributes.attributes_count = (int32_t)std::size(impl->paragraph_attributes);
+        params.layout_attributes.attributes          = impl->layout_attributes;
+        params.layout_attributes.attributes_count    = (int32_t)std::size(impl->layout_attributes);
         params.caret_mode      = SKB_CARET_MODE_SIMPLE;   // Windows-style: one grapheme per step
         params.max_undo_levels = 100;
 
@@ -719,14 +775,78 @@ namespace Text
 
         out.quads.clear();
         out.size = {};
+        skb_editor_t* e = impl->editor;
 
-        for (int32_t pi = 0; pi < skb_editor_get_paragraph_count(impl->editor); pi++)
+        if (highlighter && impl->syntax_dirty)
         {
-            const skb_vec2_t offset = skb_editor_get_paragraph_offset(impl->editor, pi);
-            engine.emit_layout(skb_editor_get_paragraph_layout(impl->editor, pi), vec2(offset.x, offset.y), scale, out.quads);
+            PROFILE(L"text_highlight");
+            std::u32string text(skb_editor_get_text_utf32_count(e), U'\0');
+            skb_editor_get_text_utf32(e, reinterpret_cast<uint32_t*>(text.data()), (int32_t)text.size());
+
+            impl->syntax_colors.assign(text.size(), 0);
+            highlighter(text, impl->syntax_colors);
+            impl->syntax_dirty = false;
+        }
+        const std::vector<uint32_t>* syntax = highlighter ? &impl->syntax_colors : nullptr;
+
+        for (int32_t pi = 0; pi < skb_editor_get_paragraph_count(e); pi++)
+        {
+            const skb_vec2_t offset = skb_editor_get_paragraph_offset(e, pi);
+            engine.emit_layout(skb_editor_get_paragraph_layout(e, pi), vec2(offset.x, offset.y), scale, out.quads,
+                syntax, skb_editor_get_paragraph_global_text_offset(e, pi));
         }
 
         engine.rasterize_missing();
+    }
+
+    vec2 Editor::content_size() const
+    {
+        auto& engine = *Engine::get().impl;
+        std::lock_guard<std::mutex> lock(engine.m);
+
+        vec2 size = {};
+        for (int32_t pi = 0; pi < skb_editor_get_paragraph_count(impl->editor); pi++)
+        {
+            const skb_vec2_t  offset = skb_editor_get_paragraph_offset(impl->editor, pi);
+            const skb_rect2_t bounds = skb_layout_get_bounds(skb_editor_get_paragraph_layout(impl->editor, pi));
+            size.x = std::max(size.x, offset.x + bounds.x + bounds.width);
+            size.y = std::max(size.y, offset.y + skb_editor_get_paragraph_advance_y(impl->editor, pi));
+        }
+        return size;
+    }
+
+    void Editor::toggle_bold()
+    {
+        auto& engine = *Engine::get().impl;
+        std::lock_guard<std::mutex> lock(engine.m);
+        skb_editor_toggle_attribute(impl->editor, engine.temp, current_selection, skb_attribute_make_font_weight(SKB_WEIGHT_BOLD));
+    }
+
+    void Editor::toggle_italic()
+    {
+        auto& engine = *Engine::get().impl;
+        std::lock_guard<std::mutex> lock(engine.m);
+        skb_editor_toggle_attribute(impl->editor, engine.temp, current_selection, skb_attribute_make_font_style(SKB_STYLE_ITALIC));
+    }
+
+    void Editor::set_color(float4 color)
+    {
+        const skb_color_t c = {
+            (uint8_t)std::clamp(color.x * 255.0f, 0.0f, 255.0f), (uint8_t)std::clamp(color.y * 255.0f, 0.0f, 255.0f),
+            (uint8_t)std::clamp(color.z * 255.0f, 0.0f, 255.0f), (uint8_t)std::clamp(color.w * 255.0f, 0.0f, 255.0f) };
+
+        auto& engine = *Engine::get().impl;
+        std::lock_guard<std::mutex> lock(engine.m);
+        skb_editor_set_attribute(impl->editor, engine.temp, current_selection,
+            skb_attribute_make_paint_color(SKB_PAINT_TEXT, SKB_PAINT_STATE_DEFAULT, c));
+    }
+
+    void Editor::clear_color()
+    {
+        auto& engine = *Engine::get().impl;
+        std::lock_guard<std::mutex> lock(engine.m);
+        skb_editor_clear_attribute(impl->editor, engine.temp, current_selection,
+            skb_attribute_make_paint_color(SKB_PAINT_TEXT, SKB_PAINT_STATE_DEFAULT, skb_color_t{}));
     }
 
     Caret Editor::caret() const
@@ -758,6 +878,34 @@ namespace Text
                 static_cast<std::vector<float4>*>(context)->emplace_back(r.x, r.y, r.x + r.width, r.y + r.height);
             },
             &rects);
+
+        // A line with several styles is several layout runs, and Skribidi emits
+        // a rect per run segment: they overlap at style boundaries and differ in
+        // height (bold/italic ascenders). Drawn translucent, every overlap would
+        // show darker. Merge rects on the same line that overlap or touch.
+        auto same_line = [](const float4& a, const float4& b)
+            {
+                const float overlap = std::min(a.w, b.w) - std::max(a.y, b.y);
+                return overlap > 0.5f * std::min(a.w - a.y, b.w - b.y);
+            };
+        auto touching = [](const float4& a, const float4& b)
+            {
+                return a.x <= b.z + 0.5f && b.x <= a.z + 0.5f;
+            };
+
+        for (bool merged = true; merged; )
+        {
+            merged = false;
+            for (size_t i = 0; i < rects.size() && !merged; ++i)
+                for (size_t j = i + 1; j < rects.size() && !merged; ++j)
+                    if (same_line(rects[i], rects[j]) && touching(rects[i], rects[j]))
+                    {
+                        rects[i] = float4(std::min(rects[i].x, rects[j].x), std::min(rects[i].y, rects[j].y),
+                                          std::max(rects[i].z, rects[j].z), std::max(rects[i].w, rects[j].w));
+                        rects.erase(rects.begin() + j);
+                        merged = true;
+                    }
+        }
         return rects;
     }
 }
