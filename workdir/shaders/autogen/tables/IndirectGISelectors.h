@@ -17,12 +17,6 @@ namespace Denoise
 			ReflectionSource reflection_source; // ReflectionSource
 			IndirectSource GetIndirect_source() { return indirect_source; }
 			ReflectionSource GetReflection_source() { return reflection_source; }
-			void init()
-			{
-				indirect_source = IndirectSource::RTXReference;
-				reflection_source = ReflectionSource::RTXReference;
-			}
-
 		};
 	}
 }

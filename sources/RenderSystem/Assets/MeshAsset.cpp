@@ -646,7 +646,15 @@ void MeshAssetInstance::update_nodes()
 	nodes_count = 0;
 	rendering_count = 0;
 
-	mesh_asset->root_node.iterate([&](MeshNode* m) {nodes_count++; rendering_count += (m->mesh_id != -1); return true; });
+	uint mask_words = 0;
+	mesh_asset->root_node.iterate([&](MeshNode* m)
+	{
+		nodes_count++;
+		rendering_count += (m->mesh_id != -1);
+		if (m->mesh_id != -1)
+			mask_words += universal_meshlet_mask_manager::words_for(static_cast<uint>(mesh_asset->meshes[m->mesh_id].meshet_view.desc.size / sizeof(Table::Meshes::Meshlet)));
+		return true;
+	});
 
 	// One contiguous id block per instance, fixed for its lifetime. It must not
 	// depend on scene membership: recompiling compiled_mesh_info on add/remove
@@ -658,6 +666,8 @@ void MeshAssetInstance::update_nodes()
 
 	universal_nodes_manager::get().allocate(nodes_handle, nodes_count);
 	universal_rtx_manager::get().allocate(instance_handle, rendering_count);
+	universal_meshlet_mask_manager::get().allocate(meshlet_mask_handle, std::max(mask_words, 1u));
+	uint mask_offset = static_cast<uint>(meshlet_mask_handle.get_offset());
 
 
 	nodes_buffer_view = universal_nodes_manager::get().buffer.resource->create_view<HAL::StructuredBufferView<Table::Meshes::node_data>>(
@@ -733,6 +743,8 @@ void MeshAssetInstance::update_nodes()
 
 			info.mesh_info.GetMeshlet_count() = static_cast<UINT>(mesh_asset->meshes[m].meshet_view.desc.size/sizeof(Table::Meshes::Meshlet));
 			info.mesh_info.GetObject_id() = first_object_id + static_cast<uint>(rendering.size());
+			info.mesh_info.GetMeshlet_mask_offset() = mask_offset;
+			mask_offset += universal_meshlet_mask_manager::words_for(info.mesh_info.GetMeshlet_count());
 
 			info.meshlet_offset = info.mesh_info.GetMeshlet_offset_local();
 			info.meshlet_count = info.mesh_info.GetMeshlet_count();
@@ -836,6 +848,12 @@ universal_material_info_part_manager::universal_material_info_part_manager() : H
 {
 }
 
+universal_meshlet_mask_manager::universal_meshlet_mask_manager() : HAL::virtual_gpu_buffer<uint>(RenderSystem::get().device(), MAX_WORDS, counterType::NONE,
+	HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess)
+{
+	buffer.resource->set_name("universal_meshlet_mask_manager");
+}
+
 void SceneFrameManager::prepare(HAL::CommandList::ptr& command_list, Scene& scene)
 {
 	auto timer = command_list->start(L"Upload data");
@@ -846,6 +864,8 @@ void SceneFrameManager::prepare(HAL::CommandList::ptr& command_list, Scene& scen
 	//	universal_mesh_info_part_manager::get().prepare(command_list);
 	universal_material_info_part_manager::get().prepare(command_list);
 	universal_rtx_manager::get().prepare(command_list);
+	// Maps tiles for newly allocated ranges; never uploads (the GPU writes it).
+	universal_meshlet_mask_manager::get().prepare(command_list);
 
 	scene.mesh_infos->prepare(command_list);
 	scene.raytrace->prepare(command_list);

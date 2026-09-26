@@ -120,8 +120,7 @@ TranslucentPayload trace_translucent(RaytracingAccelerationStructure scene, floa
 float3 shade_opaque(RaytracingAccelerationStructure scene, float3 origin, float3 dir,
 	Camera camera, TranslucentRTXData data, uint2 dims, out float hit_t)
 {
-	RayPayload p;
-	p.init();
+	RayPayload p = CreateRayPayload();
 
 	RayDesc ray;
 	ray.Origin    = origin;

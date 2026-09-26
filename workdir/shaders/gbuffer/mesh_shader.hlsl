@@ -50,9 +50,36 @@ vertex_output transform(matrix node_global_matrix, matrix node_global_matrix_pre
     return o;
 }
 
+// A meshlet's cull result, as the CAPTURE_MESHLETS permutation records it
+// (2 bits each, see MeshletCaptureWrite in meshrender.prism).
+static const uint MESHLET_CULLED_FRUSTUM  = 0;
+static const uint MESHLET_CULLED_BACKFACE = 1;
+static const uint MESHLET_CULLED_HIZ      = 2;
+static const uint MESHLET_DRAWN           = 3;
+// Debug view only: no recorded result for this part.
+static const uint MESHLET_NOT_CAPTURED    = 4;
+
+#ifdef CAPTURE_MESHLETS
+#include "../autogen/MeshletCaptureWrite.h"
+#endif
+
+#ifdef DEBUG_VIEW
+#include "../autogen/DebugViewDraw.h"
+
+// Read by debug/debug_view_mesh.hlsl, which declares the same struct.
+struct primitive_output
+{
+    uint meshlet : MESHLET_ID;
+    uint status : MESHLET_STATUS;
+};
+#endif
+
 struct Payload
 {
     uint MeshletIndices[32];
+#ifdef DEBUG_VIEW
+    uint MeshletStatus[32];
+#endif
 };
 
 
@@ -83,7 +110,8 @@ float dist(float4 plane, float3 pt)
 
 
 
-bool IsVisible(MeshletCullData c, float4x4 world, Camera camera)
+// MESHLET_DRAWN, or which of the frustum/backface-cone tests rejected it.
+uint MeshletCull(MeshletCullData c, float4x4 world, Camera camera)
 {
     float4 BoundingSphere = c.GetBoundingSphere();
 
@@ -110,18 +138,18 @@ bool IsVisible(MeshletCullData c, float4x4 world, Camera camera)
 
         if (d < -radius)
         {
-           return false;
+           return MESHLET_CULLED_FRUSTUM;
         }
     }
 
     // Do normal cone culling
     if (IsConeDegenerate(c))
-        return true; // Cone is degenerate - spread is wider than a hemisphere.
+        return MESHLET_DRAWN; // Cone is degenerate - spread is wider than a hemisphere.
 
     // Under strongly non-uniform scale the cone axis would need the
     // inverse-transpose — be conservative and skip the cone test.
     if (max(scales.x, max(scales.y, scales.z)) > 1.05 * min(scales.x, min(scales.y, scales.z)))
-        return true;
+        return MESHLET_DRAWN;
 
     // Unpack the normal cone from its 8-bit uint compression
     float4 normalCone = UnpackCone(c.GetNormalCone());
@@ -141,11 +169,16 @@ bool IsVisible(MeshletCullData c, float4x4 world, Camera camera)
     // This is the min dot product along the inverted axis from which all the meshlet's triangles are backface
     if (dot(view, -axis) > normalCone.w)
     {
-        return false;
+        return MESHLET_CULLED_BACKFACE;
     }
 
     // All tests passed - it will merit pixels
-    return true;
+    return MESHLET_DRAWN;
+}
+
+bool IsVisible(MeshletCullData c, float4x4 world, Camera camera)
+{
+    return MeshletCull(c, world, camera) == MESHLET_DRAWN;
 }
 
 // Additive per-meshlet check on top of IsVisible()'s frustum+cone test,
@@ -253,11 +286,11 @@ groupshared Payload s_Payload;
 void AS(uint gtid : SV_GroupThreadID, uint dtid : SV_DispatchThreadID, uint gid : SV_GroupID)
 {
 
-    bool visible = false;
-
+    uint cull = MESHLET_CULLED_FRUSTUM;
+    bool in_range = dtid < meshInfo.GetMeshlet_count();
 
     // Check bounds of meshlet cull data resource
-    if (dtid < meshInfo.GetMeshlet_count())
+    if (in_range)
     {
         node_data node = sceneData.GetNodes()[meshInfo.GetNode_offset()];
        matrix m = node.GetNode_global_matrix();
@@ -273,18 +306,57 @@ void AS(uint gtid : SV_GroupThreadID, uint dtid : SV_DispatchThreadID, uint gid 
         // boundary meshlets were flickering in/out -- a borderline/racy
         // IsVisible() result, not anything about the geometry itself.
 #ifdef DISABLE_MESHLET_CULL
-        visible = true;
+        cull = MESHLET_DRAWN;
 #else
-        visible = IsVisible(cull_data, m, frameInfo.GetCamera());
+        cull = MeshletCull(cull_data, m, frameInfo.GetCamera());
 #endif
 
 #ifdef HIZ_OCCLUSION
         // Additive Hi-Z check. The PSO permutation decides where this is on:
         // stage 2 of the occlusion culler only (see scene.prism).
-        if (visible)
-            visible = !IsOccludedHiZ(cull_data, m, frameInfo.GetCamera());
+        if (cull == MESHLET_DRAWN && IsOccludedHiZ(cull_data, m, frameInfo.GetCamera()))
+            cull = MESHLET_CULLED_HIZ;
 #endif
     }
+
+    bool visible = in_range && cull == MESHLET_DRAWN;
+
+#ifdef CAPTURE_MESHLETS
+    // 2 bits per meshlet, 16 per word: this group's 32 meshlets are two words,
+    // built with wave ORs (same one-wave-per-group assumption as the payload
+    // compaction below) and stored by one lane. Out-of-range lanes' bits are
+    // never read.
+    {
+        uint bits = cull << (2 * (gtid & 15));
+        uint lo = WaveActiveBitOr(gtid < 16 ? bits : 0);
+        uint hi = WaveActiveBitOr(gtid >= 16 ? bits : 0);
+        if (gtid == 0)
+        {
+            uint word = meshInfo.GetMeshlet_mask_offset() + gid * 2;
+            GetMeshletCaptureWrite().GetMasks()[word] = lo;
+            GetMeshletCaptureWrite().GetMasks()[word + 1] = hi;
+        }
+    }
+#endif
+
+#ifdef DEBUG_VIEW
+    // The debug camera's cull above only skips meshlets off its own screen; what
+    // the main view did comes from its recorded masks, so its culled meshlets
+    // are still drawn here (tinted by the PS).
+    DebugViewDraw debug_draw = GetDebugViewDraw();
+    uint status = MESHLET_NOT_CAPTURED;
+    if (debug_draw.GetRead_meshlet_masks())
+    {
+        uint word = debug_draw.GetMeshlet_masks()[meshInfo.GetMeshlet_mask_offset() + gid * 2 + (gtid >= 16 ? 1 : 0)];
+        status = (word >> (2 * (gtid & 15))) & 3;
+    }
+
+    visible = in_range && cull != MESHLET_CULLED_FRUSTUM;
+    if (debug_draw.GetMeshlet_filter() == 1)
+        visible = visible && (status == MESHLET_DRAWN || status == MESHLET_NOT_CAPTURED);
+    else if (debug_draw.GetMeshlet_filter() == 2)
+        visible = visible && status != MESHLET_DRAWN;
+#endif
 
     // Compact visible meshlets into the export payload array.
     // NOTE: wave-op compaction assumes the 32-thread group fits ONE wave —
@@ -294,6 +366,9 @@ void AS(uint gtid : SV_GroupThreadID, uint dtid : SV_DispatchThreadID, uint gid 
     {
         uint index = WavePrefixCountBits(visible);
         s_Payload.MeshletIndices[index] = dtid;
+#ifdef DEBUG_VIEW
+        s_Payload.MeshletStatus[index] = status;
+#endif
     }
     
     // Dispatch the required number of MS threadgroups to render the visible meshlets
@@ -311,6 +386,9 @@ void VS(
     in payload Payload payload,
     out indices uint3 tris[64],
     out vertices vertex_output verts[128]
+#ifdef DEBUG_VIEW
+    , out primitives primitive_output prims[64]
+#endif
 )
 {
 
@@ -328,6 +406,11 @@ void VS(
         tris[gtid] = uint3(meshInstanceInfo.GetPrimitive_indices()[index_offset],
             meshInstanceInfo.GetPrimitive_indices()[index_offset + 1],
             meshInstanceInfo.GetPrimitive_indices()[index_offset + 2]);
+
+#ifdef DEBUG_VIEW
+        prims[gtid].meshlet = meshletIndex;
+        prims[gtid].status = payload.MeshletStatus[gid];
+#endif
 
     }
     

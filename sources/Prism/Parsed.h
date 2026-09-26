@@ -962,9 +962,10 @@ struct Table : public inherited, have_options, have_name, have_hlsl
 	void setup(Parsed* all);
 	bool need_compiled = false;
 
-	// The HLSL init() generated from field defaults (resolve_payloads); empty
-	// when no field has one. HLSL has no default member values.
-	std::string hlsl_init;
+	// The HLSL `T CreateT()` generated from field defaults for a [nobind] struct
+	// (resolve_payloads); empty otherwise. HLSL has no constructors or default
+	// member values.
+	std::string hlsl_create;
 
 	SERIALIZE()
 	{
@@ -973,7 +974,7 @@ struct Table : public inherited, have_options, have_name, have_hlsl
 		SAVE_PARENT_MERGED(have_hlsl);
 
 		ar& NVP(path);
-		ar& NVP(hlsl_init);
+		ar& NVP(hlsl_create);
 		ar& NVP(values);
 		ar& NVP(used_tables);
 		ar& NVP(offsets);

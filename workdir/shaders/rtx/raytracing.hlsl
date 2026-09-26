@@ -457,8 +457,7 @@ void TraceIndirectDiffuse(Texture2D<float> depth_tex, Texture2D<float4> normal_t
 	float3 dir = ImportanceSampleGGX(seed, 1, normal);
 
 	[raypayload]
-	RayPayload payload_gi;
-	payload_gi.init();
+	RayPayload payload_gi = CreateRayPayload();
 
 	RayDesc ray;
 	ray.Origin = pos+normal/10;
@@ -814,8 +813,7 @@ void MyRaygenShader()
 	float3 dirVoxel = ImportanceSampleGGX(seed, 1, normal);
 
 	[raypayload]
-	RayPayload payload_gi;
-	payload_gi.init();
+	RayPayload payload_gi = CreateRayPayload();
 
 	float3 oneVoxelSize = voxel_info.GetSize().xyz / (voxel_info.GetVoxel_tiles_count().xyz * voxel_info.GetVoxels_per_tile().xyz);
 

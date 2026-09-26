@@ -13,11 +13,6 @@ namespace Post
 	{
 		bool enabled; // bool
 		bool GetEnabled() { return enabled; }
-		void init()
-		{
-			enabled = true;
-		}
-
 	};
 }
 using Post::TonemapSelectors;

@@ -20,21 +20,25 @@ export namespace PSOS
 		{
 			struct Keys {
 				KeyValue<int, Nullable> HiZOcclusion;
+				KeyValue<int, Nullable> CaptureMeshlets;
 				GEN_DEF_COMP(Keys);
 			private:
 				SERIALIZE()
 				{
 					ar&NVP(HiZOcclusion);
+					ar&NVP(CaptureMeshlets);
 				}
 			};
 
-			GEN_GRAPHICS_PSO(GBufferDraw, HiZOcclusion)
+			GEN_GRAPHICS_PSO(GBufferDraw, HiZOcclusion, CaptureMeshlets)
 			GEN_KEY(HiZOcclusion, true);
+			GEN_KEY(CaptureMeshlets, true);
 
 
 			SimplePSO init_pso(Keys & key, std::function<void(SimplePSO&, Keys&)> f)
 			{
 				static const ShaderDefine<&Keys::HiZOcclusion,&SimpleGraphicsPSO::amplification> HiZOcclusion = "HIZ_OCCLUSION";
+				static const ShaderDefine<&Keys::CaptureMeshlets,&SimpleGraphicsPSO::amplification> CaptureMeshlets = "CAPTURE_MESHLETS";
 
 
 				SimplePSO mpso("GBufferDraw");
@@ -51,6 +55,7 @@ export namespace PSOS
 				mpso.amplification.flags = HAL::ShaderOptions::None;
 			
 				HiZOcclusion.Apply(mpso, key);
+				CaptureMeshlets.Apply(mpso, key);
 
 				mpso.rtv_formats = { HAL::Format::R8G8B8A8_UNORM, HAL::Format::R8G8B8A8_UNORM, HAL::Format::R8G8B8A8_UNORM, HAL::Format::R16G16_FLOAT, HAL::Format::R32_UINT };	
 				mpso.blend = {  };

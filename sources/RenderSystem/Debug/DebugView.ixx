@@ -29,6 +29,7 @@ public:
 	// Stops recording: the stamps and the main-camera frustum stay at the last
 	// captured frame while the main camera moves on.
 	Variable<bool>  freeze            = { false, "Freeze capture", this };
+	Variable<bool>  color_by_meshlet  = { false, "Colour by meshlet", this };
 	Variable<bool>  draw_main_frustum = { true, "Main camera frustum", this };
 	Variable<bool>  draw_grid         = { true, "Ground grid", this };
 	Variable<float> frustum_length    = { 100.0f, "Frustum length", this, 1.0f, 1500.0f };

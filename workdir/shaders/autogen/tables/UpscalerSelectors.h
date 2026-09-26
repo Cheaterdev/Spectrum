@@ -17,12 +17,6 @@ namespace Post
 			bool upscaling_enabled; // bool
 			UpscalerType GetUpscaler_type() { return upscaler_type; }
 			bool GetUpscaling_enabled() { return upscaling_enabled; }
-			void init()
-			{
-				upscaler_type = UpscalerType::FSR;
-				upscaling_enabled = true;
-			}
-
 		};
 	}
 }

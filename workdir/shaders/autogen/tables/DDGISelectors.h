@@ -17,12 +17,6 @@ namespace GI
 			bool show_probes; // bool
 			bool GetEnabled() { return enabled; }
 			bool GetShow_probes() { return show_probes; }
-			void init()
-			{
-				enabled = true;
-				show_probes = false;
-			}
-
 		};
 	}
 }

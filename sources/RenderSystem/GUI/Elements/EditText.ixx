@@ -165,10 +165,19 @@ export namespace GUI
 
                 // A gutter with 1-based line numbers left of the text (multiline).
                 bool line_numbers = false;
+
+                // Bold / italic / color from the context menu and Ctrl+B/I.
+                bool formatting = true;
+
+                // Block images dropped from elsewhere (image_from_package);
+                // text drops are unaffected. Multiline only.
+                bool accept_images = true;
                 float4 gutter_color     = float4(0, 0, 0, 0.06f);
                 float4 line_number_color = float4(120, 120, 120, 255) / 255.0f;
 
-                // Per-codepoint colors from the text (e.g. GUI::Syntax::highlight_hlsl).
+                // Per-codepoint colors from the text (e.g. GUI::Syntax::highlight_hlsl);
+                // empty = no coloring. Set before the field is first drawn: the
+                // editor picks it up once.
                 Text::Highlighter highlighter;
 
                 float4 text_color        = float4(40, 40, 40, 255) / 255.0f;

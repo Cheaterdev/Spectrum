@@ -18,11 +18,6 @@ namespace Dev
 		float2 GetViewport_size() { return viewport_size; }
 		float GetAlpha_scale() { return alpha_scale; }
 		StructuredBuffer<DebugLineSegment> GetSegments() { return ResourceDescriptorHeap[segments]; }
-		void init()
-		{
-			alpha_scale = 1;
-		}
-
 	};
 }
 using Dev::DebugLines;

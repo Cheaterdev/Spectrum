@@ -123,13 +123,15 @@ materials::PipelinePasses::PipelinePasses(UINT id, std::string pixel, std::strin
 	raytrace_lib = HAL::library_shader::get_resource({ raytracing, "" , HAL::ShaderOptions::None, context->hit_shader.macros, true });
 }
 
-void materials::PipelinePasses::set(RENDER_TYPE render_type, MESH_TYPE type, HAL::GraphicsContext& graphics, bool hiz_occlusion)
+void materials::PipelinePasses::set(RENDER_TYPE render_type, MESH_TYPE type, HAL::GraphicsContext& graphics, bool hiz_occlusion, bool capture_meshlets)
 {
 	if (render_type == RENDER_TYPE::DEPTH)
 		graphics.set_pipeline(depth_draw->GetPSO(PSOS::Meshes::DepthDraw::HiZOcclusion.Use(hiz_occlusion)));
 	else
 		if (render_type == RENDER_TYPE::PIXEL)
-			graphics.set_pipeline(gbuffer->GetPSO(PSOS::Meshes::GBufferDraw::HiZOcclusion.Use(hiz_occlusion)));
+			graphics.set_pipeline(gbuffer->GetPSO(
+				PSOS::Meshes::GBufferDraw::HiZOcclusion.Use(hiz_occlusion) |
+				PSOS::Meshes::GBufferDraw::CaptureMeshlets.Use(capture_meshlets)));
 		else
 		{
 			graphics.set_pipeline(voxelization->GetPSO(PSOS::GI::Voxel::Voxelization::Dynamic.Use(type == MESH_TYPE::DYNAMIC)));
@@ -592,7 +594,7 @@ materials::PipelineSimple::PipelineSimple(UINT id, pixel_shader::ptr pixel) : Pi
 {
 }
 
-void materials::PipelineSimple::set(RENDER_TYPE render_type, MESH_TYPE type, HAL::GraphicsContext& graphics, bool hiz_occlusion)
+void materials::PipelineSimple::set(RENDER_TYPE render_type, MESH_TYPE type, HAL::GraphicsContext& graphics, bool hiz_occlusion, bool capture_meshlets)
 {
 	//	pipeline.pixel = pixel;
 }

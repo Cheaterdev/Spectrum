@@ -38,7 +38,7 @@ namespace Raytrace
 				// Inherited, not reset -- a recursive bounce spawned from a
 				// VSM-shadowed ray should keep using VSM too, same as every other
 				// field here is otherwise left for MyClosestHitShader to fill in
-				// fresh on the next hit (unlike init(), which is a top-level ray's
+				// fresh on the next hit (unlike CreateRayPayload(), which is a top-level ray's
 				// own first-use default).
 				result.use_vsm_shadow = use_vsm_shadow;
 
@@ -47,16 +47,18 @@ namespace Raytrace
 				return result;
 			}
 
-		void init()
-		{
-			cone.init();
-			color = 0;
-			albedo = 0;
-			recursion = 0;
-			dist = 0;
-			use_vsm_shadow = 0;
-		}
-
 	};
 }
 using Raytrace::RayPayload;
+
+RayPayload CreateRayPayload()
+{
+	RayPayload result = (RayPayload)0;
+	result.cone = CreateRayCone();
+	result.color = 0;
+	result.albedo = 0;
+	result.recursion = 0;
+	result.dist = 0;
+	result.use_vsm_shadow = 0;
+	return result;
+}

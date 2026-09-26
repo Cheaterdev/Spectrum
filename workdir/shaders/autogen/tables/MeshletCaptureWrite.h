@@ -7,12 +7,12 @@
 #pragma once
 #include "sig_hlsl.hlsl"
 #include "enums.h"
-namespace Dev
+namespace Meshes
 {
-	struct DebugViewTint
+	struct MeshletCaptureWrite
 	{
-		float4 tint; // float4
-		float4 GetTint() { return tint; }
+		uint masks; // RWStructuredBuffer<uint>
+		RWStructuredBuffer<uint> GetMasks() { return ResourceDescriptorHeap[masks]; }
 	};
 }
-using Dev::DebugViewTint;
+using Meshes::MeshletCaptureWrite;

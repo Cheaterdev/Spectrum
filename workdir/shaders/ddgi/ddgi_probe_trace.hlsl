@@ -155,8 +155,7 @@ void DDGIProbeTraceRaygenShader()
 
 	float3 probe_pos = probes.ddgi_probe_world_pos(probe_coord, info.GetGrid_min().xyz, info.GetProbe_spacing().xyz, float3(0, 0, 0), info.GetProbe_counts().xyz);
 
-	[raypayload] RayPayload payload_gi;
-	payload_gi.init();
+	[raypayload] RayPayload payload_gi = CreateRayPayload();
 	// Swap the real recursive RTX shadow ray MyClosestHitShader normally
 	// fires for a single cheap VSM lookup instead (see RayPayload::
 	// use_vsm_shadow's own comment, raytracing.prism) -- DDGI traces far more

@@ -15,11 +15,6 @@ namespace Environment
 		bool sky_changed; // bool
 		float3 GetPrev_sun_dir() { return prev_sun_dir; }
 		bool GetSky_changed() { return sky_changed; }
-		void init()
-		{
-			sky_changed = false;
-		}
-
 	};
 }
 using Environment::SkyState;

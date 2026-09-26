@@ -61,7 +61,7 @@ export namespace materials
 		PipelineSimple(UINT id, pixel_shader::ptr pixel = nullptr);
 		PipelineSimple() = default;
 
-		void set(RENDER_TYPE render_type, MESH_TYPE type, HAL::GraphicsContext& graphics, bool hiz_occlusion) override;
+		void set(RENDER_TYPE render_type, MESH_TYPE type, HAL::GraphicsContext& graphics, bool hiz_occlusion, bool capture_meshlets) override;
 
 	private:
 
@@ -89,7 +89,7 @@ export namespace materials
 
 		HAL::library_shader::ptr  raytrace_lib;
 
-		void set(RENDER_TYPE render_type, MESH_TYPE type, HAL::GraphicsContext& graphics, bool hiz_occlusion) override;
+		void set(RENDER_TYPE render_type, MESH_TYPE type, HAL::GraphicsContext& graphics, bool hiz_occlusion, bool capture_meshlets) override;
 		Meshes::TransparencyMode get_transparency_mode() const override { return transparency_mode; }
 		// nullptr unless Masked -- callers (VSM.cpp) must check the mode
 		// first, or just null-check this directly.

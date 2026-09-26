@@ -328,6 +328,13 @@ void  mesh_renderer::render_meshes(MeshRenderContext::ptr mesh_render_context, S
 
 					if (mesh_render_context->render_type == RENDER_TYPE::VOXEL)
 						graphics.set(mesh_render_context->voxelization_compiled);
+
+					if (capture_stage)
+					{
+						Slots::Meshes::MeshletCaptureWrite write;
+						write.GetMasks() = universal_meshlet_mask_manager::get().buffer;
+						graphics.set(write);
+					}
 				}
 
 			for (int i = 0; i < total; i++)
@@ -335,7 +342,7 @@ void  mesh_renderer::render_meshes(MeshRenderContext::ptr mesh_render_context, S
 				{
 					PROFILE_GPU(L"flush");
 
-					batch_pipelines[batch_start + i]->set(mesh_render_context->render_type, mesh_render_context->render_mesh, graphics, hiz_occlusion);
+					batch_pipelines[batch_start + i]->set(mesh_render_context->render_type, mesh_render_context->render_mesh, graphics, hiz_occlusion, capture_stage.has_value());
 				}
 
 				{

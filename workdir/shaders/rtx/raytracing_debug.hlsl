@@ -40,8 +40,7 @@ void ColorRTXRaygenShader()
 	float3 origin, direction;
 	GenerateCameraRay(itc, frame.GetCamera(), origin, direction);
 
-	[raypayload] RayPayload payload;
-	payload.init();
+	[raypayload] RayPayload payload = CreateRayPayload();
 
 	RayDesc ray;
 	ray.Origin    = origin;

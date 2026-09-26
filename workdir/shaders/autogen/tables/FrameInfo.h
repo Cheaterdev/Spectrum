@@ -61,12 +61,6 @@ namespace Frame
 				return vNormal;
 			}
 
-		void init()
-		{
-			mipBias = 0;
-			debugFlags = 0;
-		}
-
 	};
 }
 using Frame::FrameInfo;

@@ -269,6 +269,9 @@ export{
 
 
 		TypedHandle<Table::Meshes::node_data::Compiled> nodes_handle;
+		// Every part's range in universal_meshlet_mask_manager (MeshInfo::
+		// meshlet_mask_offset), one allocation for the whole instance.
+		TypedHandle<uint> meshlet_mask_handle;
 		struct render_info
 		{
 
@@ -353,6 +356,18 @@ export{
 		universal_nodes_manager();
 	};
 
+
+	// Per-meshlet cull results the debug view's capture records (see
+	// MeshletCaptureWrite in meshrender.prism): 2 bits per meshlet, 2 words per
+	// 32-meshlet AS group. Written only while the debug view captures.
+	class universal_meshlet_mask_manager :public Singleton<universal_meshlet_mask_manager>, public HAL::virtual_gpu_buffer<uint>
+	{
+		static const size_t MAX_WORDS = 64_mb / sizeof(uint);
+	public:
+		universal_meshlet_mask_manager();
+
+		static uint words_for(uint meshlet_count) { return 2 * ((meshlet_count + 31) / 32); }
+	};
 
 	class universal_material_info_part_manager :public Singleton<universal_material_info_part_manager>, public HAL::virtual_gpu_buffer<Table::Meshes::MaterialCommandData>
 	{

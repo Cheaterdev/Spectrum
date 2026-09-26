@@ -2,6 +2,7 @@ module Graphics:DebugView;
 import RenderSystem;
 
 import :Context;
+import :MeshAsset;
 
 using namespace HAL;
 using namespace FrameGraph;
@@ -133,11 +134,19 @@ debug_view::debug_view() : VariableContext(L"Debug View")
 				frustum.GetOutside_brightness() = has_captured_camera ? (float)outside_frustum_brightness : 1.0f;
 				graphics.set(frustum);
 			}
+			uint meshlet_filter = frame_source == Dev::DebugViewSource::Rendered ? 1
+				: frame_source == Dev::DebugViewSource::Culled ? 2 : 0;
 			for (int i = 0; i < bucket_count; i++)
 			{
-				Slots::Dev::DebugViewTint tint;
-				tint.GetTint() = bucket_tints[i];
-				graphics.set(tint);
+				Slots::Dev::DebugViewDraw draw;
+				draw.GetTint() = bucket_tints[i];
+				// Buckets 0/1 are the parts the main view drew on the captured
+				// frame -- the only ones whose masks were written that frame.
+				draw.GetMeshlet_masks()      = universal_meshlet_mask_manager::get().buffer;
+				draw.GetRead_meshlet_masks() = frame_source != Dev::DebugViewSource::All && i <= 1;
+				draw.GetMeshlet_filter()     = meshlet_filter;
+				draw.GetColor_by_meshlet()   = (bool)color_by_meshlet;
+				graphics.set(draw);
 				graphics.exec_indirect(commands[i]->buffer, mesh_count);
 			}
 		}

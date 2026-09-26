@@ -230,7 +230,7 @@ bool GUI::Elements::edit_text::can_accept(drag_n_drop_package::ptr package)
 
 	// Anything the image hook can turn into a texture becomes a block image.
 	Image image;
-	return multiline && image_from_package && image_from_package(package, image);
+	return multiline && accept_images && image_from_package && image_from_package(package, image);
 }
 
 void GUI::Elements::edit_text::on_drop_move(drag_n_drop_package::ptr package, vec2 pos)
@@ -251,7 +251,7 @@ void GUI::Elements::edit_text::on_drop_leave(drag_n_drop_package::ptr package)
 bool GUI::Elements::edit_text::on_drop(drag_n_drop_package::ptr package, vec2 pos)
 {
 	Image image;
-	if (package->name != "text" && multiline && image_from_package && image_from_package(package, image))
+	if (package->name != "text" && multiline && accept_images && image_from_package && image_from_package(package, image))
 	{
 		std::lock_guard<std::mutex> guard(m);
 		const uint32_t id = next_image_id++;
@@ -310,7 +310,7 @@ void GUI::Elements::edit_text::open_context_menu(vec2 pos)
 	if (selection)         add("Delete", VK_DELETE, false);
 	add("Select All", 'A', true);
 
-	if (selection)
+	if (selection && formatting)
 	{
 		add("Bold", 'B', true);
 		add("Italic", 'I', true);
@@ -383,11 +383,11 @@ void GUI::Elements::edit_text::process_key(long key, key_mods mods)
 		break;
 
 	case 'B':
-		editor.toggle_bold();
+		if (formatting) editor.toggle_bold();
 		break;
 
 	case 'I':
-		editor.toggle_italic();
+		if (formatting) editor.toggle_italic();
 		break;
 
 	case 'C':

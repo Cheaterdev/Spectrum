@@ -212,5 +212,6 @@ void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 //decltype(PSOS::GlyphRender::Format) PSOS::GlyphRender::Format;
 //decltype(PSOS::CopyTexture::Format) PSOS::CopyTexture::Format;
 //decltype(PSOS::GBufferDraw::HiZOcclusion) PSOS::GBufferDraw::HiZOcclusion;
+//decltype(PSOS::GBufferDraw::CaptureMeshlets) PSOS::GBufferDraw::CaptureMeshlets;
 //decltype(PSOS::DepthDraw::HiZOcclusion) PSOS::DepthDraw::HiZOcclusion;
 //decltype(PSOS::Voxelization::Dynamic) PSOS::Voxelization::Dynamic;

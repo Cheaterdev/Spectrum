@@ -447,11 +447,14 @@ static void qualify_field_types(Parsed& parsed)
 }
 
 // Per [raypayload] field, its DXR qualifiers as HLSL text, "(closesthit,caller)",
-// in the order the stages were listed. Per struct, the HLSL init() built from
-// field defaults (`float4 color = 0;`): HLSL rejects default member values
-// outright, so the defaults become assignments, plus a nested init() call for
-// a struct-typed field whose type has one. validate() has already checked
-// every name and that a payload's defaulted fields are writable by the caller.
+// in the order the stages were listed. Per [nobind] struct with field defaults
+// (`float4 color = 0;`), an HLSL `T CreateT()` returning a zero-filled T with
+// the defaults applied, a struct-typed field whose type has one built by its
+// own CreateX(). A function rather than initializers because HLSL has neither
+// constructors nor default member values; [nobind] only because those are the
+// value types shaders build -- a bound table's values come from its buffer,
+// and a context struct's defaults are for its C++ side. validate() has already
+// checked every name and that a payload's defaulted fields are caller-writable.
 static void resolve_payloads(Parsed& parsed)
 {
 	auto stages = [](const std::vector<std::string>& names)
@@ -462,20 +465,22 @@ static void resolve_payloads(Parsed& parsed)
 		return out.empty() ? out : out + ")";
 	};
 
-	std::map<std::string, bool> has_init;
-	std::function<bool(const Table&)> needs_init = [&](const Table& t) -> bool
+	std::map<std::string, bool> has_create;
+	std::function<bool(const Table&)> needs_create = [&](const Table& t) -> bool
 	{
-		if (auto it = has_init.find(t.name); it != has_init.end())
+		if (!t.find_option("nobind"))
+			return false;
+		if (auto it = has_create.find(t.name); it != has_create.end())
 			return it->second;
-		has_init[t.name] = false; // a struct can't contain itself, but don't recurse forever on bad input
+		has_create[t.name] = false; // a struct can't contain itself, but don't recurse forever on bad input
 		bool any = false;
 		for (const auto& v : t.values)
 			if (!v.expr.empty())
 				any = true;
 			else if (v.value_type == ValueType::STRUCT && !v.as_array)
-				if (const Table* inner = parsed.tables.find(v.get_type()); inner && needs_init(*inner))
+				if (const Table* inner = parsed.tables.find(v.get_type()); inner && needs_create(*inner))
 					any = true;
-		return has_init[t.name] = any;
+		return has_create[t.name] = any;
 	};
 
 	for (auto& t : parsed.tables)
@@ -488,21 +493,21 @@ static void resolve_payloads(Parsed& parsed)
 					v.stage_write = stages(payload_access(t, v, true));
 				}
 
-		if (!needs_init(t))
+		if (!needs_create(t))
 			continue;
-		std::string body;
+		std::string body = "\t" + t.name + " result = (" + t.name + ")0;\n";
 		for (const auto& v : t.values)
 		{
 			if (!v.expr.empty())
 			{
 				bool is_enum = parsed.enums.find(v.get_type()) != nullptr && v.expr.find("::") == std::string::npos;
-				body += "\t\t" + v.name + " = " + (is_enum ? v.get_type() + "::" : "") + v.expr + ";\n";
+				body += "\tresult." + v.name + " = " + (is_enum ? v.get_type() + "::" : "") + v.expr + ";\n";
 			}
 			else if (v.value_type == ValueType::STRUCT && !v.as_array)
-				if (const Table* inner = parsed.tables.find(v.get_type()); inner && needs_init(*inner))
-					body += "\t\t" + v.name + ".init();\n";
+				if (const Table* inner = parsed.tables.find(v.get_type()); inner && needs_create(*inner))
+					body += "\tresult." + v.name + " = Create" + inner->name + "();\n";
 		}
-		t.hlsl_init = "\n\tvoid init()\n\t{\n" + body + "\t}\n";
+		t.hlsl_create = "\n\n" + t.name + " Create" + t.name + "()\n{\n" + body + "\treturn result;\n}";
 	}
 }
 

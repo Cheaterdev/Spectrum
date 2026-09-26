@@ -15,12 +15,6 @@ namespace UI
 		uint per_pass; // uint
 		uint GetPasses_needed() { return passes_needed; }
 		uint GetPer_pass() { return per_pass; }
-		void init()
-		{
-			passes_needed = 0;
-			per_pass = 0;
-		}
-
 	};
 }
 using UI::UIRenderState;

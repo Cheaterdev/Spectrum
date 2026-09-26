@@ -9,10 +9,18 @@
 #include "enums.h"
 namespace Dev
 {
-	struct DebugViewState
+	struct DebugViewDraw
 	{
-		bool enabled; // bool
-		bool GetEnabled() { return enabled; }
+		float4 tint; // float4
+		uint read_meshlet_masks; // uint
+		uint meshlet_filter; // uint
+		uint color_by_meshlet; // uint
+		uint meshlet_masks; // StructuredBuffer<uint>
+		float4 GetTint() { return tint; }
+		uint GetRead_meshlet_masks() { return read_meshlet_masks; }
+		uint GetMeshlet_filter() { return meshlet_filter; }
+		uint GetColor_by_meshlet() { return color_by_meshlet; }
+		StructuredBuffer<uint> GetMeshlet_masks() { return ResourceDescriptorHeap[meshlet_masks]; }
 	};
 }
-using Dev::DebugViewState;
+using Dev::DebugViewDraw;

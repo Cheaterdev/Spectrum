@@ -370,7 +370,8 @@ namespace
 	// [Access]/[Read]/[Write] on a [raypayload] struct and its fields: stage
 	// names, every value field ending up with both sides (DXC requires a
 	// qualifier on each field once payload qualifiers are on), and the generated
-	// init() being legal in the caller. Outside a payload the options are errors.
+	// Create<Name>() being legal in the caller. Outside a payload the options are
+	// errors.
 	void check_payload(const Table& table)
 	{
 		const bool payload = table.find_option("raypayload") != nullptr;
@@ -406,13 +407,11 @@ namespace
 		if (const option* o = table.find_option("Access"))
 			check(*o, table.name);
 
-		bool has_defaults = false;
 		for (const auto& v : table.values)
 		{
 			for (const char* name : { "Access", "Read", "Write" })
 				if (const option* o = v.find_option(name))
 					check(*o, table.name + "." + v.name);
-			has_defaults |= !v.expr.empty();
 
 			if (!payload || v.value_type == ValueType::STRUCT)
 				continue;
@@ -422,15 +421,9 @@ namespace
 						table.name, v.name, write ? "write" : "read"));
 			auto w = payload_access(table, v, true);
 			if (!v.expr.empty() && !w.empty() && std::find(w.begin(), w.end(), "Caller") == w.end())
-				diagnostics().error(name_loc_of(v), std::format("{}.{} has a default, which the generated init() writes from the caller, "
-					"so its write stages need Caller", table.name, v.name));
+				diagnostics().error(name_loc_of(v), std::format("{}.{} has a default, which the generated Create{}() writes from the "
+					"caller, so its write stages need Caller", table.name, v.name, table.name));
 		}
-
-		if (has_defaults)
-			for (const auto& f : table.functions)
-				if (f.name == "init" && f.params.find_first_not_of(" \t") == std::string::npos)
-					diagnostics().error(name_loc_of(f), std::format("{}: init() is generated from the field defaults; remove this one "
-						"or the defaults", table.name));
 	}
 
 	// A namespace reopened in several blocks has one set of options: a block

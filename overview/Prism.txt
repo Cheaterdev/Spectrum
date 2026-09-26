@@ -185,12 +185,14 @@ Field options
                           [raypayload] struct.
 
 Field defaults
-  `float4 color = 0;` sets the field's default: the C++ struct gets it as an
-  initializer, and the HLSL struct gets a generated `void init()` assigning
-  every default (HLSL rejects default member values). A struct-typed field
-  whose type has an init() is initialised with it too (`cone.init();`).
-  Structs without defaults get no init(); writing your own parameterless
-  init() next to defaults is an error.
+  `float4 color = 0;` sets the field's default. The C++ struct gets it as a
+  member initializer. HLSL has neither default member values nor
+  constructors, so a [nobind] struct with defaults gets a generated
+      RayPayload CreateRayPayload()   // zero-filled, then the defaults
+  and shaders write `RayPayload p = CreateRayPayload();`. A struct-typed field
+  whose type has one is built by it (`result.cone = CreateRayCone();`). Only
+  [nobind] structs get it: a bound table's values come from its buffer, and a
+  context struct's defaults are for its C++ side.
 
 PAYLOADS
     [nobind] [raypayload] [Access = ClosestHit | Miss | Caller]
@@ -205,7 +207,7 @@ PAYLOADS
   anyhit). Per field and per side, the field's [Read]/[Write] wins, else its
   [Access], else the struct's [Access]; every value field must end up with
   both sides. A defaulted payload field needs Caller in its write stages,
-  since init() runs in the caller before TraceRay.
+  since CreateX() runs in the caller before TraceRay.
 
 HLSL functions
   A function inside a struct body is written out into the struct's generated

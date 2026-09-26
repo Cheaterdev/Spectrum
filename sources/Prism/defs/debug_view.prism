@@ -71,7 +71,8 @@ namespace Dev
 		Status;
 		# Only what the main view drew.
 		Rendered;
-		# Only what the main view culled.
+		# Only what the main view culled: whole parts, and culled meshlets of
+		# parts it drew.
 		Culled;
 	}
 
@@ -92,11 +93,23 @@ namespace Dev
 		DebugViewSource source;
 	}
 
+	# Per-bucket state for one DebugViewMesh indirect draw.
 	[Bind = DefaultLayout::Instance3]
-	struct DebugViewTint
+	struct DebugViewDraw
 	{
 		# rgb blended over the per-object colour by a.
 		float4 tint;
+
+		# Replay of the main view's per-meshlet result (MeshletCaptureWrite):
+		# nonzero for buckets whose parts the main view drew on the captured
+		# frame. Other buckets have no valid masks and show every meshlet.
+		StructuredBuffer<uint> meshlet_masks;
+		uint read_meshlet_masks;
+		# 0 every meshlet, 1 only drawn ones, 2 only culled ones.
+		uint meshlet_filter;
+
+		# Colour by object and meshlet instead of by object.
+		uint color_by_meshlet;
 	}
 
 	# The captured main-camera frustum: pixels outside it are darkened, so what
@@ -118,17 +131,19 @@ namespace Dev
 	}
 
 	# The GBuffer's mesh + amplification shaders with a flat headlight PS. The AS
-	# still frustum/cone-culls meshlets, but against the debug camera bound for this
-	# draw -- that only saves work, it isn't the main view's culling.
+	# frustum-culls meshlets against the debug camera bound for this draw (only to
+	# save work) and replays the main view's recorded per-meshlet result
+	# (DebugViewDraw) instead of culling for real, so culled meshlets still draw.
 	GraphicsPSO DebugViewMesh
 	{
 		root = DefaultLayout;
 
+		# gbuffer/mesh_shader.hlsl with DEBUG_VIEW defined -- see that file.
 		[EntryPoint = VS]
-		mesh = "gbuffer/mesh_shader.hlsl";
+		mesh = "debug/debug_view_mesh_shader.hlsl";
 
 		[EntryPoint = AS]
-		amplification = "gbuffer/mesh_shader.hlsl";
+		amplification = "debug/debug_view_mesh_shader.hlsl";
 
 		[EntryPoint = PS]
 		pixel = "debug/debug_view_mesh.hlsl";

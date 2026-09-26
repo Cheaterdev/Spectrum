@@ -16,11 +16,6 @@ namespace Dev
 		Frustum frustum; // Frustum
 		Frustum GetFrustum() { return frustum; }
 		float GetOutside_brightness() { return outside_brightness; }
-		void init()
-		{
-			outside_brightness = 1;
-		}
-
 	};
 }
 using Dev::DebugViewFrustum;

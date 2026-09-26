@@ -31,7 +31,9 @@ void CS(uint3 dispatchID : SV_DispatchThreadID)
             bucket = translucent ? 3 : 2;
 
         if (gather.GetSource() == DebugViewSource::Rendered && !rendered) return;
-        if (gather.GetSource() == DebugViewSource::Culled && bucket != 2) return;
+        // Drawn parts stay in: their culled meshlets are shown, the AS filters
+        // out the drawn ones.
+        if (gather.GetSource() == DebugViewSource::Culled && bucket == 3) return;
     }
 
     CommandData command;

@@ -53,6 +53,20 @@ namespace Meshes
 		# into GBuffer_ObjectID for editor picking/selection outline. Assigned in
 		# MeshAssetInstance::update_nodes().
 		uint object_id;
+
+		# First word of this part's range in universal_meshlet_mask_manager: two
+		# words per 32-meshlet AS group, 2 bits per meshlet (MeshletCaptureWrite).
+		uint meshlet_mask_offset;
+	}
+
+	# Debug view meshlet capture: the GBuffer AS (CaptureMeshlets permutation)
+	# records each meshlet's cull result, 2 bits at meshlet_mask_offset:
+	# 0 frustum, 1 backface cone, 2 Hi-Z occluded, 3 drawn. Only meaningful for a
+	# part the main view drew on the captured frame (CullCaptureWrite stamps).
+	[Bind = DefaultLayout::Instance5]
+	struct MeshletCaptureWrite
+	{
+		RWStructuredBuffer<uint> masks;
 	}
 
 

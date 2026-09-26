@@ -22,7 +22,9 @@ export namespace materials
         Pipeline() = default;
         virtual ~Pipeline() = default;
 
-		virtual void set(RENDER_TYPE render_type, MESH_TYPE type, HAL::GraphicsContext& graphics, bool hiz_occlusion) = 0;
+		// capture_meshlets: the GBuffer draw records per-meshlet cull results for
+		// the debug view (GBufferDraw's CaptureMeshlets permutation).
+		virtual void set(RENDER_TYPE render_type, MESH_TYPE type, HAL::GraphicsContext& graphics, bool hiz_occlusion, bool capture_meshlets) = 0;
 
 		// Per pipeline, not per material: the GPU gather routes draws by
 		// pipeline id, so this is what decides which passes a mesh reaches

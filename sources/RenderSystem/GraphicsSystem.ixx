@@ -69,6 +69,7 @@ public:
         universal_mesh_instance_manager::reset();
         universal_material_info_part_manager::reset();
         universal_rtx_manager::reset();
+        universal_meshlet_mask_manager::reset();
     	RenderSystem::get().device().stop_all();
         RenderSystem::reset();
     }
