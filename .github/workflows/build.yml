@@ -8,8 +8,17 @@ jobs:
   build:
     runs-on: windows-2025-vs2026
     strategy:
+      fail-fast: false
       matrix:
         configuration: [Debug-D3D12, Debug-Vulkan]
+
+    # Cache vcpkg's per-package binary archives, not vcpkg_installed: vcpkg keys
+    # each archive by ABI hash (compiler, tool version, portfile), so a runner
+    # image update only rebuilds what actually changed. A cached vcpkg_installed
+    # is thrown away wholesale on any such mismatch.
+    env:
+      VCPKG_BINARY_CACHE_DIR: ${{ github.workspace }}\vcpkg_binary_cache
+      VCPKG_BINARY_SOURCES: clear;files,${{ github.workspace }}\vcpkg_binary_cache,readwrite
 
     steps:
     - name: Checkout repository
@@ -22,14 +31,26 @@ jobs:
       with:
         dotnet-version: '8.0.x'
 
-    - name: Restore vcpkg installed packages
-      id: vcpkg-cache
+    # The key is unique per run so a partially-built cache (vcpkg install failed
+    # halfway) can still be saved; restore-keys picks up the newest prior one.
+    - name: Restore vcpkg binary cache
       uses: actions/cache/restore@v4
       with:
-        path: ./vcpkg_installed
-        key: vcpkg-v2-${{ runner.os }}-${{ hashFiles('vcpkg.json', 'vcpkg-configuration.json') }}
+        path: ${{ env.VCPKG_BINARY_CACHE_DIR }}
+        key: vcpkg-bin-v3-${{ runner.os }}-${{ hashFiles('vcpkg.json', 'vcpkg-configuration.json', 'custom-overlay/**') }}-${{ github.run_id }}-${{ github.run_attempt }}
         restore-keys: |
-          vcpkg-v2-${{ runner.os }}-
+          vcpkg-bin-v3-${{ runner.os }}-${{ hashFiles('vcpkg.json', 'vcpkg-configuration.json', 'custom-overlay/**') }}-
+          vcpkg-bin-v3-${{ runner.os }}-
+
+    - name: Snapshot vcpkg binary cache
+      id: vcpkg-cache-before
+      shell: powershell
+      run: |
+        New-Item -ItemType Directory -Force "$env:VCPKG_BINARY_CACHE_DIR" | Out-Null
+        $n = (Get-ChildItem "$env:VCPKG_BINARY_CACHE_DIR" -Recurse -Filter *.zip).Count
+        "count=$n" >> $env:GITHUB_OUTPUT
+        "since=$((Get-Date).ToUniversalTime().Ticks)" >> $env:GITHUB_OUTPUT
+        Write-Host "$n archives restored"
 
     - name: Setup project
       shell: cmd
@@ -40,15 +61,44 @@ jobs:
       run: generate_project.bat
 
     - name: Install vcpkg dependencies
+      id: vcpkg-install
       shell: cmd
       run: vcpkg install --triplet x64-windows --x-install-root ./vcpkg_installed/x64-windows
 
-    - name: Save vcpkg installed packages
-      if: steps.vcpkg-cache.outputs.cache-hit != 'true'
+    # Drop archives whose ABI no longer appears in the installed status file,
+    # otherwise every compiler/port bump leaves dead archives in the cache
+    # forever. Only safe after a successful install: a failed one has an
+    # incomplete status file and would prune archives that are still valid.
+    - name: Prune stale vcpkg binary archives
+      if: steps.vcpkg-install.outcome == 'success'
+      shell: powershell
+      run: |
+        $status = "vcpkg_installed/x64-windows/vcpkg/status"
+        if (-not (Test-Path $status)) { Write-Host "no status file at $status, skipping prune"; exit 0 }
+        $live = @{}
+        Select-String -Path $status -Pattern '^Abi: (\w+)' | ForEach-Object { $live[$_.Matches[0].Groups[1].Value] = $true }
+        if ($live.Count -eq 0) { Write-Host "no ABIs in $status, skipping prune"; exit 0 }
+        $stale = Get-ChildItem "$env:VCPKG_BINARY_CACHE_DIR" -Recurse -Filter *.zip | Where-Object { -not $live.ContainsKey($_.BaseName) }
+        $stale | Remove-Item -Force
+        Write-Host "$($live.Count) live ABIs, pruned $(@($stale).Count) stale archives"
+
+    - name: Check vcpkg binary cache for changes
+      id: vcpkg-cache-after
+      if: always() && steps.vcpkg-install.outcome != 'skipped'
+      shell: powershell
+      run: |
+        $files = Get-ChildItem "$env:VCPKG_BINARY_CACHE_DIR" -Recurse -Filter *.zip
+        $changed = ($files.Count -ne ${{ steps.vcpkg-cache-before.outputs.count }}) -or
+                   (@($files | Where-Object { $_.LastWriteTimeUtc.Ticks -gt ${{ steps.vcpkg-cache-before.outputs.since }} }).Count -gt 0)
+        "changed=$($changed.ToString().ToLower())" >> $env:GITHUB_OUTPUT
+        Write-Host "$($files.Count) archives now, changed=$changed"
+
+    - name: Save vcpkg binary cache
+      if: always() && steps.vcpkg-cache-after.outputs.changed == 'true'
       uses: actions/cache/save@v4
       with:
-        path: ./vcpkg_installed
-        key: vcpkg-v2-${{ runner.os }}-${{ hashFiles('vcpkg.json', 'vcpkg-configuration.json') }}
+        path: ${{ env.VCPKG_BINARY_CACHE_DIR }}
+        key: vcpkg-bin-v3-${{ runner.os }}-${{ hashFiles('vcpkg.json', 'vcpkg-configuration.json', 'custom-overlay/**') }}-${{ github.run_id }}-${{ github.run_attempt }}
 
     - name: Integrate vcpkg with MSBuild
       shell: cmd

@@ -23,7 +23,9 @@ set(VCPKG_BUILD_TYPE release)
 
 set(NRD_TAG v4.17.3)
 set(SHADERMAKE_COMMIT 18f5a344e7ca8fa65daaf079d07bc8ce38453e05)
-set(MATHLIB_TAG v11)
+# Pinned by commit, not tag: upstream force-moved the v11 tag (974e138 ->
+# e3eee93 on 2026-09-15), which changed the archive's SHA512 under us.
+set(MATHLIB_COMMIT 974e1387ba936740c7cdc494792d2641bc127e86)
 
 vcpkg_download_distfile(NRD_ARCHIVE
     URLS "https://github.com/NVIDIA-RTX/NRD/archive/refs/tags/${NRD_TAG}.zip"
@@ -36,9 +38,9 @@ vcpkg_download_distfile(SHADERMAKE_ARCHIVE
     SHA512 40dd83ac68bd9062f9fb592c6566b328a65eaa1792c130d21c2e5f298fb37b0017ebe0cbe351be36e4d275883ba7bf8074539106272725c78b930e29181a3def
 )
 vcpkg_download_distfile(MATHLIB_ARCHIVE
-    URLS "https://github.com/NVIDIA-RTX/MathLib/archive/refs/tags/${MATHLIB_TAG}.zip"
-    FILENAME "mathlib-${MATHLIB_TAG}.zip"
-    SHA512 513d3a62e09fdb6b1cafad8e12693fd23401b8e34bda42856b764c70f94d59b8086474ca254dd45dd258586795ed0dd3fcd1c82cea42a7dae38aabad01582eaa
+    URLS "https://github.com/NVIDIA-RTX/MathLib/archive/${MATHLIB_COMMIT}.zip"
+    FILENAME "mathlib-${MATHLIB_COMMIT}.zip"
+    SHA512 c19b5be3ceab1e584e7198a5c55af8bc31e6c3f6ee66fb3dad2f288a30499a4e70c1c30b18fbae0b0071c6a7a1d7722c4be835e675ac7e876df501388add6878
 )
 
 vcpkg_extract_source_archive(NRD_SOURCE_PATH
@@ -51,7 +53,7 @@ vcpkg_extract_source_archive(SHADERMAKE_SOURCE_PATH
 )
 vcpkg_extract_source_archive(MATHLIB_SOURCE_PATH
     ARCHIVE "${MATHLIB_ARCHIVE}"
-    SOURCE_BASE "mathlib-${MATHLIB_TAG}"
+    SOURCE_BASE "mathlib-${MATHLIB_COMMIT}"
 )
 
 # directx-dxc is a "host" dependency (see vcpkg.json) — its dxc.exe lands in
