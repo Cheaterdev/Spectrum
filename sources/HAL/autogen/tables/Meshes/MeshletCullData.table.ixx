@@ -21,17 +21,14 @@ export namespace Table
 			static constexpr SlotID ID = SlotID::MeshletCullData;
 			float4 BoundingSphere;
 			uint NormalCone;
-			float ApexOffset;
 			float4& GetBoundingSphere() { return BoundingSphere; }
 			uint& GetNormalCone() { return NormalCone; }
-			float& GetApexOffset() { return ApexOffset; }
 			static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 			template<class Compiler>
 			void compile(Compiler& compiler) const
 			{
 				compiler.compile(BoundingSphere, "MeshletCullData::BoundingSphere");
 				compiler.compile(NormalCone, "MeshletCullData::NormalCone");
-				compiler.compile(ApexOffset, "MeshletCullData::ApexOffset");
 			}
 			using Compiled = MeshletCullData;
 
@@ -44,7 +41,6 @@ export namespace Table
 			{
 				ar& NVP(BoundingSphere);
 				ar& NVP(NormalCone);
-				ar& NVP(ApexOffset);
 			}
 
 		};

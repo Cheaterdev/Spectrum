@@ -84,23 +84,11 @@ struct Payload
 
 
 
-bool IsConeDegenerate(MeshletCullData c)
-{
-    return (c.GetNormalCone() >> 24) == 0xff;
-}
-
+// snorm8 x4 (meshopt's cone_axis_s8 / cone_cutoff_s8).
 float4 UnpackCone(uint packed)
 {
-    float4 v;
-    v.x = float((packed >> 0) & 0xFF);
-    v.y = float((packed >> 8) & 0xFF);
-    v.z = float((packed >> 16) & 0xFF);
-    v.w = float((packed >> 24) & 0xFF);
-
-    v = v / 255.0;
-    v.xyz = v.xyz * 2.0 - 1.0;
-
-    return v;
+    int4 s = int4(packed << 24, packed << 16, packed << 8, packed) >> 24;
+    return float4(s) / 127.0;
 }
 
 float dist(float4 plane, float3 pt)
@@ -142,35 +130,24 @@ uint MeshletCull(MeshletCullData c, float4x4 world, Camera camera)
         }
     }
 
-    // Do normal cone culling
-    if (IsConeDegenerate(c))
-        return MESHLET_DRAWN; // Cone is degenerate - spread is wider than a hemisphere.
+    float4 cone = UnpackCone(c.GetNormalCone());
+
+    // Normals spread wider than the cone can bound.
+    if (cone.w >= 1)
+        return MESHLET_DRAWN;
 
     // Under strongly non-uniform scale the cone axis would need the
     // inverse-transpose — be conservative and skip the cone test.
     if (max(scales.x, max(scales.y, scales.z)) > 1.05 * min(scales.x, min(scales.y, scales.z)))
         return MESHLET_DRAWN;
 
-    // Unpack the normal cone from its 8-bit uint compression
-    float4 normalCone = UnpackCone(c.GetNormalCone());
-
-    // Transform axis to world space. NOTE: engine convention is
-    // mul(matrix, vector) — the sample's mul(vector, matrix) transformed by
-    // the TRANSPOSE (inverse rotation for rigid transforms), so the cone
-    // pointed the wrong way on any rotated node and culled front-facing
-    // meshlets. That is why this whole test was disabled.
-    float3 axis = normalize(mul(world, float4(normalCone.xyz, 0)).xyz);
-
-    // Offset the normal cone axis from the meshlet center-point - make sure to account for world scaling
-    float3 apex = center.xyz - axis * c.GetApexOffset() * scale;
-    float3 view = normalize(camera.GetPosition() - apex);
-
-    // The normal cone w-component stores -cos(angle + 90 deg)
-    // This is the min dot product along the inverted axis from which all the meshlet's triangles are backface
-    if (dot(view, -axis) > normalCone.w)
-    {
+    // meshopt's apex-free test for the 8-bit cone. The axis is divided by the
+    // scale rather than normalized: the s8 cutoff padding assumes the decoded
+    // axis as-is. Engine convention is mul(matrix, vector).
+    float3 axis = mul(world, float4(cone.xyz, 0)).xyz / scale;
+    float3 view = center.xyz - camera.GetPosition();
+    if (dot(view, axis) >= cone.w * length(view) + radius)
         return MESHLET_CULLED_BACKFACE;
-    }
 
     // All tests passed - it will merit pixels
     return MESHLET_DRAWN;
@@ -384,10 +361,10 @@ void VS(
     uint gtid : SV_GroupThreadID,
     uint2 gid2 : SV_GroupID,
     in payload Payload payload,
-    out indices uint3 tris[64],
-    out vertices vertex_output verts[128]
+    out indices uint3 tris[124],
+    out vertices vertex_output verts[64]
 #ifdef DEBUG_VIEW
-    , out primitives primitive_output prims[64]
+    , out primitives primitive_output prims[124]
 #endif
 )
 {

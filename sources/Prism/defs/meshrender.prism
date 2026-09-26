@@ -100,8 +100,9 @@ namespace Meshes
 	struct MeshletCullData
 	{
 	    float4 BoundingSphere;
+	    # meshopt's snorm8 cone axis (xyz) and cutoff (w), the cutoff already
+	    # padded for axis quantization; w = 127 means no backface test.
 	    uint   NormalCone;
-	    float  ApexOffset;
 	}
 
 

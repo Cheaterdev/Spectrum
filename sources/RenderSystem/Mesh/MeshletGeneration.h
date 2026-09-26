@@ -1,27 +1,15 @@
 #pragma once
 import Graphics;
 import Core;
-import windows;
 
-void Meshletize(
-    uint maxVerts, uint maxPrims,
-    const uint* indices, uint indexCount,
-    const float3* positions, uint vertexCount,
+// Must match the mesh shaders' `out indices uint3 tris[...]` / `out vertices
+// verts[...]` declarations. meshopt requires the triangle limit to be a
+// multiple of 4.
+static constexpr uint MESHLET_MAX_VERTICES = 64;
+static constexpr uint MESHLET_MAX_TRIANGLES = 124;
+
+void BuildMeshlets(
+    const uint* indices, uint index_count,
+    const float3* positions, uint vertex_count,
     std::vector<InlineMeshlet<uint>>& output
-);
-
-
-void BuildAdjacencyList(
-    const uint32_t* indices, uint32_t indexCount,
-    const float3* positions, uint32_t vertexCount,
-    uint32_t* adjacency
-);
-
-float4 MinimumBoundingSphere(float3* points, uint32_t count);
-
-
-HRESULT ComputeCullData(
-    const float3* positions, uint32_t vertexCount,
-    InlineMeshlet<uint>& meshlet,
-    DWORD flags
 );

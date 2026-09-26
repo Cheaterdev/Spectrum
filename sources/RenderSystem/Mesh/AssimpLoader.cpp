@@ -1221,17 +1221,11 @@ std::shared_ptr<MeshData> MeshData::load_assimp(const std::string& file_name, re
                 {
                     poses.push_back(vertices[i+ mesh.vertex_offset].pos);//argh!!
                 }
-                Meshletize(64, 126,
+                BuildMeshlets(
                     indices.data() + mesh.index_offset, mesh.index_count,
                     poses.data(), mesh.vertex_count,
                     mesh.meshlets
                 );
-
-                for (auto& m : mesh.meshlets)
-                {
-                    ComputeCullData(poses.data(), mesh.vertex_count, m, 0);
-
-                }
                
                 result->meshes[i] = (mesh);
 

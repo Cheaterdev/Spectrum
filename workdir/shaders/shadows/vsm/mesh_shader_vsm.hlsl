@@ -254,9 +254,9 @@ void VS(
 	uint gtid : SV_GroupThreadID,
 	uint gid : SV_GroupID,
 	in payload Payload payload,
-	out indices uint3 tris[64],
-	out vertices vsm_vertex_output verts[128],
-	out primitives vsm_prim_attrs prims[64]
+	out indices uint3 tris[124],
+	out vertices vsm_vertex_output verts[64],
+	out primitives vsm_prim_attrs prims[124]
 )
 {
 	uint pairIndex = payload.PackedPairIndices[gid];

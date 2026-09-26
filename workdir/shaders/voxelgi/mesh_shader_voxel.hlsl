@@ -114,8 +114,10 @@ void VS(
     uint gtid : SV_GroupThreadID,
       uint2 gid2 : SV_GroupID,
 	  in payload Payload payload,
-    out indices uint3 tris[126],
-    out vertices vertex_output verts[64]
+    // Each of the 3 groups per meshlet takes a third of its (<= 124)
+    // triangles, un-indexed: 42 triangles, 126 vertices.
+    out indices uint3 tris[42],
+    out vertices vertex_output verts[126]
 )
 {
    uint gid = gid2.x;
