@@ -106,6 +106,14 @@ std::string GUI::Elements::edit_text::get_text()
 	return text;
 }
 
+float GUI::Elements::edit_text::single_line_height()
+{
+	// The caret spans the line box (ascender to descender), which is what the
+	// editor lays a line out in -- taller than the glyphs' own bounds.
+	const float line = Text::Engine::get().caret("0", style, 0).height;
+	return std::ceil(line) + padding->top + padding->bottom + 2;
+}
+
 void GUI::Elements::edit_text::set_diagnostics(std::vector<Text::Diagnostic> diagnostics)
 {
 	editor.set_diagnostics(std::move(diagnostics));

@@ -50,8 +50,10 @@ namespace GUI
 		{
 			base::on_mouse_move(pos);
 
+			// A visible handle keeps the hover while the mouse is over it (for
+			// its highlight); an invisible one lets the move pass on as before.
 			if (!dragging)
-				return false;
+				return draw_color;
 
 			auto real_target = target;
 
@@ -104,7 +106,24 @@ namespace GUI
 		void  dragger::draw(Context& c)
 		{
 			if (draw_color)
-				c.renderer->draw_color(c, float4(25, 60, 100, 255) / 255.0f, get_render_bounds());
+				c.renderer->draw_color(c, dragging || is_hovered() ? active_color : idle_color, get_render_bounds());
+		}
+
+		void dragger::on_mouse_enter(vec2 pos)
+		{
+			base::on_mouse_enter(pos);
+			if (!draw_color) return;
+
+			if (allow_x && !allow_y)      cursor = cursor_style::WE;
+			else if (allow_y && !allow_x) cursor = cursor_style::NS;
+			else                          cursor = cursor_style::ALL;
+		}
+
+		void dragger::on_mouse_leave(vec2 pos)
+		{
+			base::on_mouse_leave(pos);
+			if (draw_color)
+				cursor = cursor_style::ARROW;
 		}
 
 	}

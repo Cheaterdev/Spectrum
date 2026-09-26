@@ -700,12 +700,27 @@ namespace GUI
 
     void base::focus()
     {
+        auto previous = user_ui->focused.lock();
+        if (previous.get() == this)
+            return;
+
         user_ui->focused = get_ptr();
+        if (previous)
+            previous->on_focus_changed(false);
+        on_focus_changed(true);
     }
 
     void base::unfocus()
     {
+        if (!user_ui || user_ui->focused.lock().get() != this)
+            return;
+
         user_ui->focused.reset();
+        on_focus_changed(false);
+    }
+
+    void base::on_focus_changed(bool)
+    {
     }
 
     bool base::is_focused()
@@ -1182,6 +1197,8 @@ namespace GUI
             if (action == mouse_action::DOWN)
             {
                 pressed[i_button].clear();
+                const auto focused_before = focused.lock();
+                base::ptr handled;
 
                 for (unsigned int i = 0; i < controls.size(); i++)
                 {
@@ -1196,8 +1213,19 @@ namespace GUI
                     control->on_touch();
                     cursor = control->update_cursor();
                     drag.mouse_action_event(control, action, button, pos);
+                    handled = control;
                     break;
                 }
+
+                // A press anywhere else takes keyboard focus away: only fields
+                // call focus(), so clicking a button or empty space used to
+                // leave the last field focused and still receiving keys (and a
+                // field that commits on focus loss never committing). Menus
+                // keep it -- the edit field's own context menu acts on it.
+                if (focused_before && focused.lock() == focused_before
+                    && std::find(controls.begin(), controls.end(), focused_before) == controls.end()
+                    && !(handled && handled->is_menu_component()))
+                    focused_before->unfocus();
             }
 
             if (action == mouse_action::UP)

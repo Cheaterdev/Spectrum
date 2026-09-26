@@ -57,8 +57,8 @@ namespace GUI
 
 	void Elements::scroll_bar::draw(Context& c)
 	{
+		// The thumb is a dragger and draws itself (idle/active colors set below).
 		c.renderer->draw_color(c, float4(0, 0, 0, 0.5), get_render_bounds());
-		c.renderer->draw_color(c, float4(1, 1, 1, 0.5), drag->get_render_bounds());
 	}
 
 	Elements::scroll_bar::scroll_bar(scroll_type _type)
@@ -84,6 +84,7 @@ namespace GUI
 		drag.reset(new self_dragger(this));
 		drag->size = { 8, 8 };
 		drag->minimal_size = { 8, 8 };
+		drag->idle_color = float4(1, 1, 1, 0.5f);   // must stand out on the dark track
 		// drag->pos = {1, 1};
 		drag->on_move = [this](vec2 _pos, vec2 delta)
 		{

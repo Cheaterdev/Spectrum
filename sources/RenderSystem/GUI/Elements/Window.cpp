@@ -28,6 +28,7 @@ GUI::Elements::window::window() : GUI::Elements::resizable()
 	title_bar->docking = dock::TOP;
 	//holder.reset(this);
 	title_bar->target = this;
+	title_bar->draw_color = false;   // the window skin draws the title bar
 	base::add_child(title_bar);
 	title_bar->padding = { 5, 0, 0, 5 };
 	minimal_size = { 50, 50 };

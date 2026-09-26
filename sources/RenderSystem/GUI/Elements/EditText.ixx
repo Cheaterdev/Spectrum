@@ -194,6 +194,11 @@ export namespace GUI
                 void set_text(const std::string& t);
                 std::string get_text();
 
+                // Height that fits one line of text plus the vertical padding,
+                // logical units. A single-line field placed in a row should be
+                // at least this tall, or its text is cropped.
+                float single_line_height();
+
                 // Compiler messages shown as wavy underlines and line-end icons;
                 // hovering one shows its message as the tooltip. Cleared by any
                 // edit.

@@ -35,7 +35,7 @@ Draw a grayed-out hint string when `text` is empty and the widget is unfocused.
 **Complexity:** low-medium  
 `std::function<bool(char)> filter` called per keystroke; reject characters that don't pass. Enables numeric-only, hex-only, etc.
 
-## 8. FloatBox
+## ~~8. FloatBox~~ ✓ (`float_box`: edit_text subclass, commits on Enter/focus loss, Up/Down + wheel while focused; used by the Properties panel for unconstrained float/int Variables)
 **Complexity:** low-medium  
 Editable float value: `EditText` with numeric filter + scroll-wheel increment/decrement + configurable step, min, max.  
 Replaces the int-only `ValueBox` pattern for float data.
@@ -48,7 +48,7 @@ A `Button` that remembers pressed/unpressed state across clicks (latching). Fire
 **Complexity:** medium  
 A header row (clickable label + arrow icon) that shows/hides a child container. Commonly used in property inspectors. Needs `MATCH_CHILDREN` height to collapse to zero.
 
-## 11. Multi-select ListBox
+## ~~11. Multi-select ListBox~~ ✓ (`list_box::multi_select`, `selected_indices()`, `on_selection_changed`)
 **Complexity:** medium  
 Extend `ListBox` with shift-click range select and ctrl-click toggle. Expose `std::vector<int> selected_indices` and `on_selection_changed`.
 
@@ -56,19 +56,19 @@ Extend `ListBox` with shift-click range select and ctrl-click toggle. Expose `st
 **Complexity:** medium  
 On hover (after a short delay), show a floating label near the cursor. Requires a timer in `think()`, a top-level overlay element, and a `std::string tooltip` field on `base` (or per-widget).
 
-## 13. Vec2 / Vec3 / Vec4 Input
+## ~~13. Vec2 / Vec3 / Vec4 Input~~ ✓ (`vector_box(components)`)
 **Complexity:** medium  
 Row of 2–4 `FloatBox` instances with X/Y/Z/W labels, grouped in a `HorizontalLayout`. Fires `on_change(floatN)`. Bread-and-butter for 3D transform/color editing.
 
-## 14. ComboBox — searchable/filterable variant
+## ~~14. ComboBox — searchable/filterable variant~~ ✓ (`combo_box::set_searchable(true)`, before add_item)
 **Complexity:** medium  
 Embed an `EditText` at the top of the dropdown that filters the item list as you type.
 
-## 15. Splitter / SplitView
+## ~~15. Splitter / SplitView~~ ✓ (`split_view(horizontal)`, ratio-based, `first()`/`second()`)
 **Complexity:** medium-high  
 Two child panels separated by a thin draggable `Resizer`. Distributes available space between the two halves (ratio stored as float). Supports horizontal and vertical split.
 
-## 16. Toast / Notification
+## ~~16. Toast / Notification~~ ✓ (`toast_manager::show(text, kind, seconds)`, any thread; manager added in main.cpp)
 **Complexity:** medium-high  
 Timed overlay messages that appear in a corner, stack vertically, and fade out after N seconds. Requires a global manager attached to `user_interface`.
 

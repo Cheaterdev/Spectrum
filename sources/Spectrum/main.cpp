@@ -2208,6 +2208,121 @@ public:
 							open_code_editor("shaders/gui/glyph.hlsl", 0, 0);
 						};
 
+					// The backlog widgets in one place: numeric boxes, a searchable
+					// combo, a multi-select list, toasts, all inside a split view.
+					test->add_item("Widgets")->on_click = [this](GUI::Elements::menu_list_element::ptr)
+						{
+							using namespace GUI::Elements;
+
+							auto split = std::make_shared<split_view>(true);
+							split->docking = GUI::dock::FILL;
+							split->ratio   = 0.55f;
+							split->first()->padding  = { 10, 10, 10, 10 };
+							split->second()->padding = { 10, 10, 10, 10 };
+
+							auto status = std::make_shared<label>();
+							auto add_row = [&](const std::string& caption, GUI::base::ptr widget)
+								{
+									auto row = std::make_shared<layouts::horizontal>();
+									row->docking = GUI::dock::TOP;
+									row->x_type  = GUI::pos_x_type::LEFT;
+									row->margin  = { 0, 0, 0, 8 };
+
+									auto name = std::make_shared<label>();
+									name->text = caption;
+									name->width_size = GUI::size_type::FIXED;
+									name->size = { 130, 26 };
+									name->magnet_text = FW1_LEFT | FW1_VCENTER;
+									row->add_child(name);
+									row->add_child(widget);
+									split->first()->add_child(row);
+								};
+
+							label::wptr status_weak = status;
+							auto report = [status_weak](const std::string& text)
+								{
+									if (auto s = status_weak.lock()) s->text = text;
+								};
+
+							auto number = std::make_shared<float_box>();
+							number->min = 0;
+							number->max = 10;
+							number->set_value(2.5f);
+							number->on_value_change = [report](float v) { report("float_box = " + std::to_string(v)); };
+							add_row("Float [0..10]", number);
+
+							auto position = std::make_shared<vector_box>(3);
+							position->on_value_change = [report](float4 v)
+								{
+									report(std::format("vector_box = ({}, {}, {})", v.x, v.y, v.z));
+								};
+							add_row("Position", position);
+
+							auto color = std::make_shared<vector_box>(4);
+							color->set_range(0, 1);
+							color->set_step(0.05f);
+							color->set_value(float4(1, 0.5f, 0.25f, 1));
+							add_row("Color [0..1]", color);
+
+							auto combo = std::make_shared<combo_box>();
+							combo->set_searchable(true);
+							combo->size = { 220, 26 };
+							for (const char* name : { "Albedo", "Normal", "Roughness", "Metallic", "Ambient occlusion",
+							                          "Emissive", "Height", "Opacity", "Subsurface", "Clear coat" })
+							{
+								std::string item = name;
+								combo->add_item(item)->on_select = [report, item]() { report("combo = " + item); };
+							}
+							combo->get_label()->text = "Albedo";
+							add_row("Searchable combo", combo);
+
+							auto toasts = std::make_shared<layouts::horizontal>();
+							for (auto [caption, kind] : { std::pair{ "Info", toast_kind::info }, std::pair{ "Success", toast_kind::success },
+							                              std::pair{ "Warning", toast_kind::warning }, std::pair{ "Error", toast_kind::error } })
+							{
+								auto b = std::make_shared<button>();
+								b->get_label()->text = caption;
+								b->size   = { 70, 26 };
+								b->margin = { 0, 0, 6, 0 };
+								b->on_click = [kind, caption = std::string(caption)](button::ptr)
+									{
+										toast_manager::show(caption + ": something happened at " + std::format("{:%T}", std::chrono::system_clock::now()), kind);
+									};
+								toasts->add_child(b);
+							}
+							add_row("Toasts", toasts);
+
+							status->docking = GUI::dock::TOP;
+							status->text = "Commit a value (Enter / click away) or pick something.";
+							split->first()->add_child(status);
+
+							auto hint = std::make_shared<label>();
+							hint->docking = GUI::dock::TOP;
+							hint->text = "Multi-select: Ctrl toggles, Shift selects a range. Drag the divider.";
+							hint->margin = { 0, 0, 0, 8 };
+							split->second()->add_child(hint);
+
+							auto selection = std::make_shared<label>();
+							selection->docking = GUI::dock::BOTTOM;
+							split->second()->add_child(selection);
+
+							auto list = std::make_shared<list_box>();
+							list->docking = GUI::dock::FILL;
+							list->multi_select = true;
+							for (int i = 1; i <= 30; i++)
+								list->add_item("Item " + std::to_string(i));
+							label::wptr selection_weak = selection;
+							list->on_selection_changed = [selection_weak](const std::vector<int>& indices)
+								{
+									std::string text = "Selected:";
+									for (int i : indices) text += " " + std::to_string(i + 1);
+									if (auto s = selection_weak.lock()) s->text = text;
+								};
+							split->second()->add_child(list);
+
+							docker->get_tabs()->add_page("Widgets", split);
+						};
+
 					GUI::Elements::Debug::OutputWindow::on_open_file = [this](std::string file, int line, int column)
 						{
 							open_code_editor(std::move(file), line, column);
@@ -2218,6 +2333,9 @@ public:
 					// Shows an element's `tooltip` after a short hover (e.g. the
 					// code editor's compile errors).
 					add_child(std::make_shared<GUI::Elements::tooltip_manager>());
+
+					// Timed notifications (GUI::Elements::toast_manager::show from anywhere).
+					add_child(std::make_shared<GUI::Elements::toast_manager>());
 				}
 				{
 					GUI::Elements::status_bar::ptr bar(new GUI::Elements::status_bar());

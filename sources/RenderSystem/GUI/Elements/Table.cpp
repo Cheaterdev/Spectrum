@@ -64,7 +64,6 @@ namespace GUI
             }
 
             dragger->target = this;
-            dragger->draw_color = true;
         }
 
         void Table::Header::on_bounds_changed(const rect& r)

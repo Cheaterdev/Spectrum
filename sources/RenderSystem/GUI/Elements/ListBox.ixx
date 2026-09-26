@@ -34,9 +34,18 @@ export namespace GUI
         {
 
                 std::vector<list_element::ptr > elements;
+                int anchor = -1;   // where a shift-click range starts
 
 
             public:
+                // Shift-click selects a range from the last clicked item,
+                // Ctrl-click toggles one; a plain click selects just that item.
+                bool multi_select = false;
+
+                // After any change made by a click. UI thread.
+                std::function<void(const std::vector<int>&)> on_selection_changed;
+
+                std::vector<int> selected_indices() const;
 
                 void clear_items();
                 //	class renderer;
@@ -50,7 +59,7 @@ export namespace GUI
                 list_element::ptr add_item(std::string elem);
                 virtual void draw(Context& c) override;
 
-                  void on_select(list_element*);               
+                  void on_select(list_element*, bool shift = false, bool ctrl = false);
              
                 /*	virtual void on_mouse_action(mouse_action action, mouse_button button, vec2 pos) override;
 

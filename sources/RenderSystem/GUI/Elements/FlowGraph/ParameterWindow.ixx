@@ -6,6 +6,7 @@ import :TabControl;
 import :CheckBoxText;
 import :FloatSlider;
 import :EditText;
+import :FloatBox;
 import :ComboBox;
 import :Label;
 import :Button;
@@ -85,22 +86,13 @@ export namespace GUI
 			}
 			else
 			{
-				auto edit = std::make_shared<GUI::Elements::edit_text>();
-				edit->size = { 60, 0 };
-				edit->set_text(std::to_string((float)elem));
-				// Only characters a float literal can contain -- on_change still
-				// fires per keystroke (edit_text has no commit-on-enter), so an
-				// in-progress partial value like "-" or "1." is expected and just
-				// silently skipped below rather than applied.
-				edit->filter = [](char32_t ch) { return (ch >= '0' && ch <= '9') || ch == '.' || ch == '-'; };
-				edit->on_change = [&elem](const std::string& text)
-				{
-					try { elem = std::stof(text); } catch (...) {}
-				};
-				// Skipped while focused: the edit's own on_change writes elem, which
-				// echoes back here and would reformat "1." to "1.000000" mid-typing.
-				elem.on_change.register_handler(row.get(), [edit](float v) { if (!edit->is_focused()) edit->set_text(std::to_string(v)); });
-				row->add_child(edit);
+				auto box = std::make_shared<GUI::Elements::float_box>();
+				box->set_value((float)elem);
+				box->on_value_change = [&elem](float value) { elem = value; };
+				// Skipped while focused: the text being typed isn't committed yet
+				// and must not be overwritten.
+				elem.on_change.register_handler(row.get(), [box](float v) { if (!box->is_focused()) box->set_value(v); });
+				row->add_child(box);
 			}
 
 			add_revert_button(row, elem);
@@ -109,12 +101,9 @@ export namespace GUI
 		}
 
 
-		// Same shape as Variable<float>'s constrained branch -- reuses
-		// float_slider (there's no dedicated integer slider widget) and just
-		// rounds at the float<->int boundary on both read and write. Only
-		// the constrained case is handled: an unconstrained Variable<int> has
-		// no natural free-form-text-box equivalent of Variable<float>'s
-		// std::stof path worth building until something actually needs one.
+		// Same shape as Variable<float>'s row -- reuses float_slider (there's
+		// no dedicated integer slider widget) or a float_box with 0 decimals,
+		// and rounds at the float<->int boundary on both read and write.
 		inline base::ptr create_property_internal(Variable<int>& elem)
 		{
 			auto row = std::make_shared<GUI::Elements::layouts::horizontal>();
@@ -156,9 +145,15 @@ export namespace GUI
 			}
 			else
 			{
-				auto label2 = std::make_shared<GUI::Elements::label>();
-				label2->text = std::to_string((int)elem);
-				row->add_child(label2);
+				auto box = std::make_shared<GUI::Elements::float_box>();
+				box->precision = 0;
+				box->step      = 1;
+				box->min       = (float)std::numeric_limits<int>::min();
+				box->max       = (float)std::numeric_limits<int>::max();
+				box->set_value((float)(int)elem);
+				box->on_value_change = [&elem](float value) { elem = (int)std::lround(value); };
+				elem.on_change.register_handler(row.get(), [box](int v) { if (!box->is_focused()) box->set_value((float)v); });
+				row->add_child(box);
 			}
 
 			add_revert_button(row, elem);

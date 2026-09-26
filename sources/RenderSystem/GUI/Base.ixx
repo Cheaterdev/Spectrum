@@ -375,6 +375,10 @@ namespace GUI
             void unfocus();
 
             bool is_focused();
+
+            // Keyboard focus gained or lost; UI thread. focus() on another
+            // element, or a press outside this one, takes it away.
+            virtual void on_focus_changed(bool focused);
         protected:
             virtual void on_add(base* parent) override;
             virtual void on_remove() override;

@@ -1,6 +1,8 @@
 module GUI:ListBox;
 import :Renderer;
 
+import <windows/windows.h>;
+
 
    GUI::Elements::list_element::list_element(list_box* owner):owner(owner)
    {
@@ -30,6 +32,7 @@ GUI::Elements::list_element::ptr GUI::Elements::list_box::add_item(std::string e
     elements.push_back(l_e);
 //	contents->size = { 80, contents->size->y + l_e->size->y + l_e->margin->top + l_e->margin->bottom };
     l_e->selected = elements.size() == 1;
+    if (elements.size() == 1) anchor = 0;
     return l_e;
 }
 
@@ -41,13 +44,44 @@ GUI::Elements::list_box::list_box()
     padding = { 5, 5, 5, 5 };
 }
 
-     void GUI::Elements::list_box::on_select(list_element* elem)
+     void GUI::Elements::list_box::on_select(list_element* elem, bool shift, bool ctrl)
      {
+         const auto found = std::find_if(elements.begin(), elements.end(), [&](auto& e) { return e.get() == elem; });
+         if (found == elements.end())
+             return;
+         const int index = int(found - elements.begin());
 
-         // todo:optimize this sht
+         if (!multi_select || (!shift && !ctrl))
+         {
              for (auto& e : elements)
-            e->selected = e.get() == elem;
-     
+                 e->selected = e.get() == elem;
+             anchor = index;
+         }
+         else if (shift && anchor >= 0 && anchor < (int)elements.size())
+         {
+             // Ctrl+Shift adds the range to what is selected; Shift alone replaces it.
+             const int lo = std::min(anchor, index), hi = std::max(anchor, index);
+             for (int i = 0; i < (int)elements.size(); i++)
+                 if (i >= lo && i <= hi)  elements[i]->selected = true;
+                 else if (!ctrl)          elements[i]->selected = false;
+         }
+         else
+         {
+             elem->selected = ctrl ? !elem->selected : true;
+             anchor = index;
+         }
+
+         if (on_selection_changed)
+             on_selection_changed(selected_indices());
+     }
+
+     std::vector<int> GUI::Elements::list_box::selected_indices() const
+     {
+         std::vector<int> result;
+         for (int i = 0; i < (int)elements.size(); i++)
+             if (elements[i]->selected)
+                 result.push_back(i);
+         return result;
      }
     
 
@@ -58,6 +92,7 @@ GUI::Elements::list_box::list_box()
                   e->remove_from_parent();
 
                 elements.clear();
+                anchor = -1;
         }
 namespace GUI
 {
@@ -76,7 +111,8 @@ namespace GUI
         if (button == mouse_button::LEFT)
             if (action == mouse_action::UP)
             {
-                owner->on_select(this);
+                // Mouse events carry no modifiers.
+                owner->on_select(this, GetKeyState(VK_SHIFT) < 0, GetKeyState(VK_CONTROL) < 0);
             
                                    if (on_select)
                     on_select(std::static_pointer_cast<list_element>(get_ptr()));

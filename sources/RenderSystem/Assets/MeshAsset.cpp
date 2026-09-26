@@ -152,6 +152,43 @@ MeshAsset::MeshAsset(std::wstring file_name, AssetLoadingContext::ptr c)
 	std::vector<Table::Meshes::Meshlet> meshlets;
 	std::vector<Table::Meshes::MeshletCullData> meshlet_cull;
 	
+	// TEMP (meshlet cull investigation): does every cull sphere contain its
+	// meshlet's vertices, and how many meshlets exceed the MS's 64-triangle
+	// output? Remove once the wrongly-culled-meshlet bug is understood.
+	{
+		std::ofstream check("meshlet_check.temp", std::ios::app);
+		check << "asset " << convert(file_name) << "\n";
+		for (size_t mi = 0; mi < data->meshes.size(); mi++)
+		{
+			auto& mesh = data->meshes[mi];
+			uint over_prims = 0, bad_spheres = 0, max_prims = 0;
+			float worst_excess = 0, worst_ratio = 0;
+			for (auto& meshet : mesh.meshlets)
+			{
+				uint prims = static_cast<uint>(meshet.PrimitiveIndices.size() / 3);
+				max_prims = std::max(max_prims, prims);
+				if (prims > 64) over_prims++;
+
+				float4 s = meshet.cull_data.BoundingSphere;
+				float max_dist = 0;
+				for (auto v : meshet.UniqueVertexIndices)
+				{
+					vec3 p = data->vertex_buffer[mesh.vertex_offset + v].pos;
+					max_dist = std::max(max_dist, (p - vec3(s.xyz)).length());
+				}
+				if (max_dist > s.w * 1.001f + 1e-4f)
+				{
+					bad_spheres++;
+					worst_excess = std::max(worst_excess, max_dist - s.w);
+					worst_ratio = std::max(worst_ratio, s.w > 0 ? max_dist / s.w : 1e9f);
+				}
+			}
+			check << "  mesh " << mi << " meshlets=" << mesh.meshlets.size() << " max_prims=" << max_prims
+				<< " over64=" << over_prims << " bad_spheres=" << bad_spheres
+				<< " worst_excess=" << worst_excess << " worst_ratio=" << worst_ratio << "\n";
+		}
+	}
+
 	for (auto& mesh : data->meshes)
 	{
 	//	mesh.meshlets_offset = meshlets_count;

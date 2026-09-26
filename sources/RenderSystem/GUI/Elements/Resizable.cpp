@@ -68,4 +68,8 @@ GUI::Elements::resizable::resizable()
 	resizers[6]->dir = direction::RIGHT;
 	resizers[6]->target = this;
 	add_child(resizers[6]);
+
+	// Window edges stay invisible; only their cursor shows they can be grabbed.
+	for (auto& r : resizers)
+		if (r) r->draw_color = false;
 }

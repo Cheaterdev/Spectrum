@@ -52,6 +52,7 @@ GUI::Elements::FlowGraph::comment::comment(canvas* canva, ::FlowGraph::window* w
     title_bar->docking = dock::TOP;
     //holder.reset(this);
     title_bar->target = this;
+    title_bar->draw_color = false;   // drawn by the comment itself
     //title_bar->draw_helper = true;
     title_bar->on_move = [canva, this](vec2, vec2 dt)
     {
