@@ -23,6 +23,9 @@ import TextEngine;
 // -----------------------------------------------------------------------
 namespace
 {
+	using Test::UI_RT_FORMAT;
+	using Test::set_ui_target;
+
 	std::shared_ptr<HAL::TextureResource> make_ninepatch_src(HAL::Device& device)
 	{
 		constexpr uint TEX_W = 32, TEX_H = 32, CORNER = 8;
@@ -59,7 +62,7 @@ namespace
 		auto src = make_ninepatch_src(device);
 
 		auto rt = std::make_shared<HAL::TextureResource>(device,
-			HAL::ResourceDesc::Tex2D(HAL::Format::B8G8R8A8_UNORM, {RT_W, RT_H}, 1, 1,
+			HAL::ResourceDesc::Tex2D(UI_RT_FORMAT, {RT_W, RT_H}, 1, 1,
 				HAL::ResFlags::RenderTarget),
 			HAL::HeapType::DEFAULT);
 
@@ -69,11 +72,7 @@ namespace
 		HAL::Texture2DView src_view(src, *list);
 		HAL::Texture2DView rt_view(rt, *list);
 
-		HAL::CompiledRT compiled;
-		compiled.table_rtv = rt_view.renderTarget;
-		list->get_graphics().set_rtv(compiled,
-			HAL::RTOptions::Default | HAL::RTOptions::ClearColor, 0, 0,
-			vec4(0.05f, 0.05f, 0.1f, 1.0f));
+		set_ui_target(list, rt_view, vec4(0.05f, 0.05f, 0.1f, 1.0f));
 
 		sizer_long full_vp{ 0, 0, (long)RT_W, (long)RT_H };
 		list->get_graphics().set_scissors(full_vp);
@@ -166,7 +165,7 @@ export namespace Test
 		constexpr uint WIDTH = 256, HEIGHT = 256;
 
 		auto tex = std::make_shared<HAL::TextureResource>(device,
-			HAL::ResourceDesc::Tex2D(HAL::Format::B8G8R8A8_UNORM, {WIDTH, HEIGHT}, 1, 1,
+			HAL::ResourceDesc::Tex2D(UI_RT_FORMAT, {WIDTH, HEIGHT}, 1, 1,
 				HAL::ResFlags::RenderTarget),
 			HAL::HeapType::DEFAULT);
 
@@ -175,11 +174,7 @@ export namespace Test
 		list->begin(L"GUIRenderer_DrawColor");
 
 		HAL::Texture2DView view(tex, *list);
-		HAL::CompiledRT compiled_rt;
-		compiled_rt.table_rtv = view.renderTarget;
-		list->get_graphics().set_rtv(compiled_rt,
-			HAL::RTOptions::Default | HAL::RTOptions::ClearColor, 0, 0,
-			vec4(0.1f, 0.1f, 0.2f, 1.0f));
+		set_ui_target(list, view, vec4(0.1f, 0.1f, 0.2f, 1.0f));
 
 		sizer_long full_vp;
 		full_vp.left   = 0;
@@ -215,7 +210,7 @@ export namespace Test
 		constexpr uint WIDTH = 256, HEIGHT = 256;
 
 		auto tex = std::make_shared<HAL::TextureResource>(device,
-			HAL::ResourceDesc::Tex2D(HAL::Format::B8G8R8A8_UNORM, {WIDTH, HEIGHT}, 1, 1,
+			HAL::ResourceDesc::Tex2D(UI_RT_FORMAT, {WIDTH, HEIGHT}, 1, 1,
 				HAL::ResFlags::RenderTarget),
 			HAL::HeapType::DEFAULT);
 
@@ -233,11 +228,7 @@ export namespace Test
 		list->begin(L"GUIElement_ColoredRect");
 
 		HAL::Texture2DView view(tex, *list);
-		HAL::CompiledRT compiled_rt;
-		compiled_rt.table_rtv = view.renderTarget;
-		list->get_graphics().set_rtv(compiled_rt,
-			HAL::RTOptions::Default | HAL::RTOptions::ClearColor, 0, 0,
-			vec4(0.1f, 0.1f, 0.2f, 1.0f));
+		set_ui_target(list, view, vec4(0.1f, 0.1f, 0.2f, 1.0f));
 
 		sizer_long full_vp;
 		full_vp.left   = 0;
@@ -272,7 +263,7 @@ export namespace Test
 		constexpr uint WIDTH = 256, HEIGHT = 240;
 
 		auto tex = std::make_shared<HAL::TextureResource>(device,
-			HAL::ResourceDesc::Tex2D(HAL::Format::B8G8R8A8_UNORM, {WIDTH, HEIGHT}, 1, 1,
+			HAL::ResourceDesc::Tex2D(UI_RT_FORMAT, {WIDTH, HEIGHT}, 1, 1,
 				HAL::ResFlags::RenderTarget),
 			HAL::HeapType::DEFAULT);
 
@@ -305,11 +296,7 @@ export namespace Test
 		list->begin(L"GUIElement_ThreeBands");
 
 		HAL::Texture2DView view(tex, *list);
-		HAL::CompiledRT compiled_rt;
-		compiled_rt.table_rtv = view.renderTarget;
-		list->get_graphics().set_rtv(compiled_rt,
-			HAL::RTOptions::Default | HAL::RTOptions::ClearColor, 0, 0,
-			vec4(0.05f, 0.05f, 0.1f, 1.0f));
+		set_ui_target(list, view, vec4(0.05f, 0.05f, 0.1f, 1.0f));
 
 		sizer_long full_vp;
 		full_vp.left   = 0;
@@ -347,7 +334,7 @@ export namespace Test
 		auto& device = RenderSystem::get().device();
 
 		auto tex = std::make_shared<HAL::TextureResource>(device,
-			HAL::ResourceDesc::Tex2D(HAL::Format::B8G8R8A8_UNORM, {W, H}, 1, 1,
+			HAL::ResourceDesc::Tex2D(UI_RT_FORMAT, {W, H}, 1, 1,
 				HAL::ResFlags::RenderTarget),
 			HAL::HeapType::DEFAULT);
 
@@ -383,11 +370,7 @@ export namespace Test
 		list->begin(L"GUIElement_Label");
 
 		HAL::Texture2DView view(tex, *list);
-		HAL::CompiledRT compiled_rt;
-		compiled_rt.table_rtv = view.renderTarget;
-		list->get_graphics().set_rtv(compiled_rt,
-			HAL::RTOptions::Default | HAL::RTOptions::ClearColor, 0, 0,
-			vec4(0.05f, 0.05f, 0.1f, 1.0f));
+		set_ui_target(list, view, vec4(0.05f, 0.05f, 0.1f, 1.0f));
 
 		sizer_long full_vp{ 0, 0, (long)W, (long)H };
 		list->get_graphics().set_scissors(full_vp);
@@ -442,7 +425,7 @@ export namespace Test
 		auto& device = RenderSystem::get().device();
 
 		auto tex = std::make_shared<HAL::TextureResource>(device,
-			HAL::ResourceDesc::Tex2D(HAL::Format::B8G8R8A8_UNORM, {W, H}, 1, 1,
+			HAL::ResourceDesc::Tex2D(UI_RT_FORMAT, {W, H}, 1, 1,
 				HAL::ResFlags::RenderTarget),
 			HAL::HeapType::DEFAULT);
 
@@ -563,11 +546,7 @@ export namespace Test
 		list->begin(L"GUIFullScreen");
 
 		HAL::Texture2DView view(tex, *list);
-		HAL::CompiledRT compiled_rt;
-		compiled_rt.table_rtv = view.renderTarget;
-		list->get_graphics().set_rtv(compiled_rt,
-			HAL::RTOptions::Default | HAL::RTOptions::ClearColor, 0, 0,
-			vec4(0.05f, 0.05f, 0.1f, 1.0f));
+		set_ui_target(list, view, vec4(0.05f, 0.05f, 0.1f, 1.0f));
 
 		sizer_long full_vp;
 		full_vp.left   = 0;
@@ -656,7 +635,7 @@ export namespace Test
 		}
 
 		auto rt = std::make_shared<HAL::TextureResource>(device,
-			HAL::ResourceDesc::Tex2D(HAL::Format::B8G8R8A8_UNORM, {RT_W, RT_H}, 1, 1,
+			HAL::ResourceDesc::Tex2D(UI_RT_FORMAT, {RT_W, RT_H}, 1, 1,
 				HAL::ResFlags::RenderTarget),
 			HAL::HeapType::DEFAULT);
 
@@ -667,11 +646,7 @@ export namespace Test
 		HAL::Texture2DView src_view(src_tex, *list);
 		HAL::Texture2DView rt_view(rt, *list);
 
-		HAL::CompiledRT compiled_rt;
-		compiled_rt.table_rtv = rt_view.renderTarget;
-		list->get_graphics().set_rtv(compiled_rt,
-			HAL::RTOptions::Default | HAL::RTOptions::ClearColor, 0, 0,
-			vec4(0.05f, 0.05f, 0.1f, 1.0f));
+		set_ui_target(list, rt_view, vec4(0.05f, 0.05f, 0.1f, 1.0f));
 
 		sizer_long full_vp;
 		full_vp.left   = 0;

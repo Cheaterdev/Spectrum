@@ -4,8 +4,87 @@ import RenderSystem;
 import HAL;
 import Core;
 
+namespace
+{
+	float half_to_float(uint16_t h)
+	{
+		uint32_t sign = (uint32_t)(h & 0x8000) << 16;
+		uint32_t exp  = (h >> 10) & 0x1f;
+		uint32_t mant = h & 0x3ff;
+		uint32_t bits;
+		if (exp == 0)
+		{
+			if (mant == 0)
+				bits = sign;
+			else
+			{
+				// subnormal: renormalize into a float32 normal
+				exp = 127 - 15 + 1;
+				while (!(mant & 0x400)) { mant <<= 1; --exp; }
+				bits = sign | (exp << 23) | ((mant & 0x3ff) << 13);
+			}
+		}
+		else if (exp == 0x1f)
+			bits = sign | 0x7f800000 | (mant << 13);
+		else
+			bits = sign | ((exp + 127 - 15) << 23) | (mant << 13);
+		return std::bit_cast<float>(bits);
+	}
+
+	uint8_t unorm8(float c)
+	{
+		return (uint8_t)std::lround(std::clamp(c, 0.0f, 1.0f) * 255.0f);
+	}
+
+	uint8_t linear_to_srgb8(float c)
+	{
+		c = std::clamp(c, 0.0f, 1.0f);
+		return unorm8(c <= 0.0031308f ? c * 12.92f : 1.055f * std::pow(c, 1.0f / 2.4f) - 0.055f);
+	}
+
+	// UI PSOs target the scRGB swapchain (R16G16B16A16_FLOAT, linear). With
+	// ui_scale = 1 the shader writes srgb_to_linear(color), so re-encoding to
+	// sRGB here reproduces the 8-bit values the golden references hold.
+	HAL::texture_data::ptr fp16_to_rgba8(const HAL::texture_data& src, Test::FloatEncoding encoding)
+	{
+		auto encode = encoding == Test::FloatEncoding::Linear ? linear_to_srgb8 : unorm8;
+
+		auto& in  = src.array[0]->mips[0];
+		auto  out = std::make_shared<HAL::texture_data>(1, 1, in->width, in->height, 1, HAL::Format::R8G8B8A8_UNORM);
+		auto& dst = out->array[0]->mips[0];
+
+		for (uint y = 0; y < in->height; ++y)
+		{
+			auto src_row = reinterpret_cast<const uint16_t*>(in->data.data() + (size_t)y * in->width_stride);
+			auto dst_row = dst->data.data() + (size_t)y * dst->width_stride;
+			for (uint x = 0; x < in->width; ++x)
+			{
+				for (uint c = 0; c < 3; ++c)
+					dst_row[x * 4 + c] = encode(half_to_float(src_row[x * 4 + c]));
+				dst_row[x * 4 + 3] = unorm8(half_to_float(src_row[x * 4 + 3]));
+			}
+		}
+		return out;
+	}
+}
+
 namespace Test
 {
+	void set_ui_target(HAL::CommandList::ptr& list, HAL::Texture2DView& view, vec4 srgb_clear)
+	{
+		auto to_linear = [](float c) { return c <= 0.04045f ? c / 12.92f : std::pow((c + 0.055f) / 1.055f, 2.4f); };
+
+		HAL::CompiledRT compiled;
+		compiled.table_rtv = view.renderTarget;
+		list->get_graphics().set_rtv(compiled,
+			HAL::RTOptions::Default | HAL::RTOptions::ClearColor, 0, 0,
+			vec4(to_linear(srgb_clear.x), to_linear(srgb_clear.y), to_linear(srgb_clear.z), srgb_clear.w));
+
+		Slots::UI::DisplayOutput output;
+		output.GetUi_scale() = 1.0f;
+		list->get_graphics().set(output);
+	}
+
 	HAL::texture_data::ptr readback_texture(HAL::TextureResource* tex, uint sub_resource)
 	{
 		auto& device = RenderSystem::get().device();
@@ -36,9 +115,24 @@ namespace Test
 		const std::filesystem::path& reference_dir,
 		const std::filesystem::path& results_dir)
 	{
+		check_texture_reference(tex, name, FloatEncoding::Linear, sub_resource, tolerance, reference_dir, results_dir);
+	}
+
+	void check_texture_reference(
+		HAL::TextureResource*        tex,
+		const std::string&           name,
+		FloatEncoding                float_encoding,
+		uint                         sub_resource,
+		uint                         tolerance,
+		const std::filesystem::path& reference_dir,
+		const std::filesystem::path& results_dir)
+	{
 		auto actual = readback_texture(tex, sub_resource);
 		if (!actual)
 			throw TestFailure("check_texture_reference: readback failed for '" + name + "'");
+
+		if (actual->format == HAL::Format::R16G16B16A16_FLOAT)
+			actual = fp16_to_rgba8(*actual, float_encoding);
 
 		auto actual_png = actual->to_png();
 		if (actual_png.empty())

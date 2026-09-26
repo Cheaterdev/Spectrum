@@ -9,6 +9,32 @@ export namespace Test
 {
 	HAL::texture_data::ptr readback_texture(HAL::TextureResource* tex, uint sub_resource = 0);
 
+	// UI PSOs are built for the scRGB swapchain; check_texture_reference
+	// re-encodes this format to sRGB8 before comparing against the goldens.
+	inline const HAL::Format UI_RT_FORMAT = HAL::Format::R16G16B16A16_FLOAT;
+
+	// Binds a UI_RT_FORMAT view with a clear, plus the DisplayOutput UI_Render
+	// binds on an SDR display. srgb_clear is sRGB-encoded, as it was when these
+	// targets were UNORM; it is linearized for the scRGB target.
+	void set_ui_target(HAL::CommandList::ptr& list, HAL::Texture2DView& view, vec4 srgb_clear);
+
+	// How an R16G16B16A16_FLOAT target is turned into the 8-bit values the
+	// goldens hold. Other formats are compared as stored.
+	enum class FloatEncoding
+	{
+		Linear,   // scRGB (UI targets): sRGB-encode
+		Encoded,  // shader already gamma-encoded (e.g. ColorRTX's pow(1/2.2)): clamp only
+	};
+
+	void check_texture_reference(
+		HAL::TextureResource*        tex,
+		const std::string&           name,
+		FloatEncoding                float_encoding,
+		uint                         sub_resource  = 0,
+		uint                         tolerance     = 2,
+		const std::filesystem::path& reference_dir = "test_references",
+		const std::filesystem::path& results_dir   = "test_results");
+
 	void check_texture_reference(
 		HAL::TextureResource*        tex,
 		const std::string&           name,

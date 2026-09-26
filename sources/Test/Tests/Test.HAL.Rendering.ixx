@@ -400,7 +400,7 @@ float4 PS(VSOut i) : SV_Target { return i.col; }
 		}
 
 		static constexpr const char* kNormalPS = R"hlsl(
-#include "mesh_shader.hlsl"
+#include "gbuffer/mesh_shader.hlsl"
 float4 PS(vertex_output i) : SV_Target { return float4(i.normal * 0.5 + 0.5, 1); }
 )hlsl";
 

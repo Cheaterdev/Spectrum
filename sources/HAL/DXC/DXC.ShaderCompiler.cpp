@@ -323,7 +323,8 @@ namespace HAL
 			errorMsg.append(infoLog);
 			Log::get() << Log::LEVEL_ERROR << errorMsg << Log::endl;
 
-			MessageBoxA(nullptr, errorMsg.c_str(), "Error!", MB_OK);
+			if (!Application::test_mode)
+				MessageBoxA(nullptr, errorMsg.c_str(), "Error!", MB_OK);
 			return std::nullopt;
 		}
 
@@ -541,8 +542,9 @@ namespace HAL
 			errorMsg += file_name + "\n";
 			errorMsg.append((infoLog));
 			Log::get() << Log::LEVEL_ERROR << errorMsg << Log::endl;
-		
-			MessageBoxA(nullptr, errorMsg.c_str(), "Error!", MB_OK);
+
+			if (!Application::test_mode)
+				MessageBoxA(nullptr, errorMsg.c_str(), "Error!", MB_OK);
 			return {};
 		}
 		ComPtr<IDxcBlob> resultBlob;

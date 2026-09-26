@@ -23,7 +23,7 @@ export namespace Test
 	//   → create_graph → Graph::setup/compile/render/commit → golden image comparison.
 	//
 	// UI: dark background fill, a 64px red top band, and a green fill area.
-	// Rendered into a 512×256 B8G8R8A8_UNORM off-screen texture.
+	// Rendered into a 512×256 UI_RT_FORMAT off-screen texture.
 	TEST(Core.HAL, FrameGraph_UIPipeline)
 	{
 		THREAD_SCOPE(GUI);
@@ -31,7 +31,7 @@ export namespace Test
 		constexpr uint W = 512, H = 256;
 
 		auto rt = std::make_shared<HAL::TextureResource>(device,
-			HAL::ResourceDesc::Tex2D(HAL::Format::B8G8R8A8_UNORM, {W, H}, 1, 1,
+			HAL::ResourceDesc::Tex2D(UI_RT_FORMAT, {W, H}, 1, 1,
 				HAL::ResFlags::RenderTarget),
 			HAL::HeapType::DEFAULT);
 

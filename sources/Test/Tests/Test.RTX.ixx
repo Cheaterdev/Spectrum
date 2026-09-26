@@ -36,11 +36,6 @@ export namespace Test
 		auto& device = RenderSystem::get().device();
 		constexpr uint W = 256, H = 256;
 
-		// Single-mip UAV+SRV texture: RTX writes here directly.
-		auto output = std::make_shared<HAL::Texture>(device,
-			HAL::ResourceDesc::Tex2D(HAL::Format::R8G8B8A8_UNORM, {W, H}, 1, 1,
-				HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess));
-
 		// Scene: material_tester sphere with the custom material.
 		auto mesh_inst = std::make_shared<MeshAssetInstance>(EngineAssets::material_tester.get_asset());
 			auto plane_inst = std::make_shared<MeshAssetInstance>(EngineAssets::plane.get_asset());
@@ -113,16 +108,20 @@ export namespace Test
 			PassDefault<Passes::Frame::PreScene>::flags);
 				 
 		// Pass 2: primary-ray color pass — no GBuffer, writes to ColorOutput.
+		// The generated need_always()/create_always() link `scene` (PreScene)
+		// and create ColorOutput at ViewportInfo::frame_size. ColorOutput can't
+		// be supplied via pass_texture: create_always() replaces the passed
+		// handler, leaving the pass writing through a null UAV. Required keeps
+		// the pass alive with no consumer; the output is read back below.
 		const ivec2 rtx_size {W, H};
+		// Captured during render: ColorOutput is transient, so the graph no
+		// longer holds it once the frame is committed.
+		std::shared_ptr<HAL::TextureResource> color_output;
 		graph.add_library_pass<Passes::Raytrace::Dev::RTXColorPass>(
-			[](auto& data, FrameGraph::TaskBuilder& builder) -> FrameGraph::SetupResult {
-				// Depend on PreScene (writes `scene`) so the RTX BVH is ready before tracing.
-				builder.need(data.scene, FrameGraph::ResourceFlags::Read);
-				builder.need(data.ColorOutput, FrameGraph::ResourceFlags::UnorderedAccess);
-
-				return true;
-			},
+			[](auto&, FrameGraph::TaskBuilder&) -> FrameGraph::SetupResult { return true; },
 			[&](auto& data, FrameGraph::FrameContext& ctx) {
+				color_output = std::dynamic_pointer_cast<HAL::TextureResource>(data.ColorOutput.info->resource);
+
 				auto& compute    = ctx.get_list()->get_compute();
 				auto& scene_info = ctx.graph->get_context<SceneInfo>();
 
@@ -141,11 +140,20 @@ export namespace Test
 				RTX::get().render<Raytrace::Dev::ColorRTX>(compute,
 					scene_info.scene->raytrace_scene, rtx_size);
 			},
-			FrameGraph::PassFlags::Compute);
+			FrameGraph::PassFlags::Compute | FrameGraph::PassFlags::Required);
 
-		// Register the output texture as the FrameGraph resource "ColorOutput".
-		graph.builder.pass_texture(FrameGraph::ResourceID::ColorOutput, output->resource,
-			{}, FrameGraph::ResourceFlags::Required);
+		// RTXColorPass [Always]-needs sky_cubemap_filtered to pull in the sky
+		// chain, which this graph doesn't have. FrameInfo.Sky is left unset
+		// above, so the miss shader never samples it -- it only has to exist.
+		auto sky_stub = std::make_shared<HAL::TextureResource>(device,
+			HAL::ResourceDesc::Tex2D(HAL::Format::R11G11B10_FLOAT, {1, 1}, 6, 1),
+			HAL::HeapType::DEFAULT);
+		graph.builder.pass_texture(FrameGraph::ResourceID::sky_cubemap_filtered, sky_stub);
+
+		// PreScene's [PreSetup] hook (raytrace_scene->new_frame()); a Pipeline
+		// runs it via run_pre_setups(), a hand-built graph has to call it.
+		// Without it the TLAS stays empty and every ray misses.
+		PassDefault<Passes::Frame::PreScene>::pre_setup(graph);
 
 		graph.setup();
 		graph.compile(frame_idx++);
@@ -153,11 +161,9 @@ export namespace Test
 
 		graph.commit_command_lists().wait();
 
-	
-
 		graph.reset();
-				   
-	
-		ASSERT_TEXTURE(output->resource.get(), "rtx_material_tester");
+
+		ASSERT_TRUE(color_output != nullptr);
+		Test::check_texture_reference(color_output.get(), "rtx_material_tester", Test::FloatEncoding::Encoded);
 	}
 }
