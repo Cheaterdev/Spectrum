@@ -38,7 +38,9 @@ export namespace HAL
             VkSemaphore   pending_signal_sem = VK_NULL_HANDLE;
 
             // Protects all vkQueue* calls — VkQueue must be externally synchronized.
-            mutable std::mutex vk_queue_mutex;
+            // Owned by the Device: queue types that share a VkQueue share it.
+            // Set together with vk_queue in construct().
+            std::mutex* vk_queue_mutex = nullptr;
 
             void execute(const API::CommandList* list);
             void flush();
@@ -64,7 +66,7 @@ export namespace HAL
             VkResult present(VkPresentInfoKHR& pi) noexcept
             {
                 if (vk_queue == VK_NULL_HANDLE) return VK_ERROR_DEVICE_LOST;
-                std::lock_guard lock(vk_queue_mutex);
+                std::lock_guard lock(*vk_queue_mutex);
                 return vkQueuePresentKHR(vk_queue, &pi);
             }
 
@@ -72,7 +74,7 @@ export namespace HAL
             void submit_raw(VkSubmitInfo2& info) noexcept
             {
                 if (vk_queue == VK_NULL_HANDLE) return;
-                std::lock_guard lock(vk_queue_mutex);
+                std::lock_guard lock(*vk_queue_mutex);
                 vkQueueSubmit2(vk_queue, 1, &info, VK_NULL_HANDLE);
             }
         };

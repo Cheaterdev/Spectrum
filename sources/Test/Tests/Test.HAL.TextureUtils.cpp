@@ -110,29 +110,25 @@ namespace Test
 	void check_texture_reference(
 		HAL::TextureResource*        tex,
 		const std::string&           name,
-		uint                         sub_resource,
-		uint                         tolerance,
+		const TextureCompare&        compare,
 		const std::filesystem::path& reference_dir,
 		const std::filesystem::path& results_dir)
 	{
-		check_texture_reference(tex, name, FloatEncoding::Linear, sub_resource, tolerance, reference_dir, results_dir);
-	}
-
-	void check_texture_reference(
-		HAL::TextureResource*        tex,
-		const std::string&           name,
-		FloatEncoding                float_encoding,
-		uint                         sub_resource,
-		uint                         tolerance,
-		const std::filesystem::path& reference_dir,
-		const std::filesystem::path& results_dir)
-	{
-		auto actual = readback_texture(tex, sub_resource);
+		auto actual = readback_texture(tex, compare.sub_resource);
 		if (!actual)
 			throw TestFailure("check_texture_reference: readback failed for '" + name + "'");
 
+		// TEMP: Vulkan golden-compare investigation -- remove once found.
+		if (actual->format == HAL::Format::R16G16B16A16_FLOAT && actual->width > 200)
+		{
+			auto& m = actual->array[0]->mips[0];
+			auto  p = reinterpret_cast<const uint16_t*>(m->data.data() + (size_t)(actual->height / 2) * m->width_stride) + 200 * 4;
+			std::ofstream("texture_compare.temp", std::ios::app) << name << " raw fp16 @(200,mid) "
+				<< half_to_float(p[0]) << " " << half_to_float(p[1]) << " " << half_to_float(p[2]) << " " << half_to_float(p[3]) << "\n" << std::flush;
+		}
+
 		if (actual->format == HAL::Format::R16G16B16A16_FLOAT)
-			actual = fp16_to_rgba8(*actual, float_encoding);
+			actual = fp16_to_rgba8(*actual, compare.float_encoding);
 
 		auto actual_png = actual->to_png();
 		if (actual_png.empty())
@@ -185,6 +181,21 @@ namespace Test
 		size_t bpp_ref = ref_data.size() / pixel_count;
 		size_t ch      = std::min({ bpp_act, bpp_ref, (size_t)3 });
 
+		// TEMP: Vulkan golden-compare investigation -- remove once found.
+		std::ofstream("texture_compare.temp", std::ios::app) << name << " fmt " << (int)actual->format
+			<< " act " << actual_rgba->width << "x" << actual_rgba->height << " bytes " << act_data.size() << " fmt " << (int)actual_rgba->format
+			<< " ref bytes " << ref_data.size() << " fmt " << (int)reference->format
+			<< " bpp " << bpp_act << "/" << bpp_ref << " ch " << ch;
+		if (actual_rgba->width > 200)
+		{
+			size_t p = (size_t)(actual_rgba->height / 2) * actual_rgba->width + 200;
+			auto& pre = actual->array[0]->mips[0]->data;
+			std::ofstream("texture_compare.temp", std::ios::app) << " | pre-png " << (int)pre[p*4] << "," << (int)pre[p*4+1] << "," << (int)pre[p*4+2]
+				<< " act " << (int)(uint8_t)act_data[p*bpp_act] << "," << (int)(uint8_t)act_data[p*bpp_act+1] << "," << (int)(uint8_t)act_data[p*bpp_act+2]
+				<< " ref " << (int)(uint8_t)ref_data[p*bpp_ref] << "," << (int)(uint8_t)ref_data[p*bpp_ref+1] << "," << (int)(uint8_t)ref_data[p*bpp_ref+2];
+		}
+		std::ofstream("texture_compare.temp", std::ios::app) << "\n" << std::flush;
+
 		for (size_t p = 0; p < pixel_count; ++p)
 		{
 			int max_diff = 0;
@@ -194,7 +205,7 @@ namespace Test
 				int d = std::abs((int)(uint8_t)act_data[p * bpp_act + c]
 				               - (int)(uint8_t)ref_data[p * bpp_ref + c]);
 				if (d > max_diff) max_diff = d;
-				if (d > (int)tolerance)
+				if (d > (int)compare.tolerance)
 					pixel_mismatch = true;
 			}
 			uint8_t brightness = (uint8_t)std::min(255, max_diff * 4);
@@ -208,6 +219,16 @@ namespace Test
 
 		if (mismatch_pixels == 0)
 			return;
+
+		const auto allowed_pixels = (size_t)(compare.max_mismatch_fraction * (double)pixel_count);
+		if (mismatch_pixels <= allowed_pixels)
+		{
+			// Within this test's budget: pass, but keep the drift visible.
+			Log::get() << Log::LEVEL_WARNING
+				<< "[TEXTURE] '" << name << "': " << mismatch_pixels << " / " << pixel_count
+				<< " pixels differ (within allowed " << allowed_pixels << ")" << Log::endl;
+			return;
+		}
 
 		// Save artefacts on failure
 		auto save_png = [&](const std::filesystem::path& path, const std::vector<uint8_t>& png)
@@ -231,6 +252,7 @@ namespace Test
 
 		throw TestFailure("Texture mismatch: '" + name + "' ("
 			+ std::to_string(mismatch_pixels) + "/" + std::to_string(pixel_count)
-			+ " pixels differ, see " + results_dir.string() + "/)");
+			+ " pixels differ, allowed " + std::to_string(allowed_pixels)
+			+ ", see " + results_dir.string() + "/)");
 	}
 }

@@ -11,7 +11,11 @@ namespace HAL
 {
 	void Queue::stop_all()
 	{
+		// TEMP: Vulkan teardown hang investigation -- remove once found.
+		std::ofstream("gpu_wait.temp", std::ios::app) << "stop_all queue " << (void*)this << " type " << (int)type << " fence " << (void*)&commandListCounter
+			<< " value " << m_fenceValue << " completed " << commandListCounter.get_completed_value() << "\n" << std::flush;
 		signal_and_wait();
+		std::ofstream("gpu_wait.temp", std::ios::app) << "stop_all queue " << (int)type << " done\n" << std::flush;
 		stop = true;
 
 		lists = {};

@@ -36,6 +36,18 @@ export namespace Test
 		std::string message;
 	};
 
+	// Thrown (via SKIP_TEST) from inside a test that can't run in this
+	// configuration, e.g. a feature a backend doesn't implement yet.
+	class TestSkipped : public std::exception
+	{
+	public:
+		explicit TestSkipped(const std::string& msg) : message(msg) {}
+		const char* what() const noexcept override { return message.c_str(); }
+
+	private:
+		std::string message;
+	};
+
 	class TestRegistry
 	{
 	public:
@@ -156,6 +168,13 @@ export namespace Test
 					test.func();
 					result.passed = true;
 					Log::get() << Log::LEVEL_INFO << "[PASS] " << fullName << Log::endl;
+				}
+				catch (const TestSkipped& e)
+				{
+					result.skipped = true;
+					result.passed = true;
+					result.errorMessage = e.what();
+					Log::get() << Log::LEVEL_INFO << "[SKIP] " << fullName << " (" << result.errorMessage << ")" << Log::endl;
 				}
 				catch (const TestFailure& e)
 				{

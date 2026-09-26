@@ -80,6 +80,16 @@ namespace HAL
                 auto mip      = mip_desc.get_mip(texture.subresource);
                 auto box      = ivec3(mip_desc.get_size(mip));
 
+                // TEMP: Vulkan crash investigation -- remove once the crash is found.
+                {
+                    auto want = device.get_texture_layout(srequest.resource->get_desc(), texture.subresource, box);
+                    std::ofstream("ds_queue.temp", std::ios::app) << srequest.file.string()
+                        << " off=" << srequest.file_offset << " size=" << srequest.size
+                        << " uncompressed=" << srequest.uncompressed_size << " compressed=" << srequest.compressed
+                        << " sub=" << texture.subresource << " save_row=" << save_layout.row_stride
+                        << " layout_row=" << want.row_stride << " layout_size=" << want.size << "\n" << std::flush;
+                }
+
                 list->get_copy().update_texture(
                     srequest.resource.get(),
                     ivec3(0, 0, 0),
@@ -113,7 +123,8 @@ namespace HAL
 
             if (family_idx == static_cast<uint32_t>(-1)) return;
 
-            vkGetDeviceQueue(vk_device, family_idx, 0, &vk_queue);
+            vkGetDeviceQueue(vk_device, family_idx, api_dev.get_queue_index(static_cast<int>(type)), &vk_queue);
+            vk_queue_mutex = &api_dev.get_queue_mutex(static_cast<int>(type));
 
             // Query timestamp frequency (nanoseconds per tick)
             VkPhysicalDeviceProperties props{};
@@ -219,7 +230,7 @@ namespace HAL
             submit.signalSemaphoreInfoCount  = sig_count;
             submit.pSignalSemaphoreInfos     = sig_count ? &sig_info  : nullptr;
 
-            std::lock_guard lock(vk_queue_mutex);
+            std::lock_guard lock(*vk_queue_mutex);
             vkQueueSubmit2(vk_queue, 1, &submit, VK_NULL_HANDLE);
             // Note: no flush() — frame pacing is handled by timeline semaphores in signal().
         }
@@ -228,7 +239,7 @@ namespace HAL
         {
             if (vk_queue != VK_NULL_HANDLE)
             {
-                std::lock_guard lock(vk_queue_mutex);
+                std::lock_guard lock(*vk_queue_mutex);
                 vkQueueWaitIdle(vk_queue);
             }
         }
@@ -247,7 +258,7 @@ namespace HAL
             submit.signalSemaphoreInfoCount = 1;
             submit.pSignalSemaphoreInfos    = &sem;
 
-            std::lock_guard lock(vk_queue_mutex);
+            std::lock_guard lock(*vk_queue_mutex);
             vkQueueSubmit2(vk_queue, 1, &submit, VK_NULL_HANDLE);
         }
 
@@ -255,6 +266,11 @@ namespace HAL
         {
             if (!waiter || vk_queue == VK_NULL_HANDLE) return;
             if (waiter.fence->timeline_semaphore == VK_NULL_HANDLE) return;
+
+            // TEMP: Vulkan teardown hang investigation -- remove once found.
+            std::ofstream("gpu_wait.temp", std::ios::app) << "queue " << (void*)static_cast<HAL::Queue*>(this)
+                << " waits fence " << (void*)waiter.fence << " value " << waiter.value
+                << " completed " << static_cast<const HAL::Fence*>(waiter.fence)->get_completed_value() << "\n" << std::flush;
 
             VkSemaphoreSubmitInfo sem{ VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO };
             sem.semaphore = waiter.fence->timeline_semaphore;
@@ -265,7 +281,7 @@ namespace HAL
             submit.waitSemaphoreInfoCount = 1;
             submit.pWaitSemaphoreInfos    = &sem;
 
-            std::lock_guard lock(vk_queue_mutex);
+            std::lock_guard lock(*vk_queue_mutex);
             vkQueueSubmit2(vk_queue, 1, &submit, VK_NULL_HANDLE);
         }
 

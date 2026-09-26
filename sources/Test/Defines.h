@@ -34,6 +34,12 @@
 #define ASSERT_NE(expected, actual) \
 	Test::AssertNotEqual(expected, actual, __FILE__, __LINE__)
 
+// Skip (not fail) a test that exercises something the Vulkan backend doesn't
+// implement yet. Remove from a test once its feature lands on Vulkan.
+#define SKIP_ON_VULKAN(reason) \
+	if (HAL::get_backend_name() == "vulkan") \
+		throw ::Test::TestSkipped("Vulkan: " reason)
+
 #define SETUP_CATEGORY(category, ...) \
 	namespace { \
 		struct CONCAT_IMPL(SetupRegistrar_, __LINE__) { \
@@ -50,8 +56,11 @@
 #define ASSERT_TEXTURE(tex, name) \
 	Test::check_texture_reference(tex, name)
 
-#define ASSERT_TEXTURE_EX(tex, name, sub_resource, tolerance) \
-	Test::check_texture_reference(tex, name, sub_resource, tolerance)
+// Per-test comparison options, as Test::TextureCompare designated initializers
+// (in member order: tolerance, max_mismatch_fraction, float_encoding, sub_resource):
+//   ASSERT_TEXTURE_EX(tex, "rtx", .tolerance = 8, .max_mismatch_fraction = 0.001);
+#define ASSERT_TEXTURE_EX(tex, name, ...) \
+	Test::check_texture_reference(tex, name, Test::TextureCompare{ __VA_ARGS__ })
 
 #define TEARDOWN_CATEGORY(category, ...) \
 	namespace { \

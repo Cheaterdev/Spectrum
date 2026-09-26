@@ -26,25 +26,27 @@ export namespace Test
 		Encoded,  // shader already gamma-encoded (e.g. ColorRTX's pow(1/2.2)): clamp only
 	};
 
-	void check_texture_reference(
-		HAL::TextureResource*        tex,
-		const std::string&           name,
-		FloatEncoding                float_encoding,
-		uint                         sub_resource  = 0,
-		uint                         tolerance     = 2,
-		const std::filesystem::path& reference_dir = "test_references",
-		const std::filesystem::path& results_dir   = "test_results");
+	struct TextureCompare
+	{
+		// Max per-channel difference (0-255) for a pixel to still count as
+		// matching. 2 absorbs PNG encoders rounding exact boundary values (e.g.
+		// 0.5*255) differently (DirectXTex on D3D12 vs WIC on Vulkan) and GPUs
+		// differing by a unit in the last place.
+		uint tolerance = 2;
+
+		// Fraction of pixels (0-1) allowed to exceed `tolerance` before the test
+		// fails. 0 = every pixel must match. For output with a little inherent
+		// noise, e.g. ray tracing.
+		double max_mismatch_fraction = 0.0;
+
+		FloatEncoding float_encoding = FloatEncoding::Linear;
+		uint          sub_resource   = 0;
+	};
 
 	void check_texture_reference(
 		HAL::TextureResource*        tex,
 		const std::string&           name,
-		uint                         sub_resource  = 0,
-		// Allow a 1-LSB difference per channel: golden references and actuals can
-		// be encoded by different PNG libraries (DirectXTex on D3D12 vs WIC on
-		// Vulkan) which round exact boundary values (e.g. 0.5*255) differently,
-		// and GPUs may differ by a unit in the last place.  2 stays well below
-		// any perceptible / real rendering error.
-		uint                         tolerance     = 2,
+		const TextureCompare&        compare       = {},
 		const std::filesystem::path& reference_dir = "test_references",
 		const std::filesystem::path& results_dir   = "test_results");
 }

@@ -191,7 +191,7 @@ namespace nvidia
 		return fn_is_feature_supported(to_sl(feature), info) == sl::Result::eOk;
 	}
 
-	void Streamline::bind_device(D3D::Device native_device)
+	void Streamline::bind_device(NativeDevice native_device)
 	{
 		if (!initialized || !native_device) return;
 

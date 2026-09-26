@@ -58,6 +58,11 @@ export
 
 			void init();
 		public:
+			// Per-backend: the serialized texel data is GDeflate-compressed on
+			// D3D12 (DirectStorage) and raw on Vulkan, so the caches can't be shared.
+			// → cache/<backend>/<hash>.bin
+			static std::string cache_subfolder() { return get_backend_name(); }
+
 			const ResourceDesc& get_desc() const;
 			HAL::TextureResource::ptr resource;
 

@@ -11,6 +11,9 @@ export namespace nvidia
 	{
 		class Streamline
 		{
+		public:
+			using NativeDevice = D3D::Device;
+
 		protected:
 			PFun_slSetD3DDevice* fn_set_d3d_device = nullptr;
 

@@ -557,10 +557,11 @@ namespace HAL
 		ComPtr<IDxcBlob> reflectionBlob{};
 		compiledShaderBuffer->GetOutput(DXC_OUT_REFLECTION, IID_PPV_ARGS(&reflectionBlob), nullptr);
 
+		// SPIR-V compiles (-spirv) produce no DXC_OUT_REFLECTION blob.
 		const DxcBuffer reflectionBuffer
 		{
-			.Ptr = reflectionBlob->GetBufferPointer(),
-			.Size = reflectionBlob->GetBufferSize()
+			.Ptr = reflectionBlob ? reflectionBlob->GetBufferPointer() : nullptr,
+			.Size = reflectionBlob ? reflectionBlob->GetBufferSize() : 0
 		};
 
 		// Backend-specific: D3D12 uses ID3D12ShaderReflection to extract per-pass

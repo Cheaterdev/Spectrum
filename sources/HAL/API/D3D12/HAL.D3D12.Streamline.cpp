@@ -21,7 +21,7 @@ namespace nvidia::API
 		return fn_set_d3d_device != nullptr;
 	}
 
-	bool Streamline::bind_device_native(D3D::Device native_device)
+	bool Streamline::bind_device_native(NativeDevice native_device)
 	{
 		if (!fn_set_d3d_device || !native_device) return false;
 

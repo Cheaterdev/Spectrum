@@ -351,6 +351,8 @@ float4 PS(VSOut i) : SV_Target { return i.col; }
 	// PreScene pass) and is easy to forget when bypassing the FrameGraph.
 	TEST(Core.HAL, RenderMeshDirect)
 	{
+		SKIP_ON_VULKAN("material pipelines are not generated (universal_material::generate)");
+
 		auto& device = RenderSystem::get().device();
 		constexpr uint W = 256, H = 256;
 

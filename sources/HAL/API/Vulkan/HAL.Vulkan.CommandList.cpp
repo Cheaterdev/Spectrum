@@ -482,6 +482,32 @@ namespace HAL::API
         vkCmdClearColorImage(vk_cmd, img, VK_IMAGE_LAYOUT_GENERAL, &cv, 1, &range);
     }
 
+    void CommandList::clear_uav_uint(const Handles::UAV& h, uint4 color)
+    {
+        if (vk_cmd == VK_NULL_HANDLE || !h.is_valid()) return;
+
+        auto& ri  = h.get_resource_info();
+        auto* uav = std::get_if<Views::UnorderedAccess>(&ri.view);
+        if (!uav || !uav->Resource) return;
+
+        auto& api = static_cast<API::Resource&>(*uav->Resource);
+        VkImage img = api.get_vk_image();
+        if (img == VK_NULL_HANDLE) return;
+
+        end_rendering_if_active();
+
+        VkClearColorValue cv{};
+        cv.uint32[0] = color.x;
+        cv.uint32[1] = color.y;
+        cv.uint32[2] = color.z;
+        cv.uint32[3] = color.w;
+
+        VkImageSubresourceRange range{ VK_IMAGE_ASPECT_COLOR_BIT,
+                                       0, VK_REMAINING_MIP_LEVELS,
+                                       0, VK_REMAINING_ARRAY_LAYERS };
+        vkCmdClearColorImage(vk_cmd, img, VK_IMAGE_LAYOUT_GENERAL, &cv, 1, &range);
+    }
+
     // ---- Lazy render-pass start (for draw calls) ----------------------------
 
     void CommandList::ensure_rendering_active()

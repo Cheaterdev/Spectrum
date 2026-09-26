@@ -11,8 +11,7 @@ using namespace HAL;
 
 export namespace HAL
 {
-    // Backend identifier used to segregate per-backend caches (shaders, PSOs).
-    // Textures are backend-agnostic and stay in the cache root.
+    // Backend identifier used to segregate per-backend caches (shaders, PSOs, textures).
     inline std::string get_backend_name() { return "d3d12"; }
 }
 

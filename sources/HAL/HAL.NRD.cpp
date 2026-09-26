@@ -10,8 +10,6 @@ import :HLSL;
 import :DescriptorHeap;
 import :CommandList;
 import :Autogen;
-import d3d12;
-import wrl;
 
 namespace nvidia
 {

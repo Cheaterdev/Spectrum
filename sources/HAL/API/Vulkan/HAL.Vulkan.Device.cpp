@@ -239,21 +239,43 @@ namespace HAL
             if (compute_family  == UINT32_MAX) compute_family  = graphics_family;
             if (transfer_family == UINT32_MAX) transfer_family = graphics_family;
 
-            // Store for Queue::construct() and CommandAllocator
-            queue_families[0] = graphics_family;   // DIRECT
-            queue_families[1] = compute_family;    // COMPUTE
-            queue_families[2] = transfer_family;   // COPY
+            // Store for Queue::construct() and CommandAllocator, indexed by
+            // HAL::CommandListType. The async compute queues (COMPUTE2/3) take
+            // further queues of the compute family.
+            const uint32_t type_families[queue_type_count] = {
+                graphics_family,   // DIRECT
+                compute_family,    // COMPUTE
+                transfer_family,   // COPY
+                compute_family,    // COMPUTE2
+                compute_family,    // COMPUTE3
+            };
+
+            std::map<uint32_t, uint32_t> family_queue_count;
+            for (uint32_t t = 0; t < queue_type_count; ++t)
+            {
+                const uint32_t family = type_families[t];
+                uint32_t& used        = family_queue_count[family];
+
+                queue_families[t] = family;
+                queue_indices[t]  = used < qf_props[family].queueCount ? used++ : used - 1;
+
+                for (uint32_t other = 0; other < t; ++other)
+                    if (queue_families[other] == family && queue_indices[other] == queue_indices[t])
+                    {
+                        queue_mutex_slot[t] = queue_mutex_slot[other];
+                        break;
+                    }
+            }
 
             // ---- Queue create infos ----------------------------------------
-            const float priority = 1.0f;
+            const std::vector<float> priorities(queue_type_count, 1.0f);
             std::vector<VkDeviceQueueCreateInfo> queue_infos;
-            std::set<uint32_t> unique_families = { graphics_family, compute_family, transfer_family };
-            for (uint32_t qf : unique_families)
+            for (auto [family, count] : family_queue_count)
             {
                 VkDeviceQueueCreateInfo qi{ VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO };
-                qi.queueFamilyIndex = qf;
-                qi.queueCount       = 1;
-                qi.pQueuePriorities = &priority;
+                qi.queueFamilyIndex = family;
+                qi.queueCount       = count;
+                qi.pQueuePriorities = priorities.data();
                 queue_infos.push_back(qi);
             }
 

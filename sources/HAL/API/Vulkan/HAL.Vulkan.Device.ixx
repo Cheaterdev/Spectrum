@@ -57,12 +57,21 @@ export namespace HAL
             VkDevice         vk_device     = VK_NULL_HANDLE;
             VmaAllocator     vma_allocator = VK_NULL_HANDLE;
 
-            // Queue family indices: DIRECT=0, COMPUTE=1, COPY=2.
-            uint32_t queue_families[3] = {
-                static_cast<uint32_t>(-1),
-                static_cast<uint32_t>(-1),
-                static_cast<uint32_t>(-1)
+            // Per HAL::CommandListType (DIRECT, COMPUTE, COPY, COMPUTE2, COMPUTE3):
+            // queue family and queue index within it. Types get distinct queues
+            // while the family has them, then share the family's last one.
+            static constexpr uint32_t queue_type_count = 5;
+            uint32_t queue_families[queue_type_count] = {
+                static_cast<uint32_t>(-1), static_cast<uint32_t>(-1), static_cast<uint32_t>(-1),
+                static_cast<uint32_t>(-1), static_cast<uint32_t>(-1)
             };
+            uint32_t queue_indices[queue_type_count] = {};
+
+            // VkQueue must be externally synchronized, so types that share a
+            // VkQueue must share its mutex: queue_mutex_slot maps each type to
+            // the first type using the same (family, index).
+            std::array<std::mutex, queue_type_count> queue_mutexes;
+            uint32_t queue_mutex_slot[queue_type_count] = { 0, 1, 2, 3, 4 };
 
             // Descriptor sizes — interface compat; always 0 in Vulkan.
             enum_array<DescriptorHeapType, uint> descriptor_sizes;
@@ -118,6 +127,8 @@ export namespace HAL
             VmaAllocator     get_vma_allocator()     const noexcept { return vma_allocator; }
             VkPhysicalDevice get_vk_physical_dev()   const noexcept { return vk_physical; }
             uint32_t         get_queue_family(int i) const noexcept { return queue_families[i]; }
+            uint32_t         get_queue_index(int i)  const noexcept { return queue_indices[i]; }
+            std::mutex&      get_queue_mutex(int i)        noexcept { return queue_mutexes[queue_mutex_slot[i]]; }
 
             // ---- VK_EXT_descriptor_heap accessors ----------------------------
             // Uniform resource-heap slot stride (D3D12 "handle increment size").

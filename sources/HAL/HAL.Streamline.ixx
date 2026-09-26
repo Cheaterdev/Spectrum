@@ -100,7 +100,7 @@ export namespace nvidia
 		bool supports(Feature feature, const void* luid, uint luid_size) const;
 
 		// Call once, right after device creation.
-		void bind_device(D3D::Device native_device);
+		void bind_device(NativeDevice native_device);
 
 		// Must be called after bind_device() succeeded.
 		bool get_feature_function(Feature feature, const char* name, void*& fn) const;

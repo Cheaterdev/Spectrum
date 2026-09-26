@@ -74,8 +74,8 @@ requires (T t, T t2) {
 };
 
 // Resources may opt into a cache subfolder via a static cache_subfolder().
-// Used to segregate backend-specific caches (shaders/PSOs → cache/<backend>/),
-// while backend-agnostic resources (textures) omit it and cache in the root.
+// Used to segregate backend-specific caches (shaders, textures → cache/<backend>/);
+// resources without one cache in the root.
 template<class T> concept HasCacheSubfolder = requires { T::cache_subfolder(); };
 template<class _resource, class _header>
 class resource_manager

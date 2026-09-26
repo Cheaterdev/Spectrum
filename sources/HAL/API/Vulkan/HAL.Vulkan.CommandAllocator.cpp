@@ -14,7 +14,7 @@ namespace HAL
         auto& api_dev = static_cast<API::Device&>(device);
         if (api_dev.vk_device == VK_NULL_HANDLE) return;
 
-        uint32_t family = api_dev.queue_families[static_cast<uint32_t>(type)];
+        uint32_t family = api_dev.get_queue_family(static_cast<int>(type));
         if (family == static_cast<uint32_t>(-1)) return;
 
         VkCommandPoolCreateInfo info{ VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO };
