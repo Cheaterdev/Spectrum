@@ -685,12 +685,19 @@ std::shared_ptr<MeshData> MeshData::load_assimp(const std::string& file_name, re
             auto asset = storage ? storage->get_asset() : nullptr;
             auto tex = asset ? asset->get_ptr<TextureAsset>() : nullptr;
 
-            if (!tex)
+            // A file that exists but fails to decode leaves a TextureAsset
+            // holding Texture::null, a Texture with a null `resource` --
+            // get_desc() on it dereferences null, which the format checks
+            // below (normal-map/opacity/specular) all do.
+            bool tex_unusable = tex && (!tex->get_texture() || !tex->get_texture()->resource);
+
+            if (!tex || tex_unusable)
             {
                 const char* reason = it == load_textures.end() ? "never registered (missing check_assimp_texture call for its texture type?)"
                                     : !storage             ? "no matching asset found for this filename"
                                     : !asset                ? "asset storage found but failed to load"
-                                    :                          "asset found but isn't a TextureAsset";
+                                    : !tex                  ? "asset found but isn't a TextureAsset"
+                                    :                          "file exists but failed to decode (empty GPU resource)";
 
                 Log::get() << Log::LEVEL_WARNING << "AssimpLoader: texture \"" << name.string()
                     << "\" could not be loaded (" << reason << ") -- using missing_texture placeholder" << Log::endl;
