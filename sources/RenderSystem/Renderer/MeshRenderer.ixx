@@ -68,7 +68,7 @@ class mesh_renderer : public renderer, public Events::prop_handler, VariableCont
 		// for a CPU-sized direct dispatch (count known on CPU — no indirect).
 		// capture_stage: when non-null, the gather stamps every mesh it draws into
 		// `capture` with this stage.
-		void  render_meshes(MeshRenderContext::ptr mesh_render_context, Scene::ptr scene, std::map<size_t, materials::Pipeline::ptr>& pipelines, Slots::Meshes::GatherPipelineGlobal::Compiled& gatherData, bool needCulling, HAL::StructuredBufferView<DispatchArguments>* dispatch_args, UINT direct_count, bool hiz_occlusion, std::optional<CullCapture::Stage> capture_stage = std::nullopt);
+		void  render_meshes(MeshRenderContext::ptr mesh_render_context, Scene::ptr scene, std::map<size_t, materials::Pipeline::ptr>& pipelines, Slots::Meshes::GatherPipelineGlobal::Compiled& gatherData, bool needCulling, HAL::StructuredBufferView<DispatchArguments>* dispatch_args, UINT direct_count, bool hiz_occlusion, std::optional<CullCapture::Stage> capture_stage = std::nullopt, bool walk_lod = false);
 		void  draw_boxes(MeshRenderContext::ptr mesh_render_context, Scene::ptr scene);
 		void  generate_boxes(MeshRenderContext::ptr mesh_render_context, Scene::ptr scene, Slots::Meshes::GatherPipelineGlobal::Compiled& gatherData, HAL::StructuredBufferView<DispatchArguments>* dispatch_args, UINT direct_count);
 		void  gather_rendered_boxes(MeshRenderContext::ptr mesh_render_context, Scene::ptr scene, bool invisibleToo);
@@ -121,6 +121,10 @@ class mesh_renderer : public renderer, public Events::prop_handler, VariableCont
         // Set only on the main view's renderer: its GBuffer draws record what
         // they drew here while capture->capturing (see CullCapture).
         CullCapture::ptr capture;
+
+        // Set only on the main view's renderer, from FrameInfo::lodThreshold > 0:
+        // its GBuffer draws walk the cluster LOD hierarchy (ClusterLod permutations).
+        bool cluster_lod = false;
 
         using ptr = s_ptr<mesh_renderer>;
         mesh_renderer();

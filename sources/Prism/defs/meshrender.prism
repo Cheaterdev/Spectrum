@@ -33,6 +33,7 @@ namespace Meshes
 		StructuredBuffer<Meshlet> meshlets;
 
 		StructuredBuffer<MeshletCullData> meshletCullData;
+		StructuredBuffer<MeshletGroup> meshletGroups;
 
 		StructuredBuffer<uint> unique_indices;
 		StructuredBuffer<uint> primitive_indices;
@@ -47,26 +48,40 @@ namespace Meshes
 		uint meshlet_offset_local;
 
 	    uint node_offset;
+		# Original full-detail clusters, stored first. Passes without cluster LOD
+		# selection draw only these.
 		uint meshlet_count;
+		# Every cluster of the LOD DAG (>= meshlet_count), for LOD-selecting passes.
+		uint lod_meshlet_count;
+		# This part's MeshletGroup ranges in MeshInstanceInfo::meshletGroups
+		# (group indices in nodes are relative to lod_group_offset, cluster
+		# indices in groups to meshlet_offset_local). One ClusterLod AS group per node.
+		uint lod_group_offset;
+		uint lod_node_offset;
+		uint lod_node_count;
 
 		# Per mesh part, unique for the instance's lifetime (0 = none), written
 		# into GBuffer_ObjectID for editor picking/selection outline. Assigned in
 		# MeshAssetInstance::update_nodes().
 		uint object_id;
 
-		# First word of this part's range in universal_meshlet_mask_manager: two
-		# words per 32-meshlet AS group, 2 bits per meshlet (MeshletCaptureWrite).
+		# This part's first entry in universal_meshlet_mask_manager, one per
+		# cluster of the whole DAG (MeshletCaptureWrite).
 		uint meshlet_mask_offset;
 	}
 
 	# Debug view meshlet capture: the GBuffer AS (CaptureMeshlets permutation)
-	# records each meshlet's cull result, 2 bits at meshlet_mask_offset:
-	# 0 frustum, 1 backface cone, 2 Hi-Z occluded, 3 drawn. Only meaningful for a
-	# part the main view drew on the captured frame (CullCaptureWrite stamps).
+	# records each cluster it tests as (frame << 4) | status at
+	# meshlet_mask_offset + cluster: 0 frustum, 1 backface cone, 2 Hi-Z
+	# occluded, 3 drawn, 4 not in the LOD cut. The LOD hierarchy never visits
+	# most clusters; their stale frame reads as "not in the LOD cut", so the
+	# buffer needs no per-frame clear. Only meaningful for a part the main view
+	# drew on the captured frame (CullCaptureWrite stamps).
 	[Bind = DefaultLayout::Instance5]
 	struct MeshletCaptureWrite
 	{
 		RWStructuredBuffer<uint> masks;
+		uint frame;
 	}
 
 
@@ -103,6 +118,36 @@ namespace Meshes
 	    # meshopt's snorm8 cone axis (xyz) and cutoff (w), the cutoff already
 	    # padded for axis quantization; w = 127 means no backface test.
 	    uint   NormalCone;
+
+	    # Cluster LOD (meshopt clusterlod): a cluster is drawn when its group's
+	    # LodError (MeshletGroup) projects over the threshold -- the coarser
+	    # version is not good enough -- and RefinedError, from RefinedSphere,
+	    # projects at or under it -- this one is. RefinedError is negative for
+	    # original geometry. Mesh-space.
+	    float  RefinedError;
+	    uint   LodLevel;
+	    float4 RefinedSphere;
+	}
+
+	# Cluster LOD hierarchy, both levels in one buffer (MeshInstanceInfo):
+	# - group: a clusterlod group's clusters (FirstCluster/ClusterCount, <= 16,
+	#   bigger groups are split), LodSphere/LodError its own simplification
+	#   error (FLT_MAX where nothing coarser exists), RefinedSphere/RefinedError
+	#   enclose its clusters' refined bounds, min error (negative if any cluster
+	#   is original geometry).
+	# - node: 32 consecutive groups (FirstCluster/ClusterCount = group range),
+	#   LodSphere/LodError = enclosing sphere and max, Refined* = enclosing and min.
+	# Enclosing spheres make both levels conservative: a node or group is only
+	# skipped when every group or cluster under it would fail its own test.
+	[serialize]
+	struct MeshletGroup
+	{
+		float4 LodSphere;
+		float4 RefinedSphere;
+		float  LodError;
+		float  RefinedError;
+		uint   FirstCluster;
+		uint   ClusterCount;
 	}
 
 
@@ -156,7 +201,10 @@ namespace Meshes
 		uint node_offset;
 		MeshInfo* mesh_cb;
 		MeshInstanceInfo* meshinstance_cb;
+		# Original clusters, 32 per AS group: every pass without ClusterLod.
 		DispatchMeshArguments draw_commands;
+		# One AS group per LOD hierarchy node: GatherPipeline's ClusterLod.
+		DispatchMeshArguments lod_draw_commands;
 		uint meshlet_count;
 	}
 
@@ -310,6 +358,12 @@ namespace Meshes
 		[rename = CAPTURE_VISIBILITY]
 		[CS, nullable]
 		define CaptureVisibility;
+
+		# Hands out lod_draw_commands instead of draw_commands. Must match the
+		# draws' GBufferDraw ClusterLod permutation (mesh_renderer sets both).
+		[rename = CLUSTER_LOD]
+		[CS, nullable]
+		define ClusterLod;
 	}
 
 

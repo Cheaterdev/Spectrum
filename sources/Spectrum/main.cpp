@@ -108,6 +108,14 @@ public:
 	GUI::Elements::circle_selector::ptr sun_direction_circle;
 	Variable<bool> auto_rotate_sun = { false, "Auto rotate sun", this };
 
+	Variable<bool>  cluster_lod     = { true, "Cluster LOD", this };
+	Variable<float> lod_error_pixels = { 1.0f, "LOD error (px)", this, 0.25f, 16.0f };
+	// FrameInfo::lodThreshold for this frame, shared with the debug view so its
+	// replay of the captured masks covers the same clusters.
+	float lod_threshold = 0;
+	// The main view's GBuffer mesh_renderer, whose draws walk the LOD hierarchy.
+	mesh_renderer::ptr main_view_mesh_renderer;
+
 	// Grouping contexts for the mesh_renderer instances constructed below --
 	// mesh_renderer always names itself "mesh_renderer" (see MeshRenderer.cpp),
 	// so without these every instance across the whole app would land as an
@@ -215,6 +223,7 @@ public:
 		debug_window->scene    = scene;
 		debug_window->main_cam = &cam;
 		main_view_renderer->capture = debug_window->capture;
+		main_view_mesh_renderer = main_view_renderer;
 
 		// VSM is a class member (wired at construction, before scene exists
 		// above) -- its Phase 2 invalidation tracker registers scene event
@@ -548,6 +557,9 @@ public:
 		tonemap_update_selectors(graph);
 		bloom_update_selectors(graph);
 		stenciler->update_frame(graph);
+		lod_threshold = cluster_lod ? lod_error_pixels / std::max(float(vp.frame_size.y), 1.0f) : 0.0f;
+		debug_window->lod_threshold = lod_threshold;
+		main_view_mesh_renderer->cluster_lod = lod_threshold > 0;
 		// After cam.update() above: draws this frame's main-camera frustum.
 		debug_window->update_frame(graph);
 
@@ -619,6 +631,7 @@ public:
 				// comment for why this DDGI-owned toggle is mirrored here instead of
 				// living on DDGIInfo (its effect isn't DDGI-exclusive).
 				frameInfo.GetDebugFlags() = ddgi_sky_fallback_disabled() ? (uint32_t)Dev::RTXDebugFlags::DisableSkyFallback : 0u;
+				frameInfo.GetLodThreshold() = lod_threshold;
 
 				auto compiled = frameInfo.compile(*graph.builder.current_frame);
 				graph.register_slot_setter(compiled);

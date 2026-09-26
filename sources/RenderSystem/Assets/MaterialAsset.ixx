@@ -24,7 +24,9 @@ export namespace materials
 
 		// capture_meshlets: the GBuffer draw records per-meshlet cull results for
 		// the debug view (GBufferDraw's CaptureMeshlets permutation).
-		virtual void set(RENDER_TYPE render_type, MESH_TYPE type, HAL::GraphicsContext& graphics, bool hiz_occlusion, bool capture_meshlets) = 0;
+		// cluster_lod: the GBuffer draw walks the cluster LOD hierarchy; the
+		// gather must have handed out lod_draw_commands (GBufferDraw ClusterLod).
+		virtual void set(RENDER_TYPE render_type, MESH_TYPE type, HAL::GraphicsContext& graphics, bool hiz_occlusion, bool capture_meshlets, bool cluster_lod) = 0;
 
 		// Per pipeline, not per material: the GPU gather routes draws by
 		// pipeline id, so this is what decides which passes a mesh reaches

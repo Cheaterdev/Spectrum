@@ -19,6 +19,7 @@ struct primitive_output
 {
     uint meshlet : MESHLET_ID;
     uint status : MESHLET_STATUS;
+    uint lod_level : MESHLET_LOD;
 };
 
 #include "../common/common.hlsl"
@@ -56,6 +57,21 @@ float3 id_color(uint id)
     return 0.35 + 0.65 * float3((h & 0xFF) / 255.0, ((h >> 8) & 0xFF) / 255.0, ((h >> 16) & 0xFF) / 255.0);
 }
 
+// Original geometry green, then through yellow and orange to red and purple.
+float3 lod_color(uint level)
+{
+    static const float3 ramp[6] =
+    {
+        float3(0.2, 0.8, 0.3),
+        float3(0.85, 0.85, 0.2),
+        float3(1.0, 0.55, 0.15),
+        float3(0.95, 0.25, 0.2),
+        float3(0.75, 0.25, 0.8),
+        float3(0.35, 0.35, 0.95),
+    };
+    return ramp[min(level, 5u)];
+}
+
 // Same test as gather_pipeline.hlsl's intersect(): inside when on the positive
 // side of all six planes.
 bool inside_frustum(Frustum f, float3 p)
@@ -72,7 +88,12 @@ float4 PS(vertex_output i, primitive_output prim) : SV_TARGET0
     DebugViewDraw draw = GetDebugViewDraw();
 
     uint object_id = GetMeshInfo().GetObject_id();
-    float3 color = draw.GetColor_by_meshlet() ? id_color(hash(object_id) ^ prim.meshlet) : id_color(object_id);
+    float3 color = id_color(object_id);
+    if (draw.GetColor_mode() == DebugViewColor::Meshlet)
+        color = id_color(hash(object_id) ^ prim.meshlet);
+    else if (draw.GetColor_mode() == DebugViewColor::LodLevel)
+        // Per-meshlet shade variation keeps cluster borders visible.
+        color = lod_color(prim.lod_level) * (0.75 + 0.25 * (hash(prim.meshlet) & 0xFF) / 255.0);
 
     float4 tint = prim.status < MESHLET_DRAWN ? meshlet_culled_tints[prim.status] : draw.GetTint();
     color = lerp(color, tint.rgb, tint.a);

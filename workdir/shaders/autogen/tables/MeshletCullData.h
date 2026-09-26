@@ -13,8 +13,14 @@ namespace Meshes
 	{
 		float4 BoundingSphere; // float4
 		uint NormalCone; // uint
+		float RefinedError; // float
+		uint LodLevel; // uint
+		float4 RefinedSphere; // float4
 		float4 GetBoundingSphere() { return BoundingSphere; }
 		uint GetNormalCone() { return NormalCone; }
+		float GetRefinedError() { return RefinedError; }
+		uint GetLodLevel() { return LodLevel; }
+		float4 GetRefinedSphere() { return RefinedSphere; }
 	};
 }
 using Meshes::MeshletCullData;

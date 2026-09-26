@@ -19,22 +19,27 @@ export namespace Table
 		struct MeshletCaptureWrite
 		{
 			static constexpr SlotID ID = SlotID::MeshletCaptureWrite;
+			uint frame;
 			HLSL::RWStructuredBuffer<uint> masks;
 			HLSL::RWStructuredBuffer<uint>& GetMasks() { return masks; }
+			uint& GetFrame() { return frame; }
 			static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 			template<class Compiler>
 			void compile(Compiler& compiler) const
 			{
+				compiler.compile(frame, "MeshletCaptureWrite::frame");
 				compiler.compile(masks, "MeshletCaptureWrite::masks");
 			}
 			struct Compiled
 			{
+				uint frame; // uint
 				uint masks; // RWStructuredBuffer<uint>
 
 			
 				private:
 				SERIALIZE()
 				{
+					ar& NVP(frame);
 				}
 
 
@@ -47,6 +52,7 @@ export namespace Table
 			private:
 			SERIALIZE()
 			{
+				ar& NVP(frame);
 			}
 
 		};

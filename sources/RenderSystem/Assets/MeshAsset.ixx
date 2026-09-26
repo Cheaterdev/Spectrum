@@ -49,10 +49,15 @@ export{
 
 		unsigned int node_index;
 
+		// Cluster LOD DAG: the first base_meshlet_count are the original clusters.
 		std::vector<InlineMeshlet<UINT>> meshlets;
+		unsigned int base_meshlet_count = 0;
+		// LOD hierarchy levels; FirstCluster is relative to this mesh (see MeshletGroup).
+		std::vector<Table::Meshes::MeshletGroup> lod_groups;
+		std::vector<Table::Meshes::MeshletGroup> lod_nodes;
 
 
-		
+
 	private:
 		SERIALIZE()
 		{
@@ -64,6 +69,9 @@ export{
 			ar& NVP(primitive);
 			ar& NVP(node_index);
 			ar& NVP(meshlets);
+			ar& NVP(base_meshlet_count);
+			ar& NVP(lod_groups);
+			ar& NVP(lod_nodes);
 		}
 	};
 
@@ -107,9 +115,16 @@ export{
 		HAL::StructuredBufferView<Table::Meshes::mesh_vertex_input> vertex_buffer_view;
 		HAL::StructuredBufferView<UINT32> index_buffer_view;
 	HAL::StructuredBufferView<Table::Meshes::Meshlet> meshet_view;
+		// Original clusters at the front of meshet_view; the rest are LOD levels.
+		uint base_meshlet_count = 0;
+		// This mesh's MeshletGroup ranges within MeshAsset::meshlet_groups.
+		uint lod_group_offset = 0;
+		uint lod_node_offset = 0;
+		uint lod_node_count = 0;
 
 		DrawIndexedArguments draw_arguments;
 		DispatchMeshArguments dispatch_mesh_arguments;
+		DispatchMeshArguments lod_dispatch_mesh_arguments;
 
 		uint node_index;
 			size_t material;
@@ -124,8 +139,13 @@ export{
 			ar& NVP(vertex_buffer_view);
 			ar& NVP(index_buffer_view);
 			ar& NVP(meshet_view);
+			ar& NVP(base_meshlet_count);
 			ar& NVP(draw_arguments);
 			ar& NVP(dispatch_mesh_arguments);
+			ar& NVP(lod_group_offset);
+			ar& NVP(lod_node_offset);
+			ar& NVP(lod_node_count);
+			ar& NVP(lod_dispatch_mesh_arguments);
 		}
 	};
 	class MeshData : public loader<MeshData, std::string, AssetLoadingContext::ptr>
@@ -169,6 +189,7 @@ export{
 		HAL::StructuredBufferView<UINT32>						primitive_indices;
 		HAL::StructuredBufferView<Table::Meshes::Meshlet>				meshlets;
 		HAL::StructuredBufferView<Table::Meshes::MeshletCullData>		meshlet_cull_datas;
+		HAL::StructuredBufferView<Table::Meshes::MeshletGroup>		meshlet_groups;
 
 		std::vector<CompiledMeshInfo>	meshes;
 		std::vector<MaterialAsset::ref> materials;
@@ -210,6 +231,7 @@ export{
 				ar& NVP(primitive_indices);
 				ar& NVP(meshlets);
 				ar& NVP(meshlet_cull_datas);
+				ar& NVP(meshlet_groups);
 
 			}
 
@@ -281,6 +303,7 @@ export{
 
 			DrawIndexedArguments draw_arguments;
 			DispatchMeshArguments dispatch_mesh_arguments;
+			DispatchMeshArguments lod_dispatch_mesh_arguments;
 			UINT material_id;
 			MaterialAsset* material;
 			UINT meshlet_offset;
@@ -358,15 +381,15 @@ export{
 
 
 	// Per-meshlet cull results the debug view's capture records (see
-	// MeshletCaptureWrite in meshrender.prism): 2 bits per meshlet, 2 words per
-	// 32-meshlet AS group. Written only while the debug view captures.
+	// MeshletCaptureWrite in meshrender.prism): one frame-tagged entry per
+	// cluster. Written only while the debug view captures.
 	class universal_meshlet_mask_manager :public Singleton<universal_meshlet_mask_manager>, public HAL::virtual_gpu_buffer<uint>
 	{
 		static const size_t MAX_WORDS = 64_mb / sizeof(uint);
 	public:
 		universal_meshlet_mask_manager();
 
-		static uint words_for(uint meshlet_count) { return 2 * ((meshlet_count + 31) / 32); }
+		static uint words_for(uint meshlet_count) { return meshlet_count; }
 	};
 
 	class universal_material_info_part_manager :public Singleton<universal_material_info_part_manager>, public HAL::virtual_gpu_buffer<Table::Meshes::MaterialCommandData>

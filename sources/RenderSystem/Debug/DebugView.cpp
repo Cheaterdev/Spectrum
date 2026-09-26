@@ -117,6 +117,10 @@ debug_view::debug_view() : VariableContext(L"Debug View")
 			Slots::Frame::FrameInfo frameInfo;
 			frameInfo.GetCamera()     = frame_camera;
 			frameInfo.GetPrevCamera() = frame_camera;
+			// The main view's threshold, so the mesh AS covers the same cluster
+			// range the captured masks were written for; buckets without masks
+			// then pick their LOD cut from the debug camera.
+			frameInfo.GetLodThreshold() = captured_lod_threshold;
 			graphics.set(frameInfo);
 		}
 
@@ -144,8 +148,9 @@ debug_view::debug_view() : VariableContext(L"Debug View")
 				// frame -- the only ones whose masks were written that frame.
 				draw.GetMeshlet_masks()      = universal_meshlet_mask_manager::get().buffer;
 				draw.GetRead_meshlet_masks() = frame_source != Dev::DebugViewSource::All && i <= 1;
+				draw.GetCapture_frame()      = frame_capture;
 				draw.GetMeshlet_filter()     = meshlet_filter;
-				draw.GetColor_by_meshlet()   = (bool)color_by_meshlet;
+				draw.GetColor_mode()         = color_mode;
 				graphics.set(draw);
 				graphics.exec_indirect(commands[i]->buffer, mesh_count);
 			}
@@ -201,6 +206,7 @@ void debug_view::update_frame(FrameGraph::Graph& graph)
 		captured_inv_view_proj = main_cam->get_inv_view_proj();
 		captured_eye           = main_cam->camera_cb.current.position.xyz;
 		captured_frustum       = main_cam->camera_cb.current.frustum;
+		captured_lod_threshold = lod_threshold;
 		has_captured_camera    = true;
 	}
 

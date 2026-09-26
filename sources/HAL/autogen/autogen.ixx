@@ -119,6 +119,7 @@ export import :Autogen.Tables.Meshes.MeshletCaptureWrite;
 export import :Autogen.Tables.Meshes.RaytraceInstanceInfo;
 export import :Autogen.Tables.Meshes.Meshlet;
 export import :Autogen.Tables.Meshes.MeshletCullData;
+export import :Autogen.Tables.Meshes.MeshletGroup;
 export import :Autogen.Tables.Meshes.MeshInstance;
 export import :Autogen.Tables.Meshes.CommandData;
 export import :Autogen.Tables.Meshes.MeshCommandData;

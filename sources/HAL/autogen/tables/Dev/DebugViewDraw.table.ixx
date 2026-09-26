@@ -21,30 +21,34 @@ export namespace Table
 			static constexpr SlotID ID = SlotID::DebugViewDraw;
 			float4 tint;
 			uint read_meshlet_masks;
+			uint capture_frame;
 			uint meshlet_filter;
-			uint color_by_meshlet;
+			::Dev::DebugViewColor color_mode;
 			HLSL::StructuredBuffer<uint> meshlet_masks;
 			float4& GetTint() { return tint; }
 			HLSL::StructuredBuffer<uint>& GetMeshlet_masks() { return meshlet_masks; }
 			uint& GetRead_meshlet_masks() { return read_meshlet_masks; }
+			uint& GetCapture_frame() { return capture_frame; }
 			uint& GetMeshlet_filter() { return meshlet_filter; }
-			uint& GetColor_by_meshlet() { return color_by_meshlet; }
+			::Dev::DebugViewColor& GetColor_mode() { return color_mode; }
 			static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 			template<class Compiler>
 			void compile(Compiler& compiler) const
 			{
 				compiler.compile(tint, "DebugViewDraw::tint");
 				compiler.compile(read_meshlet_masks, "DebugViewDraw::read_meshlet_masks");
+				compiler.compile(capture_frame, "DebugViewDraw::capture_frame");
 				compiler.compile(meshlet_filter, "DebugViewDraw::meshlet_filter");
-				compiler.compile(color_by_meshlet, "DebugViewDraw::color_by_meshlet");
+				compiler.compile(color_mode, "DebugViewDraw::color_mode");
 				compiler.compile(meshlet_masks, "DebugViewDraw::meshlet_masks");
 			}
 			struct Compiled
 			{
 				float4 tint; // float4
 				uint read_meshlet_masks; // uint
+				uint capture_frame; // uint
 				uint meshlet_filter; // uint
-				uint color_by_meshlet; // uint
+				::Dev::DebugViewColor color_mode; // DebugViewColor
 				uint meshlet_masks; // StructuredBuffer<uint>
 
 			
@@ -53,8 +57,9 @@ export namespace Table
 				{
 					ar& NVP(tint);
 					ar& NVP(read_meshlet_masks);
+					ar& NVP(capture_frame);
 					ar& NVP(meshlet_filter);
-					ar& NVP(color_by_meshlet);
+					ar& NVP(color_mode);
 				}
 
 
@@ -69,8 +74,9 @@ export namespace Table
 			{
 				ar& NVP(tint);
 				ar& NVP(read_meshlet_masks);
+				ar& NVP(capture_frame);
 				ar& NVP(meshlet_filter);
-				ar& NVP(color_by_meshlet);
+				ar& NVP(color_mode);
 			}
 
 		};

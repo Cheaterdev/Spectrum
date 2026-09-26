@@ -15,12 +15,20 @@ namespace Meshes
 		uint meshlet_offset_local; // uint
 		uint node_offset; // uint
 		uint meshlet_count; // uint
+		uint lod_meshlet_count; // uint
+		uint lod_group_offset; // uint
+		uint lod_node_offset; // uint
+		uint lod_node_count; // uint
 		uint object_id; // uint
 		uint meshlet_mask_offset; // uint
 		uint GetVertex_offset_local() { return vertex_offset_local; }
 		uint GetMeshlet_offset_local() { return meshlet_offset_local; }
 		uint GetNode_offset() { return node_offset; }
 		uint GetMeshlet_count() { return meshlet_count; }
+		uint GetLod_meshlet_count() { return lod_meshlet_count; }
+		uint GetLod_group_offset() { return lod_group_offset; }
+		uint GetLod_node_offset() { return lod_node_offset; }
+		uint GetLod_node_count() { return lod_node_count; }
 		uint GetObject_id() { return object_id; }
 		uint GetMeshlet_mask_offset() { return meshlet_mask_offset; }
 	};

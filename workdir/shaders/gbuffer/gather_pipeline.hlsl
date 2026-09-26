@@ -118,7 +118,11 @@ void CS(
         command.material_cb = material.material_cb;
         command.mesh_cb = mesh.mesh_cb;
          command.meshinstance_cb = mesh.meshinstance_cb;
+#ifdef CLUSTER_LOD
+        command.draw_commands = mesh.lod_draw_commands;
+#else
         command.draw_commands = mesh.draw_commands;
+#endif
        
         // Stamped only where appended: this dispatch runs once per batch of 8
         // pipelines over the same mesh list, and only one batch owns each mesh.

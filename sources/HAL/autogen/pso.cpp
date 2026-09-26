@@ -200,6 +200,7 @@ void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 //decltype(PSOS::RCAS::cas) PSOS::RCAS::cas;
 //decltype(PSOS::GatherPipeline::CheckFrustum) PSOS::GatherPipeline::CheckFrustum;
 //decltype(PSOS::GatherPipeline::CaptureVisibility) PSOS::GatherPipeline::CaptureVisibility;
+//decltype(PSOS::GatherPipeline::ClusterLod) PSOS::GatherPipeline::ClusterLod;
 //decltype(PSOS::GatherBoxes::CheckFrustum) PSOS::GatherBoxes::CheckFrustum;
 //decltype(PSOS::InitDispatch::CheckFrustum) PSOS::InitDispatch::CheckFrustum;
 //decltype(PSOS::GatherMeshes::Invisible) PSOS::GatherMeshes::Invisible;
@@ -213,5 +214,6 @@ void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 //decltype(PSOS::CopyTexture::Format) PSOS::CopyTexture::Format;
 //decltype(PSOS::GBufferDraw::HiZOcclusion) PSOS::GBufferDraw::HiZOcclusion;
 //decltype(PSOS::GBufferDraw::CaptureMeshlets) PSOS::GBufferDraw::CaptureMeshlets;
+//decltype(PSOS::GBufferDraw::ClusterLod) PSOS::GBufferDraw::ClusterLod;
 //decltype(PSOS::DepthDraw::HiZOcclusion) PSOS::DepthDraw::HiZOcclusion;
 //decltype(PSOS::Voxelization::Dynamic) PSOS::Voxelization::Dynamic;

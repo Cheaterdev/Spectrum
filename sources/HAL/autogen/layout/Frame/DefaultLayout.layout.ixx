@@ -53,7 +53,7 @@ namespace Frame
 		struct Instance3
 		{
 			static const uint ID = 7;
-			static const uint CB = 4;
+			static const uint CB = 5;
 			static const uint CB_ID = 23;
 			static const uint SRV = 2;
 			static const uint SRV_ID = 25;

@@ -24,6 +24,7 @@ export namespace Table
 			float4 sunDir;
 			float mipBias = 0;
 			uint debugFlags = 0;
+			float lodThreshold = 0;
 			HLSL::Texture2D<float4> bestFitNormals;
 			HLSL::Texture3D<float4> brdf;
 			HLSL::TextureCube<float4> sky;
@@ -38,6 +39,7 @@ export namespace Table
 			float& GetMipBias() { return mipBias; }
 			HLSL::Texture2D<float>& GetMainHiZ() { return mainHiZ; }
 			uint& GetDebugFlags() { return debugFlags; }
+			float& GetLodThreshold() { return lodThreshold; }
 			Table::Frame::Camera& GetCamera() { return camera; }
 			Table::Frame::Camera& GetPrevCamera() { return prevCamera; }
 			static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
@@ -48,6 +50,7 @@ export namespace Table
 				compiler.compile(sunDir, "FrameInfo::sunDir");
 				compiler.compile(mipBias, "FrameInfo::mipBias");
 				compiler.compile(debugFlags, "FrameInfo::debugFlags");
+				compiler.compile(lodThreshold, "FrameInfo::lodThreshold");
 				compiler.compile(bestFitNormals, "FrameInfo::bestFitNormals");
 				compiler.compile(brdf, "FrameInfo::brdf");
 				compiler.compile(sky, "FrameInfo::sky");
@@ -61,6 +64,7 @@ export namespace Table
 				float4 sunDir; // float4
 				float mipBias; // float
 				uint debugFlags; // uint
+				float lodThreshold; // float
 				uint bestFitNormals; // Texture2D<float4>
 				uint brdf; // Texture3D<float4>
 				uint sky; // TextureCube<float4>
@@ -78,6 +82,7 @@ export namespace Table
 					ar& NVP(sunDir);
 					ar& NVP(mipBias);
 					ar& NVP(debugFlags);
+					ar& NVP(lodThreshold);
 				}
 
 
@@ -96,6 +101,7 @@ export namespace Table
 				ar& NVP(sunDir);
 				ar& NVP(mipBias);
 				ar& NVP(debugFlags);
+				ar& NVP(lodThreshold);
 			}
 
 		};

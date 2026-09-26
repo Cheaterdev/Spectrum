@@ -9,6 +9,7 @@
 #include "enums.h"
 #include "Meshlet.h"
 #include "MeshletCullData.h"
+#include "MeshletGroup.h"
 #include "mesh_vertex_input.h"
 namespace Meshes
 {
@@ -18,12 +19,14 @@ namespace Meshes
 		uint indices; // StructuredBuffer<uint>
 		uint meshlets; // StructuredBuffer<Meshlet>
 		uint meshletCullData; // StructuredBuffer<MeshletCullData>
+		uint meshletGroups; // StructuredBuffer<MeshletGroup>
 		uint unique_indices; // StructuredBuffer<uint>
 		uint primitive_indices; // StructuredBuffer<uint>
 		StructuredBuffer<mesh_vertex_input> GetVertexes() { return ResourceDescriptorHeap[vertexes]; }
 		StructuredBuffer<uint> GetIndices() { return ResourceDescriptorHeap[indices]; }
 		StructuredBuffer<Meshlet> GetMeshlets() { return ResourceDescriptorHeap[meshlets]; }
 		StructuredBuffer<MeshletCullData> GetMeshletCullData() { return ResourceDescriptorHeap[meshletCullData]; }
+		StructuredBuffer<MeshletGroup> GetMeshletGroups() { return ResourceDescriptorHeap[meshletGroups]; }
 		StructuredBuffer<uint> GetUnique_indices() { return ResourceDescriptorHeap[unique_indices]; }
 		StructuredBuffer<uint> GetPrimitive_indices() { return ResourceDescriptorHeap[primitive_indices]; }
 	};

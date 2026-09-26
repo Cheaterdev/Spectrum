@@ -45,6 +45,16 @@ namespace GI
 using GI::DDGI::DDGIOcclusionMode;
 namespace Dev
 {
+	enum class DebugViewColor : uint
+	{
+		Object,
+		Meshlet,
+		LodLevel
+	};
+}
+using Dev::DebugViewColor;
+namespace Dev
+{
 	enum class DebugViewSource : uint
 	{
 		All,

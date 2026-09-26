@@ -13,13 +13,15 @@ namespace Dev
 	{
 		float4 tint; // float4
 		uint read_meshlet_masks; // uint
+		uint capture_frame; // uint
 		uint meshlet_filter; // uint
-		uint color_by_meshlet; // uint
+		DebugViewColor color_mode; // DebugViewColor
 		uint meshlet_masks; // StructuredBuffer<uint>
 		float4 GetTint() { return tint; }
 		uint GetRead_meshlet_masks() { return read_meshlet_masks; }
+		uint GetCapture_frame() { return capture_frame; }
 		uint GetMeshlet_filter() { return meshlet_filter; }
-		uint GetColor_by_meshlet() { return color_by_meshlet; }
+		DebugViewColor GetColor_mode() { return color_mode; }
 		StructuredBuffer<uint> GetMeshlet_masks() { return ResourceDescriptorHeap[meshlet_masks]; }
 	};
 }

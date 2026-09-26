@@ -40,7 +40,8 @@ void CS(uint3 dispatchID : SV_DispatchThreadID)
     command.material_cb = material.material_cb;
     command.mesh_cb = mesh.mesh_cb;
     command.meshinstance_cb = mesh.meshinstance_cb;
-    command.draw_commands = mesh.draw_commands;
+    // DebugViewMesh always walks the LOD hierarchy (DEBUG_VIEW implies it).
+    command.draw_commands = mesh.lod_draw_commands;
 
     // Literal indices: bucket varies per thread, and a varying descriptor index
     // would need NonUniformResourceIndex (AMD reads the wrong buffer without it).

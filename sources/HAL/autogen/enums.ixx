@@ -237,6 +237,7 @@ export
 		RaytraceInstanceInfo = "RaytraceInstanceInfo"_crc32,
 		Meshlet = "Meshlet"_crc32,
 		MeshletCullData = "MeshletCullData"_crc32,
+		MeshletGroup = "MeshletGroup"_crc32,
 		DrawIndexedArguments = "DrawIndexedArguments"_crc32,
 		DispatchMeshArguments = "DispatchMeshArguments"_crc32,
 		DispatchArguments = "DispatchArguments"_crc32,
@@ -429,6 +430,15 @@ namespace GI
 				RTXRay = 2
 			};
 	}
+}
+namespace Dev
+{
+		enum class DebugViewColor : uint
+		{
+			Object,
+			Meshlet,
+			LodLevel
+		};
 }
 namespace Dev
 {

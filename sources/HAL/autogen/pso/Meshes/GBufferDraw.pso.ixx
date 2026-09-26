@@ -21,24 +21,28 @@ export namespace PSOS
 			struct Keys {
 				KeyValue<int, Nullable> HiZOcclusion;
 				KeyValue<int, Nullable> CaptureMeshlets;
+				KeyValue<int, Nullable> ClusterLod;
 				GEN_DEF_COMP(Keys);
 			private:
 				SERIALIZE()
 				{
 					ar&NVP(HiZOcclusion);
 					ar&NVP(CaptureMeshlets);
+					ar&NVP(ClusterLod);
 				}
 			};
 
-			GEN_GRAPHICS_PSO(GBufferDraw, HiZOcclusion, CaptureMeshlets)
+			GEN_GRAPHICS_PSO(GBufferDraw, HiZOcclusion, CaptureMeshlets, ClusterLod)
 			GEN_KEY(HiZOcclusion, true);
 			GEN_KEY(CaptureMeshlets, true);
+			GEN_KEY(ClusterLod, true);
 
 
 			SimplePSO init_pso(Keys & key, std::function<void(SimplePSO&, Keys&)> f)
 			{
 				static const ShaderDefine<&Keys::HiZOcclusion,&SimpleGraphicsPSO::amplification> HiZOcclusion = "HIZ_OCCLUSION";
 				static const ShaderDefine<&Keys::CaptureMeshlets,&SimpleGraphicsPSO::amplification> CaptureMeshlets = "CAPTURE_MESHLETS";
+				static const ShaderDefine<&Keys::ClusterLod,&SimpleGraphicsPSO::amplification> ClusterLod = "CLUSTER_LOD";
 
 
 				SimplePSO mpso("GBufferDraw");
@@ -56,6 +60,7 @@ export namespace PSOS
 			
 				HiZOcclusion.Apply(mpso, key);
 				CaptureMeshlets.Apply(mpso, key);
+				ClusterLod.Apply(mpso, key);
 
 				mpso.rtv_formats = { HAL::Format::R8G8B8A8_UNORM, HAL::Format::R8G8B8A8_UNORM, HAL::Format::R8G8B8A8_UNORM, HAL::Format::R16G16_FLOAT, HAL::Format::R32_UINT };	
 				mpso.blend = {  };

@@ -11,7 +11,9 @@ namespace Meshes
 {
 	struct MeshletCaptureWrite
 	{
+		uint frame; // uint
 		uint masks; // RWStructuredBuffer<uint>
+		uint GetFrame() { return frame; }
 		RWStructuredBuffer<uint> GetMasks() { return ResourceDescriptorHeap[masks]; }
 	};
 }

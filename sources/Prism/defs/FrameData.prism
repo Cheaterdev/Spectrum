@@ -85,6 +85,12 @@ namespace Frame
 		# DDGI-exclusive -- see that flag's own comment.
 		uint debugFlags = 0;
 
+		# Cluster LOD error threshold as a fraction of the screen height (pixels
+		# / render height). 0 disables LOD selection: the mesh AS then draws only
+		# the original clusters, the right fallback for every view that fills its
+		# own FrameInfo without choosing a threshold (ortho shadow cameras etc.).
+		float lodThreshold = 0;
+
 
 		float2 IntegrateBRDF(float Roughness, float Metallic, float NoV)
 		{

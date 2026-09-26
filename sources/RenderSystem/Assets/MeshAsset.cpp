@@ -151,44 +151,9 @@ MeshAsset::MeshAsset(std::wstring file_name, AssetLoadingContext::ptr c)
 
 	std::vector<Table::Meshes::Meshlet> meshlets;
 	std::vector<Table::Meshes::MeshletCullData> meshlet_cull;
+	// Every mesh's LOD groups then nodes, in mesh order (offsets recomputed below).
+	std::vector<Table::Meshes::MeshletGroup> meshlet_group_rows;
 	
-	// TEMP (meshlet cull investigation): does every cull sphere contain its
-	// meshlet's vertices, and how many meshlets exceed the MS's 64-triangle
-	// output? Remove once the wrongly-culled-meshlet bug is understood.
-	{
-		std::ofstream check("meshlet_check.temp", std::ios::app);
-		check << "asset " << convert(file_name) << "\n";
-		for (size_t mi = 0; mi < data->meshes.size(); mi++)
-		{
-			auto& mesh = data->meshes[mi];
-			uint over_prims = 0, bad_spheres = 0, max_prims = 0;
-			float worst_excess = 0, worst_ratio = 0;
-			for (auto& meshet : mesh.meshlets)
-			{
-				uint prims = static_cast<uint>(meshet.PrimitiveIndices.size() / 3);
-				max_prims = std::max(max_prims, prims);
-				if (prims > 64) over_prims++;
-
-				float4 s = meshet.cull_data.BoundingSphere;
-				float max_dist = 0;
-				for (auto v : meshet.UniqueVertexIndices)
-				{
-					vec3 p = data->vertex_buffer[mesh.vertex_offset + v].pos;
-					max_dist = std::max(max_dist, (p - vec3(s.xyz)).length());
-				}
-				if (max_dist > s.w * 1.001f + 1e-4f)
-				{
-					bad_spheres++;
-					worst_excess = std::max(worst_excess, max_dist - s.w);
-					worst_ratio = std::max(worst_ratio, s.w > 0 ? max_dist / s.w : 1e9f);
-				}
-			}
-			check << "  mesh " << mi << " meshlets=" << mesh.meshlets.size() << " max_prims=" << max_prims
-				<< " over64=" << over_prims << " bad_spheres=" << bad_spheres
-				<< " worst_excess=" << worst_excess << " worst_ratio=" << worst_ratio << "\n";
-		}
-	}
-
 	for (auto& mesh : data->meshes)
 	{
 	//	mesh.meshlets_offset = meshlets_count;
@@ -217,6 +182,8 @@ MeshAsset::MeshAsset(std::wstring file_name, AssetLoadingContext::ptr c)
 
 		}
 
+		meshlet_group_rows.insert(meshlet_group_rows.end(), mesh.lod_groups.begin(), mesh.lod_groups.end());
+		meshlet_group_rows.insert(meshlet_group_rows.end(), mesh.lod_nodes.begin(), mesh.lod_nodes.end());
 	}
 
 	LinearAllocator allocator;
@@ -227,6 +194,7 @@ MeshAsset::MeshAsset(std::wstring file_name, AssetLoadingContext::ptr c)
 	auto primitive_index_handle = allocator.Allocate<uint>(priimitive_ids_buffer.size());
 	auto meshlet_handle = allocator.Allocate<Table::Meshes::Meshlet>(meshlets.size());
 	auto meshlet_cull_handle = allocator.Allocate<Table::Meshes::MeshletCullData>(meshlet_cull.size());
+	auto meshlet_group_handle = allocator.Allocate<Table::Meshes::MeshletGroup>(meshlet_group_rows.size());
 
 
 	buffer = std::make_shared<HAL::Buffer>(RenderSystem::get().device(), HAL::ResourceDesc::Buffer(allocator.get_max_usage(), HAL::ResFlags::ShaderResource | HAL::ResFlags::Immutable), HAL::HeapType::DEFAULT);
@@ -264,6 +232,13 @@ MeshAsset::MeshAsset(std::wstring file_name, AssetLoadingContext::ptr c)
 			meshlet_cull_handle.get_size(),
 			counterType::NONE
 		});
+	meshlet_groups = buffer->create_view<HAL::StructuredBufferView<Table::Meshes::MeshletGroup>>(
+		RenderSystem::get().device().get_static_gpu_data(),
+		StructuredBufferViewDesc{
+			meshlet_group_handle.get_offset(),
+			meshlet_group_handle.get_size(),
+			counterType::NONE
+		});
 
 	unique_indices = buffer->create_view<HAL::StructuredBufferView<UINT32>>(
 		RenderSystem::get().device().get_static_gpu_data(),
@@ -287,6 +262,7 @@ MeshAsset::MeshAsset(std::wstring file_name, AssetLoadingContext::ptr c)
 	list->get_copy().update<UINT32>(index_buffer_view, 0, data->index_buffer);
 	list->get_copy().update<Table::Meshes::Meshlet>(this->meshlets, 0, meshlets);
 	list->get_copy().update<Table::Meshes::MeshletCullData>(meshlet_cull_datas, 0, meshlet_cull);
+	list->get_copy().update<Table::Meshes::MeshletGroup>(meshlet_groups, 0, meshlet_group_rows);
 	list->get_copy().update<UINT32>(unique_indices, 0, unique_ids_buffer);
 	list->get_copy().update<UINT32>(primitive_indices, 0, priimitive_ids_buffer);
 
@@ -295,12 +271,18 @@ MeshAsset::MeshAsset(std::wstring file_name, AssetLoadingContext::ptr c)
 	meshes.reserve(data->meshes.size());
 
 	uint64 meshlets_offset= 0;
+	uint group_rows_offset = 0;
 	for (auto& mesh : data->meshes)
 	{
 		meshes.emplace_back();
 		auto & compiled=meshes.back();
 		compiled.primitive = mesh.primitive->clone();
 	compiled.material = mesh.material;
+	compiled.base_meshlet_count = mesh.base_meshlet_count;
+	compiled.lod_group_offset = group_rows_offset;
+	compiled.lod_node_offset = group_rows_offset + static_cast<uint>(mesh.lod_groups.size());
+	compiled.lod_node_count = static_cast<uint>(mesh.lod_nodes.size());
+	group_rows_offset += static_cast<uint>(mesh.lod_groups.size() + mesh.lod_nodes.size());
 
 			compiled.vertex_buffer_view = buffer->create_view<HAL::StructuredBufferView<Table::Meshes::mesh_vertex_input>>(
 				RenderSystem::get().device().get_static_gpu_data(),
@@ -333,9 +315,13 @@ MeshAsset::MeshAsset(std::wstring file_name, AssetLoadingContext::ptr c)
 			compiled.draw_arguments.StartInstanceLocation = 0;
 
 
-			compiled.dispatch_mesh_arguments.ThreadGroupCountX = static_cast<UINT>(Math::DivideByMultiple(mesh.meshlets.size(), 32));
+			compiled.dispatch_mesh_arguments.ThreadGroupCountX = static_cast<UINT>(Math::DivideByMultiple(mesh.base_meshlet_count, 32));
 			compiled.dispatch_mesh_arguments.ThreadGroupCountY = 1;
 			compiled.dispatch_mesh_arguments.ThreadGroupCountZ = 1;
+
+			compiled.lod_dispatch_mesh_arguments.ThreadGroupCountX = compiled.lod_node_count;
+			compiled.lod_dispatch_mesh_arguments.ThreadGroupCountY = 1;
+			compiled.lod_dispatch_mesh_arguments.ThreadGroupCountZ = 1;
 
 		meshlets_offset+=mesh.meshlets.size() ;
 	}
@@ -434,6 +420,7 @@ void MeshAssetInstance::override_material(size_t i, MaterialAsset::ptr mat)
 	meshpart[0].meshinstance_cb = mesh_instance_info.compiled();
 
 	meshpart[0].draw_commands = info.dispatch_mesh_arguments;
+	meshpart[0].lod_draw_commands = info.lod_dispatch_mesh_arguments;
 	meshpart[0].node_offset = info.mesh_info.GetNode_offset();
 	meshpart[0].meshlet_count = info.meshlet_count;
 
@@ -525,6 +512,7 @@ void MeshAssetInstance::on_add(scene_object* parent)
 
 			meshpart[i].material_id = static_cast<materials::universal_material*>(info.material)->get_material_id();
 			meshpart[i].draw_commands = info.dispatch_mesh_arguments;
+			meshpart[i].lod_draw_commands = info.lod_dispatch_mesh_arguments;
 			meshpart[i].node_offset = info.mesh_info.GetNode_offset();
 			meshpart[i].meshlet_count = info.meshlet_count;
 
@@ -719,6 +707,7 @@ void MeshAssetInstance::update_nodes()
 	instance_info.GetVertexes() = mesh_asset->vertex_buffer_view;
 	instance_info.GetIndices() = mesh_asset->index_buffer_view;
 	instance_info.GetMeshletCullData() = mesh_asset->meshlet_cull_datas;
+	instance_info.GetMeshletGroups() = mesh_asset->meshlet_groups;
 	instance_info.GetMeshlets() = mesh_asset->meshlets;
 
 	instance_info.GetUnique_indices() = mesh_asset->unique_indices;
@@ -752,6 +741,7 @@ void MeshAssetInstance::update_nodes()
 			info.index_buffer_view = mesh_asset->meshes[m].index_buffer_view;
 			info.draw_arguments = mesh_asset->meshes[m].draw_arguments;
 			info.dispatch_mesh_arguments = mesh_asset->meshes[m].dispatch_mesh_arguments;
+			info.lod_dispatch_mesh_arguments = mesh_asset->meshes[m].lod_dispatch_mesh_arguments;
 
 
 			info.primitive = mesh_asset->meshes[m].primitive;
@@ -778,10 +768,14 @@ void MeshAssetInstance::update_nodes()
 
 			info.mesh_info.GetNode_offset() = static_cast<UINT>(nodes_handle.get_offset() + nodes.size() - 1);
 
-			info.mesh_info.GetMeshlet_count() = static_cast<UINT>(mesh_asset->meshes[m].meshet_view.desc.size/sizeof(Table::Meshes::Meshlet));
+			info.mesh_info.GetMeshlet_count() = mesh_asset->meshes[m].base_meshlet_count;
+			info.mesh_info.GetLod_meshlet_count() = static_cast<UINT>(mesh_asset->meshes[m].meshet_view.desc.size/sizeof(Table::Meshes::Meshlet));
 			info.mesh_info.GetObject_id() = first_object_id + static_cast<uint>(rendering.size());
 			info.mesh_info.GetMeshlet_mask_offset() = mask_offset;
-			mask_offset += universal_meshlet_mask_manager::words_for(info.mesh_info.GetMeshlet_count());
+			info.mesh_info.GetLod_group_offset() = mesh_asset->meshes[m].lod_group_offset;
+			info.mesh_info.GetLod_node_offset() = mesh_asset->meshes[m].lod_node_offset;
+			info.mesh_info.GetLod_node_count() = mesh_asset->meshes[m].lod_node_count;
+			mask_offset += universal_meshlet_mask_manager::words_for(info.mesh_info.GetLod_meshlet_count());
 
 			info.meshlet_offset = info.mesh_info.GetMeshlet_offset_local();
 			info.meshlet_count = info.mesh_info.GetMeshlet_count();

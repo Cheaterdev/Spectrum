@@ -61,6 +61,14 @@ namespace Dev
 		cull = None;
 	}
 
+	enum DebugViewColor
+	{
+		Object;
+		Meshlet;
+		# Cluster LOD DAG level (0 = original geometry).
+		LodLevel;
+	}
+
 	# What the debug view draws. Everything but All reads the culling capture: what
 	# the main view's GBuffer drew on the captured frame (CullCaptureWrite).
 	enum DebugViewSource
@@ -105,11 +113,12 @@ namespace Dev
 		# frame. Other buckets have no valid masks and show every meshlet.
 		StructuredBuffer<uint> meshlet_masks;
 		uint read_meshlet_masks;
+		# The captured frame; mask entries tagged with another are stale.
+		uint capture_frame;
 		# 0 every meshlet, 1 only drawn ones, 2 only culled ones.
 		uint meshlet_filter;
 
-		# Colour by object and meshlet instead of by object.
-		uint color_by_meshlet;
+		DebugViewColor color_mode;
 	}
 
 	# The captured main-camera frustum: pixels outside it are darkened, so what

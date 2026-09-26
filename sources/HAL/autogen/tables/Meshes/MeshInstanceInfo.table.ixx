@@ -13,6 +13,7 @@ import :HLSL;
 import :Enums;
 import :Autogen.Tables.Meshes.Meshlet;
 import :Autogen.Tables.Meshes.MeshletCullData;
+import :Autogen.Tables.Meshes.MeshletGroup;
 import :Autogen.Tables.Meshes.mesh_vertex_input;
 export namespace Table
 {
@@ -26,12 +27,14 @@ export namespace Table
 			HLSL::StructuredBuffer<uint> indices;
 			HLSL::StructuredBuffer<Table::Meshes::Meshlet> meshlets;
 			HLSL::StructuredBuffer<Table::Meshes::MeshletCullData> meshletCullData;
+			HLSL::StructuredBuffer<Table::Meshes::MeshletGroup> meshletGroups;
 			HLSL::StructuredBuffer<uint> unique_indices;
 			HLSL::StructuredBuffer<uint> primitive_indices;
 			HLSL::StructuredBuffer<Table::Meshes::mesh_vertex_input>& GetVertexes() { return vertexes; }
 			HLSL::StructuredBuffer<uint>& GetIndices() { return indices; }
 			HLSL::StructuredBuffer<Table::Meshes::Meshlet>& GetMeshlets() { return meshlets; }
 			HLSL::StructuredBuffer<Table::Meshes::MeshletCullData>& GetMeshletCullData() { return meshletCullData; }
+			HLSL::StructuredBuffer<Table::Meshes::MeshletGroup>& GetMeshletGroups() { return meshletGroups; }
 			HLSL::StructuredBuffer<uint>& GetUnique_indices() { return unique_indices; }
 			HLSL::StructuredBuffer<uint>& GetPrimitive_indices() { return primitive_indices; }
 			static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
@@ -42,6 +45,7 @@ export namespace Table
 				compiler.compile(indices, "MeshInstanceInfo::indices");
 				compiler.compile(meshlets, "MeshInstanceInfo::meshlets");
 				compiler.compile(meshletCullData, "MeshInstanceInfo::meshletCullData");
+				compiler.compile(meshletGroups, "MeshInstanceInfo::meshletGroups");
 				compiler.compile(unique_indices, "MeshInstanceInfo::unique_indices");
 				compiler.compile(primitive_indices, "MeshInstanceInfo::primitive_indices");
 			}
@@ -51,6 +55,7 @@ export namespace Table
 				uint indices; // StructuredBuffer<uint>
 				uint meshlets; // StructuredBuffer<Meshlet>
 				uint meshletCullData; // StructuredBuffer<MeshletCullData>
+				uint meshletGroups; // StructuredBuffer<MeshletGroup>
 				uint unique_indices; // StructuredBuffer<uint>
 				uint primitive_indices; // StructuredBuffer<uint>
 

@@ -1214,17 +1214,10 @@ std::shared_ptr<MeshData> MeshData::load_assimp(const std::string& file_name, re
                 mesh.primitive = get_best_primitive(position_function, native_mesh->mNumVertices);
              
 
-                /// hate this, just do normally later
-                std::vector<float3> poses;
-
-                for(UINT i=0;i< mesh.vertex_count;i++)
-                {
-                    poses.push_back(vertices[i+ mesh.vertex_offset].pos);//argh!!
-                }
-                BuildMeshlets(
+                mesh.base_meshlet_count = BuildMeshlets(
                     indices.data() + mesh.index_offset, mesh.index_count,
-                    poses.data(), mesh.vertex_count,
-                    mesh.meshlets
+                    vertices.data() + mesh.vertex_offset, mesh.vertex_count,
+                    mesh.meshlets, mesh.lod_groups, mesh.lod_nodes
                 );
                
                 result->meshes[i] = (mesh);

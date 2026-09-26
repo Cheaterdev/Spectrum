@@ -16,6 +16,7 @@ namespace Frame
 		float4 sunDir; // float4
 		float mipBias; // float
 		uint debugFlags; // uint
+		float lodThreshold; // float
 		uint bestFitNormals; // Texture2D<float4>
 		uint brdf; // Texture3D<float4>
 		uint sky; // TextureCube<float4>
@@ -28,6 +29,7 @@ namespace Frame
 		float4 GetSunDir() { return sunDir; }
 		float GetMipBias() { return mipBias; }
 		uint GetDebugFlags() { return debugFlags; }
+		float GetLodThreshold() { return lodThreshold; }
 		Texture2D<float4> GetBestFitNormals() { return ResourceDescriptorHeap[bestFitNormals]; }
 		Texture3D<float4> GetBrdf() { return ResourceDescriptorHeap[brdf]; }
 		TextureCube<float4> GetSky() { return ResourceDescriptorHeap[sky]; }

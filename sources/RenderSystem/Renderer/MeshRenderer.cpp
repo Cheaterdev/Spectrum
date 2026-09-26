@@ -57,11 +57,14 @@ void mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, Scene::pt
 		capture->prepare(list);
 	}
 	auto capture_stage = [&](CullCapture::Stage stage) { return capturing ? std::optional(stage) : std::nullopt; };
+	// Same GBuffer-only scope as the capture: the hierarchy is walked for the
+	// main view's own camera, and the gather must hand out the matching args.
+	bool lod = cluster_lod && gbuffer && mesh_render_context->render_type == RENDER_TYPE::PIXEL;
 
 	if (!gbuffer || !use_gpu_occlusion)
 	{
 		// Scene mesh count is CPU-known — direct dispatch, no indirect args.
-		render_meshes(mesh_render_context, scene, pipelines, scene->compiledGather[(int)mesh_render_context->render_mesh], (mesh_render_context->render_type != RENDER_TYPE::VOXEL), nullptr, meshes_count, false, capture_stage(CullCapture::First));
+		render_meshes(mesh_render_context, scene, pipelines, scene->compiledGather[(int)mesh_render_context->render_mesh], (mesh_render_context->render_type != RENDER_TYPE::VOXEL), nullptr, meshes_count, false, capture_stage(CullCapture::First), lod);
 		return;
 	}
 
@@ -89,7 +92,7 @@ void mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, Scene::pt
 		draw_boxes(mesh_render_context, scene);
 		gather_rendered_boxes(mesh_render_context, scene, true);
 
-		render_meshes(mesh_render_context, scene, pipelines, gather_visible, false, &render_args, 0, false, capture_stage(CullCapture::First));
+		render_meshes(mesh_render_context, scene, pipelines, gather_visible, false, &render_args, 0, false, capture_stage(CullCapture::First), lod);
 		MipMapGenerator::get().downsample_depth(compute, gbuffer->depth, gbuffer->HalfBuffer.hiZ_depth_uav);
 		// Coarser mips on top of mip 0, for the AS's per-meshlet test below.
 		// Skipped with the toggle off so disabling it is a clean baseline.
@@ -111,7 +114,7 @@ void mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, Scene::pt
 		draw_boxes(mesh_render_context, scene);
 		gather_rendered_boxes(mesh_render_context, scene, false);
 
-		render_meshes(mesh_render_context, scene, pipelines, gather_visible, false, &render_args, 0, use_meshlet_hiz_occlusion, capture_stage(CullCapture::Retest));
+		render_meshes(mesh_render_context, scene, pipelines, gather_visible, false, &render_args, 0, use_meshlet_hiz_occlusion, capture_stage(CullCapture::Retest), lod);
 
 		MipMapGenerator::get().downsample_depth(compute, gbuffer->depth, gbuffer->HalfBuffer.hiZ_depth_uav);
 		// Coarser mips on top of mip 0, for the AS's per-meshlet test below.
@@ -238,7 +241,7 @@ void  mesh_renderer::draw_boxes(MeshRenderContext::ptr mesh_render_context, Scen
 
 	graphics.set_rtv(gbuffer->compiled);
 }
-void  mesh_renderer::render_meshes(MeshRenderContext::ptr mesh_render_context, Scene::ptr scene, std::map<size_t, materials::Pipeline::ptr>& pipelines, Slots::Meshes::GatherPipelineGlobal::Compiled& gatherData, bool needCulling, HAL::StructuredBufferView<DispatchArguments>* dispatch_args, UINT direct_count, bool hiz_occlusion, std::optional<CullCapture::Stage> capture_stage)
+void  mesh_renderer::render_meshes(MeshRenderContext::ptr mesh_render_context, Scene::ptr scene, std::map<size_t, materials::Pipeline::ptr>& pipelines, Slots::Meshes::GatherPipelineGlobal::Compiled& gatherData, bool needCulling, HAL::StructuredBufferView<DispatchArguments>* dispatch_args, UINT direct_count, bool hiz_occlusion, std::optional<CullCapture::Stage> capture_stage, bool walk_lod)
 {
 	PROFILE_GPU(L"render_meshes");
 
@@ -296,7 +299,8 @@ void  mesh_renderer::render_meshes(MeshRenderContext::ptr mesh_render_context, S
 
 			compute.set_pipeline<PSOS::Meshes::GatherPipeline>(
 				PSOS::Meshes::GatherPipeline::CheckFrustum.Use(needCulling) |
-				PSOS::Meshes::GatherPipeline::CaptureVisibility.Use(capture_stage.has_value()));
+				PSOS::Meshes::GatherPipeline::CaptureVisibility.Use(capture_stage.has_value()) |
+				PSOS::Meshes::GatherPipeline::ClusterLod.Use(walk_lod));
 			compute.set(gatherData);
 			compute.set(gather);
 			if (capture_stage)
@@ -333,6 +337,7 @@ void  mesh_renderer::render_meshes(MeshRenderContext::ptr mesh_render_context, S
 					{
 						Slots::Meshes::MeshletCaptureWrite write;
 						write.GetMasks() = universal_meshlet_mask_manager::get().buffer;
+						write.GetFrame()  = capture->frame;
 						graphics.set(write);
 					}
 				}
@@ -342,7 +347,7 @@ void  mesh_renderer::render_meshes(MeshRenderContext::ptr mesh_render_context, S
 				{
 					PROFILE_GPU(L"flush");
 
-					batch_pipelines[batch_start + i]->set(mesh_render_context->render_type, mesh_render_context->render_mesh, graphics, hiz_occlusion, capture_stage.has_value());
+					batch_pipelines[batch_start + i]->set(mesh_render_context->render_type, mesh_render_context->render_mesh, graphics, hiz_occlusion, capture_stage.has_value(), walk_lod);
 				}
 
 				{

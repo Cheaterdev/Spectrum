@@ -21,24 +21,28 @@ export namespace PSOS
 			struct Keys {
 				KeyValue<int, Nullable> CheckFrustum;
 				KeyValue<int, Nullable> CaptureVisibility;
+				KeyValue<int, Nullable> ClusterLod;
 				GEN_DEF_COMP(Keys);
 			private:
 				SERIALIZE()
 				{
 					ar&NVP(CheckFrustum);
 					ar&NVP(CaptureVisibility);
+					ar&NVP(ClusterLod);
 				}
 			};
 
-			GEN_COMPUTE_PSO(GatherPipeline, CheckFrustum, CaptureVisibility)
+			GEN_COMPUTE_PSO(GatherPipeline, CheckFrustum, CaptureVisibility, ClusterLod)
 			GEN_KEY(CheckFrustum, true);
 			GEN_KEY(CaptureVisibility, true);
+			GEN_KEY(ClusterLod, true);
 
 
 			SimplePSO init_pso(Keys & key, std::function<void(SimplePSO&, Keys&)> f)
 			{
 				static const ShaderDefine<&Keys::CheckFrustum,&SimpleComputePSO::compute> CheckFrustum = "CHECK_FRUSTUM";
 				static const ShaderDefine<&Keys::CaptureVisibility,&SimpleComputePSO::compute> CaptureVisibility = "CAPTURE_VISIBILITY";
+				static const ShaderDefine<&Keys::ClusterLod,&SimpleComputePSO::compute> ClusterLod = "CLUSTER_LOD";
 
 
 				SimplePSO mpso("GatherPipeline");
@@ -52,6 +56,7 @@ export namespace PSOS
 			
 				CheckFrustum.Apply(mpso, key);
 				CaptureVisibility.Apply(mpso, key);
+				ClusterLod.Apply(mpso, key);
 				return mpso;
 			}
 

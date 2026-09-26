@@ -23,12 +23,20 @@ export namespace Table
 			uint meshlet_offset_local;
 			uint node_offset;
 			uint meshlet_count;
+			uint lod_meshlet_count;
+			uint lod_group_offset;
+			uint lod_node_offset;
+			uint lod_node_count;
 			uint object_id;
 			uint meshlet_mask_offset;
 			uint& GetVertex_offset_local() { return vertex_offset_local; }
 			uint& GetMeshlet_offset_local() { return meshlet_offset_local; }
 			uint& GetNode_offset() { return node_offset; }
 			uint& GetMeshlet_count() { return meshlet_count; }
+			uint& GetLod_meshlet_count() { return lod_meshlet_count; }
+			uint& GetLod_group_offset() { return lod_group_offset; }
+			uint& GetLod_node_offset() { return lod_node_offset; }
+			uint& GetLod_node_count() { return lod_node_count; }
 			uint& GetObject_id() { return object_id; }
 			uint& GetMeshlet_mask_offset() { return meshlet_mask_offset; }
 			static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
@@ -39,6 +47,10 @@ export namespace Table
 				compiler.compile(meshlet_offset_local, "MeshInfo::meshlet_offset_local");
 				compiler.compile(node_offset, "MeshInfo::node_offset");
 				compiler.compile(meshlet_count, "MeshInfo::meshlet_count");
+				compiler.compile(lod_meshlet_count, "MeshInfo::lod_meshlet_count");
+				compiler.compile(lod_group_offset, "MeshInfo::lod_group_offset");
+				compiler.compile(lod_node_offset, "MeshInfo::lod_node_offset");
+				compiler.compile(lod_node_count, "MeshInfo::lod_node_count");
 				compiler.compile(object_id, "MeshInfo::object_id");
 				compiler.compile(meshlet_mask_offset, "MeshInfo::meshlet_mask_offset");
 			}
@@ -55,6 +67,10 @@ export namespace Table
 				ar& NVP(meshlet_offset_local);
 				ar& NVP(node_offset);
 				ar& NVP(meshlet_count);
+				ar& NVP(lod_meshlet_count);
+				ar& NVP(lod_group_offset);
+				ar& NVP(lod_node_offset);
+				ar& NVP(lod_node_count);
 				ar& NVP(object_id);
 				ar& NVP(meshlet_mask_offset);
 			}

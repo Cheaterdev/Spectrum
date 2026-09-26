@@ -29,7 +29,7 @@ public:
 	// Stops recording: the stamps and the main-camera frustum stay at the last
 	// captured frame while the main camera moves on.
 	Variable<bool>  freeze            = { false, "Freeze capture", this };
-	Variable<bool>  color_by_meshlet  = { false, "Colour by meshlet", this };
+	Variable<Dev::DebugViewColor> color_mode = { Dev::DebugViewColor::Object, "Colour", this };
 	Variable<bool>  draw_main_frustum = { true, "Main camera frustum", this };
 	Variable<bool>  draw_grid         = { true, "Ground grid", this };
 	Variable<float> frustum_length    = { 100.0f, "Frustum length", this, 1.0f, 1500.0f };
@@ -43,6 +43,9 @@ public:
 
 	// Hand to the main view's mesh_renderer, whose GBuffer draws fill it.
 	CullCapture::ptr capture;
+
+	// The main view's FrameInfo::lodThreshold, set before update_frame().
+	float lod_threshold = 0;
 
 	// Setup is generated (debug_view.prism) -- render only.
 	Passes::Dev::DebugView::render_func_type m_render;
@@ -81,6 +84,7 @@ private:
 	mat4x4 captured_inv_view_proj;
 	vec3 captured_eye;
 	Table::Frame::Frustum captured_frustum;
+	float captured_lod_threshold = 0;
 	bool has_captured_camera = false;
 
 	bool keys[256] = {};

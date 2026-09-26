@@ -21,14 +21,23 @@ export namespace Table
 			static constexpr SlotID ID = SlotID::MeshletCullData;
 			float4 BoundingSphere;
 			uint NormalCone;
+			float RefinedError;
+			uint LodLevel;
+			float4 RefinedSphere;
 			float4& GetBoundingSphere() { return BoundingSphere; }
 			uint& GetNormalCone() { return NormalCone; }
+			float& GetRefinedError() { return RefinedError; }
+			uint& GetLodLevel() { return LodLevel; }
+			float4& GetRefinedSphere() { return RefinedSphere; }
 			static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 			template<class Compiler>
 			void compile(Compiler& compiler) const
 			{
 				compiler.compile(BoundingSphere, "MeshletCullData::BoundingSphere");
 				compiler.compile(NormalCone, "MeshletCullData::NormalCone");
+				compiler.compile(RefinedError, "MeshletCullData::RefinedError");
+				compiler.compile(LodLevel, "MeshletCullData::LodLevel");
+				compiler.compile(RefinedSphere, "MeshletCullData::RefinedSphere");
 			}
 			using Compiled = MeshletCullData;
 
@@ -41,6 +50,9 @@ export namespace Table
 			{
 				ar& NVP(BoundingSphere);
 				ar& NVP(NormalCone);
+				ar& NVP(RefinedError);
+				ar& NVP(LodLevel);
+				ar& NVP(RefinedSphere);
 			}
 
 		};
