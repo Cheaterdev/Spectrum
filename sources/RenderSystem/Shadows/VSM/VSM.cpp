@@ -247,7 +247,8 @@ void VSM::plan_frame(FrameGraph::Graph& graph)
 	// whether VSM_Combine itself runs this frame -- VSM_Combine no longer
 	// runs at all when use_vsm_penumbra is on (see its own PassNode comment
 	// in vsm.prism), which used to be the only place this was set.
-	RTX::get().debug_full_reference_shadow = (vsm_debug_view == Shadows::VSM::VSMDebugView::RtxReference);
+	if (RenderSystem::get().device().is_rtx_supported())
+		RTX::get().debug_full_reference_shadow = (vsm_debug_view == Shadows::VSM::VSMDebugView::RtxReference);
 
 	// Single-threaded, once per frame, strictly before any level's render()
 	// is dispatched (see the LevelPlan comment in VSM.ixx for why this has
@@ -874,7 +875,9 @@ VSM::VSM() : VariableContext(L"VSM")
 				                        true, false, 0, 0, /*whole_resource*/ true);
 		}
 
-		if (!any_dirty)
+		// Pages are still cleared above, so without mesh shaders VSM sees an
+		// empty shadow atlas rather than stale depth.
+		if (!any_dirty || !RenderSystem::get().device().is_mesh_shader_supported())
 			return;
 
 		{
@@ -1513,7 +1516,7 @@ VSM::VSM() : VariableContext(L"VSM")
 			compute.set(io);
 		}
 
-		bool rtx_capable = RenderSystem::get().device().get_properties().rtx;
+		bool rtx_capable = RenderSystem::get().device().is_rtx_supported();
 		bool rtx_verify  = rtx_capable && use_vsm_rtx_verify;
 
 		{

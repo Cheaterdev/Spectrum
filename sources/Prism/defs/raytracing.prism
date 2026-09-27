@@ -538,6 +538,7 @@ namespace Shadows
 		RWTexture2D<float4> output;
 	}
 
+	[Requires = Raytracing]
 	ComputePSO RTXShadowReferenceCompute
 	{
 		root = DefaultLayout;

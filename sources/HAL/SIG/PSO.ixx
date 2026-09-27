@@ -235,10 +235,15 @@ requires (T t) {
 
 
 
+// create() returns null for a PSO the device can't run -- a mesh/amplification
+// stage without mesh shaders, or requires_raytracing (inline RayQuery; set from
+// the .prism's [Requires = Raytracing]) without raytracing. Passes using such a
+// PSO must be gated on the same feature; GetPSO() asserts on the null entry.
 struct SimpleComputePSO {
 	Layouts root_signature;
 	HAL::shader_header compute;
 	std::string name;
+	bool requires_raytracing = false;
 
 	SimpleComputePSO(std::string name) :name(name)
 	{
@@ -265,6 +270,7 @@ struct  SimpleGraphicsPSO {
 	std::vector<HAL::Format> rtv_formats;
 	std::vector<HAL::RenderTarget> blend;
 	std::string name;
+	bool requires_raytracing = false;
 
 	bool conservative;
 	bool depth_write;

@@ -208,7 +208,7 @@ FrameGraph::SetupResult PassDefault<Passes::Denoise::NRD::NRD_SIGMA_Execute>::se
 FrameGraph::SetupResult PassDefault<Passes::Denoise::NRD::NRD_IndirectCombine>::setup(
 	Passes::Denoise::NRD::NRD_IndirectCombine::Context& data, FrameGraph::TaskBuilder& builder)
 {
-	if (!(builder.graph->get_context<Table::Post::Upscale::UpscalerSelectors>().upscaler_type != ::Post::Upscale::UpscalerType::DLSSRR))
+	if (!(builder.graph->get_context<Table::Post::Upscale::UpscalerSelectors>().upscaler_type != ::Post::Upscale::UpscalerType::DLSSRR && builder.graph->get_context<Table::Raytrace::RenderDeviceCapabilities>().rtx_supported && builder.graph->get_context<Table::Raytrace::RenderDeviceCapabilities>().dlssrr_available))
 		return FrameGraph::SetupResult::Disabled;
 	return FrameGraph::SetupResult::NeedsRender;
 }
@@ -464,7 +464,7 @@ FrameGraph::SetupResult PassDefault<Passes::GI::IndirectRTX>::setup(
 FrameGraph::SetupResult PassSetupDefault<Passes::Reflections::ReflCombine>::setup(
 	Passes::Reflections::ReflCombine::Context& data, FrameGraph::TaskBuilder& builder)
 {
-	if (!(builder.graph->get_context<Table::GI::Voxel::VoxelGISelectors>().reflection_enabled && builder.graph->get_context<Table::Post::Upscale::UpscalerSelectors>().upscaler_type != ::Post::Upscale::UpscalerType::DLSSRR))
+	if (!(builder.graph->get_context<Table::GI::Voxel::VoxelGISelectors>().reflection_enabled && builder.graph->get_context<Table::Post::Upscale::UpscalerSelectors>().upscaler_type != ::Post::Upscale::UpscalerType::DLSSRR && builder.graph->get_context<Table::Raytrace::RenderDeviceCapabilities>().rtx_supported && builder.graph->get_context<Table::Raytrace::RenderDeviceCapabilities>().dlssrr_available))
 		return FrameGraph::SetupResult::Disabled;
 	return FrameGraph::SetupResult::NeedsRender;
 }

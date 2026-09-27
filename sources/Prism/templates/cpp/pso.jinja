@@ -80,6 +80,15 @@ export namespace PSOS
 {%- set d = pso.defines[v]-%}
 			{{d.name}}.Apply(mpso, key);
 {%endfor%}
+{%- if pso.options.Requires is defined and pso.options.Requires.value_atom.expr == "Raytracing" %}
+			mpso.requires_raytracing = true;
+{% endif %}
+{%- for v in (pso.defines|list) %}
+{%- set d = pso.defines[v]-%}
+{%- if d.options.Requires is defined and d.options.Requires.value_atom.expr == "Raytracing" %}
+			if (key.{{d.name}}.use) mpso.requires_raytracing = true;
+{% endif %}
+{%- endfor %}
 
 {%-if pso.graphics-%}
 {%- set values = create_list('values') -%}

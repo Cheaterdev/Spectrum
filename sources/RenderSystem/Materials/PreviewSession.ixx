@@ -79,7 +79,8 @@ export namespace materials
 		HAL::Texture2DView get_slice_view(int slot);
 
 		bool is_3d() const { return want_3d; }
-		void set_3d(bool value) { want_3d = value; }
+		// The 3D preview draws with mesh shaders; without them it stays 2D.
+		void set_3d(bool value);
 
 		static void open(::FlowGraph::graph* g);
 		static void close(::FlowGraph::graph* g);

@@ -8,6 +8,9 @@ void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>&);
 
 HAL::ComputePipelineState::ptr SimpleComputePSO::create(HAL::Device& device)
 {
+	if (requires_raytracing && !device.is_rtx_supported())
+		return nullptr;
+
 	HAL::ComputePipelineStateDesc desc;
 	desc.layout = root_signature;
 	desc.shader = HAL::compute_shader::get_resource(compute);
@@ -17,6 +20,11 @@ HAL::ComputePipelineState::ptr SimpleComputePSO::create(HAL::Device& device)
 
 HAL::PipelineState::ptr SimpleGraphicsPSO::create(HAL::Device&device)
 {
+	if (requires_raytracing && !device.is_rtx_supported())
+		return nullptr;
+	if ((!mesh.entry_point.empty() || !amplification.entry_point.empty()) && !device.is_mesh_shader_supported())
+		return nullptr;
+
 	HAL::PipelineStateDesc desc;
 	desc.layout = root_signature;
 	if (!vertex.entry_point.empty())	desc.vertex = HAL::vertex_shader::get_resource(vertex);

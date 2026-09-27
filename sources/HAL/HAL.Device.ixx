@@ -39,6 +39,7 @@ export namespace HAL
 		IdGenerator<Thread::Lockable> id_generator;
 		friend class CommandList;
 		bool rtx = false;
+		bool mesh_shader = false;
 		std::unique_ptr<FrameResourceManager> frame_manager;
 
 		std::unique_ptr<HeapFactory> heap_factory;
@@ -85,7 +86,11 @@ export namespace HAL
 
 		std::shared_ptr<HAL::Queue>& get_queue(HAL::CommandListType type);
 
+		// Optional features. Both can be forced off on capable hardware with the
+		// SPECTRUM_DISABLE_RTX / SPECTRUM_DISABLE_MESH_SHADERS environment
+		// variables, to exercise the fallback paths a lesser GPU would take.
 		bool is_rtx_supported();
+		bool is_mesh_shader_supported();
 
 		mutable bool alive = true;
 

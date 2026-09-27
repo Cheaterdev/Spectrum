@@ -260,7 +260,9 @@ static inline const PassContextDeps pass_context_deps[] = {
 		  ContextField::VSMSelectors_shadow_source,
 		true },
 	{ PassID::NRD_IndirectCombine,
-		  ContextField::UpscalerSelectors_upscaler_type,
+		  ContextField::RenderDeviceCapabilities_rtx_supported
+		| ContextField::RenderDeviceCapabilities_dlssrr_available
+		| ContextField::UpscalerSelectors_upscaler_type,
 		  ContextField::None,
 		true },
 	{ PassID::NRD_ShadowCombine,
@@ -399,7 +401,9 @@ static inline const PassContextDeps pass_context_deps[] = {
 		  ContextField::None,
 		true },
 	{ PassID::ReflCombine,
-		  ContextField::UpscalerSelectors_upscaler_type
+		  ContextField::RenderDeviceCapabilities_rtx_supported
+		| ContextField::RenderDeviceCapabilities_dlssrr_available
+		| ContextField::UpscalerSelectors_upscaler_type
 		| ContextField::VoxelGISelectors_reflection_enabled,
 		  ContextField::None,
 		true },

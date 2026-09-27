@@ -104,7 +104,16 @@ namespace HAL
 
 		//auto another_direct = std::make_shared<HAL::Queue>(CommandListType::DIRECT, this);
 		ds_queue = std::make_unique<DirectStorageQueue>(*this);
-		rtx = !Debug::RunForPix && get_properties().rtx;
+		auto forced_off = [](const char* var, const char* feature) {
+			const char* v = std::getenv(var);
+			bool off = v && *v && *v != '0';
+			if (off)
+				Log::get() << feature << " disabled by " << var << Log::endl;
+			return off;
+		};
+		rtx = !Debug::RunForPix && get_properties().rtx && !forced_off("SPECTRUM_DISABLE_RTX", "Raytracing");
+		mesh_shader = get_properties().mesh_shader && !forced_off("SPECTRUM_DISABLE_MESH_SHADERS", "Mesh shaders");
+		Log::get() << "Raytracing: " << (rtx ? "on" : "off") << ", mesh shaders: " << (mesh_shader ? "on" : "off") << Log::endl;
 
 		heap_factory = std::make_unique<HeapFactory>(*this);
 		descriptor_heap_factory = std::make_unique<DescriptorHeapFactory>(*this);
@@ -192,4 +201,5 @@ namespace HAL
 
 	const HAL::DeviceProperties& Device::get_properties() const { return properties; }
 	bool Device::is_rtx_supported() { return rtx; }
+	bool Device::is_mesh_shader_supported() { return mesh_shader; }
 }

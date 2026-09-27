@@ -124,7 +124,7 @@ debug_view::debug_view() : VariableContext(L"Debug View")
 			graphics.set(frameInfo);
 		}
 
-		if (mesh_count)
+		if (mesh_count && RenderSystem::get().device().is_mesh_shader_supported())
 		{
 			PROFILE(L"debug_view_meshes");
 			graphics.set_pipeline<PSOS::Dev::DebugViewMesh>();

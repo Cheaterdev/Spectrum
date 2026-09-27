@@ -14,6 +14,10 @@ namespace
 	// to it in the same change that adds the consumer. The exceptions are
 	// marked "unread": used in .prism files as annotations, consumed by nothing.
 	const std::set<std::string> PSO_OPTIONS = { "Template", "ExcludeVulkan" };
+	// [Requires = X] on a ComputePSO/GraphicsPSO or one of its defines: the PSO
+	// (or that permutation) is only built when the device supports X. Mesh
+	// shaders need no tag -- a mesh/amplification stage implies it.
+	const std::set<std::string> REQUIRES_VALUES = { "Raytracing" };
 	const std::set<std::string> RESOURCE_FIELD_OPTIONS = {
 		"Always", "ArrayCount", "Format", "MipCount", "Optional", "PrevFor", "Recreate", "RecreateFlags",
 		"Size", "SkipEnablement", "Write",
@@ -29,14 +33,14 @@ namespace
 		{ "layout", {} },
 		{ "slot", {} },
 		{ "render target", {} },
-		{ "ComputePSO", PSO_OPTIONS },
-		{ "GraphicsPSO", { "Template", "ExcludeVulkan", "Base" /* unread */ } },
+		{ "ComputePSO", { "Template", "ExcludeVulkan", "Requires" } },
+		{ "GraphicsPSO", { "Template", "ExcludeVulkan", "Requires", "Base" /* unread */ } },
 		{ "WorkgraphPSO", PSO_OPTIONS },
 		{ "RaytracePSO", PSO_OPTIONS },
 		{ "RaytraceRaygen", { "Bind" } },
 		{ "RaytracePass", { "Bind" } },
 		{ "shader", { "EntryPoint", "Erase", "Enable16bits" } },
-		{ "define", { "CS", "PS", "VS", "GS", "FS", "HS", "MS", "AS", "rename", "type", "indirect",
+		{ "define", { "CS", "PS", "VS", "GS", "FS", "HS", "MS", "AS", "rename", "type", "indirect", "Requires",
 			"nullable" /* unread */ } },
 		{ "PSO param", {} },
 		{ "rtv", {} },
@@ -630,10 +634,19 @@ namespace
 				s.path_literal, shaders.lexically_normal().string()));
 	}
 
+	void check_requires(const have_options& holder, const std::string& owner_name)
+	{
+		const option* req = holder.find_option("Requires");
+		if (req && !REQUIRES_VALUES.count(req->value_atom.expr))
+			unknown_name(name_loc_of(*req), std::format("{}: unknown [Requires = {}]", owner_name, req->value_atom.expr),
+				req->value_atom.expr, { REQUIRES_VALUES.begin(), REQUIRES_VALUES.end() });
+	}
+
 	template <class T>
 	void check_pso(const T& pso, const std::string& kind)
 	{
 		check_options(pso, kind, pso.name);
+		check_requires(pso, pso.name);
 
 		for (const auto& s : pso.shaders)
 		{
@@ -642,7 +655,10 @@ namespace
 		}
 
 		for (const auto& d : pso.defines)
+		{
 			check_options(d, "define", pso.name + "." + d.name);
+			check_requires(d, pso.name + "." + d.name);
+		}
 
 		if constexpr (std::is_base_of_v<param_holder, T>)
 			for (const auto& p : pso.params)

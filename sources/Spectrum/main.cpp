@@ -781,11 +781,12 @@ public:
 				if (auto* session = materials::MaterialPreviewSession::find(m_graph))
 					session->set_3d(false);
 			};
-			combo->add_item("3D")->on_select = [this]()
-			{
-				if (auto* session = materials::MaterialPreviewSession::find(m_graph))
-					session->set_3d(true);
-			};
+			if (RenderSystem::get().device().is_mesh_shader_supported())
+				combo->add_item("3D")->on_select = [this]()
+				{
+					if (auto* session = materials::MaterialPreviewSession::find(m_graph))
+						session->set_3d(true);
+				};
 			row->add_child(combo);
 
 			add_child(row);
@@ -1193,7 +1194,9 @@ public:
 			auto f_rtx = thread_pool::get().enqueue([]()
 			{
 				PROFILE(L"RTX update");
-				RTX::get().update();
+				// RTX::get() lazily constructs the singleton, which builds the DXR state object.
+				if (RenderSystem::get().device().is_rtx_supported())
+					RTX::get().update();
 			});
 
 			auto f_times = thread_pool::get().enqueue([this, frame_dt]()

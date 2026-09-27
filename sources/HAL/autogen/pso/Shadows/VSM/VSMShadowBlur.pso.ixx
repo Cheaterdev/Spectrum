@@ -49,6 +49,8 @@ export namespace PSOS
 					mpso.compute.flags = HAL::ShaderOptions::None;
 			
 					VsmRtxVerify.Apply(mpso, key);
+
+					if (key.VsmRtxVerify.use) mpso.requires_raytracing = true;
 					return mpso;
 				}
 

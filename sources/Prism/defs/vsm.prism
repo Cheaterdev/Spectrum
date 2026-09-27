@@ -567,6 +567,7 @@ namespace Shadows
 			# [[project-nrd-integration]]).
 			[rename = VSM_RTX_VERIFY]
 			[CS, nullable]
+			[Requires = Raytracing]
 			define VsmRtxVerify;
 		}
 

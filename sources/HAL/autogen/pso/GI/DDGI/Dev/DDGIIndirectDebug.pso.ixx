@@ -46,6 +46,8 @@ export namespace PSOS
 						mpso.compute.entry_point = "CS";
 						mpso.compute.flags = HAL::ShaderOptions::None;
 			
+
+						mpso.requires_raytracing = true;
 						return mpso;
 					}
 

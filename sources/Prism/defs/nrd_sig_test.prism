@@ -1069,9 +1069,9 @@ namespace Denoise
 		# The FSR/DLSS-side equivalent of the indirect term RTXCombine computes for
 		# DLSS-RR (see [[project-nrd-integration]]). Runs exactly in the
 		# complementary case to RTXCombine (which handles DLSS-RR itself) -- the
-		# negation of NRD_GBufferPack's own condition (above), same three Table::
-		# contexts.
-		[SetupCondition = UpscalerSelectors::upscaler_type != UpscalerType::DLSSRR]
+		# same condition as NRD_GBufferPack/NRD_REBLUR_Execute (above), which
+		# produce RTXIndirectDenoised; without RTX there is nothing to combine.
+		[SetupCondition = UpscalerSelectors::upscaler_type != UpscalerType::DLSSRR && RenderDeviceCapabilities::rtx_supported && RenderDeviceCapabilities::dlssrr_available]
 		PassNode NRD_IndirectCombine
 		{
 			# Flat fields, not the (removed) GBuffer PassView -- see pssm.prism's own

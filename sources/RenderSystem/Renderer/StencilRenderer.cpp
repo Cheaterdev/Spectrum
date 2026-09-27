@@ -561,6 +561,7 @@ void stencil_renderer::draw_gizmo(HAL::GraphicsContext& graphics)
 	}
 
 	// Handle ids: arrows 1..3, rings 4..6 (mouse_on_axis = id - 1).
+	if (RenderSystem::get().device().is_mesh_shader_supported())
 	{
 		graphics.set_index_buffer(HAL::Views::IndexBuffer());
 		{

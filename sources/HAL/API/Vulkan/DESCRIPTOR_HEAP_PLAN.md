@@ -1,178 +1,294 @@
-# VK_EXT_descriptor_heap Migration Plan
+# Vulkan Binding Model + Optional RT / Mesh Shaders — Plan
 
-Goal: make the Vulkan HAL backend match D3D12 1:1 in terms of Descriptors,
-RootSignatures, and binding features by replacing the classic descriptor model
-(VkDescriptorPool / VkDescriptorSet / VkDescriptorSetLayout / VkPipelineLayout)
-with **VK_EXT_descriptor_heap**.
+Goal: a Vulkan resource-binding model that runs on Android, plus making
+raytracing and mesh shaders optional engine features (their passes are skipped
+when unsupported; fallback passes come later).
 
-Status: **planned** — a previous attempt was reverted; its failure causes are
-analyzed at the bottom and folded into this plan.
+Status: **planned**. Replaces the earlier `VK_EXT_descriptor_heap` migration
+plan — that extension is ~1% on Android and is not the target anymore. The
+current backend still uses it and gets rewritten by Track A below.
+
+Two independent tracks:
+
+- **Track A** — binding model: `VK_EXT_mutable_descriptor_type` + descriptor
+  indexing, one device-global pipeline layout.
+- **Track B** — capabilities: `Raytracing` / `MeshShader` become optional;
+  PSOs and passes that need them are skipped.
 
 ---
 
-## Why VK_EXT_descriptor_heap
+## Why mutable descriptors
 
-The extension was designed to match D3D12's descriptor model:
+A D3D12 CBV/SRV/UAV heap is a flat array: every slot has the same size and can
+hold any view type. Classic Vulkan has no such thing — descriptor sizes differ
+per type and per GPU, so a `VkDescriptorSet` is a *typed struct* and its
+`VkDescriptorSetLayout` is the struct definition. That is why allocation needs a
+layout.
 
-| D3D12 concept | Classic Vulkan (current) | VK_EXT_descriptor_heap |
+Measured on the reference Android device (Xiaomi 15, Adreno 830, driver
+512.800.75, gpuinfo report 51382):
+
+| descriptor type | size |
+|---|---|
+| sampler / sampled image / storage image / uniform buffer | 64 B |
+| storage buffer | **192 B** |
+
+`VK_EXT_mutable_descriptor_type` gives one binding whose elements can each be
+any type from a declared list — the D3D12 heap semantics — at the cost of every
+slot taking the size of the largest listed type. It is what vkd3d-proton uses
+to run D3D12 on Vulkan.
+
+Why this and not the alternatives:
+
+| option | Android coverage (gpuinfo) | notes |
 |---|---|---|
-| Descriptor heap = flat memory array | VkDescriptorPool + VkDescriptorSet (opaque) | **VkBuffer, host-mapped, device address** |
-| CPU handle = ptr + index × increment | impossible; must vkUpdateDescriptorSets | mapped_ptr + index × `resourceDescriptorSize` |
-| GPU handle / bindless index | dstArrayElement games on binding 0 | byte offset / index into the heap buffer |
-| `CopyDescriptors` = memcpy | vkCopyDescriptorSets (slow, constrained) | **plain memcpy** |
-| CPU-only staging heaps | second descriptor set + copy restrictions | plain host allocation, memcpy to GPU heap |
-| `SetDescriptorHeaps` (2 heaps, once) | vkCmdBindDescriptorSets per-layout, per-bind-point | `vkCmdBindResourceHeapEXT` / `vkCmdBindSamplerHeapEXT` |
-| Root signature = small blob, no layout objects | VkDescriptorSetLayout + VkPipelineLayout per sig | **no objects at all** — set/binding→heap mapping table at pipeline creation |
-| `SetRoot32BitConstant` (no layout arg) | vkCmdPushConstants (needs layout) | `vkCmdPushDataEXT` (no layout arg) |
-| Root CBV/SRV/UAV = raw GPU VA | not implementable → `ASSERT(0)` today | push a 64-bit `VkDeviceAddress` via PushData |
-| Static samplers in root signature | device-global "inline sampler" set hack | embedded-sampler binding mappings |
+| `VK_EXT_descriptor_heap` | ~1% | current backend; not viable on Android |
+| `VK_EXT_descriptor_buffer` | ~18% | being superseded by descriptor_heap |
+| `VK_EXT_mutable_descriptor_type` | ~18% | **chosen** — keeps one index space and `ResourceDescriptorHeap[i]` in HLSL unchanged |
+| typed per-type arrays | ~77% (descriptor_indexing) | needs per-type allocators + Prism emitting typed arrays; fallback if mutable ever blocks us |
+
+The mutable coverage figure is not the limiting factor: mesh shaders (~5%) and
+RT pipelines (~7.7%) are rarer, and every driver that ships them (Qualcomm
+512.800+, Mali r53+, Turnip) also ships mutable descriptors.
+
+Xiaomi 15 also has: update-after-bind for all types, non-uniform indexing for
+sampled/storage image, storage buffer **and** UBO, storage-image R/W without
+format, BDA, sync2, dynamic rendering, push descriptors, 256 B push constants.
+It does **not** have `VK_EXT_mesh_shader` or `VK_KHR_ray_tracing_pipeline`
+(only `ray_query`) — hence Track B.
 
 ---
 
-## File-by-file changes
+## Track A — binding model
 
-### HAL.Vulkan.Device (.ixx / .cpp)
+### The shape
 
-- Require `VK_EXT_descriptor_heap` **and `VK_KHR_maintenance5`**.
-  - descriptor_heap lists maintenance5 as a required dependency
-    (VUID-vkCreateDevice-ppEnabledExtensionNames-01387).
-  - maintenance5 also provides `VkPipelineCreateFlags2CreateInfo` and allows
-    `layout = VK_NULL_HANDLE` at pipeline creation.
-  - Enable BOTH feature structs (`VkPhysicalDeviceMaintenance5FeaturesKHR`,
-    `VkPhysicalDeviceDescriptorHeapFeaturesEXT`) in the device `pNext` chain.
-  - Hard required-extension check with `crash_error` if unsupported
-    (AMD iGPU lacks it; NVIDIA 580+ supports it).
-- Load extension entry points via `vkGetDeviceProcAddr` trampolines
-  (guarded by `VK_ONLY_EXPORTED_PROTOTYPES` in the header — NOT exported by
-  vulkan-1.lib): `vkWriteResourceDescriptorsEXT`,
-  `vkWriteSamplerDescriptorsEXT`, `vkCmdBindResourceHeapEXT`,
-  `vkCmdBindSamplerHeapEXT`, `vkCmdPushDataEXT`.
-  Pattern: anonymous-namespace `PFN_*` pointers + real `VKAPI_ATTR` function
-  definitions that delegate; load once after `vkCreateDevice`; log per-function
-  if null.
-- Query `VkPhysicalDeviceDescriptorHeapPropertiesEXT` →
-  `resourceDescriptorSize` / `samplerDescriptorSize` become the D3D12
-  "handle increment size" (exposed through the existing `handle_size`).
-- Build the **binding-mapping table once** (device-lifetime storage — stable
-  pointers, pipelines reference it at creation):
-  - set 0, binding 0        → resource heap (`-fvk-bind-resource-heap 0 0`)
-  - set 0, binding 2        → counter buffer (`counter.var.ResourceDescriptorHeap`,
-    DXC puts AppendStructuredBuffer hidden counters here — **was missed in the
-    first attempt**, VUID-11312 fired for it)
-  - set 0, bindings 384–388 → embedded static samplers s0..s4 (`-fvk-s-shift 384`)
-  - set 1, binding 0        → sampler heap (`-fvk-bind-sampler-heap 1 0`)
-- Delete: `cbv_srv_uav_layout`, `sampler_layout`, inline-sampler descriptor
-  writes, `VK_EXT_mutable_descriptor_type` machinery and extension.
+SIG/Prism uses `DefaultLayout` everywhere, and every slot is a single root
+constant holding a bindless index (`HAL/SIG/Layout.ixx`:
+`DescriptorConstants(T::ID, 1, ...)`; HLSL reads it as `_hal_push.s{id}` under
+`__spirv__`, see `Prism/templates/hlsl/slot.jinja`). So the entire Vulkan
+"root signature" is one device-global object:
 
-### HAL.Vulkan.DescriptorHeap (.ixx / .cpp)
+```
+VkPipelineLayout  (one, created at device init, derived from DefaultLayout)
+ ├─ set 0: b0 MUTABLE[N] {SAMPLED_IMAGE, STORAGE_IMAGE, STORAGE_BUFFER, UNIFORM_BUFFER}
+ │         (+ counter-buffer binding, see open items)
+ ├─ set 1: b0 SAMPLER[N]
+ ├─ set 2: 7 immutable static samplers (FrameLayout's list)
+ └─ push constants: 15 slots × uint = 60 B, VK_SHADER_STAGE_ALL, offset = slot.id * 4
+```
 
-- Replace pool/set with a **VMA host-visible, device-addressable VkBuffer**
-  (AUTO + HOST_ACCESS_RANDOM + MAPPED, persistently mapped) sized
-  `Count × descriptorSize` plus the driver-reported reserved range.
-- `Descriptor::place(...)` → fill `VkResourceDescriptorInfoEXT` and call
-  `vkWriteResourceDescriptorsEXT` writing into
-  `mapped_ptr + offset × descriptorSize`. No UPDATE_AFTER_BIND, no pool limits.
-  - Signature note: `vkWriteResourceDescriptorsEXT(VkDevice, uint32_t count,
-    const VkResourceDescriptorInfoEXT*, const VkHostAddressRangeEXT*)` —
-    destination is the *mutable* `VkHostAddressRangeEXT`.
-- `Descriptor::operator=` (copy) → **memcpy** between heaps' mapped memory —
-  exact D3D12 `CopyDescriptors` semantics, including CPU-staging → GPU-visible
-  copies that are impossible with vkCopyDescriptorSets today.
-- Non-shader-visible heaps (D3D12 `FLAG_NONE`): plain host memory, no VkBuffer.
-- RTV/DSV heaps: unchanged (no Vulkan objects; dynamic rendering).
-- Resource side: keep `VkImageViewCreateInfo` alongside `VkImageView` so
-  descriptor writes can be described (the EXT wants create-info, not views,
-  for some paths).
+`NoneLayout` uses a subset of the same push block, so the same pipeline layout
+serves it. All pipelines share one layout → sets bound once stay valid across
+`set_pipeline` (D3D12 "SetDescriptorHeaps once" semantics).
 
-### HAL.Vulkan.RootSignature (.ixx / .cpp)
+### How the objects relate
 
-- Becomes a near-empty class: no VkPipelineLayout, no VkDescriptorSetLayout,
-  no destructor logic. Keeps only the CPU-side interpretation of
-  `RootSignatureDesc`: which push-data offsets hold 32-bit constants vs.
-  root-descriptor addresses — same role the root signature plays for the
-  D3D12 command list.
-- Static samplers from `RootSignatureDesc::sampler_map` → per-signature
-  embedded-sampler mapping entries (replacing the device-global 5-sampler
-  hack; matches D3D12 semantics where static samplers belong to the root
-  signature).
+```
+                    HAL::API::Device (built once)
+ ┌─────────────────────────────────────────────────────────────────┐
+ │ set0_layout, set1_layout            (UPDATE_AFTER_BIND_POOL)     │
+ │ set0_host_layout, set1_host_layout  (HOST_ONLY_POOL_BIT_EXT)     │
+ │ static_sampler_layout + its one set (set 2)                      │
+ │ pipeline_layout = {set0, set1, set2} + 60 B push constants       │
+ └──────┬────────────────────────┬─────────────────────┬───────────┘
+        │ each heap allocates    │ every PSO uses       │ every bind/push uses
+        ▼ one set from these     ▼ the same layout      ▼ the same layout
+ DescriptorHeap             PipelineState          CommandList
+ ├ ShaderVisible:           vkCreate*Pipelines(    set_descriptor_heaps → remember sets, dirty
+ │  pool(UAB) + 1 set;        layout = global)     before draw/dispatch: vkCmdBindDescriptorSets
+ │  place() = vkUpdate-     no flags2, no          (only when dirty, per bind point)
+ │  DescriptorSets            mapping tables       set_constant → vkCmdPushConstants(slot*4)
+ └ CPU-only:                                       reapply_draw_state → rebind + re-push
+    pool(HOST_ONLY) + 1 set;
+    operator= = vkCopyDescriptorSets
+ RootSignature: empty (nothing to create)
+```
 
-### HAL.Vulkan.PipelineState (.cpp)
+### A1 — `HAL.Vulkan.Device.ixx / .cpp`
 
-- `VkPipelineCreateFlags2CreateInfo{ .flags =
-  VK_PIPELINE_CREATE_2_DESCRIPTOR_HEAP_BIT_EXT }` on the pipeline pNext.
-- `VkShaderDescriptorSetAndBindingMappingInfoEXT` chained on **every
-  `VkPipelineShaderStageCreateInfo::pNext`** — NOT the pipeline-level chain.
-  (First attempt's main bug: VUID-VkGraphicsPipelineCreateInfo-flags-11312 /
-  VkComputePipelineCreateInfo-flags-11312 fired for VS/PS/CS/task/mesh stages;
-  the struct is also not in the pipeline pNext allowlist, which produced the
-  "unexpected VkStructureType" warnings.)
-- `layout = VK_NULL_HANDLE` (allowed with maintenance5 + the heap bit).
-- If a stage struct needs a local mutation, copy it — no const_cast on
-  device-owned mapping storage.
+- Require `VK_EXT_mutable_descriptor_type` (+ `mutableDescriptorType` feature)
+  and the Vulkan 1.2 descriptor-indexing features: `runtimeDescriptorArray`,
+  `descriptorBindingPartiallyBound`, `descriptorBindingVariableDescriptorCount`,
+  `descriptorBinding{SampledImage,StorageImage,StorageBuffer,UniformBuffer}UpdateAfterBind`,
+  `shader{SampledImage,StorageImage,StorageBuffer,UniformBuffer}ArrayNonUniformIndexing`.
+- Delete the `VK_EXT_descriptor_heap` machinery: extension/feature enable,
+  `vkGetDeviceProcAddr` trampolines, binding-mapping table, descriptor-size /
+  reserved-range queries.
+- Create the set layouts, host-only variants, static-sampler set and the global
+  pipeline layout; expose getters.
+- Clamp heap sizes to `maxDescriptorSetUpdateAfterBind*` — the current
+  `65536 * 8` (`HAL.DescriptorHeap.cpp:295`) exceeds a 500k limit.
+- Starting point: the classic implementation before commit `bfd6aaf3`
+  (`git show bfd6aaf3^:sources/HAL/API/Vulkan/HAL.Vulkan.Device.cpp`) already
+  builds a mutable set layout.
 
-### HAL.Vulkan.CommandList (.ixx / .cpp)
+### A2 — `HAL.Vulkan.DescriptorHeap.ixx / .cpp`
 
-- `set_descriptor_heaps` → capture heap device address / size / reserved
-  range; bind lazily before draw/dispatch via `vkCmdBindResourceHeapEXT` /
-  `vkCmdBindSamplerHeapEXT` with `VkBindHeapInfoEXT{ heapRange,
-  reservedRangeOffset, reservedRangeSize }`. Heaps bind once and persist —
-  matches D3D12; delete `flush_descriptor_sets` and per-dispatch rebinding.
-- `graphics/compute_set_constant` → `vkCmdPushDataEXT` with
-  `VkPushDataInfoEXT{ offset, data = { address, size } }`. Keep the 128-byte
-  staging block so `reapply_draw_state` can re-push after a command-buffer
-  split (task-based recorder).
-- `graphics/compute_set_const_buffer` (today `ASSERT(0)`) → push the buffer's
-  `VkDeviceAddress` as 8 bytes of push data at the root-parameter offset.
-  Caveat: HLSL must read it as an address (`vk::RawBufferLoad` or
-  VK_KHR_shader_untyped_pointers under `#ifdef __spirv__`) — stage this LAST;
-  everything else works without it because the SIG system passes bindless
-  indices through root constants.
-- `set_graphics_signature` / `set_compute_signature` → no-ops (nothing to bind).
-- Remove `current_pipeline_layout`, `cbv_srv_uav_set`, `sampler_set`,
-  `descriptor_sets_dirty` state.
+- Members: `VkDescriptorPool`, `VkDescriptorSet`, `host_only` flag. Remove the
+  VMA buffer / mapped pointer / device address / descriptor-size members.
+- `place(SRV/UAV/CBV)` → `VkWriteDescriptorSet{ dstBinding = 0,
+  dstArrayElement = offset, descriptorType = <concrete type> }`. Keep the
+  existing `FirstElement` / `NumElements` / `OffsetInBytes` sub-range handling.
+- `operator=` → 1-element `vkCopyDescriptorSets` (mutable descriptors keep their
+  type through the copy; works host-only → shader-visible).
+- `copy_ranges_to_gpu` stays a no-op: shader-visible heaps are written directly,
+  which update-after-bind makes legal for slots in-flight work doesn't read.
+- RTV / DSV heaps: unchanged (dynamic rendering, no Vulkan objects).
+- Starting point: `git show bfd6aaf3^:sources/HAL/API/Vulkan/HAL.Vulkan.DescriptorHeap.cpp`.
 
-### HAL.Vulkan.ShaderReflection.cpp (DXC flags)
+### A3 — `HAL.Vulkan.PipelineState.cpp`
 
-- **Unchanged.** Existing `-fvk-b/t/u/s-shift`, `-fvk-bind-resource-heap 0 0`,
-  `-fvk-bind-sampler-heap 1 0` produce exactly the set/binding decorations the
-  mapping table translates.
+- Remove `VkPipelineCreateFlags2CreateInfo` (descriptor-heap bit) and the
+  per-stage `VkShaderDescriptorSetAndBindingMappingInfoEXT` chain.
+- `layout = device.get_pipeline_layout()`.
+
+### A4 — `HAL.Vulkan.CommandList.ixx / .cpp`
+
+- `vkCmdBindResourceHeapEXT` / `vkCmdBindSamplerHeapEXT` → dirty flag +
+  `vkCmdBindDescriptorSets` for GRAPHICS and COMPUTE (RAY_TRACING later).
+- `vkCmdPushDataEXT` → `vkCmdPushConstants(global layout, VK_SHADER_STAGE_ALL,
+  slot*4, ...)`. Keep the staging block for `reapply_draw_state` after a
+  command-buffer split.
+- `set_graphics_signature` / `set_compute_signature` stay no-ops.
+- `graphics/compute_set_const_buffer` stays `ASSERT(0)` (root CBV via BDA is
+  future work; SIG never needs it).
+
+### A5 — Prism / shaders
+
+- Static samplers: FrameLayout declares **7** (`linearSampler` …
+  `linearBorderBlackSampler`). The old classic code hardcoded 5 (s0..s4,
+  bindings 384–388) and would drop `vsmShadowSampler` and
+  `linearBorderBlackSampler`. Build the immutable-sampler list from
+  DefaultLayout's `RootSignatureDesc` (`desc.set_sampler(...)`), not a constant.
+- Put them in set 2 so heap layouts don't depend on signature creation order:
+  Prism's generated layout header emits `[[vk::binding(i, 2)]]` on the samplers
+  under `__spirv__`. (Alternative: set 0 at 384+ with `-fvk-s-shift 384`, only
+  if the device knows the sampler list before the first heap is created.)
+- DXC flags in `HAL.Vulkan.ShaderReflection.cpp` otherwise unchanged
+  (`-fvk-bind-resource-heap 0 0`, `-fvk-bind-sampler-heap 1 0`).
+
+### Track A open items
+
+- **Append/Consume counters**: DXC puts hidden counter buffers at set 0,
+  binding 2 (`counter.var.ResourceDescriptorHeap`). Either add a
+  `STORAGE_BUFFER[N]` binding for it to set 0, or ban Append/Consume on Vulkan.
+  The first descriptor-heap attempt hit exactly this.
+- **Memory**: every mutable slot costs the largest listed type (192 B on
+  Adreno) → ~96 MiB for 524,288 slots vs 32 MiB at 64 B. Acceptable; keep the
+  type list minimal and the heap clamped.
+- **TLAS in the heap** (`ACCELERATION_STRUCTURE_KHR` in the mutable list, and
+  DXC's `ResourceDescriptorHeap` → `RaytracingAccelerationStructure` path) —
+  unverified; only matters once Vulkan RT exists. Fallback: separate binding.
+
+### Outside DefaultLayout (RT / mesh only → gated by Track B)
+
+- **RTX local root signature** (`create_local_signature`, hit-group records) →
+  Vulkan shader-record data via `[[vk::shader_record_ext]]`. Deferred with
+  Vulkan RT.
+- **Per-draw root constants in indirect commands**: `CommandData` and
+  `VSMDispatchCommandData` carry slot values (`mesh_cb`, `material_cb`, …) per
+  draw — D3D12 `ExecuteIndirect` sets root constants per command, Vulkan cannot
+  change push constants inside an indirect draw. The comment at
+  `HAL.Vulkan.CommandList.cpp` `execute_indirect` claiming the argument structs
+  "carry no per-command root constants" is wrong for these two; per-draw slots
+  are most likely dropped and the mesh-task args read from the wrong offset
+  (unconfirmed). Only the mesh path uses them today, but the vertex-shader
+  fallback will need the same: the shader reads its per-draw slot values from
+  the command buffer itself, indexed by `DrawIndex`.
 
 ---
 
-## Constraints (unchanged from project rules)
+## Track B — optional Raytracing / MeshShader
 
-- NO `#ifdef` in HAL backend code (`HAL_BACKEND_VULKAN` only outside HAL).
-- `#ifdef __spirv__` allowed in HLSL shaders.
-- NO topology sync from PSO in `set_pipeline`.
-- WorkGR stays `[ExcludeVulkan]` (DXC lib_6_8 + -spirv bug).
+### Data flow
 
-## Lessons from the reverted first attempt
+```
+ Adapter probe ──► DeviceProperties { rtx, mesh_shader }
+                          │
+                          ▼
+            HAL::Device::supports(Feature)  ◄── debug override: force off
+            (the only thing anything else asks)
+     ┌──────────────┬─────────┴──────────┬────────────────────────┐
+     ▼              ▼                    ▼                        ▼
+ Vulkan device   init_pso()          RTX / scene side         FrameGraph pipeline
+ creation:       (psos.jinja)        RTX::get() init,         PassNode [Requires=X]
+ enable RT/mesh  skip PSOs whose     BLAS/TLAS builds,        → setup condition false
+ exts only when  requirement isn't   materials (update_rtx    → consumers: builder.exists()
+ present         met                 already gated)           → selectors clamped to non-RT
+```
 
-1. `VK_KHR_maintenance5` must be explicitly enabled (extension list + feature
-   struct) — root cause of the device-creation warning and the
-   "VkPipelineCreateFlags2CreateInfo but maintenance5 not enabled" spam.
-2. Mapping info goes **per-stage**, not per-pipeline.
-3. Counter binding (set 0, binding 2) needs its own mapping entry.
-4. Extension functions need `vkGetDeviceProcAddr` trampolines + a hard
-   required-extension check.
-5. Validation layers (SDK 1.4.350) don't list the mapping struct in the
-   pipeline pNext allowlist — chaining per-stage sidesteps that warning too.
-6. `VkHostAddressRangeConstEXT` field is `address`, not `pAddress`.
-7. Module note: extension types may not resolve through the `vulkan` header
-   unit — use a `module;` global fragment with `#include <vulkan/vulkan.h>`
-   where needed (Device.ixx precedent).
+### B1 — capabilities in HAL
 
-## Implementation order
+- `Device::supports(Feature::Raytracing | Feature::MeshShader)`, next to the
+  existing `rtx = !Debug::RunForPix && get_properties().rtx`
+  (`HAL.Device.cpp:107`); add `mesh_shader` the same way.
+- Force-off override (command-line flag or `Variable<bool>`) — this is how the
+  Xiaomi 15 is simulated on a desktop GPU.
+- Vulkan device creation: enable mesh (and later RT) extensions only when
+  present. `props.mesh_shader` is already probed
+  (`HAL.Vulkan.Device.cpp:474`); `props.rtx` stays `false` until Vulkan RT is
+  implemented.
+- `RenderSystem::select_adapter` already prefers mesh-shader adapters and falls
+  back — no change needed.
 
-1. Device: extensions + features + trampolines + descriptor-heap properties +
-   mapping table.
-2. DescriptorHeap: buffer-backed heaps, place() via write, operator= via memcpy.
-3. PipelineState: flags2 + per-stage mapping chaining, null layout.
-4. CommandList: heap binding + PushData constants.
-5. RootSignature: strip to CPU-side desc holder + embedded static samplers.
-6. Root CBV/SRV/UAV via device address (+ HLSL `__spirv__` read path) — last,
-   optional until something needs `set_const_buffer` on Vulkan.
+### B2 — Prism `[Requires = ...]`
 
-Verify each stage against the test suite (`test.exe`): 214 tests, the 18
-GUI/SIG texture-mismatch failures from the first attempt are the regression
-signal for descriptor binding correctness.
+- PSOs — inferred:
+  - `GraphicsPSO` with `mesh =` / `amplification =` → `MeshShader`
+  - `RaytracePSO`, `RaytraceRaygen`, `RaytracePass` → `Raytracing`
+  - explicit only: `ComputePSO` using `RayQuery` (Prism can't see HLSL), e.g.
+    `RTXShadowReferenceCompute`.
+- `psos.jinja` `init_pso`: wrap each `tasks.emplace_back` in
+  `if (device.supports(...))`. A skipped PSO stays null → `set_pipeline` needs a
+  clear assert naming the PSO.
+- PassNode: explicit `[Requires = X]`, ANDed into the generated setup condition
+  (reuse the `SetupCondition` codegen in `pass.jinja` / `pass_defaults*.jinja`).
+- `Validate.cpp`: allow `Requires` on PSOs and PassNodes.
+
+### B3 — tag passes
+
+| feature | passes / code | gating |
+|---|---|---|
+| MeshShader | `Scene` (GBuffer/Depth), `VSM_RenderPages`, `Voxelize`, `stencil_renderer`, `DebugView`, `AssetGBuffer`, material preview | these **create** resources (GBuffer, VSM atlas, …): keep setup, skip only the draws, so consumers see cleared targets |
+| Raytracing | `ShadowRTX`, `ReflectionRTX(Half)`, `IndirectRTX(Half)`, `RTXCombine`, all `DDGI*`, `RTXShadow`, `RTXColorPass`, `TranslucentRTX` | `[Requires = Raytracing]` — drop the pass |
+| Raytracing, outside the graph | `RTX::get()` init, BLAS/TLAS builds (`f_rtx` task, `main.cpp`), `MeshAsset` BLAS | early-out on `supports()` |
+| already gated | `universal_material::update_rtx`, VSM `rtx_verify` (`VSM.cpp:1516`) | — |
+
+### B4 — fix consumers
+
+- Clamp selectors to non-RT defaults when RT is off:
+  `IndirectGISelectors::indirect_source`, `reflection_source`,
+  `VSMSelectors::shadow_source` — otherwise `[Optional = selector]` fields in
+  `nrd_sig_test.prism` expect resources no pass produces.
+- Run the graph with both features forced off and fix every graph-build failure
+  (`need()` without `exists()` on a resource from a dropped pass).
+- Tests: skip `Test.RTX` and the mesh/RT parts of `Test.HAL.Rendering` when
+  unsupported.
+
+All of Track B is backend-independent and can be built and verified on D3D12
+first.
+
+---
+
+## Order
+
+```
+A1 Device layouts ─► A2 DescriptorHeap ─► A3 PipelineState ─► A4 CommandList ─► A5 Prism samplers ─► test.exe (Vulkan, desktop)
+                                                                                                          │
+B1 caps + override ─► B2 Prism [Requires] ─► B3 tag passes/PSOs ─► B4 fix consumers ──────────────────────┤
+          (verify on D3D12 first)                                                                         ▼
+                                                        Milestone: desktop Vulkan, mesh + RT forced off
+                                                                   = what the Xiaomi 15 will run
+```
+
+Expected result at the milestone: every scene draw goes through mesh /
+amplification shaders (GBuffer, depth, VSM, voxelization), so with mesh
+shaders off **the scene is empty**; sky, UI, post-processing and compute passes
+work. The vertex-shader fallback pass is the next step after that.
+
+## Constraints (unchanged)
+
+- No `#ifdef` in HAL backend code (`HAL_BACKEND_VULKAN` only outside HAL).
+- `#ifdef __spirv__` allowed in HLSL and Prism-generated HLSL.
+- WorkGR stays `[ExcludeVulkan]` (DXC lib_6_8 + `-spirv` bug).

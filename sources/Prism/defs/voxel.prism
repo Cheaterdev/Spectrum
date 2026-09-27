@@ -685,9 +685,11 @@ namespace Reflections
 	[Compute]
 	# RTXCombine (below) takes over this job -- reflections plus indirect GI plus
 	# shadow, all three -- whenever DLSS-RR is the selected upscaler; same gate as
-	# its own, negated. No availability terms: upscaler_type cannot hold an
-	# unavailable type (see g_upscaler_type's invariant, UpscalingDLSS.ixx).
-	[SetupCondition = VoxelGISelectors::reflection_enabled && UpscalerSelectors::upscaler_type != UpscalerType::DLSSRR]
+	# its own, negated. No availability terms for the upscaler: upscaler_type
+	# cannot hold an unavailable type (see g_upscaler_type's invariant,
+	# UpscalingDLSS.ixx). The RTX terms are NRD_REBLUR_Execute's, which is the
+	# only producer of RTXReflectionDenoised.
+	[SetupCondition = VoxelGISelectors::reflection_enabled && UpscalerSelectors::upscaler_type != UpscalerType::DLSSRR && RenderDeviceCapabilities::rtx_supported && RenderDeviceCapabilities::dlssrr_available]
 	PassNode ReflCombine
 	{
 		# Flat fields, not the (removed) GBuffer PassView -- see pssm.prism's own

@@ -120,7 +120,8 @@ materials::PipelinePasses::PipelinePasses(UINT id, std::string pixel, std::strin
 		});
 	}
 
-	raytrace_lib = HAL::library_shader::get_resource({ raytracing, "" , HAL::ShaderOptions::None, context->hit_shader.macros, true });
+	if (RenderSystem::get().device().is_rtx_supported())
+		raytrace_lib = HAL::library_shader::get_resource({ raytracing, "" , HAL::ShaderOptions::None, context->hit_shader.macros, true });
 }
 
 void materials::PipelinePasses::set(RENDER_TYPE render_type, MESH_TYPE type, HAL::GraphicsContext& graphics, bool hiz_occlusion, bool capture_meshlets, bool cluster_lod)
@@ -444,7 +445,8 @@ void materials::universal_material::compile()
 	need_update_compiled = false;
 	need_update_uniforms = false;
 
-	RTX::get().rtx.init_material(this);
+	if (RenderSystem::get().device().is_rtx_supported())
+		RTX::get().rtx.init_material(this);
 	end_changing_contents();
 }
 

@@ -14,6 +14,11 @@ materials::MaterialPreviewSession::MaterialPreviewSession(universal_material* ma
 {
 }
 
+void materials::MaterialPreviewSession::set_3d(bool value)
+{
+	want_3d = value && RenderSystem::get().device().is_mesh_shader_supported();
+}
+
 void materials::MaterialPreviewSession::rebuild_pso()
 {
 	auto src = material->get_preview_shader_source();

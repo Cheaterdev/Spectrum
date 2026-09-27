@@ -37,6 +37,9 @@ void mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, Scene::pt
 	std::map<size_t, materials::Pipeline::ptr>& pipelines = *pipelines_ptr;
 
 	if (meshes_count == 0) return;
+	// Every scene draw is a mesh/amplification dispatch; without mesh shaders the
+	// targets keep their clear, same as an empty scene.
+	if (!RenderSystem::get().device().is_mesh_shader_supported()) return;
 
 	commands_boxes->reserve(list, meshes_count);
 	visible_boxes->reserve(list, meshes_count);

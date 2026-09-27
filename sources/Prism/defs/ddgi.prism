@@ -867,6 +867,8 @@ namespace GI
 				RWTexture2D<float4> target;
 			}
 
+			# ddgi_sample.hlsl's occlusion test is an inline RayQuery.
+			[Requires = Raytracing]
 			ComputePSO DDGIIndirectDebug
 			{
 				root = DefaultLayout;
