@@ -17,6 +17,11 @@ export namespace nvidia
 			using NativeDevice = VkDevice;
 
 		protected:
+			// sl.interposer must not even be loaded here: once in the process it
+			// intercepts the Vulkan calls that follow and, with slInit never
+			// called, reports "Please call slInit before any other ... API".
+			static constexpr bool backend_supported = false;
+
 			bool resolve_api(void*) { return false; }
 			bool bind_device_native(NativeDevice) { return false; }
 		};

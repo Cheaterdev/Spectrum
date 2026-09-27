@@ -7,6 +7,8 @@ module HAL:Heap;
 import HAL;
 import Core;
 
+void temp_va_log(const std::string& line);   // TEMP: HAL.Vulkan.Resource.cpp
+
 namespace HAL
 {
     Heap::Heap(Device& device, const HeapDesc& desc) : desc(desc)
@@ -52,6 +54,7 @@ namespace HAL
                 VkBufferDeviceAddressInfo dai{ VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO };
                 dai.buffer = vk_buf;
                 gpu_address = vkGetBufferDeviceAddress(api_dev.vk_device, &dai);
+                temp_va_log(std::format("heap    {} 0x{:x} size 0x{:x} type {}", (void*)this, gpu_address, desc.Size, (int)desc.Type));
 
                 // Store the VkBuffer handle via the allocation so the destructor can free it.
                 // We abuse vk_memory to stash the VkBuffer (both are opaque handles).
@@ -85,7 +88,10 @@ namespace HAL
         Heap::~Heap()
         {
             if (vma_allocation && vma_allocator_ref)
+            {
+                temp_va_log(std::format("heapdel {} 0x{:x}", (void*)this, gpu_address));
                 vmaDestroyBuffer(vma_allocator_ref, heap_vk_buffer, vma_allocation);
+            }
         }
 
         GPUAddressPtr Heap::get_address() const { return gpu_address; }

@@ -66,23 +66,18 @@ export namespace HAL
             std::vector<VkRect2D>   current_scissors;
             VkPrimitiveTopology     current_topology  = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 
-            // Bound descriptor heaps (set by set_descriptor_heaps()).  Under
-            // VK_EXT_descriptor_heap a heap is a device-address range bound via
-            // vkCmdBindResourceHeapEXT / vkCmdBindSamplerHeapEXT.  Like D3D12's
-            // SetDescriptorHeaps, the binding persists — flushed once per command
-            // buffer (and re-flushed after a recorder-induced CB split).
-            VkDeviceAddress cbv_srv_uav_addr           = 0;
-            VkDeviceSize    cbv_srv_uav_size           = 0;
-            VkDeviceSize    cbv_srv_uav_reserved_off   = 0;
-            VkDeviceSize    cbv_srv_uav_reserved_size  = 0;
-            VkDeviceAddress sampler_addr               = 0;
-            VkDeviceSize    sampler_size               = 0;
-            VkDeviceSize    sampler_reserved_off       = 0;
-            VkDeviceSize    sampler_reserved_size      = 0;
-            bool            heaps_dirty                = false;
+            // Bound descriptor heaps (set by set_descriptor_heaps()): each shader-
+            // visible heap is one descriptor set of the device-global pipeline
+            // layout.  Every pipeline shares that layout, so like D3D12's
+            // SetDescriptorHeaps the binding survives set_pipeline -- it is only
+            // re-issued when the heaps change or a new command buffer begins.
+            VkDescriptorSet resource_set = VK_NULL_HANDLE;
+            VkDescriptorSet sampler_set  = VK_NULL_HANDLE;
+            bool            heaps_dirty  = false;
 
             // Push constant staging (for graphics_set_constant / compute_set_constant),
-            // re-pushed via vkCmdPushDataEXT after a command-buffer split.
+            // re-pushed after a command-buffer split.  Sized to the pipeline
+            // layout's push-constant range.
             std::array<uint32_t, 32> push_constants = {};
 
             // Deferred PRESENT_SRC_KHR transitions.
@@ -108,7 +103,7 @@ export namespace HAL
             void begin_rendering(VkAttachmentLoadOp color_load, VkClearValue color_clear,
                                  VkAttachmentLoadOp depth_load, VkClearValue depth_clear);
             void ensure_rendering_active(); // lazily start render pass for draw calls
-            void flush_heaps();            // bind pending descriptor heaps (resource + sampler)
+            void flush_heaps();            // bind pending descriptor sets (resource + sampler)
             void push_full_constants();    // push the whole staged root-constant block
             void reapply_draw_state();     // re-bind pipeline + viewport/scissor before a draw
 

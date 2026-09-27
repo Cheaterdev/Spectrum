@@ -309,6 +309,31 @@ namespace HAL {
 		// those two are exactly what CreateShaderResourceView needs when there is
 		// no resource to read the rest from.
 		std::map<std::pair<size_t, Format>, Handle> null_descriptors;
+		std::map<std::pair<size_t, Format>, Handle> null_uav_descriptors;
+
+		template<class View>
+		const Handle& get_null(std::map<std::pair<size_t, Format>, Handle>& cache, const View& proto)
+		{
+			// Called from table compilation, which runs across FrameGraph workers.
+			std::lock_guard<std::mutex> lock(null_descriptor_mutex);
+
+			// init_null_descriptors() was never called -- a null descriptor cannot be
+			// created without a device, and silently returning an invalid handle would
+			// put the slot back at descriptor index 0, the exact bug this prevents.
+			ASSERT(null_descriptor_device);
+
+			const auto key = std::make_pair(proto.View.index(), proto.Format);
+
+			auto it = cache.find(key);
+			if (it != cache.end()) return it->second;
+
+			Handle h = null_descriptor_device->get_static_gpu_data().alloc_descriptor(
+				1, DescriptorHeapIndex{ DescriptorHeapType::CBV_SRV_UAV, DescriptorHeapFlags::ShaderVisible });
+
+			h = proto;   // Resource == nullptr -> a null view (Create*View(nullptr, ...))
+
+			return cache.emplace(key, h).first->second;
+		}
 	}
 
 	void init_null_descriptors(Device& device)
@@ -316,29 +341,17 @@ namespace HAL {
 		std::lock_guard<std::mutex> lock(null_descriptor_mutex);
 		null_descriptor_device = &device;
 		null_descriptors.clear();
+		null_uav_descriptors.clear();
 	}
 
 	const Handle& get_null_descriptor(const Views::ShaderResource& proto)
 	{
-		// Called from table compilation, which runs across FrameGraph workers.
-		std::lock_guard<std::mutex> lock(null_descriptor_mutex);
+		return get_null(null_descriptors, proto);
+	}
 
-		// init_null_descriptors() was never called -- a null descriptor cannot be
-		// created without a device, and silently returning an invalid handle would
-		// put the slot back at descriptor index 0, the exact bug this prevents.
-		ASSERT(null_descriptor_device);
-
-		const auto key = std::make_pair(proto.View.index(), proto.Format);
-
-		auto it = null_descriptors.find(key);
-		if (it != null_descriptors.end()) return it->second;
-
-		Handle h = null_descriptor_device->get_static_gpu_data().alloc_descriptor(
-			1, DescriptorHeapIndex{ DescriptorHeapType::CBV_SRV_UAV, DescriptorHeapFlags::ShaderVisible });
-
-		h = proto;   // Resource == nullptr -> CreateShaderResourceView(nullptr, ...)
-
-		return null_descriptors.emplace(key, h).first->second;
+	const Handle& get_null_descriptor(const Views::UnorderedAccess& proto)
+	{
+		return get_null(null_uav_descriptors, proto);
 	}
 
 }

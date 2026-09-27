@@ -93,6 +93,7 @@ PSSM::PSSM()
 		{
 			Slots::Frame::FrameInfo frameInfo;
 			frameInfo.GetBrdf()   = EngineAssets::brdf.get_asset()->get_texture()->texture_3d().texture3D;
+			frameInfo.GetBestFitNormals() = EngineAssets::best_fit_normals.get_asset()->get_texture()->texture_2d().texture2D;
 			frameInfo.GetCamera() = light_cam.camera_cb.current;
 			graphics.set(frameInfo);
 			compute.set(frameInfo);
@@ -176,6 +177,7 @@ PSSM::PSSM()
 			{
 				Slots::Frame::FrameInfo frameInfo;
 				frameInfo.GetBrdf()   = EngineAssets::brdf.get_asset()->get_texture()->texture_3d().texture3D;
+				frameInfo.GetBestFitNormals() = EngineAssets::best_fit_normals.get_asset()->get_texture()->texture_2d().texture2D;
 				frameInfo.GetCamera() = light_cam.camera_cb.current;
 				graphics.set(frameInfo);
 				compute.set(frameInfo);

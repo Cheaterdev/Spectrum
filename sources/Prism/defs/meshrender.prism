@@ -259,6 +259,9 @@ namespace Meshes
 	struct GatherPipelineGlobal
 	{
 		StructuredBuffer<uint> meshes_count;
+		# [Auto]: mesh_renderer's gather_boxes_commands binds only meshes_count --
+		# its sole reader (occluder_cs_dispatch_init.hlsl) never reads commands.
+		[Auto = Texture_Null]
 		Buffer<uint> commands;
 
 	}

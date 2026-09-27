@@ -19,12 +19,10 @@ namespace Frame
 		uint meshes; // StructuredBuffer<MeshCommandData>
 		uint materials; // StructuredBuffer<MaterialCommandData>
 		uint raytraceInstanceInfo; // StructuredBuffer<RaytraceInstanceInfo>
-		uint scene; // RaytracingAccelerationStructure
 		StructuredBuffer<node_data> GetNodes() { return ResourceDescriptorHeap[nodes]; }
 		StructuredBuffer<MeshCommandData> GetMeshes() { return ResourceDescriptorHeap[meshes]; }
 		StructuredBuffer<MaterialCommandData> GetMaterials() { return ResourceDescriptorHeap[materials]; }
 		StructuredBuffer<RaytraceInstanceInfo> GetRaytraceInstanceInfo() { return ResourceDescriptorHeap[raytraceInstanceInfo]; }
-		RaytracingAccelerationStructure GetScene() { return ResourceDescriptorHeap[scene]; }
 	};
 }
 using Frame::SceneData;

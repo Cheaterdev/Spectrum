@@ -3,6 +3,8 @@ import RenderSystem;
 
 import :Context;
 import :MeshAsset;
+import :EngineAssets;
+import :BRDF;
 
 using namespace HAL;
 using namespace FrameGraph;
@@ -117,6 +119,8 @@ debug_view::debug_view() : VariableContext(L"Debug View")
 			Slots::Frame::FrameInfo frameInfo;
 			frameInfo.GetCamera()     = frame_camera;
 			frameInfo.GetPrevCamera() = frame_camera;
+			frameInfo.GetBrdf()           = EngineAssets::brdf.get_asset()->get_texture()->texture_3d().texture3D;
+			frameInfo.GetBestFitNormals() = EngineAssets::best_fit_normals.get_asset()->get_texture()->texture_2d().texture2D;
 			// The main view's threshold, so the mesh AS covers the same cluster
 			// range the captured masks were written for; buckets without masks
 			// then pick their LOD cut from the debug camera.

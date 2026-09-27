@@ -2,6 +2,7 @@
 import RenderSystem;
 
 import :EngineAssets;
+import :BRDF;
 
 import :Materials.UniversalMaterial;
 import GUI;
@@ -567,6 +568,8 @@ void stencil_renderer::draw_gizmo(HAL::GraphicsContext& graphics)
 		{
 			Slots::Frame::FrameInfo frameInfo;
 			frameInfo.GetCamera() = axis_cam.camera_cb.current;
+			frameInfo.GetBrdf()           = EngineAssets::brdf.get_asset()->get_texture()->texture_3d().texture3D;
+			frameInfo.GetBestFitNormals() = EngineAssets::best_fit_normals.get_asset()->get_texture()->texture_2d().texture2D;
 			graphics.set(frameInfo);
 		}
 		graphics.set_pipeline<PSOS::Editor::DrawAxis>();

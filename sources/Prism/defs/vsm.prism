@@ -344,13 +344,21 @@ namespace Shadows
 			int skip_occlusion;
 		}
 
+		# Shared by every VSM compute pass (classify, blocker search, screen-space
+		# shadow, resolve, blur, debug overlays), each binding only what its own
+		# entry point reads -- hence [Auto] on every resource. The nested gbuffer
+		# can't be [Auto]; every pass binds it.
 		[Bind = DefaultLayout::Instance2]
 		struct VSMLighting
 		{
 			GBuffer gbuffer;
+			[Auto = Texture_Null]
 			Texture2DArray<float> vsm_atlas;
+			[Auto = Texture_Null]
 			Texture2DArray<uint> page_table;
+			[Auto = Texture_Null]
 			StructuredBuffer<Camera> page_cameras;
+			[Auto = Texture_Null]
 			RWTexture2D<float4> result;
 			# Pre-baked screen-space noise (see BlueNoise.prism) -- rotates the PCSS
 			# Poisson disc per pixel (VSM_impl.hlsl's get_shadow_vsm) so the fixed
@@ -359,6 +367,7 @@ namespace Shadows
 			# re-binding the whole BlueNoise struct (which wants Instance0, already
 			# taken here by VSMConstants) -- same pattern VoxelGI/ReflectionDenoiser
 			# already use for consuming this same baked texture.
+			[Auto = Texture_Null]
 			Texture2D<float2> blue_noise;
 			# Reference-comparison debug view: RTXShadow's own (denoised) full-RT
 			# shadow mask, same resource PSSM_Combine reads as an alternative to its
@@ -368,9 +377,11 @@ namespace Shadows
 			# VSM.cpp's m_combine_setup for the builder.exists() guard (RTXShadow's
 			# own setup() can return false on non-RTX hardware, in which case this
 			# resource never gets created that frame).
+			[Auto = Texture_Null]
 			Texture2D<float> rtx_shadow_mask;
 			# VSM_ScreenSpaceShadow's contact-shadow patch -- see VSM_ShadowResolve's
 			# own PassNode comment. Only bound/read by the shadow-blur PSO.
+			[Auto = Texture_Null]
 			Texture2D<float> contact_shadow;
 			# Diagnostic-only (see [[project-nrd-integration]]): packs the same raw
 			# distanceToOccluder each of CS_FULL_LIT/CS_FULL_SHADOW/CS_SHADOW_BLUR
@@ -380,6 +391,7 @@ namespace Shadows
 			# is completely unaffected; nothing reads the denoised output back into
 			# ResultTexture for this source (see NRD_ShadowCombine's own PassNode
 			# comment, gated to ShadowSource::RTXReference only).
+			[Auto = Texture_Null]
 			RWTexture2D<float> shadow_noise;
 		}
 

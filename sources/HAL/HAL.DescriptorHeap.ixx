@@ -307,6 +307,7 @@ export
 		// there is no resource, so there is nothing to transition. See
 		// Slot_Compiler::compile_auto.
 		const Handle& get_null_descriptor(const Views::ShaderResource& proto);
+		const Handle& get_null_descriptor(const Views::UnorderedAccess& proto);
 	}
 
 }

@@ -45,7 +45,12 @@ namespace GI
 		{
 			GBuffer gbuffer;
 
+			# Only the voxel cone-trace passes (VoxelScreen, ScreenReflection) bind
+			# these -- their raygens' trace() samples both. The RTX passes share this
+			# struct just for its GBuffer.
+			[Auto = Texture_Null]
 			Texture3D<float4> voxels;
+			[Auto = Texture_Null]
 			TextureCube<float4> tex_cube;
 
 			# Nothing assigns these -- the history they want is not wired up yet, and
@@ -60,24 +65,33 @@ namespace GI
 			Texture2D<float> prev_depth;
 		}
 
+		# A union of every raytrace pass's outputs (raytracing.hlsl has one struct
+		# per DefaultLayout instance slot): each pass binds only what its own raygen
+		# reads -- ShadowRTX: noise + shadow_noise; Indirect/ReflectionRTX(Half):
+		# noise + blueNoise (+ DirAndPdf, + ddgi_*); VoxelGIGraph's Indirect/
+		# Reflection: noiseRaw + blueNoise. Hence [Auto] on every resource.
 		[Bind = DefaultLayout::Instance2]
 		struct VoxelOutput
 		{
+			[Auto = Texture_Null]
 			RWTexture2D<float4> noise;
-			RWTexture2D<float> frames;
 
+			[Auto = Texture_Null]
 			RWTexture2D<float4> DirAndPdf;
+			[Auto = Texture_Null]
 			 Texture2D<float2> blueNoise;
 
 			# Packed IN_DIFF/SPEC_RADIANCE_HITDIST for NRD (PackForReblurDiffuse/
 			# PackForReblurSpecular), written by MyRaygenShader/MyRaygenShaderReflection
 			# (voxel-cone-traced source, see [[project-nrd-integration]]).
+			[Auto = Texture_Null]
 			RWTexture2D<float4> noiseRaw;
 
 			# SIGMA-packed distanceToOccluder (SIGMA_FrontEnd_PackPenumbra), written by
 			# MyRaygenShaderShadowRTXOnly when ShadowSource::RTXReference is selected
 			# (see [[project-nrd-integration]]). Distinct from noise above, which
 			# stores this same pass's binary visibility for DLSS-RR's RTXCombine.
+			[Auto = Texture_Null]
 			RWTexture2D<float> shadow_noise;
 
 			# DDGI probe-volume feedback term (see [[project-ddgi]] planning notes) --
@@ -94,7 +108,9 @@ namespace GI
 			DDGIInfo ddgi_cascade2;
 			DDGIInfo ddgi_cascade3;
 			DDGIInfo ddgi_cascade4;
+			[Auto = Texture_Null]
 			Texture2DArray<float4> ddgi_irradiance;
+			[Auto = Texture_Null]
 			Texture2DArray<float2> ddgi_visibility;
 			# Gates ddgi_sample_irradiance's 8-probe trilinear blend (ddgi_sample.hlsl)
 			# -- without this, a non-resident corner's stale/never-written atlas
@@ -102,6 +118,7 @@ namespace GI
 			# visible artifacts in the DDGI Indirect debug view once real residency
 			# culling actually started dropping probes. Read-only here; DDGIProbeResidencyMark
 			# (ddgi.prism) is the sole writer.
+			[Auto = Texture_Null]
 			StructuredBuffer<uint> ddgi_residency;
 			# Hit-point-driven residency marking's inbox (see [[project-ddgi]]
 			# planning notes and DDGI_ProbeResidencyPending's own comment, ddgi.prism):
@@ -109,6 +126,7 @@ namespace GI
 			# probe cell per cascade (skipping the coarsest, which is always
 			# resident regardless). Shared across all DDGI_CascadeCount cascades in
 			# one buffer, same offset convention DDGI_ProbeResidency itself uses.
+			[Auto = Texture_Null]
 			RWStructuredBuffer<uint> ddgi_residency_pending;
 		}
 
@@ -803,6 +821,8 @@ namespace GI
 			[Always = None] Texture GBuffer_DepthMips;
 			[Always = Read] Texture3D VoxelLighted;
 			[Always = Read] Texture BlueNoise;
+			# Sky term of trace()'s cone march, for rays leaving the voxel volume.
+			[Always = Read] TextureCube sky_cubemap_filtered;
 
 			[Always = UnorderedAccess] [Size = ViewportContext::frame_size] [Format = R16G16B16A16_FLOAT] Texture VoxelIndirectNoiseRaw;
 		}
@@ -830,6 +850,8 @@ namespace Reflections
 		[Always = None] Texture GBuffer_DepthMips;
 		[Always = Read] Texture3D VoxelLighted;
 		[Always = Read] Texture BlueNoise;
+		# Sky term of trace()'s cone march, for rays leaving the voxel volume.
+		[Always = Read] TextureCube sky_cubemap_filtered;
 
 		[Always = UnorderedAccess] [Size = ViewportContext::frame_size] [Format = R16G16B16A16_FLOAT] Texture VoxelReflectionNoiseRaw;
 	}

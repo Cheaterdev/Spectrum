@@ -7,11 +7,10 @@ export namespace HAL
 {
     namespace API
     {
-        // With VK_EXT_descriptor_heap a root signature owns NO Vulkan objects:
-        // there is no VkPipelineLayout and no VkDescriptorSetLayout.  Binding
-        // mappings live on the Device and are chained into each pipeline's stages;
-        // root constants / root descriptors are pushed via vkCmdPushDataEXT.
-        // This class is kept only for HAL-layer type compatibility.
+        // A root signature owns no Vulkan objects: the SIG system uses
+        // DefaultLayout everywhere, so every pipeline shares the one
+        // VkPipelineLayout the Device creates (bindless sets + push constants
+        // for the root constants).  Kept only for HAL-layer type compatibility.
         class RootSignature
         {
         public:

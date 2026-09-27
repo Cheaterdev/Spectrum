@@ -28,7 +28,7 @@ export namespace Table
 			void compile(Compiler& compiler) const
 			{
 				compiler.compile(size, "EnvFilter::size");
-				compiler.compile(targets, "EnvFilter::targets");
+				compiler.compile_auto(targets, "EnvFilter::targets");
 			}
 			struct Compiled
 			{

@@ -48,6 +48,26 @@ inline void report_unbound_slot(const char* member)
 		Log::get() << "[sig] unbound slot: " << member << Log::endl;
 }
 
+// An unbound member WITHOUT [Auto] would write descriptor index 0 -- a real,
+// unrelated descriptor -- which on D3D12 silently reads the wrong resource and on
+// Vulkan can fault the device. Every member must be bound, or be marked [Auto] in
+// the .prism so it gets a typed null view instead.
+inline void fail_unbound_slot(const char* member)
+{
+	static std::mutex m;
+	static std::set<std::string> seen;
+	{
+		std::lock_guard<std::mutex> lock(m);
+		if (!seen.insert(member ? member : "").second) return;
+	}
+
+	Log::get() << Log::LEVEL_ERROR << "[sig] unbound table member without [Auto]: "
+	           << (member ? member : "<unnamed>") << Log::endl;
+	// Also straight to stderr: the assert terminates before the log file is flushed.
+	std::cerr << "[sig] unbound table member without [Auto]: " << (member ? member : "<unnamed>") << std::endl;
+	ASSERT(!"unbound table member without [Auto] -- bind it, or mark it [Auto] in the .prism");
+}
+
 // ---- [Auto = ...] ----------------------------------------------------------
 //
 // Which null descriptor a table member wants when nothing was assigned to it.
@@ -94,6 +114,65 @@ template<class E> struct NullViewFor<HLSL::Buffer<E>>
 	static HAL::Views::ShaderResource make()
 	{
 		return { nullptr, null_format_of<E>(), HAL::Views::ShaderResource::Buffer{ 0, 0, 0, false } };
+	}
+};
+
+template<class E> struct NullViewFor<HLSL::TextureCube<E>>
+{
+	static HAL::Views::ShaderResource make()
+	{
+		return { nullptr, null_format_of<E>(), HAL::Views::ShaderResource::Cube{ 0, 1, 0.0f } };
+	}
+};
+
+template<class E> struct NullViewFor<HLSL::StructuredBuffer<E>>
+{
+	static HAL::Views::ShaderResource make()
+	{
+		return { nullptr, HAL::Format::UNKNOWN, HAL::Views::ShaderResource::Buffer{ 0, 0, sizeof(Underlying<E>), false } };
+	}
+};
+
+template<class E> struct NullViewFor<HLSL::RWStructuredBuffer<E>>
+{
+	static HAL::Views::UnorderedAccess make()
+	{
+		return { nullptr, HAL::Format::UNKNOWN, HAL::Views::UnorderedAccess::Buffer{ 0, 0, sizeof(Underlying<E>), false, 0, nullptr } };
+	}
+};
+
+template<class E> struct NullViewFor<HLSL::Texture2DArray<E>>
+{
+	static HAL::Views::ShaderResource make()
+	{
+		return { nullptr, null_format_of<E>(), HAL::Views::ShaderResource::Texture2DArray{ 0, 1, 0, 1, 0, 0.0f } };
+	}
+};
+
+// UAV null views: writes are dropped, reads return zero.
+template<class E> struct NullViewFor<HLSL::RWTexture2D<E>>
+{
+	static HAL::Views::UnorderedAccess make()
+	{
+		return { nullptr, null_format_of<E>(), HAL::Views::UnorderedAccess::Texture2D{ 0, 0 } };
+	}
+};
+
+// A plain null Texture2D UAV, not a sampler-feedback view: the feedback kind
+// needs a paired texture, and a null UAV of any dimension drops writes.
+template<> struct NullViewFor<HLSL::FeedbackTexture2DMip>
+{
+	static HAL::Views::UnorderedAccess make()
+	{
+		return { nullptr, HAL::Format::R32_UINT, HAL::Views::UnorderedAccess::Texture2D{ 0, 0 } };
+	}
+};
+
+template<class E> struct NullViewFor<HLSL::RWTexture2DArray<E>>
+{
+	static HAL::Views::UnorderedAccess make()
+	{
+		return { nullptr, null_format_of<E>(), HAL::Views::UnorderedAccess::Texture2DArray{ 0, 0, 1, 0 } };
 	}
 };
 
@@ -233,12 +312,22 @@ public:
 			offset = handle.get_offset();
 		}
 		else if constexpr (BuildOptions::Dev)
-		{
-			// offset stays 0 -- see report_unbound_slot for why that matters.
-			if (member) report_unbound_slot(member);
-		}
+			fail_unbound_slot(member);   // offset stays 0 -- see fail_unbound_slot
 
 		s.write(reinterpret_cast<const char*>(&offset), sizeof(offset));
+	}
+
+	// compile_auto for a FIXED array member ([Auto] T x[N]): each element falls
+	// back to the null view on its own, laid out exactly like compile(T(&)[N]).
+	template<HAL::HandleClass T, uint N>
+	void compile_auto(const T(&handles)[N], const char* member)
+	{
+		pad();
+		for (uint i = 0; i < N; i++)
+		{
+			compile_auto(handles[i], member);
+			pad();
+		}
 	}
 
 	template<HAL::HandleClass T, uint N>
@@ -287,6 +376,8 @@ public:
 				}
 				else
 				{
+					if constexpr (BuildOptions::Dev)
+						fail_unbound_slot(member);   // index 0 -- see fail_unbound_slot
 					offsets.emplace_back(0);
 				}
 			}

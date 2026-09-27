@@ -84,9 +84,8 @@ void PassDefault<Passes::Reflections::ReflectionRTX>::render(
 
 	// Slots::GI::Voxel::VoxelScreen is this codebase's only GBuffer-to-raytracing
 	// binding path (RTXShadow reuses it the same way, GBuffer only) -- its
-	// voxel-texture/cubemap fields are left unset (reads descriptor 0, an
-	// established pattern for fields no bound shader ever samples, see the
-	// struct's own comment in voxel.prism). MyRaygenShaderReflectionRTXOnly
+	// voxel-texture/cubemap fields are left unset and fall back to [Auto] null
+	// views (see the struct in voxel.prism). MyRaygenShaderReflectionRTXOnly
 	// never calls GetVoxels()/GetTex_cube(), and SlotID::VoxelInfo is never
 	// bound at all -- this pass touches no voxel data whatsoever.
 	{

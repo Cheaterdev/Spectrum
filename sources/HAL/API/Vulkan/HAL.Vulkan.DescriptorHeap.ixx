@@ -28,6 +28,26 @@ export namespace HAL
             D3D12_CPU_DESCRIPTOR_HANDLE get_cpu() const { return cpu_handle; }
             D3D12_GPU_DESCRIPTOR_HANDLE get_gpu() const { return gpu_handle; }
         };
+
+        // Everything needed to (re)write one heap slot.  D3D12 descriptors are
+        // self-contained blobs that CopyDescriptors can memcpy between any two
+        // heaps; a VkDescriptorSet slot can't be read back, so each heap keeps the
+        // source of every slot and a copy re-writes it at the destination.
+        struct DescriptorRecord
+        {
+            VkDescriptorType type = VK_DESCRIPTOR_TYPE_MAX_ENUM;  // MAX_ENUM: empty slot
+            union
+            {
+                VkDescriptorImageInfo  image;
+                VkDescriptorBufferInfo buffer;
+            };
+            // Append/Consume counter -- DXC reads slot i's counter from element i
+            // of set 0, binding 2.  buffer == VK_NULL_HANDLE when there is none.
+            VkDescriptorBufferInfo counter{};
+
+            DescriptorRecord() : buffer{} {}
+            bool empty() const noexcept { return type == VK_DESCRIPTOR_TYPE_MAX_ENUM; }
+        };
     }
 
     struct DescriptorHeapDesc
@@ -42,26 +62,25 @@ export namespace HAL
 
     namespace API
     {
-        // VK_EXT_descriptor_heap: a heap is a host-visible, device-addressable
-        // VkBuffer holding raw descriptors at a uniform stride.  This mirrors
-        // D3D12 exactly — a descriptor "handle" is just base + slot*stride, and
-        // CopyDescriptors is a plain memcpy between mapped heaps.
+        // A shader-visible CBV_SRV_UAV or SAMPLER heap is one descriptor set of the
+        // device's bindless layout (set 0 / set 1), and a slot index is the array
+        // element the shader indexes ResourceDescriptorHeap / SamplerDescriptorHeap
+        // with.  Other heaps own no Vulkan objects: RTV/DSV are handled by dynamic
+        // rendering, and CPU-only heaps only keep records to copy from.
         class DescriptorHeap
         {
         protected:
-            VkBuffer      vk_heap_buffer = VK_NULL_HANDLE;
-            VmaAllocation vma_alloc      = VK_NULL_HANDLE;
-            uint8_t*      mapped         = nullptr;  // persistent CPU mapping
-            VkDeviceAddress device_address = 0;      // heap base GPU address
+            VkDescriptorPool vk_pool = VK_NULL_HANDLE;
+            VkDescriptorSet  vk_set  = VK_NULL_HANDLE;
+            uint             capacity = 0;
+            std::vector<DescriptorRecord> records;
 
-            VkDeviceSize  descriptor_size = 0;       // per-slot stride (uniform)
-            VkDeviceSize  main_size       = 0;       // Count * stride
-            VkDeviceSize  reserved_offset = 0;       // start of reserved (embedded) range
-            VkDeviceSize  reserved_size   = 0;       // size of reserved range
+            // vkUpdateDescriptorSets requires external synchronization of dstSet.
+            std::mutex write_mutex;
 
         public:
             const DescriptorHeapDesc desc;
-            Device& device;   // non-const: place() calls vkWriteResourceDescriptorsEXT
+            Device& device;
 
             uint handle_size = 0;
 
@@ -73,18 +92,19 @@ export namespace HAL
             HAL::Descriptor operator[](uint i);
 
             // D3D12 stages descriptors in a CPU heap and copies ranges to the GPU
-            // heap on demand.  VK_EXT_descriptor_heap writes straight into the
-            // host-visible GPU heap, so this batched sync is a no-op — kept for
-            // shared-code interface parity (FrameManager calls it).
+            // heap on demand; here place() writes the shader-visible set directly,
+            // so this batched sync is a no-op -- kept for shared-code interface
+            // parity (FrameManager calls it).
             void copy_ranges_to_gpu(std::span<const std::pair<uint64, uint64>> ranges) {}
 
-            // Heap binding info for CommandList::set_descriptor_heaps.
-            VkDeviceAddress get_device_address() const noexcept { return device_address; }
-            VkDeviceSize    get_total_size()     const noexcept { return main_size + reserved_size; }
-            VkDeviceSize    get_reserved_offset()const noexcept { return reserved_offset; }
-            VkDeviceSize    get_reserved_size()  const noexcept { return reserved_size; }
-            VkDeviceSize    get_descriptor_size()const noexcept { return descriptor_size; }
-            uint8_t*        get_mapped()         const noexcept { return mapped; }
+            VkDescriptorSet get_vk_set() const noexcept { return vk_set; }
+
+            // Record slot `slot` and, for a shader-visible heap, write it to the set.
+            void store(uint slot, const DescriptorRecord& record);
+            const DescriptorRecord* get_record(uint slot) const noexcept
+            {
+                return slot < records.size() ? &records[slot] : nullptr;
+            }
         };
     }
 }

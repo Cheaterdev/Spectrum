@@ -444,6 +444,8 @@ float4 PS(vertex_output i) : SV_Target { return float4(i.normal * 0.5 + 0.5, 1);
 		{
 			Slots::Frame::FrameInfo frameInfo;
 			frameInfo.GetCamera() = cam.camera_cb.current;
+			frameInfo.GetBrdf()           = EngineAssets::brdf.get_asset()->get_texture()->texture_3d().texture3D;
+			frameInfo.GetBestFitNormals() = EngineAssets::best_fit_normals.get_asset()->get_texture()->texture_2d().texture2D;
 			gfx.set(frameInfo);
 		}
 

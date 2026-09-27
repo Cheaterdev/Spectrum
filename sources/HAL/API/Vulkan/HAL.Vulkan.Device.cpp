@@ -13,57 +13,72 @@ import :HeapAllocators;
 import stl.core;
 import Core;
 
-// ---- VK_EXT_descriptor_heap entry points --------------------------------
-// These commands are guarded by VK_ONLY_EXPORTED_PROTOTYPES in vulkan_core.h,
-// so vulkan-1.dll does NOT export them and the linker cannot resolve them
-// directly.  We load them via vkGetDeviceProcAddr into function pointers and
-// provide trampoline definitions (matching the extern "C" header declarations)
-// that delegate through those pointers.  Because they have C language linkage
-// they attach to the global module, so every Vulkan TU that includes
-// vulkan.h can call them and link against this single definition.
 namespace
 {
-    PFN_vkWriteResourceDescriptorsEXT pfn_vkWriteResourceDescriptorsEXT = nullptr;
-    PFN_vkWriteSamplerDescriptorsEXT  pfn_vkWriteSamplerDescriptorsEXT  = nullptr;
-    PFN_vkCmdBindResourceHeapEXT      pfn_vkCmdBindResourceHeapEXT      = nullptr;
-    PFN_vkCmdBindSamplerHeapEXT       pfn_vkCmdBindSamplerHeapEXT       = nullptr;
-    PFN_vkCmdPushDataEXT              pfn_vkCmdPushDataEXT              = nullptr;
+    // Set once the device exists; check_device_lost() can be reached from any
+    // thread that submits or waits, without a Device reference.
+    VkDevice                    fault_device      = VK_NULL_HANDLE;
+    PFN_vkGetDeviceFaultInfoEXT fn_get_fault_info = nullptr;
+    std::atomic_bool            fault_reported    = false;
 
-    void load_descriptor_heap_ext(VkDevice dev)
+    void log_device_fault(const char* where)
     {
-    #define LOAD(name)                                                           \
-        pfn_##name = reinterpret_cast<PFN_##name>(vkGetDeviceProcAddr(dev, #name)); \
-        if (!pfn_##name) Log::get() << Log::LEVEL_ERROR                           \
-            << "[Vulkan] vkGetDeviceProcAddr returned null for " #name << Log::endl
-        LOAD(vkWriteResourceDescriptorsEXT);
-        LOAD(vkWriteSamplerDescriptorsEXT);
-        LOAD(vkCmdBindResourceHeapEXT);
-        LOAD(vkCmdBindSamplerHeapEXT);
-        LOAD(vkCmdPushDataEXT);
-    #undef LOAD
+        Log::get() << Log::LEVEL_ERROR << "[Vulkan] VK_ERROR_DEVICE_LOST detected at " << where << Log::endl;
+        if (!fn_get_fault_info || fault_device == VK_NULL_HANDLE)
+        {
+            Log::get() << Log::LEVEL_ERROR << "[Vulkan] no VK_EXT_device_fault report available" << Log::endl;
+            return;
+        }
+
+        VkDeviceFaultCountsEXT counts{ VK_STRUCTURE_TYPE_DEVICE_FAULT_COUNTS_EXT };
+        if (fn_get_fault_info(fault_device, &counts, nullptr) != VK_SUCCESS)
+        {
+            Log::get() << Log::LEVEL_ERROR << "[Vulkan] vkGetDeviceFaultInfoEXT (counts) failed" << Log::endl;
+            return;
+        }
+
+        std::vector<VkDeviceFaultAddressInfoEXT> addresses(counts.addressInfoCount);
+        std::vector<VkDeviceFaultVendorInfoEXT>  vendors(counts.vendorInfoCount);
+        counts.vendorBinarySize = 0;   // the vendor crash-dump blob isn't decoded here
+
+        VkDeviceFaultInfoEXT info{ VK_STRUCTURE_TYPE_DEVICE_FAULT_INFO_EXT };
+        info.pAddressInfos = addresses.data();
+        info.pVendorInfos  = vendors.data();
+        VkResult r = fn_get_fault_info(fault_device, &counts, &info);
+        if (r != VK_SUCCESS && r != VK_INCOMPLETE)
+        {
+            Log::get() << Log::LEVEL_ERROR << "[Vulkan] vkGetDeviceFaultInfoEXT failed: " << static_cast<int>(r) << Log::endl;
+            return;
+        }
+
+        Log::get() << Log::LEVEL_ERROR << "[Vulkan] device fault: " << info.description
+                   << " (" << addresses.size() << " addresses, " << vendors.size() << " vendor records)" << Log::endl;
+        for (auto& a : addresses)
+        {
+            // The fault lies within reportedAddress rounded down/up to addressPrecision.
+            const uint64_t mask = a.addressPrecision ? ~(a.addressPrecision - 1) : ~0ull;
+            Log::get() << Log::LEVEL_ERROR << "[Vulkan]   " << std::string(magic_enum::enum_name(a.addressType))
+                       << " address 0x" << std::hex << a.reportedAddress
+                       << " (range 0x" << (a.reportedAddress & mask) << " +0x" << a.addressPrecision << ")"
+                       << std::dec << Log::endl;
+        }
+        for (auto& v : vendors)
+            Log::get() << Log::LEVEL_ERROR << "[Vulkan]   vendor: " << v.description
+                       << " code 0x" << std::hex << v.vendorFaultCode
+                       << " data 0x" << v.vendorFaultData << std::dec << Log::endl;
     }
 }
 
-VKAPI_ATTR VkResult VKAPI_CALL vkWriteResourceDescriptorsEXT(
-    VkDevice device, uint32_t resourceCount,
-    const VkResourceDescriptorInfoEXT* pResources,
-    const VkHostAddressRangeEXT* pDescriptors)
-{ return pfn_vkWriteResourceDescriptorsEXT(device, resourceCount, pResources, pDescriptors); }
-
-VKAPI_ATTR VkResult VKAPI_CALL vkWriteSamplerDescriptorsEXT(
-    VkDevice device, uint32_t samplerCount,
-    const VkSamplerCreateInfo* pSamplers,
-    const VkHostAddressRangeEXT* pDescriptors)
-{ return pfn_vkWriteSamplerDescriptorsEXT(device, samplerCount, pSamplers, pDescriptors); }
-
-VKAPI_ATTR void VKAPI_CALL vkCmdBindResourceHeapEXT(VkCommandBuffer cb, const VkBindHeapInfoEXT* pInfo)
-{ pfn_vkCmdBindResourceHeapEXT(cb, pInfo); }
-
-VKAPI_ATTR void VKAPI_CALL vkCmdBindSamplerHeapEXT(VkCommandBuffer cb, const VkBindHeapInfoEXT* pInfo)
-{ pfn_vkCmdBindSamplerHeapEXT(cb, pInfo); }
-
-VKAPI_ATTR void VKAPI_CALL vkCmdPushDataEXT(VkCommandBuffer cb, const VkPushDataInfoEXT* pInfo)
-{ pfn_vkCmdPushDataEXT(cb, pInfo); }
+namespace HAL::API
+{
+    bool check_device_lost(VkResult result, const char* where)
+    {
+        if (result != VK_ERROR_DEVICE_LOST) return false;
+        if (!fault_reported.exchange(true))
+            log_device_fault(where);
+        return true;
+    }
+}
 
 // Vulkan native implementation of HAL::Device.
 // Mirrors the partition layout of D3D12/HAL.D3D12.Device.cpp.
@@ -291,16 +306,20 @@ namespace HAL
                 VK_KHR_TIMELINE_SEMAPHORE_EXTENSION_NAME,
                 VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME,
                 VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME,
-                // The D3D12-identical descriptor model: heaps are memory-backed
-                // buffers, root signatures carry no layout objects, SM6.6
-                // ResourceDescriptorHeap/SamplerDescriptorHeap map straight in.
-                VK_EXT_DESCRIPTOR_HEAP_EXTENSION_NAME,
-                // Required dependency of descriptor_heap; also provides
-                // VkPipelineCreateFlags2CreateInfo and VK_NULL_HANDLE layouts.
+                // Required: DXC maps every ResourceDescriptorHeap[i] access, whatever
+                // its type, onto one binding -- only a mutable binding can hold that.
+                VK_EXT_MUTABLE_DESCRIPTOR_TYPE_EXTENSION_NAME,
+                // Optional: VK_FORMAT_A8_UNORM (glyph atlases).
                 VK_KHR_MAINTENANCE_5_EXTENSION_NAME,
                 // Optional: allows vkCmdCopyImage between depth (D32) and color (R32)
                 // images — needed to build the color Hi-Z pyramid from the depth GBuffer.
                 VK_KHR_MAINTENANCE_8_EXTENSION_NAME,
+                // Optional: faulting addresses/vendor info after VK_ERROR_DEVICE_LOST.
+                VK_EXT_DEVICE_FAULT_EXTENSION_NAME,
+                // nullDescriptor: D3D12-style null views for unbound slots.
+                VK_EXT_ROBUSTNESS_2_EXTENSION_NAME,
+                // TEMP: device-lost investigation -- GPU address bind/unbind reports.
+                VK_EXT_DEVICE_ADDRESS_BINDING_REPORT_EXTENSION_NAME,
                 // Required by DXC SPIRV for 'discard' in pixel shaders.
                 VK_EXT_SHADER_DEMOTE_TO_HELPER_INVOCATION_EXTENSION_NAME,
                 // Optional: ddx/ddy in compute shaders.
@@ -330,34 +349,24 @@ namespace HAL
             const bool has_cs_derivatives = has_ext(VK_KHR_COMPUTE_SHADER_DERIVATIVES_EXTENSION_NAME);
             const bool has_maintenance8   = has_ext(VK_KHR_MAINTENANCE_8_EXTENSION_NAME);
 
-            // VK_EXT_descriptor_heap is not optional — the entire descriptor/root
-            // signature model depends on it.  Fail loudly if the GPU/driver lacks it.
-            if (!has_ext(VK_EXT_DESCRIPTOR_HEAP_EXTENSION_NAME) ||
-                !has_ext(VK_KHR_MAINTENANCE_5_EXTENSION_NAME))
+            if (!has_ext(VK_EXT_MUTABLE_DESCRIPTOR_TYPE_EXTENSION_NAME))
             {
                 Log::get().crash_error(
-                    "[Vulkan] VK_EXT_descriptor_heap (+ VK_KHR_maintenance5) is required "
-                    "but not supported by this GPU/driver. Update your driver or select a "
-                    "device that supports it.");
+                    "[Vulkan] VK_EXT_mutable_descriptor_type is required but not supported "
+                    "by this GPU/driver.");
                 return;
             }
 
             // ---- Feature chain ----------------------------------------------
+            // vkGetPhysicalDeviceFeatures2 below overwrites every struct in this
+            // chain with what the device supports, and that same chain is what
+            // vkCreateDevice enables -- so everything supported gets enabled and
+            // the required features are checked after the query.
             // All Vulkan 1.2 promoted features must live in a single
             // VkPhysicalDeviceVulkan12Features — the individual VkPhysicalDevice*Features
             // structs for these cannot coexist with it in the same pNext chain.
             VkPhysicalDeviceVulkan12Features vk12_features{
                 VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES };
-            vk12_features.bufferDeviceAddress                       = VK_TRUE;
-            vk12_features.timelineSemaphore                         = VK_TRUE;
-            vk12_features.runtimeDescriptorArray                    = VK_TRUE;
-            vk12_features.descriptorBindingPartiallyBound           = VK_TRUE;
-            vk12_features.descriptorBindingVariableDescriptorCount  = VK_TRUE;
-            vk12_features.shaderSampledImageArrayNonUniformIndexing = VK_TRUE;
-            vk12_features.scalarBlockLayout                         = VK_TRUE;  // sub-16 StructuredBuffer strides
-            vk12_features.hostQueryReset                            = VK_TRUE;  // vkResetQueryPool from CPU
-            vk12_features.separateDepthStencilLayouts               = VK_TRUE;  // DEPTH-only barriers on D24S8
-            vk12_features.drawIndirectCount                         = VK_TRUE;  // execute_indirect *IndirectCount
 
             VkPhysicalDeviceSynchronization2Features sync2_features{
                 VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SYNCHRONIZATION_2_FEATURES };
@@ -369,24 +378,14 @@ namespace HAL
             dr_features.dynamicRendering = VK_TRUE;
             dr_features.pNext = &sync2_features;
 
-            // VK_EXT_descriptor_heap: the D3D12-style memory-backed heap model.
-            VkPhysicalDeviceDescriptorHeapFeaturesEXT heap_features{
-                VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_HEAP_FEATURES_EXT };
-            heap_features.descriptorHeap = VK_TRUE;
-            heap_features.pNext = &dr_features;
-
-            // maintenance5: dependency of descriptor_heap; enables
-            // VkPipelineCreateFlags2CreateInfo and VK_NULL_HANDLE pipeline layouts.
-            VkPhysicalDeviceMaintenance5Features maint5_features{
-                VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MAINTENANCE_5_FEATURES };
-            maint5_features.maintenance5 = VK_TRUE;
-            maint5_features.pNext = &heap_features;
+            VkPhysicalDeviceMutableDescriptorTypeFeaturesEXT mutable_features{
+                VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MUTABLE_DESCRIPTOR_TYPE_FEATURES_EXT };
+            mutable_features.pNext = &dr_features;
 
             // DemoteToHelperInvocation: 'discard' in pixel shaders uses this capability.
             VkPhysicalDeviceShaderDemoteToHelperInvocationFeatures demote_features{
                 VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_DEMOTE_TO_HELPER_INVOCATION_FEATURES };
-            demote_features.shaderDemoteToHelperInvocation = VK_TRUE;
-            demote_features.pNext = &maint5_features;
+            demote_features.pNext = &mutable_features;
 
             // extendedDynamicState: required for vkCmdSetPrimitiveTopology (used by
             // set_topology / reapply_draw_state).
@@ -413,7 +412,14 @@ namespace HAL
                 VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MAINTENANCE_8_FEATURES_KHR };
             maint8_features.maintenance8 = VK_TRUE;
 
+            VkPhysicalDeviceMaintenance5Features maint5_features{
+                VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MAINTENANCE_5_FEATURES };
+
             void* feature_head = &eds_features;
+            if (has_ext(VK_KHR_MAINTENANCE_5_EXTENSION_NAME)) {
+                maint5_features.pNext = feature_head;
+                feature_head = &maint5_features;
+            }
             if (has_cs_derivatives) {
                 cs_deriv_features.pNext = feature_head;
                 feature_head = &cs_deriv_features;
@@ -421,6 +427,28 @@ namespace HAL
             if (has_mesh_shader) {
                 mesh_features.pNext = feature_head;
                 feature_head = &mesh_features;
+            }
+            VkPhysicalDeviceFaultFeaturesEXT fault_features{
+                VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FAULT_FEATURES_EXT };
+            const bool has_device_fault = has_ext(VK_EXT_DEVICE_FAULT_EXTENSION_NAME);
+            if (has_device_fault) {
+                fault_features.pNext = feature_head;
+                feature_head = &fault_features;
+            }
+            VkPhysicalDeviceRobustness2FeaturesEXT robustness2_features{
+                VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ROBUSTNESS_2_FEATURES_EXT };
+            const bool has_robustness2 = has_ext(VK_EXT_ROBUSTNESS_2_EXTENSION_NAME);
+            if (has_robustness2) {
+                robustness2_features.pNext = feature_head;
+                feature_head = &robustness2_features;
+            }
+
+            // TEMP: device-lost investigation.
+            VkPhysicalDeviceAddressBindingReportFeaturesEXT binding_report_features{
+                VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ADDRESS_BINDING_REPORT_FEATURES_EXT };
+            if (has_ext(VK_EXT_DEVICE_ADDRESS_BINDING_REPORT_EXTENSION_NAME)) {
+                binding_report_features.pNext = feature_head;
+                feature_head = &binding_report_features;
             }
             if (has_maintenance8) {
                 maint8_features.pNext = feature_head;
@@ -431,6 +459,42 @@ namespace HAL
                 VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2 };
             features2.pNext = feature_head;
             vkGetPhysicalDeviceFeatures2(vk_physical, &features2);
+
+            // Their parent features (multiview, primitiveFragmentShadingRate) are not
+            // in the chain, and enabling a dependent feature without its parent is invalid.
+            mesh_features.multiviewMeshShader                    = VK_FALSE;
+            mesh_features.primitiveFragmentShadingRateMeshShader = VK_FALSE;
+
+            // Only nullDescriptor is wanted from robustness2; robust buffer/image
+            // access would add bounds checks to every access.
+            robustness2_features.robustBufferAccess2 = VK_FALSE;
+            robustness2_features.robustImageAccess2  = VK_FALSE;
+            null_descriptor = has_robustness2 && robustness2_features.nullDescriptor;
+            if (!null_descriptor)
+                Log::get() << Log::LEVEL_WARNING << "[Vulkan] nullDescriptor unsupported: unbound descriptor "
+                              "slots stay unwritten (reading them is undefined)" << Log::endl;
+
+            {
+                const std::pair<VkBool32, const char*> required[] = {
+                    { mutable_features.mutableDescriptorType,                       "mutableDescriptorType" },
+                    { vk12_features.runtimeDescriptorArray,                         "runtimeDescriptorArray" },
+                    { vk12_features.descriptorBindingPartiallyBound,                "descriptorBindingPartiallyBound" },
+                    { vk12_features.descriptorBindingSampledImageUpdateAfterBind,   "descriptorBindingSampledImageUpdateAfterBind" },
+                    { vk12_features.descriptorBindingStorageImageUpdateAfterBind,   "descriptorBindingStorageImageUpdateAfterBind" },
+                    { vk12_features.descriptorBindingStorageBufferUpdateAfterBind,  "descriptorBindingStorageBufferUpdateAfterBind" },
+                    { vk12_features.descriptorBindingUniformBufferUpdateAfterBind,  "descriptorBindingUniformBufferUpdateAfterBind" },
+                    { vk12_features.shaderSampledImageArrayNonUniformIndexing,      "shaderSampledImageArrayNonUniformIndexing" },
+                    { vk12_features.shaderStorageImageArrayNonUniformIndexing,      "shaderStorageImageArrayNonUniformIndexing" },
+                    { vk12_features.shaderStorageBufferArrayNonUniformIndexing,     "shaderStorageBufferArrayNonUniformIndexing" },
+                    { vk12_features.shaderUniformBufferArrayNonUniformIndexing,     "shaderUniformBufferArrayNonUniformIndexing" },
+                };
+                for (auto& [supported, name] : required)
+                    if (!supported)
+                    {
+                        Log::get().crash_error(std::string("[Vulkan] required feature not supported: ") + name);
+                        return;
+                    }
+            }
 
             // ---- Create logical device --------------------------------------
             VkDeviceCreateInfo device_ci{ VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO };
@@ -448,25 +512,18 @@ namespace HAL
                 return;
             }
 
-            // ---- Load VK_EXT_descriptor_heap entry points -------------------
-            load_descriptor_heap_ext(vk_device);
+            fault_device = vk_device;
+            if (has_device_fault && fault_features.deviceFault)
+                fn_get_fault_info = reinterpret_cast<PFN_vkGetDeviceFaultInfoEXT>(
+                    vkGetDeviceProcAddr(vk_device, "vkGetDeviceFaultInfoEXT"));
+            Log::get() << "[Vulkan] device fault reporting: " << (fn_get_fault_info ? "on" : "unavailable") << Log::endl;
 
             // ---- DeviceProperties -------------------------------------------
-            VkPhysicalDeviceDescriptorHeapPropertiesEXT heap_props{
-                VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_HEAP_PROPERTIES_EXT };
+            VkPhysicalDeviceVulkan12Properties vk12_props{
+                VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_PROPERTIES };
             VkPhysicalDeviceProperties2 props2{ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2 };
-            props2.pNext = &heap_props;
+            props2.pNext = &vk12_props;
             vkGetPhysicalDeviceProperties2(vk_physical, &props2);
-
-            // Uniform resource stride = max(image,buffer) so a flat heap keeps
-            // D3D12's "slot index == array element, uniform increment" model.
-            resource_descriptor_size = std::max(heap_props.imageDescriptorSize,
-                                                heap_props.bufferDescriptorSize);
-            sampler_descriptor_size  = heap_props.samplerDescriptorSize;
-            resource_heap_alignment  = heap_props.resourceHeapAlignment;
-            sampler_heap_alignment   = heap_props.samplerHeapAlignment;
-            resource_reserved_range  = heap_props.minResourceHeapReservedRange;
-            sampler_reserved_range   = heap_props.minSamplerHeapReservedRangeWithEmbedded;
 
             auto& p = THIS->properties;
             p.name = props2.properties.deviceName;
@@ -498,24 +555,49 @@ namespace HAL
                 if (mem_props.memoryHeaps[i].flags & VK_MEMORY_HEAP_DEVICE_LOCAL_BIT)
                     vram += mem_props.memoryHeaps[i].size;
 
-            // ---- Shader set/binding -> heap mapping table -------------------
-            // VK_EXT_descriptor_heap replaces descriptor set layouts entirely.
-            // DXC SPIR-V (see HAL.Vulkan.ShaderReflection.cpp flags) emits:
-            //   set 0, binding 0        : ResourceDescriptorHeap  (CBV/SRV/UAV, any type)
-            //   set 0, binding 2        : counter.var.ResourceDescriptorHeap (append counters)
-            //   set 0, bindings 384..388: inline static samplers s0..s4 (s-shift = 384)
+            // ---- Bindless descriptor layouts -------------------------------
+            // Must match the DXC flags in HAL.Vulkan.ShaderReflection.cpp:
+            //   set 0, binding 0        : ResourceDescriptorHeap -- MUTABLE[N]; every
+            //                             CBV/SRV/UAV type aliases this one binding
+            //   set 0, binding 2        : counter.var.ResourceDescriptorHeap -- the
+            //                             Append/Consume counter of slot i is element i
+            //   set 0, bindings 384..390: static samplers s0..s6 (s-shift 384)
             //   set 1, binding 0        : SamplerDescriptorHeap
-            // Each is translated to a heap access here.  Storage lives on the
-            // device for the pipeline lifetime (pMappings referenced by pointer).
+            //   push constants          : one uint per SIG slot, offset = slot * 4
             {
-                constexpr uint32_t SMP_BASE = 384; // s-shift
+                // DescriptorHeapFactory's shader-visible heap sizes; heaps clamp to
+                // the capacities computed from them below.
+                constexpr uint64_t REQUESTED_RESOURCES = 65536 * 8;
+                constexpr uint64_t REQUESTED_SAMPLERS  = 2048;
+                constexpr uint32_t SMP_BASE            = 384;
 
-                // Embedded static samplers s0..s6 — create-infos kept alive so the
-                // mapping's pEmbeddedSampler stays valid.  Order matches Frame::FrameLayout.h:
-                //   s0=linearWrap, s1=pointClamp, s2=linearClamp, s3=anisoBorder,
-                //   s4=pointBorder, s5=vsmShadow (comparison), s6=linearBorderBlack
-                // Register sN maps to binding SMP_BASE + N, so the list must stay
-                // contiguous and in layout order.
+                // A mutable descriptor counts against the limit of every type in its
+                // list, and the counter binding adds another N storage buffers.
+                const auto& L = vk12_props;
+                uint64_t cap = REQUESTED_RESOURCES;
+                for (uint64_t limit : {
+                         uint64_t(L.maxDescriptorSetUpdateAfterBindSampledImages),
+                         uint64_t(L.maxDescriptorSetUpdateAfterBindStorageImages),
+                         uint64_t(L.maxDescriptorSetUpdateAfterBindUniformBuffers),
+                         uint64_t(L.maxDescriptorSetUpdateAfterBindStorageBuffers) / 2,
+                         uint64_t(L.maxPerStageDescriptorUpdateAfterBindSampledImages),
+                         uint64_t(L.maxPerStageDescriptorUpdateAfterBindStorageImages),
+                         uint64_t(L.maxPerStageDescriptorUpdateAfterBindUniformBuffers),
+                         uint64_t(L.maxPerStageDescriptorUpdateAfterBindStorageBuffers) / 2,
+                         uint64_t(L.maxPerStageUpdateAfterBindResources) / 5,
+                         uint64_t(L.maxUpdateAfterBindDescriptorsInAllPools) / 2 })
+                    cap = std::min(cap, limit);
+                resource_heap_capacity = static_cast<uint32_t>(cap);
+                sampler_heap_capacity  = static_cast<uint32_t>(std::min<uint64_t>({ REQUESTED_SAMPLERS,
+                    L.maxDescriptorSetUpdateAfterBindSamplers - NUM_INLINE_SMP,
+                    L.maxPerStageDescriptorUpdateAfterBindSamplers - NUM_INLINE_SMP }));
+                if (cap < REQUESTED_RESOURCES)
+                    Log::get() << Log::LEVEL_WARNING << "[Vulkan] resource descriptor heap limited to "
+                               << resource_heap_capacity << " of " << REQUESTED_RESOURCES << " by device limits" << Log::endl;
+
+                // Static samplers, in Frame::FrameLayout order (register sN = binding
+                // SMP_BASE + N): linearWrap, pointClamp, linearClamp, anisoBorder,
+                // pointBorder, vsmShadow (comparison), linearBorderBlack.
                 const SamplerDesc* descs[NUM_INLINE_SMP] = {
                     &Samplers::SamplerLinearWrapDesc,
                     &Samplers::SamplerPointClampDesc,
@@ -525,75 +607,74 @@ namespace HAL
                     &Samplers::SamplerShadowComparisonDesc,
                     &Samplers::SamplerLinearBorderBlackDesc,
                 };
-                embedded_sampler_cis.resize(NUM_INLINE_SMP);
-                for (uint32_t i = 0; i < NUM_INLINE_SMP; ++i)
-                    embedded_sampler_cis[i] = to_native_sampler_ci(*descs[i]);
-
-                auto make_mapping = [](uint32_t set, uint32_t binding,
-                                       VkSpirvResourceTypeFlagsEXT mask,
-                                       VkDescriptorMappingSourceEXT source,
-                                       VkDescriptorMappingSourceDataEXT data)
-                {
-                    VkDescriptorSetAndBindingMappingEXT m{
-                        VK_STRUCTURE_TYPE_DESCRIPTOR_SET_AND_BINDING_MAPPING_EXT };
-                    m.descriptorSet = set;
-                    m.firstBinding  = binding;
-                    m.bindingCount  = 1;
-                    m.resourceMask  = mask;
-                    m.source        = source;
-                    m.sourceData    = data;
-                    return m;
-                };
-
-                binding_mappings.clear();
-
-                // set 0, binding 0 — resource heap: element index == descriptor slot,
-                // uniform stride (D3D12 handle increment).
-                {
-                    VkDescriptorMappingSourceDataEXT d{};
-                    d.constantOffset.heapOffset      = 0;
-                    d.constantOffset.heapArrayStride = static_cast<uint32_t>(resource_descriptor_size);
-                    binding_mappings.push_back(make_mapping(
-                        0, 0, VK_SPIRV_RESOURCE_TYPE_ALL_EXT,
-                        VK_DESCRIPTOR_MAPPING_SOURCE_HEAP_WITH_CONSTANT_OFFSET_EXT, d));
-                }
-
-                // set 0, binding 2 — append/consume hidden counter (storage buffer),
-                // indexed into the resource heap like binding 0.
-                {
-                    VkDescriptorMappingSourceDataEXT d{};
-                    d.constantOffset.heapOffset      = 0;
-                    d.constantOffset.heapArrayStride = static_cast<uint32_t>(resource_descriptor_size);
-                    binding_mappings.push_back(make_mapping(
-                        0, 2, VK_SPIRV_RESOURCE_TYPE_READ_WRITE_STORAGE_BUFFER_BIT_EXT,
-                        VK_DESCRIPTOR_MAPPING_SOURCE_HEAP_WITH_CONSTANT_OFFSET_EXT, d));
-                }
-
-                // set 0, bindings 384..390 — embedded static samplers s0..s6.
-                // Fully baked into the pipeline via pEmbeddedSampler.
                 for (uint32_t i = 0; i < NUM_INLINE_SMP; ++i)
                 {
-                    VkDescriptorMappingSourceDataEXT d{};
-                    d.constantOffset.pEmbeddedSampler = &embedded_sampler_cis[i];
-                    binding_mappings.push_back(make_mapping(
-                        0, SMP_BASE + i, VK_SPIRV_RESOURCE_TYPE_SAMPLER_BIT_EXT,
-                        VK_DESCRIPTOR_MAPPING_SOURCE_HEAP_WITH_CONSTANT_OFFSET_EXT, d));
+                    auto ci = to_native_sampler_ci(*descs[i]);
+                    vkCreateSampler(vk_device, &ci, nullptr, &inline_samplers[i]);
                 }
 
-                // set 1, binding 0 — sampler heap: element index == sampler slot.
-                {
-                    VkDescriptorMappingSourceDataEXT d{};
-                    d.constantOffset.samplerHeapOffset      = 0;
-                    d.constantOffset.samplerHeapArrayStride = static_cast<uint32_t>(sampler_descriptor_size);
-                    binding_mappings.push_back(make_mapping(
-                        1, 0, VK_SPIRV_RESOURCE_TYPE_SAMPLER_BIT_EXT,
-                        VK_DESCRIPTOR_MAPPING_SOURCE_HEAP_WITH_CONSTANT_OFFSET_EXT, d));
-                }
+                constexpr VkDescriptorBindingFlags bindless_flags =
+                    VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT;
 
-                binding_mapping_info.sType =
-                    VK_STRUCTURE_TYPE_SHADER_DESCRIPTOR_SET_AND_BINDING_MAPPING_INFO_EXT;
-                binding_mapping_info.mappingCount = static_cast<uint32_t>(binding_mappings.size());
-                binding_mapping_info.pMappings    = binding_mappings.data();
+                // ---- Set 0 ----
+                constexpr uint32_t SET0_BINDINGS = 2 + NUM_INLINE_SMP;
+                VkDescriptorSetLayoutBinding bindings[SET0_BINDINGS]{};
+                VkDescriptorBindingFlags     flags[SET0_BINDINGS]{};
+                VkMutableDescriptorTypeListEXT mutable_lists[SET0_BINDINGS]{};
+
+                bindings[0] = { 0, VK_DESCRIPTOR_TYPE_MUTABLE_EXT, resource_heap_capacity, VK_SHADER_STAGE_ALL, nullptr };
+                flags[0]    = bindless_flags;
+                mutable_lists[0].descriptorTypeCount = static_cast<uint32_t>(std::size(mutable_resource_types));
+                mutable_lists[0].pDescriptorTypes    = mutable_resource_types;
+
+                bindings[1] = { 2, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, resource_heap_capacity, VK_SHADER_STAGE_ALL, nullptr };
+                flags[1]    = bindless_flags;
+
+                for (uint32_t i = 0; i < NUM_INLINE_SMP; ++i)
+                    bindings[2 + i] = { SMP_BASE + i, VK_DESCRIPTOR_TYPE_SAMPLER, 1, VK_SHADER_STAGE_ALL, &inline_samplers[i] };
+
+                VkMutableDescriptorTypeCreateInfoEXT mutable_ci{ VK_STRUCTURE_TYPE_MUTABLE_DESCRIPTOR_TYPE_CREATE_INFO_EXT };
+                mutable_ci.mutableDescriptorTypeListCount = SET0_BINDINGS;
+                mutable_ci.pMutableDescriptorTypeLists    = mutable_lists;
+
+                VkDescriptorSetLayoutBindingFlagsCreateInfo flags_ci{ VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO };
+                flags_ci.bindingCount  = SET0_BINDINGS;
+                flags_ci.pBindingFlags = flags;
+                flags_ci.pNext         = &mutable_ci;
+
+                VkDescriptorSetLayoutCreateInfo set0_ci{ VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO };
+                set0_ci.flags        = VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT;
+                set0_ci.bindingCount = SET0_BINDINGS;
+                set0_ci.pBindings    = bindings;
+                set0_ci.pNext        = &flags_ci;
+                process_result(vkCreateDescriptorSetLayout(vk_device, &set0_ci, nullptr, &resource_set_layout), "resource set layout");
+
+                // ---- Set 1 ----
+                VkDescriptorSetLayoutBinding sampler_binding{ 0, VK_DESCRIPTOR_TYPE_SAMPLER, sampler_heap_capacity, VK_SHADER_STAGE_ALL, nullptr };
+                VkDescriptorSetLayoutBindingFlagsCreateInfo sampler_flags_ci{ VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO };
+                sampler_flags_ci.bindingCount  = 1;
+                sampler_flags_ci.pBindingFlags = &bindless_flags;
+
+                VkDescriptorSetLayoutCreateInfo set1_ci{ VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO };
+                set1_ci.flags        = VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT;
+                set1_ci.bindingCount = 1;
+                set1_ci.pBindings    = &sampler_binding;
+                set1_ci.pNext        = &sampler_flags_ci;
+                process_result(vkCreateDescriptorSetLayout(vk_device, &set1_ci, nullptr, &sampler_set_layout), "sampler set layout");
+
+                // ---- Pipeline layout ----
+                VkDescriptorSetLayout set_layouts[] = { resource_set_layout, sampler_set_layout };
+                VkPushConstantRange push_range{ VK_SHADER_STAGE_ALL, 0, PUSH_CONSTANT_SIZE };
+
+                VkPipelineLayoutCreateInfo pl_ci{ VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO };
+                pl_ci.setLayoutCount         = static_cast<uint32_t>(std::size(set_layouts));
+                pl_ci.pSetLayouts            = set_layouts;
+                pl_ci.pushConstantRangeCount = 1;
+                pl_ci.pPushConstantRanges    = &push_range;
+                process_result(vkCreatePipelineLayout(vk_device, &pl_ci, nullptr, &pipeline_layout), "pipeline layout");
+
+                Log::get() << "[Vulkan] bindless heap: " << resource_heap_capacity << " resources, "
+                           << sampler_heap_capacity << " samplers" << Log::endl;
             }
 
             Log::get() << "Vulkan device: " << p.name.c_str()
@@ -602,8 +683,11 @@ namespace HAL
 
         Device::~Device()
         {
-            // Embedded samplers are baked into pipelines; no VkSampler/layout objects
-            // to destroy (VK_EXT_descriptor_heap owns no per-device descriptor objects).
+            if (pipeline_layout)     vkDestroyPipelineLayout(vk_device, pipeline_layout, nullptr);
+            if (resource_set_layout) vkDestroyDescriptorSetLayout(vk_device, resource_set_layout, nullptr);
+            if (sampler_set_layout)  vkDestroyDescriptorSetLayout(vk_device, sampler_set_layout, nullptr);
+            for (VkSampler s : inline_samplers)
+                if (s) vkDestroySampler(vk_device, s, nullptr);
             if (vma_allocator) vmaDestroyAllocator(vma_allocator);
             if (vk_device)     vkDestroyDevice(vk_device, nullptr);
             // Instance and debug messenger are owned by the static in HAL::init() /

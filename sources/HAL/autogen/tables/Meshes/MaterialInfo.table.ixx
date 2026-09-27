@@ -32,7 +32,7 @@ export namespace Table
 			{
 				compiler.compile(data, "MaterialInfo::data");
 				compiler.compile(textures, "MaterialInfo::textures");
-				compiler.compile(texture_feedbacks, "MaterialInfo::texture_feedbacks");
+				compiler.compile_auto(texture_feedbacks, "MaterialInfo::texture_feedbacks");
 			}
 
 

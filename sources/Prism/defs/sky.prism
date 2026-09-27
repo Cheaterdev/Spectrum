@@ -25,11 +25,15 @@ namespace Environment
 	{
 
 		float3 sunDir;
+		# [Auto] (with result below): set only by the screen-space sky (CS); the
+		# cubemap bake (CS_Cube) uses the LUTs alone.
+		[Auto = Texture_Null]
 		Texture2D<float> depthBuffer;
 
 		Texture2D<float4> transmittance;
 		Texture3D<float4> inscatter;
 		Texture2D<float4> irradiance;
+		[Auto = Texture_Null]
 		RWTexture2D<float4> result;
 	}
 
@@ -52,7 +56,9 @@ namespace Environment
 		uint4 size;
 
 		# One array UAV per output mip. The specular pass walks all of them from a
-		# single flattened dispatch; the diffuse pass writes [0] only.
+		# single flattened dispatch; the diffuse pass writes [0] only. [Auto]:
+		# entries past size.y (the mip count) are never written.
+		[Auto = Texture_Null]
 		RWTexture2DArray<float4> targets[8];
 	}
 

@@ -36,11 +36,11 @@ export namespace Table
 			void compile(Compiler& compiler) const
 			{
 				compiler.compile(sunDir, "SkyData::sunDir");
-				compiler.compile(depthBuffer, "SkyData::depthBuffer");
+				compiler.compile_auto(depthBuffer, "SkyData::depthBuffer");
 				compiler.compile(transmittance, "SkyData::transmittance");
 				compiler.compile(inscatter, "SkyData::inscatter");
 				compiler.compile(irradiance, "SkyData::irradiance");
-				compiler.compile(result, "SkyData::result");
+				compiler.compile_auto(result, "SkyData::result");
 			}
 			struct Compiled
 			{

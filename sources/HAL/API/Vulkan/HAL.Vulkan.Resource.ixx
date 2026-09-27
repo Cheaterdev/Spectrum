@@ -48,18 +48,16 @@ export namespace HAL
             VkImageView   vk_image_view= VK_NULL_HANDLE; // owned (non-swapchain) images
             VmaAllocation vma_alloc    = VK_NULL_HANDLE;
 
-            // Cached per-mip image views for UAV (storage image) descriptors.
-            // Keyed by (array_layer << 16 | mip_level). VkImageViews with levelCount=1
-            // are required for VK_DESCRIPTOR_TYPE_STORAGE_IMAGE descriptors.
+            // Cached single-mip image views for UAV (storage image) descriptors.
+            // Keyed by (array_layer << 16 | mip_level).
             mutable std::unordered_map<uint32_t, VkImageView> per_mip_views;
 
             // Format/aspect stored at image creation for per-mip view creation.
             VkFormat           vk_image_format = VK_FORMAT_UNDEFINED;
             VkImageAspectFlags vk_image_aspect = 0;
 
-            // Full-resource image-view create-info, saved at init().  VK_EXT_descriptor_heap
-            // image writes (VkImageDescriptorInfoEXT) take a VkImageViewCreateInfo rather
-            // than a VkImageView, so the parameters must be reproducible here.
+            // Full-resource image-view create-info, saved at init(); per-mip UAV
+            // views are derived from it.
             VkImageViewCreateInfo vk_view_ci = {};
 
             // Persistent CPU mapping (UPLOAD / READBACK heaps).
@@ -108,13 +106,11 @@ export namespace HAL
                 return import_handle.image_view != VK_NULL_HANDLE
                      ? import_handle.image_view : vk_image_view;
             }
-            // Single-mip image view for UAV (STORAGE_IMAGE) descriptors.
-            // Lazily created and cached; requires levelCount=1 per Vulkan spec.
-            VkImageView get_vk_mip_view(VkDevice vk_dev, uint32_t mip, uint32_t layer = 0) const noexcept;
+            // View for a UAV (STORAGE_IMAGE) descriptor, created from get_uav_view_ci()
+            // on first use and cached. Thread-safe: descriptors are placed from many threads.
+            VkImageView get_vk_uav_view(VkDevice vk_dev, uint32_t mip, uint32_t layer = 0) const noexcept;
 
-            // Full-resource image-view create-info (for VK_EXT_descriptor_heap SRV writes).
-            const VkImageViewCreateInfo& get_view_ci() const noexcept { return vk_view_ci; }
-            // Single-mip create-info for UAV (STORAGE_IMAGE) descriptor writes.
+            // Single-mip create-info for UAV (STORAGE_IMAGE) descriptors.
             // A 3D storage image must keep a 3D view (a 2D view of a 3D image is
             // invalid without 2D_ARRAY_COMPATIBLE); 2D/array images use a 2D view
             // of one mip/layer.

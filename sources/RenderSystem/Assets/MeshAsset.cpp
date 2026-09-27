@@ -188,13 +188,18 @@ MeshAsset::MeshAsset(std::wstring file_name, AssetLoadingContext::ptr c)
 
 	LinearAllocator allocator;
 
-	auto vertex_handle = allocator.Allocate<Table::Meshes::mesh_vertex_input>(data->vertex_buffer.size());
-	auto index_handle = allocator.Allocate<uint>(data->index_buffer.size());
-	auto unique_index_handle = allocator.Allocate<uint>(unique_ids_buffer.size());
-	auto primitive_index_handle = allocator.Allocate<uint>(priimitive_ids_buffer.size());
-	auto meshlet_handle = allocator.Allocate<Table::Meshes::Meshlet>(meshlets.size());
-	auto meshlet_cull_handle = allocator.Allocate<Table::Meshes::MeshletCullData>(meshlet_cull.size());
-	auto meshlet_group_handle = allocator.Allocate<Table::Meshes::MeshletGroup>(meshlet_group_rows.size());
+	// Every block below starts a structured view.
+	auto& device = RenderSystem::get().device();
+	auto block = [&]<class T>(size_t count) {
+		return allocator.Allocate<T>(count, device.structured_buffer_alignment(sizeof(T)));
+	};
+	auto vertex_handle = block.operator()<Table::Meshes::mesh_vertex_input>(data->vertex_buffer.size());
+	auto index_handle = block.operator()<uint>(data->index_buffer.size());
+	auto unique_index_handle = block.operator()<uint>(unique_ids_buffer.size());
+	auto primitive_index_handle = block.operator()<uint>(priimitive_ids_buffer.size());
+	auto meshlet_handle = block.operator()<Table::Meshes::Meshlet>(meshlets.size());
+	auto meshlet_cull_handle = block.operator()<Table::Meshes::MeshletCullData>(meshlet_cull.size());
+	auto meshlet_group_handle = block.operator()<Table::Meshes::MeshletGroup>(meshlet_group_rows.size());
 
 
 	buffer = std::make_shared<HAL::Buffer>(RenderSystem::get().device(), HAL::ResourceDesc::Buffer(allocator.get_max_usage(), HAL::ResFlags::ShaderResource | HAL::ResFlags::Immutable), HAL::HeapType::DEFAULT);
@@ -361,6 +366,8 @@ void MeshAsset::try_register()
 
 void MeshAsset::update_preview(HAL::Texture::ptr preview)
 {
+	// See MaterialAsset::update_preview.
+	if (!AssetRenderer::is_good()) return;
 	if (!preview || !preview->is_rt())
 		preview.reset(new HAL::Texture(RenderSystem::get().device(), HAL::ResourceDesc::Tex2D(HAL::Format::R8G8B8A8_UNORM, { 256, 256 }, 1, 6, HAL::ResFlags::ShaderResource | HAL::ResFlags::RenderTarget | HAL::ResFlags::UnorderedAccess)));
 

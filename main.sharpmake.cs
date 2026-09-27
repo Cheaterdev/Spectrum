@@ -202,6 +202,12 @@ namespace Spectrum
 
             conf.Output = Configuration.OutputType.Exe;
             conf.TargetPath = @"[project.SharpmakeCsPath]\bin\" + target.Mode.ToString();
+
+            // Both backends share TargetPath, so distinct names keep one backend's
+            // build from being launched as the other's (VS's up-to-date check sees
+            // a newer exe from the other backend and skips relinking).
+            if (target.Backend == Backend.Vulkan)
+                conf.TargetFileName = GetType().Name.ToLower() + "_vulkan";
         }
 
     }
@@ -280,11 +286,12 @@ namespace Spectrum
                     conf.TargetCopyFilesToSubDirectory.Add(
                         new KeyValuePair<string, string>(slBin + @"\" + dll, Streamline.Dir));
 
-                // sl.interposer.lib is NOT linked: Windows doesn't search
-                // subdirectories for statically imported DLLs, and this
-                // Sharpmake version has no working delay-load path either.
-                // HAL LoadLibrary's it from Streamline.Dir and resolves sl*
-                // entry points via GetProcAddress instead.
+                // sl.interposer.lib is not linked on purpose: HAL LoadLibrary's
+                // it from Streamline.Dir and resolves sl* entry points via
+                // GetProcAddress. vcpkg's auto-link does still pick it up (and
+                // applocal-deps copies sl.interposer.dll next to the exe), so
+                // any API it also exports must come from an explicitly listed
+                // lib -- see vulkan-1.lib in HAL.
             }
 
             { // NVIDIA NRD
@@ -373,12 +380,14 @@ namespace Spectrum
 
                 conf.Defines.Add("HAL_BACKEND_VULKAN");
 
-                // vulkan-1.lib is generated from C:\Windows\System32\vulkan-1.dll
-                // (the Vulkan loader shipped with GPU drivers).  It lives next to
-                // the Vulkan module wrapper so the project is self-contained.
-                // If the Vulkan SDK is later installed, replace this with the SDK lib:
-                //   %VULKAN_SDK%\Lib\vulkan-1.lib
-                // conf.LibraryFiles.Add(@"[project.SharpmakeCsPath]\sources\Modules\vulkan\vulkan-1.lib");
+                // Must be listed explicitly: vcpkg's auto-link appends every
+                // installed .lib after the project's own, alphabetically, and
+                // sl.interposer.lib (streamline port) also exports the vk*
+                // entry points -- left to auto-link, the linker resolves them
+                // from it, all Vulkan calls go through Streamline's proxy, and
+                // it errors "call slInit before ... Vulkan API". Explicit libs
+                // come first, like d3d12.lib/dxgi.lib above.
+                conf.LibraryFiles.Add("vulkan-1.lib");
             }
 
             // DXC folder is always compiled — DXC emits SPIR-V for Vulkan too.
@@ -456,6 +465,13 @@ namespace Spectrum
             base.ConfigureAll(conf, target);
 
             //conf.IsBlobbed = true;
+
+            // Same mirroring as RenderSystem: main.cpp's #ifndef HAL_BACKEND_VULKAN
+            // guards (the 3D scene drawer) need the backend define too.
+            if (target.Backend == Backend.D3D12)
+                conf.Defines.Add("HAL_BACKEND_D3D12");
+            else
+                conf.Defines.Add("HAL_BACKEND_VULKAN");
 
             conf.LibraryFiles.Add("Onecore.lib");
 

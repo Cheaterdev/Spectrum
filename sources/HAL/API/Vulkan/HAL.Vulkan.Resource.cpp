@@ -14,6 +14,15 @@ import :Device;         // HAL::Device
 import :HeapAllocators;
 import :FrameManager;
 
+// TEMP: device-lost investigation (VK_DEVICE_FAULT write to an unmapped
+// address) -- maps GPU addresses to buffers. Remove once found.
+void temp_va_log(const std::string& line)
+{
+    static std::mutex m;
+    std::lock_guard g(m);
+    std::ofstream("gpu_va.temp", std::ios::app) << line << "\n";
+}
+
 namespace HAL
 {
     namespace API
@@ -122,6 +131,8 @@ namespace HAL
                     mapped_data = api_heap->cpu_address + placement.offset;
                     address     = api_heap->get_address() + placement.offset;
                     vk_buffer   = api_heap->get_vk_buffer();
+                    temp_va_log(std::format("placed  {} 0x{:x} size 0x{:x}", (void*)this, address,
+                        _desc.is_buffer() ? _desc.as_buffer().SizeInBytes : 0));
                     return;
                 }
                 // Case B: DEFAULT heap — fall through to VMA allocation below.
@@ -166,6 +177,7 @@ namespace HAL
                     VkBufferDeviceAddressInfo dai{ VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO };
                     dai.buffer = vk_buffer;
                     address = vkGetBufferDeviceAddress(device.get_native_device(), &dai);
+                    temp_va_log(std::format("buffer  {} 0x{:x} size 0x{:x}", (void*)this, address, buf.SizeInBytes));
                 }
             }
             else if (_desc.is_texture())
@@ -247,7 +259,6 @@ namespace HAL
                     ivci.subresourceRange.levelCount     = VK_REMAINING_MIP_LEVELS;
                     ivci.subresourceRange.layerCount     = VK_REMAINING_ARRAY_LAYERS;
                     vkCreateImageView(device.get_native_device(), &ivci, nullptr, &vk_image_view);
-                    // Saved for VK_EXT_descriptor_heap SRV writes (which take a create-info).
                     vk_view_ci = ivci;
 
                     // The state manager records `initialLayout` as the layout this
@@ -331,6 +342,10 @@ namespace HAL
     {
         if (!this->name.empty() && name.empty()) return;
         this->name = name;
+        if (vk_buffer != VK_NULL_HANDLE)
+            temp_va_log(std::format("name    {} 0x{:x} {}", (void*)static_cast<API::Resource*>(this), get_address(), name));
+        else if (vk_image != VK_NULL_HANDLE)
+            temp_va_log(std::format("imgname {} 0x{:x} {}", (void*)static_cast<API::Resource*>(this), (uint64_t)vk_image, name));
 
         if (!m_device) return;
         auto& api_dev = static_cast<API::Device&>(*m_device);
@@ -366,26 +381,21 @@ namespace HAL
 
     namespace API
     {
-        VkImageView Resource::get_vk_mip_view(VkDevice vk_dev, uint32_t mip, uint32_t layer) const noexcept
+        // Guards every Resource's per_mip_views; lookups after the first are cheap.
+        static std::mutex per_mip_views_mutex;
+
+        VkImageView Resource::get_vk_uav_view(VkDevice vk_dev, uint32_t mip, uint32_t layer) const noexcept
         {
-            if (vk_image == VK_NULL_HANDLE || vk_image_format == VK_FORMAT_UNDEFINED)
+            if (vk_image == VK_NULL_HANDLE || vk_view_ci.image == VK_NULL_HANDLE)
                 return VK_NULL_HANDLE;
 
-            uint32_t key = (layer << 16) | mip;
+            const uint32_t key = (layer << 16) | mip;
+            std::lock_guard g(per_mip_views_mutex);
             auto it = per_mip_views.find(key);
             if (it != per_mip_views.end())
                 return it->second;
 
-            VkImageViewCreateInfo ivci{ VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
-            ivci.image    = vk_image;
-            ivci.viewType = VK_IMAGE_VIEW_TYPE_2D;
-            ivci.format   = vk_image_format;
-            ivci.subresourceRange.aspectMask     = vk_image_aspect;
-            ivci.subresourceRange.baseMipLevel   = mip;
-            ivci.subresourceRange.levelCount     = 1;
-            ivci.subresourceRange.baseArrayLayer = layer;
-            ivci.subresourceRange.layerCount     = 1;
-
+            VkImageViewCreateInfo ivci = get_uav_view_ci(mip, layer);
             VkImageView v = VK_NULL_HANDLE;
             vkCreateImageView(vk_dev, &ivci, nullptr, &v);
             per_mip_views[key] = v;
@@ -421,7 +431,10 @@ namespace HAL
             }
 
             if (vk_buffer != VK_NULL_HANDLE)
+            {
+                temp_va_log(std::format("destroy {} 0x{:x}", (void*)static_cast<API::Resource*>(this), get_address()));
                 vmaDestroyBuffer(api_dev.get_vma_allocator(), vk_buffer, vma_alloc);
+            }
             else if (vk_image != VK_NULL_HANDLE && !import_handle.image)
                 vmaDestroyImage(api_dev.get_vma_allocator(), vk_image, vma_alloc);
             vma_alloc = VK_NULL_HANDLE;

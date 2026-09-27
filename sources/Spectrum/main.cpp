@@ -1223,6 +1223,28 @@ public:
 
 			swap_chain->wait_for_free();
 
+			// TEMP: device-lost investigation -- remove once found.
+			// SPECTRUM_FLIP_ONLY=1 skips the frame graph: each frame only makes an
+			// empty submit (it consumes the swapchain's acquire semaphore), presents,
+			// and logs the DIRECT queue's timeline -- UINT64_MAX means device lost.
+			static const bool flip_only = [] {
+				const char* v = std::getenv("SPECTRUM_FLIP_ONLY");
+				return v && *v && *v != '0';
+			}();
+			if (flip_only)
+			{
+				auto list = RenderSystem::get().device().get_upload_list();
+				auto submitted = list->execute();
+				swap_chain->present();
+
+				const auto completed = submitted.fence->get_completed_value();
+				if (frame_counter <= 20 || frame_counter % 100 == 0 || completed == std::numeric_limits<decltype(completed)>::max())
+					Log::get() << "[FlipOnly] frame " << frame_counter << " submitted " << submitted.value
+						<< " completed " << completed
+						<< (completed == std::numeric_limits<decltype(completed)>::max() ? "  DEVICE LOST" : "") << Log::endl;
+			}
+			else
+			{
 			{
 				static float display_poll = 0.0f;
 				display_poll += frame_dt;
@@ -1324,6 +1346,7 @@ public:
 			swap_chain->present();
 			if (frame_counter <= 5)
 				Log::get() << "[Render] present returned frame " << frame_counter << Log::endl;
+			} // TEMP: end of !flip_only
 		}
 
 
@@ -2616,6 +2639,15 @@ struct test
 
 #include <shellscalingapi.h>
 
+// TEMP: Vulkan descriptor-model crash investigation -- remove once found.
+static LONG WINAPI temp_crash_handler(EXCEPTION_POINTERS* ep)
+{
+	auto code = ep->ExceptionRecord->ExceptionCode;
+	if (code == EXCEPTION_ACCESS_VIOLATION || code == EXCEPTION_STACK_OVERFLOW)
+		std::ofstream("crash_stack.temp", std::ios::app) << std::hex << "code 0x" << code << std::dec << "\n"
+			<< std::stacktrace::current() << "\n----\n" << std::flush;
+	return EXCEPTION_CONTINUE_SEARCH;
+}
 
 int APIENTRY WinMain(_In_ HINSTANCE hinst,
 	_In_opt_ HINSTANCE,
@@ -2623,6 +2655,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hinst,
 	_In_ int)
 {
 //	setlocale(LC_ALL, "");
+	AddVectoredExceptionHandler(1, temp_crash_handler);
 	CoInitialize(NULL);
 	SetProcessDpiAwareness(PROCESS_PER_MONITOR_DPI_AWARE);
 

@@ -15,11 +15,21 @@ struct vertex_output
     float dist : DISTANCE;
 };
 
+// DXC doesn't mark per-primitive pixel-shader inputs PerPrimitiveEXT in SPIR-V,
+// so they mismatch the mesh shader's outputs (VUID-RuntimeSpirv-OpVariable-08746,
+// DXC issue #6862); decorate them by hand. 5283 = MeshShadingEXT capability,
+// 5271 = PerPrimitiveEXT decoration.
+#ifdef __spirv__
+#define PER_PRIMITIVE_INPUT [[vk::ext_extension("SPV_EXT_mesh_shader")]] [[vk::ext_capability(5283)]] [[vk::ext_decorate(5271)]]
+#else
+#define PER_PRIMITIVE_INPUT
+#endif
+
 struct primitive_output
 {
-    uint meshlet : MESHLET_ID;
-    uint status : MESHLET_STATUS;
-    uint lod_level : MESHLET_LOD;
+    PER_PRIMITIVE_INPUT uint meshlet : MESHLET_ID;
+    PER_PRIMITIVE_INPUT uint status : MESHLET_STATUS;
+    PER_PRIMITIVE_INPUT uint lod_level : MESHLET_LOD;
 };
 
 #include "../common/common.hlsl"

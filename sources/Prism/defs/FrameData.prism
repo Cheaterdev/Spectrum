@@ -49,9 +49,14 @@ namespace Frame
 
 	    Camera camera;
 	    Camera prevCamera;
-
 	  	Texture2D<float4> bestFitNormals;
+
 		Texture3D<float4> brdf;
+		# [Auto]: the filtered sky cubemap doesn't exist for the first frames
+		# (main.cpp binds it only once the graph has produced it), and passes that
+		# build their own FrameInfo for another camera leave it unset -- only the
+		# RT miss shader and rtx_combine read it.
+		[Auto = Texture_Null]
 		TextureCube<float4> sky;
 		float4 sunDir;
 

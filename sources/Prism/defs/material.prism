@@ -5,6 +5,9 @@ namespace Meshes
 	{
 		[dynamic] MaterialCB data;
 	    Texture2D<float4> textures[];
+		# [Auto]: only virtual (tiled) textures have a sampler-feedback view;
+		# a regular texture's element stays unbound.
+		[Auto = Texture_Null]
 		FeedbackTexture2DMip texture_feedbacks[];
 	}
 }

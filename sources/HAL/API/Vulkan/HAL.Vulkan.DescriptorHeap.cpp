@@ -1,29 +1,15 @@
 module;
 #define VK_USE_PLATFORM_WIN32_KHR
 #include <vulkan/vulkan.h>
-#include <vma/vk_mem_alloc.h>
 module HAL:DescriptorHeap;
 
 import :Debug;
 import :Resource;
 import :Resource.Buffer;
-import :API.Device;   // get_native_device(), get_vma_allocator(), descriptor sizes
+import :API.Device;   // get_native_device(), bindless layouts and capacities
 
 import vulkan;
 import Core;
-
-// VK_EXT_descriptor_heap — D3D12-identical descriptor model.
-//
-// A heap is a host-visible, device-addressable VkBuffer of Count descriptors
-// at a uniform stride (descriptor_size).  A descriptor "handle" is simply
-// base + slot*stride, exactly like a D3D12 CPU descriptor handle:
-//   - place(view)   → vkWriteResourceDescriptorsEXT into mapped[slot*stride]
-//   - operator=     → memcpy between mapped heaps (D3D12 CopyDescriptors)
-//   - RTV / DSV     → no descriptor object; handled by dynamic rendering
-//
-// DXC SPIR-V indexes ResourceDescriptorHeap[i] as element i of set 0 binding 0;
-// the Device's mapping table converts that to base + i*stride.  So the slot
-// index IS the bindless array index the shader uses.
 
 namespace HAL
 {
@@ -38,85 +24,99 @@ namespace HAL
         gpu_handle = { static_cast<UINT64>(offset) };
     }
 
-    // Write one resource descriptor into the heap's mapped memory at `slot`.
-    static void write_descriptor(API::DescriptorHeap& heap, uint slot,
-                                 VkDescriptorType type,
-                                 const VkResourceDescriptorDataEXT& data)
+    // StructuredBuffers are sub-ranges (FirstElement..NumElements) of shared
+    // buffers; honour them or the shader reads the wrong elements.
+    template<class BufferView>
+    static VkDescriptorBufferInfo buffer_range(VkBuffer buffer, const BufferView& b)
     {
-        uint8_t* dst_ptr = heap.get_mapped();
-        if (!dst_ptr) return;
+        const VkDeviceSize stride = b.StructureByteStride ? b.StructureByteStride : 1u;
+        VkDescriptorBufferInfo info{ buffer };
+        info.offset = static_cast<VkDeviceSize>(b.FirstElement) * stride;
+        info.range  = b.NumElements ? static_cast<VkDeviceSize>(b.NumElements) * stride : VK_WHOLE_SIZE;
 
-        VkResourceDescriptorInfoEXT info{ VK_STRUCTURE_TYPE_RESOURCE_DESCRIPTOR_INFO_EXT };
-        info.type = type;
-        info.data = data;
+        // TEMP: storage-buffer alignment investigation -- remove once fixed.
+        if (info.offset % 16)
+        {
+            static std::mutex m; static int n = 0;
+            std::lock_guard g(m);
+            if (n++ < 40)
+                std::ofstream("misaligned_sb.temp", std::ios::app) << "offset " << info.offset << " stride " << b.StructureByteStride
+                    << " first " << b.FirstElement << " count " << b.NumElements << "\n" << std::stacktrace::current() << "\n----\n";
+        }
+        return info;
+    }
 
-        VkHostAddressRangeEXT dst{};
-        dst.address = dst_ptr + slot * heap.get_descriptor_size();
-        dst.size    = static_cast<size_t>(heap.get_descriptor_size());
+    // D3D12 null view (a view with no resource): reads return zero, writes are
+    // dropped. Left unwritten, the slot holds garbage or a stale descriptor, and a
+    // shader reading it -- get_null_descriptor() hands these out for every unbound
+    // table slot -- faults the device (VK_ERROR_DEVICE_LOST, WRITE_INVALID).
+    static void place_null(API::DescriptorHeap& heap, uint slot, VkDescriptorType type)
+    {
+        ASSERT(heap.device.supports_null_descriptor() && "null view on a device without nullDescriptor: slot stays unwritten");
+        if (!heap.device.supports_null_descriptor()) return;
 
-        vkWriteResourceDescriptorsEXT(heap.device.get_native_device(), 1, &info, &dst);
+        API::DescriptorRecord rec;
+        rec.type = type;
+        if (type == VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE || type == VK_DESCRIPTOR_TYPE_STORAGE_IMAGE)
+            rec.image = { VK_NULL_HANDLE, VK_NULL_HANDLE, VK_IMAGE_LAYOUT_UNDEFINED };
+        else
+            rec.buffer = { VK_NULL_HANDLE, 0, VK_WHOLE_SIZE };
+        heap.store(slot, rec);
     }
 
     void Descriptor::place(const Views::ShaderResource& v, bool /*skip_gpu_write*/)
     {
         auto& api_heap = static_cast<API::DescriptorHeap&>(heap);
-        if (!api_heap.get_mapped() || !v.Resource) return;
-
+        if (!v.Resource)
+        {
+            place_null(api_heap, offset, std::holds_alternative<Views::ShaderResource::Buffer>(v.View)
+                ? VK_DESCRIPTOR_TYPE_STORAGE_BUFFER : VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE);
+            return;
+        }
         auto& api_res = static_cast<const API::Resource&>(*v.Resource);
 
+        API::DescriptorRecord rec;
         if (api_res.get_vk_image() != VK_NULL_HANDLE)
         {
-            // SRV texture → SAMPLED_IMAGE.  GENERAL layout matches
-            // to_native(SHADER_RESOURCE) so SRV/UAV slots for the same image agree.
-            VkImageViewCreateInfo view_ci = api_res.get_view_ci();
-            if (view_ci.image == VK_NULL_HANDLE) return;
-
-            VkImageDescriptorInfoEXT img{ VK_STRUCTURE_TYPE_IMAGE_DESCRIPTOR_INFO_EXT };
-            img.pView  = &view_ci;
-            img.layout = VK_IMAGE_LAYOUT_GENERAL;
-
-            VkResourceDescriptorDataEXT data{};
-            data.pImage = &img;
-            write_descriptor(api_heap, offset, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, data);
+            // GENERAL matches to_native(SHADER_RESOURCE), so SRV and UAV slots for
+            // the same image agree on its layout.
+            VkImageView view = api_res.get_vk_image_view();
+            ASSERT(view != VK_NULL_HANDLE && "SRV: image has no view");
+            if (view == VK_NULL_HANDLE) return;
+            rec.type  = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+            rec.image = { VK_NULL_HANDLE, view, VK_IMAGE_LAYOUT_GENERAL };
         }
         else if (api_res.get_vk_buffer() != VK_NULL_HANDLE)
         {
-            // Buffer SRV → STORAGE_BUFFER via device address.  StructuredBuffers are
-            // sub-ranges (FirstElement..NumElements); honour them or the shader reads
-            // the wrong elements.
-            VkDeviceAddress base = static_cast<VkDeviceAddress>(
-                const_cast<API::Resource&>(api_res).get_address());
-            VkDeviceSize    off  = 0;
-            VkDeviceSize    range = VK_WHOLE_SIZE;
-            if (auto* b = std::get_if<Views::ShaderResource::Buffer>(&v.View))
-            {
-                const uint64_t stride = b->StructureByteStride ? b->StructureByteStride : 1u;
-                off = b->FirstElement * stride;
-                range = b->NumElements ? static_cast<VkDeviceSize>(b->NumElements) * stride
-                                       : VK_WHOLE_SIZE;
-            }
-            else ASSERT(0);
-
-            VkDeviceAddressRangeEXT ar{};
-            ar.address = base + off;
-            ar.size    = range;
-
-            VkResourceDescriptorDataEXT data{};
-            data.pAddressRange = &ar;
-            write_descriptor(api_heap, offset, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, data);
+            auto* b = std::get_if<Views::ShaderResource::Buffer>(&v.View);
+            ASSERT(b && "SRV: buffer resource with a non-buffer view");
+            if (!b) return;
+            rec.type   = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+            rec.buffer = buffer_range(api_res.get_vk_buffer(), *b);
         }
+        else
+        {
+            ASSERT(!"SRV: resource has neither a VkImage nor a VkBuffer (failed creation?)");
+            return;
+        }
+
+        api_heap.store(offset, rec);
     }
 
     void Descriptor::place(const Views::UnorderedAccess& v, bool /*skip_gpu_write*/)
     {
         auto& api_heap = static_cast<API::DescriptorHeap&>(heap);
-        if (!api_heap.get_mapped() || !v.Resource) return;
-
+        if (!v.Resource)
+        {
+            place_null(api_heap, offset, std::holds_alternative<Views::UnorderedAccess::Buffer>(v.View)
+                ? VK_DESCRIPTOR_TYPE_STORAGE_BUFFER : VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
+            return;
+        }
         auto& api_res = static_cast<const API::Resource&>(*v.Resource);
 
+        API::DescriptorRecord rec;
         if (api_res.get_vk_image() != VK_NULL_HANDLE)
         {
-            // UAV texture → STORAGE_IMAGE.  Vulkan requires a single-mip view.
             uint32_t mip_slice = 0, array_slice = 0;
             std::visit(overloaded{
                 [&](const Views::UnorderedAccess::Texture2D& t)      { mip_slice = t.MipSlice; },
@@ -125,61 +125,55 @@ namespace HAL
                 [](auto&&) {}
             }, v.View);
 
-            VkImageViewCreateInfo view_ci = api_res.get_uav_view_ci(mip_slice, array_slice);
-            if (view_ci.image == VK_NULL_HANDLE) return;
-
-            VkImageDescriptorInfoEXT img{ VK_STRUCTURE_TYPE_IMAGE_DESCRIPTOR_INFO_EXT };
-            img.pView  = &view_ci;
-            img.layout = VK_IMAGE_LAYOUT_GENERAL;
-
-            VkResourceDescriptorDataEXT data{};
-            data.pImage = &img;
-            write_descriptor(api_heap, offset, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, data);
+            VkImageView view = api_res.get_vk_uav_view(heap.device.get_native_device(), mip_slice, array_slice);
+            ASSERT(view != VK_NULL_HANDLE && "UAV: storage image view creation failed");
+            if (view == VK_NULL_HANDLE) return;
+            rec.type  = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+            rec.image = { VK_NULL_HANDLE, view, VK_IMAGE_LAYOUT_GENERAL };
         }
         else if (api_res.get_vk_buffer() != VK_NULL_HANDLE)
         {
-            VkDeviceAddress base = static_cast<VkDeviceAddress>(
-                const_cast<API::Resource&>(api_res).get_address());
-            VkDeviceSize    off  = 0;
-            VkDeviceSize    range = VK_WHOLE_SIZE;
+            rec.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
             if (auto* b = std::get_if<Views::UnorderedAccess::Buffer>(&v.View))
             {
-                const uint64_t stride = b->StructureByteStride ? b->StructureByteStride : 1u;
-                off = static_cast<VkDeviceSize>(b->FirstElement) * stride;
-                range = b->NumElements ? static_cast<VkDeviceSize>(b->NumElements) * stride
-                                       : VK_WHOLE_SIZE;
+                rec.buffer = buffer_range(api_res.get_vk_buffer(), *b);
+                if (b->CounterResource)
+                {
+                    auto& counter = static_cast<const API::Resource&>(*b->CounterResource);
+                    rec.counter = { counter.get_vk_buffer(), b->CounterOffsetInBytes, sizeof(uint32_t) };
+                }
             }
-
-            VkDeviceAddressRangeEXT ar{};
-            ar.address = base + off;
-            ar.size    = range;
-
-            VkResourceDescriptorDataEXT data{};
-            data.pAddressRange = &ar;
-            write_descriptor(api_heap, offset, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, data);
+            else
+                rec.buffer = { api_res.get_vk_buffer(), 0, VK_WHOLE_SIZE };
         }
+        else
+        {
+            ASSERT(!"UAV: resource has neither a VkImage nor a VkBuffer (failed creation?)");
+            return;
+        }
+
+        api_heap.store(offset, rec);
     }
 
     void Descriptor::place(const Views::ConstantBuffer& v, bool /*skip_gpu_write*/)
     {
         auto& api_heap = static_cast<API::DescriptorHeap&>(heap);
-        if (!api_heap.get_mapped() || !v.Resource) return;
-
+        if (!v.Resource)
+        {
+            place_null(api_heap, offset, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
+            return;
+        }
         auto& api_res = static_cast<const API::Resource&>(*v.Resource);
+        ASSERT(api_res.get_vk_buffer() != VK_NULL_HANDLE && "CBV: resource has no VkBuffer");
         if (api_res.get_vk_buffer() == VK_NULL_HANDLE) return;
 
         // CBVs are sub-allocated inside larger shared buffers; honour
         // OffsetInBytes/SizeInBytes or the shader reads the wrong sub-region.
-        VkDeviceAddress base = static_cast<VkDeviceAddress>(
-            const_cast<API::Resource&>(api_res).get_address());
-
-        VkDeviceAddressRangeEXT ar{};
-        ar.address = base + v.OffsetInBytes;
-        ar.size    = v.SizeInBytes > 0 ? v.SizeInBytes : VK_WHOLE_SIZE;
-
-        VkResourceDescriptorDataEXT data{};
-        data.pAddressRange = &ar;
-        write_descriptor(api_heap, offset, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, data);
+        API::DescriptorRecord rec;
+        rec.type   = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        rec.buffer = { api_res.get_vk_buffer(), v.OffsetInBytes,
+                       v.SizeInBytes > 0 ? VkDeviceSize(v.SizeInBytes) : VK_WHOLE_SIZE };
+        api_heap.store(offset, rec);
     }
 
     void Descriptor::place(const Views::RenderTarget&, bool) {} // handled by dynamic rendering
@@ -187,84 +181,129 @@ namespace HAL
 
     void Descriptor::operator=(const Descriptor& r)
     {
-        // D3D12 CopyDescriptors == memcpy between mapped heaps.  RTV/DSV heaps have
-        // no descriptor memory (dynamic rendering) — the ResourceInfo copy done by
-        // HAL::Handle::place() is enough there.
+        // D3D12 CopyDescriptors.  RTV/DSV heaps have no descriptors (dynamic
+        // rendering) -- the ResourceInfo copy done by HAL::Handle::place() is
+        // enough there.
         auto& dst_api = static_cast<API::DescriptorHeap&>(heap);
         auto& src_api = static_cast<API::DescriptorHeap&>(r.heap);
 
-        if (dst_api.desc.HeapType == DescriptorHeapType::RTV ||
-            dst_api.desc.HeapType == DescriptorHeapType::DSV)
-            return;
-
-        if (!dst_api.get_mapped() || !src_api.get_mapped()) return;
-
-        const VkDeviceSize stride = dst_api.get_descriptor_size();
-        std::memcpy(dst_api.get_mapped() + offset   * stride,
-                    src_api.get_mapped() + r.offset  * src_api.get_descriptor_size(),
-                    static_cast<size_t>(stride));
+        // RTV/DSV heaps keep no records (get_record is null); any other heap's
+        // source slot must have been placed, or the copy spreads an unwritten slot.
+        if (auto* rec = src_api.get_record(r.offset))
+        {
+            ASSERT(!rec->empty() && "descriptor copy from a slot that was never placed");
+            if (!rec->empty())
+                dst_api.store(offset, *rec);
+        }
     }
 
-    uint DescriptorHeap::get_size() { return desc.Count; }
+    uint DescriptorHeap::get_size() { return capacity; }
 
     namespace API
     {
         DescriptorHeap::DescriptorHeap(Device& dev, const DescriptorHeapDesc& d)
             : device(dev), desc(d)
         {
-            handle_size = 0;
+            capacity = d.Count;
 
-            // RTV / DSV heaps have no descriptor memory (dynamic rendering).
-            if (d.HeapType == DescriptorHeapType::RTV ||
-                d.HeapType == DescriptorHeapType::DSV)
+            // RTV / DSV heaps have no descriptors (dynamic rendering).
+            if (d.HeapType == DescriptorHeapType::RTV || d.HeapType == DescriptorHeapType::DSV)
                 return;
 
-            VkDevice     vk_dev = dev.get_native_device();
-            VmaAllocator vma    = dev.get_vma_allocator();
-            if (vk_dev == VK_NULL_HANDLE || vma == VK_NULL_HANDLE) return;
+            const bool is_sampler = d.HeapType == DescriptorHeapType::SAMPLER;
+            if (check(d.Flags & DescriptorHeapFlags::ShaderVisible))
+            {
+                VkDevice vk_dev = dev.get_native_device();
 
-            const bool is_sampler = (d.HeapType == DescriptorHeapType::SAMPLER);
-            descriptor_size = is_sampler ? dev.get_sampler_descriptor_size()
-                                         : dev.get_resource_descriptor_size();
-            reserved_size   = is_sampler ? dev.get_sampler_reserved_range()
-                                         : dev.get_resource_reserved_range();
-            handle_size     = static_cast<uint>(descriptor_size);
-            if (descriptor_size == 0) return;
+                // Pool sizes must cover the layout's full binding counts, which are
+                // the device capacities -- the heap can only address up to those.
+                const uint32_t layout_count = is_sampler ? dev.get_sampler_heap_capacity()
+                                                         : dev.get_resource_heap_capacity();
+                capacity = std::min(d.Count, layout_count);
 
-            main_size       = descriptor_size * d.Count;
-            reserved_offset = main_size;                 // reserved (embedded) range at the end
-            const VkDeviceSize total = main_size + reserved_size;
+                std::vector<VkDescriptorPoolSize>           sizes;
+                std::vector<VkMutableDescriptorTypeListEXT> lists;
+                if (is_sampler)
+                    sizes = { { VK_DESCRIPTOR_TYPE_SAMPLER, layout_count } };
+                else
+                {
+                    sizes = {
+                        { VK_DESCRIPTOR_TYPE_MUTABLE_EXT,    layout_count },
+                        { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, layout_count },  // Append/Consume counters
+                        { VK_DESCRIPTOR_TYPE_SAMPLER,        Device::get_inline_sampler_count() },
+                    };
+                    lists.resize(sizes.size());
+                    lists[0].descriptorTypeCount = static_cast<uint32_t>(std::size(Device::mutable_resource_types));
+                    lists[0].pDescriptorTypes    = Device::mutable_resource_types;
+                }
 
-            const VkDeviceSize align = is_sampler ? dev.get_sampler_heap_alignment()
-                                                  : dev.get_resource_heap_alignment();
+                VkMutableDescriptorTypeCreateInfoEXT mutable_ci{ VK_STRUCTURE_TYPE_MUTABLE_DESCRIPTOR_TYPE_CREATE_INFO_EXT };
+                mutable_ci.mutableDescriptorTypeListCount = static_cast<uint32_t>(lists.size());
+                mutable_ci.pMutableDescriptorTypeLists    = lists.data();
 
-            VkBufferCreateInfo bci{ VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
-            bci.size  = total;
-            bci.usage = VK_BUFFER_USAGE_DESCRIPTOR_HEAP_BIT_EXT
-                      | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
+                VkDescriptorPoolCreateInfo pool_ci{ VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO };
+                pool_ci.flags         = VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT;
+                pool_ci.maxSets       = 1;
+                pool_ci.poolSizeCount = static_cast<uint32_t>(sizes.size());
+                pool_ci.pPoolSizes    = sizes.data();
+                pool_ci.pNext         = is_sampler ? nullptr : &mutable_ci;
+                dev.process_result(vkCreateDescriptorPool(vk_dev, &pool_ci, nullptr, &vk_pool), "descriptor pool");
 
-            VmaAllocationCreateInfo aci{};
-            aci.usage = VMA_MEMORY_USAGE_AUTO;
-            aci.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT
-                      | VMA_ALLOCATION_CREATE_MAPPED_BIT;
+                VkDescriptorSetLayout layout = is_sampler ? dev.get_sampler_set_layout()
+                                                          : dev.get_resource_set_layout();
+                VkDescriptorSetAllocateInfo alloc{ VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO };
+                alloc.descriptorPool     = vk_pool;
+                alloc.descriptorSetCount = 1;
+                alloc.pSetLayouts        = &layout;
+                dev.process_result(vkAllocateDescriptorSets(vk_dev, &alloc, &vk_set), "descriptor set");
+            }
 
-            VmaAllocationInfo ai{};
-            VkResult r = vmaCreateBufferWithAlignment(
-                vma, &bci, &aci, align ? align : 1, &vk_heap_buffer, &vma_alloc, &ai);
-            if (r != VK_SUCCESS) { vk_heap_buffer = VK_NULL_HANDLE; return; }
-
-            mapped = static_cast<uint8_t*>(ai.pMappedData);
-
-            VkBufferDeviceAddressInfo dai{ VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO };
-            dai.buffer = vk_heap_buffer;
-            device_address = vkGetBufferDeviceAddress(vk_dev, &dai);
+            records.resize(capacity);
         }
 
         DescriptorHeap::~DescriptorHeap()
         {
-            VmaAllocator vma = device.get_vma_allocator();
-            if (vk_heap_buffer != VK_NULL_HANDLE && vma != VK_NULL_HANDLE)
-                vmaDestroyBuffer(vma, vk_heap_buffer, vma_alloc);
+            // Destroying the pool frees its set.
+            if (vk_pool != VK_NULL_HANDLE)
+                vkDestroyDescriptorPool(device.get_native_device(), vk_pool, nullptr);
+        }
+
+        void DescriptorHeap::store(uint slot, const DescriptorRecord& record)
+        {
+            ASSERT(slot < records.size() && "descriptor slot beyond the heap's capacity");
+            if (slot >= records.size()) return;
+            records[slot] = record;
+            if (vk_set == VK_NULL_HANDLE) return;
+
+            VkWriteDescriptorSet writes[2]{};
+            uint32_t count = 0;
+
+            auto& w = writes[count++];
+            w.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            w.dstSet          = vk_set;
+            w.dstBinding      = 0;
+            w.dstArrayElement = slot;
+            w.descriptorCount = 1;
+            w.descriptorType  = record.type;
+            if (record.type == VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE || record.type == VK_DESCRIPTOR_TYPE_STORAGE_IMAGE)
+                w.pImageInfo  = &record.image;
+            else
+                w.pBufferInfo = &record.buffer;
+
+            if (record.counter.buffer != VK_NULL_HANDLE)
+            {
+                auto& c = writes[count++];
+                c.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+                c.dstSet          = vk_set;
+                c.dstBinding      = 2;
+                c.dstArrayElement = slot;
+                c.descriptorCount = 1;
+                c.descriptorType  = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+                c.pBufferInfo     = &record.counter;
+            }
+
+            std::lock_guard g(write_mutex);
+            vkUpdateDescriptorSets(device.get_native_device(), count, writes, 0, nullptr);
         }
 
         HAL::Descriptor DescriptorHeap::operator[](uint i)

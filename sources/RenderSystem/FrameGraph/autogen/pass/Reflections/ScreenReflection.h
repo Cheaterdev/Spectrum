@@ -42,6 +42,9 @@ namespace Reflections
 			Handlers::Texture BlueNoise = ResourceID::BlueNoise;
 
 
+			Handlers::TextureCube sky_cubemap_filtered = ResourceID::sky_cubemap_filtered;
+
+
 			Handlers::Texture VoxelReflectionNoiseRaw = ResourceID::VoxelReflectionNoiseRaw;
 
 
@@ -68,6 +71,7 @@ namespace Reflections
 				builder.need(data.GBuffer_DepthMips, FrameGraph::ResourceFlags::None);
 				builder.need(data.VoxelLighted, FrameGraph::ResourceFlags::Read);
 				builder.need(data.BlueNoise, FrameGraph::ResourceFlags::Read);
+				builder.need(data.sky_cubemap_filtered, FrameGraph::ResourceFlags::Read);
 			}
 
 			// Resources this pass always creates with a fixed desc, generated from
@@ -101,6 +105,7 @@ namespace Reflections
 				FrameGraph::ChainIndex GBuffer_DepthMips = FrameGraph::ChainIndex::Unresolved;
 				FrameGraph::ChainIndex VoxelLighted = FrameGraph::ChainIndex::Unresolved;
 				FrameGraph::ChainIndex BlueNoise = FrameGraph::ChainIndex::Unresolved;
+				FrameGraph::ChainIndex sky_cubemap_filtered = FrameGraph::ChainIndex::Unresolved;
 				FrameGraph::ChainIndex VoxelReflectionNoiseRaw = FrameGraph::ChainIndex::Unresolved;
 			};
 
@@ -113,6 +118,7 @@ namespace Reflections
 				cache.GBuffer_DepthMips = FrameGraph::TaskBuilder::cache_slot(data.GBuffer_DepthMips, ResourceID::GBuffer_DepthMips);
 				cache.VoxelLighted = FrameGraph::TaskBuilder::cache_slot(data.VoxelLighted, ResourceID::VoxelLighted);
 				cache.BlueNoise = FrameGraph::TaskBuilder::cache_slot(data.BlueNoise, ResourceID::BlueNoise);
+				cache.sky_cubemap_filtered = FrameGraph::TaskBuilder::cache_slot(data.sky_cubemap_filtered, ResourceID::sky_cubemap_filtered);
 				cache.VoxelReflectionNoiseRaw = FrameGraph::TaskBuilder::cache_slot(data.VoxelReflectionNoiseRaw, ResourceID::VoxelReflectionNoiseRaw);
 			}
 
@@ -132,6 +138,7 @@ namespace Reflections
 				builder.load(data.GBuffer_DepthMips, ResourceID::GBuffer_DepthMips, cache.GBuffer_DepthMips);
 				builder.load(data.VoxelLighted, ResourceID::VoxelLighted, cache.VoxelLighted);
 				builder.load(data.BlueNoise, ResourceID::BlueNoise, cache.BlueNoise);
+				builder.load(data.sky_cubemap_filtered, ResourceID::sky_cubemap_filtered, cache.sky_cubemap_filtered);
 				builder.create_versioned(data.VoxelReflectionNoiseRaw, cache.VoxelReflectionNoiseRaw, { ivec3(builder.graph->get_context<Table::Frame::ViewportContext>().frame_size, 0), HAL::Format::R16G16B16A16_FLOAT, 1, 1 });
 			}
 
@@ -146,6 +153,7 @@ namespace Reflections
 				{ ResourceID::GBuffer_DepthMips, false },
 				{ ResourceID::VoxelLighted, false },
 				{ ResourceID::BlueNoise, false },
+				{ ResourceID::sky_cubemap_filtered, false },
 				{ ResourceID::VoxelReflectionNoiseRaw, true },
 			};
 			static constexpr uint resource_count = std::size(resource_accesses);

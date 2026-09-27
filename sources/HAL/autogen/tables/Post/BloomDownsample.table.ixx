@@ -45,7 +45,7 @@ export namespace Table
 				compiler.compile(knee, "BloomDownsample::knee");
 				compiler.compile(unjitter, "BloomDownsample::unjitter");
 				compiler.compile(source, "BloomDownsample::source");
-				compiler.compile(exposure_state, "BloomDownsample::exposure_state");
+				compiler.compile_auto(exposure_state, "BloomDownsample::exposure_state");
 				compiler.compile(target, "BloomDownsample::target");
 			}
 			struct Compiled

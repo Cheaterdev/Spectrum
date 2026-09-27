@@ -39,7 +39,7 @@ export namespace Table
 				compiler.compile(normals, "GBuffer::normals");
 				compiler.compile(specular, "GBuffer::specular");
 				compiler.compile(motion, "GBuffer::motion");
-				compiler.compile(object_id, "GBuffer::object_id");
+				compiler.compile_auto(object_id, "GBuffer::object_id");
 				compiler.compile(depth, "GBuffer::depth");
 			}
 			struct Compiled

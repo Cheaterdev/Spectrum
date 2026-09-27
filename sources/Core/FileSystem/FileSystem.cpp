@@ -302,7 +302,7 @@ void native_file_provider::iterate(std::filesystem::path path, std::function<voi
 				++dir;
 			}
 		else
-			Log::get() << Log::LEVEL_DEBUG << ec.message() << Log::endl;
+			Log::get() << Log::LEVEL_DEBUG << path.string() << ": " << ec.message() << Log::endl;
 	}
 	else
 	{
@@ -319,7 +319,7 @@ void native_file_provider::iterate(std::filesystem::path path, std::function<voi
 				++dir;
 			}
 		else
-			Log::get() << Log::LEVEL_DEBUG << ec.message() << Log::endl;
+			Log::get() << Log::LEVEL_DEBUG << path.string() << ": " << ec.message() << Log::endl;
 	}
 }
 
@@ -340,7 +340,7 @@ void native_file_provider::iterate_dirs(std::filesystem::path path, std::functio
 				++dir;
 			}
 		else
-			Log::get() << Log::LEVEL_DEBUG << ec.message() << Log::endl;
+			Log::get() << Log::LEVEL_DEBUG << path.string() << ": " << ec.message() << Log::endl;
 	}
 	else
 	{
@@ -357,6 +357,6 @@ void native_file_provider::iterate_dirs(std::filesystem::path path, std::functio
 				++dir;
 			}
 		else
-			Log::get() << Log::LEVEL_DEBUG << ec.message() << Log::endl;
+			Log::get() << Log::LEVEL_DEBUG << path.string() << ": " << ec.message() << Log::endl;
 	}
 }

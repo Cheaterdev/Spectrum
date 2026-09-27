@@ -81,6 +81,12 @@ namespace nvidia
 
 	Streamline::Streamline()
 	{
+		if (!backend_supported)
+		{
+			Log::get() << "[Streamline] not supported on this backend - DLSS disabled" << Log::endl;
+			return;
+		}
+
 		const std::wstring plugin_dir = exe_relative(kPluginSubDir);
 		if (plugin_dir.empty()) return;
 

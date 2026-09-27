@@ -37,6 +37,9 @@ namespace Post
 		# exposure from exposure_state (Tonemap's adapted value, .y).
 		float threshold;
 		float knee;
+		# [Auto]: read only when threshold > 0 -- the first downsample level; the
+		# rest of the chain leaves it unset.
+		[Auto = Texture_Null]
 		StructuredBuffer<float4> exposure_state;
 		# First downsample only, when non-zero: sample the source offset by
 		# the camera's sub-pixel jitter (FrameInfo camera.jitter), so a

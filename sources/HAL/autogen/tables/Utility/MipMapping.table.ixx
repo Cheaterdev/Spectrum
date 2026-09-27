@@ -40,10 +40,10 @@ export namespace Table
 				compiler.compile(SrcMipLevel, "MipMapping::SrcMipLevel");
 				compiler.compile(NumMipLevels, "MipMapping::NumMipLevels");
 				compiler.compile(TexelSize, "MipMapping::TexelSize");
-				compiler.compile(SrcMip, "MipMapping::SrcMip");
-				compiler.compile(SrcMipArray, "MipMapping::SrcMipArray");
-				compiler.compile(OutMip, "MipMapping::OutMip");
-				compiler.compile(OutMipArray, "MipMapping::OutMipArray");
+				compiler.compile_auto(SrcMip, "MipMapping::SrcMip");
+				compiler.compile_auto(SrcMipArray, "MipMapping::SrcMipArray");
+				compiler.compile_auto(OutMip, "MipMapping::OutMip");
+				compiler.compile_auto(OutMipArray, "MipMapping::OutMipArray");
 			}
 			struct Compiled
 			{

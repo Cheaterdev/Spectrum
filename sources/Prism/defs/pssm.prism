@@ -89,7 +89,11 @@ namespace Shadows
 		struct PSSMLighting
 		{
 			GBuffer gbuffer;
+			# [Auto]: set only by the apply pass (PS_RESULT/CS_RESULT); the mask
+			# draw (PS) shares the struct for its GBuffer alone.
+			[Auto = Texture_Null]
 			Texture2D<float> light_mask;
+			[Auto = Texture_Null]
 			RWTexture2D<float4> result;
 		}
 

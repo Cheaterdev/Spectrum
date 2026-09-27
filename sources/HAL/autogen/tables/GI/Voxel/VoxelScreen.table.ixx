@@ -38,8 +38,8 @@ export namespace Table
 				template<class Compiler>
 				void compile(Compiler& compiler) const
 				{
-					compiler.compile(voxels, "VoxelScreen::voxels");
-					compiler.compile(tex_cube, "VoxelScreen::tex_cube");
+					compiler.compile_auto(voxels, "VoxelScreen::voxels");
+					compiler.compile_auto(tex_cube, "VoxelScreen::tex_cube");
 					compiler.compile_auto(prev_gi, "VoxelScreen::prev_gi");
 					compiler.compile_auto(prev_frames, "VoxelScreen::prev_frames");
 					compiler.compile_auto(prev_depth, "VoxelScreen::prev_depth");

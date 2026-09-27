@@ -4,6 +4,7 @@ import :Types;
 import :Utils;
 import :Fence;
 import :CommandList;
+import :API.Device;   // check_device_lost
 
 export namespace HAL
 {
@@ -67,7 +68,9 @@ export namespace HAL
             {
                 if (vk_queue == VK_NULL_HANDLE) return VK_ERROR_DEVICE_LOST;
                 std::lock_guard lock(*vk_queue_mutex);
-                return vkQueuePresentKHR(vk_queue, &pi);
+                VkResult r = vkQueuePresentKHR(vk_queue, &pi);
+                check_device_lost(r, "vkQueuePresentKHR");
+                return r;
             }
 
             // Thread-safe raw submit used by SwapChain for its transition CB.
@@ -75,7 +78,7 @@ export namespace HAL
             {
                 if (vk_queue == VK_NULL_HANDLE) return;
                 std::lock_guard lock(*vk_queue_mutex);
-                vkQueueSubmit2(vk_queue, 1, &info, VK_NULL_HANDLE);
+                check_device_lost(vkQueueSubmit2(vk_queue, 1, &info, VK_NULL_HANDLE), "vkQueueSubmit2 (swapchain)");
             }
         };
 

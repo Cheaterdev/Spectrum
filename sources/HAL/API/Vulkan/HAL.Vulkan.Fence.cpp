@@ -3,6 +3,7 @@ module HAL:Fence;
 import vulkan;
 import Core;
 import :Device;
+import :API.Device;   // check_device_lost
 
 // Vulkan implementation of the HAL::Fence / HAL::Event wrappers using a
 // VK_KHR_timeline_semaphore.  This is inherently native code (no shared
@@ -52,7 +53,7 @@ namespace HAL
     Fence::CounterType Fence::get_completed_value() const
     {
         uint64_t value = 0;
-        vkGetSemaphoreCounterValue(device, timeline_semaphore, &value);
+        API::check_device_lost(vkGetSemaphoreCounterValue(device, timeline_semaphore, &value), "vkGetSemaphoreCounterValue");
         return value;
     }
 
@@ -65,6 +66,6 @@ namespace HAL
         info.semaphoreCount = 1;
         info.pSemaphores    = &timeline_semaphore;
         info.pValues        = &value;
-        vkWaitSemaphores(device, &info, std::numeric_limits<uint64>::max());
+        API::check_device_lost(vkWaitSemaphores(device, &info, std::numeric_limits<uint64>::max()), "vkWaitSemaphores");
     }
 }

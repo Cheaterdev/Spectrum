@@ -20,10 +20,30 @@ namespace
 
     VKAPI_ATTR VkBool32 VKAPI_CALL debug_callback(
         VkDebugUtilsMessageSeverityFlagBitsEXT      severity,
-        VkDebugUtilsMessageTypeFlagsEXT             /*type*/,
+        VkDebugUtilsMessageTypeFlagsEXT             type,
         const VkDebugUtilsMessengerCallbackDataEXT* data,
         void* /*user*/)
     {
+        // TEMP: device-lost investigation -- log every GPU address range bound
+        // or unbound (images included), to match a VK_EXT_device_fault address.
+        if (type & VK_DEBUG_UTILS_MESSAGE_TYPE_DEVICE_ADDRESS_BINDING_BIT_EXT)
+        {
+            for (auto* p = static_cast<const VkBaseInStructure*>(data->pNext); p; p = p->pNext)
+                if (p->sType == VK_STRUCTURE_TYPE_DEVICE_ADDRESS_BINDING_CALLBACK_DATA_EXT)
+                {
+                    auto* b = reinterpret_cast<const VkDeviceAddressBindingCallbackDataEXT*>(p);
+                    const bool bind = b->bindingType == VK_DEVICE_ADDRESS_BINDING_TYPE_BIND_EXT;
+                    const auto* obj = data->objectCount ? &data->pObjects[0] : nullptr;
+                    static std::mutex m;
+                    std::lock_guard g(m);
+                    std::ofstream("gpu_va.temp", std::ios::app) << std::format("{} type {} 0x{:x} 0x{:x} size 0x{:x}",
+                        bind ? "vabind " : "vaunbnd",
+                        obj ? (int)obj->objectType : -1, obj ? obj->objectHandle : 0,
+                        b->baseAddress, b->size) << "\n";
+                }
+            return VK_FALSE;
+        }
+
         if (severity >= VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT)
             Log::get() << Log::LEVEL_WARNING << "[Vulkan] " << data->pMessage << Log::endl;
         return VK_FALSE;
@@ -110,12 +130,14 @@ namespace HAL
                 use_debug_utils = true;
 
                 debug_info.messageSeverity =
+                    VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT    |  // TEMP: address-binding reports are INFO
                     VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
                     VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
                 debug_info.messageType =
                     VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT     |
                     VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT  |
-                    VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
+                    VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT |
+                    VK_DEBUG_UTILS_MESSAGE_TYPE_DEVICE_ADDRESS_BINDING_BIT_EXT;  // TEMP
                 debug_info.pfnUserCallback = debug_callback;
             }
         }

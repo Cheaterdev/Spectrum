@@ -718,6 +718,7 @@ VoxelGI::VoxelGI(Scene::ptr& scene, VSM& vsm) :scene(scene), vsm(vsm), VariableC
 		GBuffer gbuffer    = GBufferViewDesc::actualize(data);
 		auto noisy_output  = *data.VoxelIndirectNoiseRaw;
 		auto voxel_lighted = *data.VoxelLighted;
+		auto sky_cubemap   = *data.sky_cubemap_filtered;
 
 		auto& sceneinfo = context.graph->get_context<SceneInfo>();
 
@@ -733,6 +734,7 @@ VoxelGI::VoxelGI(Scene::ptr& scene, VSM& vsm) :scene(scene), vsm(vsm), VariableC
 			Slots::GI::Voxel::VoxelScreen voxelScreen;
 			gbuffer.SetTable(voxelScreen.GetGbuffer());
 			voxelScreen.GetVoxels() = voxel_lighted.texture3D;
+			voxelScreen.GetTex_cube() = sky_cubemap.textureCube;
 			compute.set(voxelScreen);
 		}
 
@@ -759,6 +761,7 @@ VoxelGI::VoxelGI(Scene::ptr& scene, VSM& vsm) :scene(scene), vsm(vsm), VariableC
 		GBuffer gbuffer    = GBufferViewDesc::actualize(data);
 		auto noisy_output  = *data.VoxelReflectionNoiseRaw;
 		auto voxel_lighted = *data.VoxelLighted;
+		auto sky_cubemap   = *data.sky_cubemap_filtered;
 
 		auto& sceneinfo = context.graph->get_context<SceneInfo>();
 
@@ -774,6 +777,7 @@ VoxelGI::VoxelGI(Scene::ptr& scene, VSM& vsm) :scene(scene), vsm(vsm), VariableC
 			Slots::GI::Voxel::VoxelScreen voxelScreen;
 			gbuffer.SetTable(voxelScreen.GetGbuffer());
 			voxelScreen.GetVoxels() = voxel_lighted.texture3D;
+			voxelScreen.GetTex_cube() = sky_cubemap.textureCube;
 			compute.set(voxelScreen);
 		}
 

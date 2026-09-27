@@ -81,6 +81,14 @@ export namespace HAL
 		void stop_all();
 
 		const HAL::DeviceProperties& get_properties() const;
+
+		// Offset alignment for a buffer region a structured view (element size
+		// `stride`) will start at: a whole element, and a multiple of Vulkan's
+		// minStorageBufferOffsetAlignment (1 on D3D12).
+		uint64 structured_buffer_alignment(uint64 stride) const
+		{
+			return std::lcm(stride, std::max<uint64>(1, properties.min_storage_buffer_offset_alignment));
+		}
 		ContextGenerator context_generator;
 		std::shared_ptr<CommandList> get_upload_list();
 

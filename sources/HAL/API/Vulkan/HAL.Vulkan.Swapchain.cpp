@@ -165,8 +165,10 @@ namespace HAL
                 Log::get() << Log::LEVEL_ERROR
                     << "[Vulkan swapchain] FP16 scRGB surface format unavailable; UI PSOs expect R16G16B16A16_FLOAT" << Log::endl;
         }
+        // Streaming the VkFormat itself decomposes it as bit flags.
         Log::get() << "[Vulkan swapchain] " << fmt_count << " surface formats available"
-                   << "; selected format=" << vk_format << Log::endl;
+                   << "; selected format=" << std::string(magic_enum::enum_name(vk_format))
+                   << " (" << static_cast<int>(vk_format) << ")" << Log::endl;
 
         // Present mode: prefer MAILBOX, fall back to FIFO (always available).
         uint32_t pm_count = 0;
@@ -364,6 +366,7 @@ namespace HAL
         VkResult r = vkAcquireNextImageKHR(vk_device, vk_swapchain,
                                             UINT64_MAX, sem,
                                             VK_NULL_HANDLE, &out_image);
+        API::check_device_lost(r, "vkAcquireNextImageKHR");
         if (r == VK_SUCCESS || r == VK_SUBOPTIMAL_KHR)
         {
             out_frame_index = out_image;

@@ -538,8 +538,11 @@
 #define SMAA_BRANCH [branch]
 #endif
 #if defined(SMAA_HLSL_4) || defined(SMAA_HLSL_4_1)
-SamplerState LinearSampler { Filter = MIN_MAG_LINEAR_MIP_POINT; AddressU = Clamp; AddressV = Clamp; };
-SamplerState PointSampler { Filter = MIN_MAG_MIP_POINT; AddressU = Clamp; AddressV = Clamp; };
+// The reference's effect-style state blocks carry no register, so the compiler
+// binds them wherever it likes -- on Vulkan that landed on the bindless counter
+// binding. Use the FrameLayout static samplers with the same filter/clamp modes.
+#define LinearSampler linearClampSampler
+#define PointSampler pointClampSampler
 #define SMAATexture2D(tex) Texture2D tex
 #define SMAATexturePass2D(tex) tex
 #define SMAASampleLevelZero(tex, coord) tex.SampleLevel(LinearSampler, coord, 0)

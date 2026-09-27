@@ -145,14 +145,23 @@ namespace HAL {
 		GPUEntityStorage(Device& device) :
 			GPUMemoryAllocator<AllocationPolicy>(device),
 			QueryHeapPageManager<AllocationPolicy>(device),
-			DescriptorHeapPageManager<AllocationPolicy>(device)
+			DescriptorHeapPageManager<AllocationPolicy>(device),
+			storage_buffer_alignment(std::max<size_t>(1, device.get_properties().min_storage_buffer_offset_alignment))
 		{
 
 		}
 		GPUMemoryAllocator<MemoryAllocationPolicy>::HandleType alloc_memory(size_t size, size_t alignment, GPUMemoryAllocator<MemoryAllocationPolicy>::HeapMemoryOptions options) override
 		{
+			// Callers align placements to their element stride so a structured view
+			// can start there; Vulkan additionally requires storage-buffer descriptor
+			// offsets to be multiples of minStorageBufferOffsetAlignment (1 on D3D12).
+			alignment = std::lcm(alignment, storage_buffer_alignment);
 			return GPUMemoryAllocator<MemoryAllocationPolicy>::alloc(size, alignment, options);
 		}
+
+	private:
+		size_t storage_buffer_alignment;
+	public:
 
 		QueryHeapPageManager<AllocationPolicy>::HandleType  alloc_query(uint size, QueryHeapPageManager<AllocationPolicy>::HeapMemoryOptions options) override
 		{

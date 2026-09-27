@@ -992,6 +992,7 @@ VSM::VSM() : VariableContext(L"VSM")
 				{
 					Slots::Frame::FrameInfo frameInfo;
 					frameInfo.GetBrdf()   = EngineAssets::brdf.get_asset()->get_texture()->texture_3d().texture3D;
+					frameInfo.GetBestFitNormals() = EngineAssets::best_fit_normals.get_asset()->get_texture()->texture_2d().texture2D;
 					frameInfo.GetCamera() = context.graph->get_context<CameraInfo>().cam->camera_cb.current;
 					graphics.set(frameInfo);
 				}
@@ -1737,6 +1738,9 @@ VSM::VSM() : VariableContext(L"VSM")
 
 		{
 			Slots::Shadows::VSM::VSMLighting lighting;
+			// The tile overlays below don't read the GBuffer, but a nested table
+			// can't be left unbound.
+			GBufferViewDesc::actualize(data).SetTable(lighting.GetGbuffer());
 			lighting.GetResult() = data.ResultTexture->rwTexture2D;
 			compute.set(lighting);
 		}

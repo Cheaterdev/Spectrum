@@ -231,7 +231,7 @@ namespace HAL
             submit.pSignalSemaphoreInfos     = sig_count ? &sig_info  : nullptr;
 
             std::lock_guard lock(*vk_queue_mutex);
-            vkQueueSubmit2(vk_queue, 1, &submit, VK_NULL_HANDLE);
+            check_device_lost(vkQueueSubmit2(vk_queue, 1, &submit, VK_NULL_HANDLE), "vkQueueSubmit2 (execute)");
             // Note: no flush() — frame pacing is handled by timeline semaphores in signal().
         }
 
@@ -240,7 +240,7 @@ namespace HAL
             if (vk_queue != VK_NULL_HANDLE)
             {
                 std::lock_guard lock(*vk_queue_mutex);
-                vkQueueWaitIdle(vk_queue);
+                check_device_lost(vkQueueWaitIdle(vk_queue), "vkQueueWaitIdle");
             }
         }
 
@@ -259,7 +259,7 @@ namespace HAL
             submit.pSignalSemaphoreInfos    = &sem;
 
             std::lock_guard lock(*vk_queue_mutex);
-            vkQueueSubmit2(vk_queue, 1, &submit, VK_NULL_HANDLE);
+            check_device_lost(vkQueueSubmit2(vk_queue, 1, &submit, VK_NULL_HANDLE), "vkQueueSubmit2 (signal)");
         }
 
         void Queue::gpu_wait(HAL::FenceWaiter waiter)
@@ -282,7 +282,7 @@ namespace HAL
             submit.pWaitSemaphoreInfos    = &sem;
 
             std::lock_guard lock(*vk_queue_mutex);
-            vkQueueSubmit2(vk_queue, 1, &submit, VK_NULL_HANDLE);
+            check_device_lost(vkQueueSubmit2(vk_queue, 1, &submit, VK_NULL_HANDLE), "vkQueueSubmit2 (gpu_wait)");
         }
 
         VkQueue Queue::get_native() const { return vk_queue; }

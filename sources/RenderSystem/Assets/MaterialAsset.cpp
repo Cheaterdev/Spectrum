@@ -27,6 +27,9 @@ MaterialAsset::MaterialAsset(materials::material::ptr m)
 
 void MaterialAsset::update_preview(HAL::Texture::ptr preview)
 {
+    // get() would construct an AssetRenderer on a backend where GraphicsSystem
+    // deliberately doesn't create one (Vulkan: no material pipelines yet).
+    if (!AssetRenderer::is_good()) return;
     AssetRenderer::get().draw(get_ptr<MaterialAsset>(), preview);
     mark_changed();
 }

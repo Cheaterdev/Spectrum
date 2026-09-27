@@ -2,6 +2,7 @@ module Graphics:Materials.PreviewSession;
 import RenderSystem;
 
 import :EngineAssets;
+import :BRDF;
 import :Scene;
 import :MeshAsset;
 import :Camera;
@@ -193,6 +194,8 @@ void materials::MaterialPreviewSession::dispatch()
 		{
 			Slots::Frame::FrameInfo frameInfo;
 			frameInfo.GetCamera() = preview_cam.camera_cb.current;
+			frameInfo.GetBrdf()           = EngineAssets::brdf.get_asset()->get_texture()->texture_3d().texture3D;
+			frameInfo.GetBestFitNormals() = EngineAssets::best_fit_normals.get_asset()->get_texture()->texture_2d().texture2D;
 			graphics.set(frameInfo);
 		}
 

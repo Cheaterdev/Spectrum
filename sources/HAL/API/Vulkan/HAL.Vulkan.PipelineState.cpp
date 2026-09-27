@@ -184,13 +184,6 @@ namespace HAL
         // the primitive-topology dynamic state (VUID-...-07065).
         const bool has_mesh = (desc.mesh != nullptr);
 
-        // ---- Descriptor-heap binding mapping (VK_EXT_descriptor_heap) --------
-        // The set/binding -> heap mapping MUST be chained into every stage's pNext
-        // (VUID-VkGraphicsPipelineCreateInfo-flags-11312), not the pipeline pNext.
-        const auto& mapping_info = api_dev.get_binding_mapping_info();
-        for (auto& si : stages)
-            si.pNext = &mapping_info;
-
         // ---- Vertex input — vertex-pulling; no VS input attributes ---------
         VkPipelineVertexInputStateCreateInfo vi{ VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO };
 
@@ -334,13 +327,8 @@ namespace HAL
         gp_ci.pColorBlendState    = &blend_ci;
         gp_ci.pViewportState      = &viewport;
         gp_ci.pDynamicState       = &dyn_ci;
-        gp_ci.layout              = VK_NULL_HANDLE; // no VkPipelineLayout with descriptor_heap
-
-        // Enable descriptor-heap mode; chain: flags2 -> rendering_ci (dynamic rendering).
-        VkPipelineCreateFlags2CreateInfo flags2{ VK_STRUCTURE_TYPE_PIPELINE_CREATE_FLAGS_2_CREATE_INFO };
-        flags2.flags = VK_PIPELINE_CREATE_2_DESCRIPTOR_HEAP_BIT_EXT;
-        flags2.pNext = &rendering_ci;
-        gp_ci.pNext  = &flags2;
+        gp_ci.layout              = api_dev.get_pipeline_layout();
+        gp_ci.pNext               = &rendering_ci;
 
         VkPipeline pipeline = VK_NULL_HANDLE;
         VkResult r = vkCreateGraphicsPipelines(vk_dev, VK_NULL_HANDLE, 1, &gp_ci,
@@ -388,21 +376,12 @@ namespace HAL
         vkCreateShaderModule(vk_dev, &module_ci, nullptr, &cs_module);
         if (cs_module == VK_NULL_HANDLE) return;
 
-        // Binding mapping chains into the stage pNext (per VUID-...-flags-11312).
-        const auto& mapping_info = api_dev.get_binding_mapping_info();
-
         VkComputePipelineCreateInfo cp_ci{ VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO };
         cp_ci.stage.sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
         cp_ci.stage.stage  = VK_SHADER_STAGE_COMPUTE_BIT;
         cp_ci.stage.module = cs_module;
         cp_ci.stage.pName  = cs_entry.c_str();
-        cp_ci.stage.pNext  = &mapping_info;
-        cp_ci.layout       = VK_NULL_HANDLE; // no VkPipelineLayout with descriptor_heap
-
-        // Enable descriptor-heap mode on the compute pipeline.
-        VkPipelineCreateFlags2CreateInfo flags2{ VK_STRUCTURE_TYPE_PIPELINE_CREATE_FLAGS_2_CREATE_INFO };
-        flags2.flags = VK_PIPELINE_CREATE_2_DESCRIPTOR_HEAP_BIT_EXT;
-        cp_ci.pNext  = &flags2;
+        cp_ci.layout       = api_dev.get_pipeline_layout();
 
         VkPipeline pipeline = VK_NULL_HANDLE;
         vkCreateComputePipelines(vk_dev, VK_NULL_HANDLE, 1, &cp_ci, nullptr, &pipeline);

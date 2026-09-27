@@ -4,9 +4,38 @@ Goal: a Vulkan resource-binding model that runs on Android, plus making
 raytracing and mesh shaders optional engine features (their passes are skipped
 when unsupported; fallback passes come later).
 
-Status: **planned**. Replaces the earlier `VK_EXT_descriptor_heap` migration
-plan — that extension is ~1% on Android and is not the target anymore. The
-current backend still uses it and gets rewritten by Track A below.
+Status: **Track B done; Track A implemented** (Vulkan test.exe 220/222, 0
+failed). Replaces the earlier `VK_EXT_descriptor_heap` migration plan — that
+extension is ~1% on Android and is not the target anymore.
+
+Track A as built differs from the plan below in three places:
+
+- **No host-only pools.** Only one CBV_SRV_UAV heap exists (the shader-visible
+  one); every heap keeps a CPU `DescriptorRecord` per slot, and a D3D12-style
+  copy re-writes the record at the destination instead of `vkCopyDescriptorSets`.
+- **Static samplers stay in set 0** (bindings 384..390, immutable samplers),
+  no Prism change. The device's list is still the FrameLayout order, hardcoded.
+- **DXC heap flags are `<binding> <set>`.** The old `-fvk-bind-sampler-heap 1 0`
+  put `SamplerDescriptorHeap` at set 0 / binding 1, not set 1; now `0 1`, plus
+  an explicit `-fvk-bind-counter-heap 2 0`.
+
+Open after Track A:
+
+- `VUID-VkWriteDescriptorSet-descriptorType-00328` (storage-buffer offsets must
+  be multiples of `minStorageBufferOffsetAlignment`): per-frame placements
+  (`GPUEntityStorage::alloc_memory`) and MeshAsset's block starts now align to
+  `lcm(stride, alignment)` (`Device::structured_buffer_alignment`). Still open:
+  MeshAsset's per-mesh sub-views (`CompiledMeshInfo::vertex_buffer_view` /
+  `index_buffer_view` / `meshet_view`) start at `mesh.*_offset * stride` inside
+  those blocks, and their offsets are serialized with the asset -- fixing them
+  means padding each mesh's segment, i.e. an asset format change + re-import.
+  Only the RT hit shaders bind the vertex/index sub-view descriptors.
+- `VUID-vkCmdResetQueryPool-renderpass`: GPU-profiler query resets are
+  recorded inside an active dynamic-rendering instance. Not descriptor-related.
+- Vulkan runs UI-only: the `Spectrum` project now gets `HAL_BACKEND_VULKAN`, so
+  `main.cpp`'s 3D scene drawer is excluded, as that guard intended. Rendering
+  the scene needs material generation on Vulkan
+  (`universal_material::generate_material`).
 
 Two independent tracks:
 

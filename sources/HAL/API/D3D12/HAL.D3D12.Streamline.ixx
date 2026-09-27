@@ -15,6 +15,8 @@ export namespace nvidia
 			using NativeDevice = D3D::Device;
 
 		protected:
+			static constexpr bool backend_supported = true;
+
 			PFun_slSetD3DDevice* fn_set_d3d_device = nullptr;
 
 			// Resolve the backend-specific entry points from an already-loaded

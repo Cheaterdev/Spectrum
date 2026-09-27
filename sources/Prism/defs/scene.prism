@@ -8,8 +8,6 @@ namespace Frame
 		StructuredBuffer<MaterialCommandData> materials;
 
 		StructuredBuffer<RaytraceInstanceInfo> raytraceInstanceInfo;
-
-		RaytracingAccelerationStructure scene;
 	}
 }
 
@@ -23,6 +21,10 @@ namespace Meshes
 		RenderTarget<float4> normals;
 		RenderTarget<float4> specular;
 		RenderTarget<float2> motion;
+		# [Auto]: as a nested table (GBufferViewDesc::SetTable) this is never
+		# bound -- no shader reads object_id through the table; picking/outline
+		# read GBuffer_ObjectID directly. Only the render-target form uses it.
+		[Auto = Texture_Null]
 		RenderTarget<uint> object_id;
 
 		DepthStencil<float> depth;

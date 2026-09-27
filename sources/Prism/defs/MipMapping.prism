@@ -12,15 +12,23 @@ namespace Utility
 		# ResourceDescriptorHeap cause DXC to emit duplicate OpTypeArray IDs in SPIR-V.
 		# Four individual fields have identical binary layout and avoid the issue.
 		# See REFACTOR_TODO.md for root cause and the proper template fix.
+		#
+		# [Auto] on all four: a dispatch binds only one variant (2D or
+		# ARRAY_SLICES), and only NumMipLevels of the four output mips; the shader
+		# never touches the rest, which get null views.
+		[Auto = Texture_Null]
 		RWTexture2D<float4> OutMip[4];
 
+		[Auto = Texture_Null]
 		Texture2D<float4> SrcMip;
 
 		# ARRAY_SLICES variant: the same four output mips and source viewed as
 		# arrays, so one dispatch covers every slice (cube face = dispatch Z)
 		# instead of one dispatch per slice.
+		[Auto = Texture_Null]
 		RWTexture2DArray<float4> OutMipArray[4];
 
+		[Auto = Texture_Null]
 		Texture2DArray<float4> SrcMipArray;
 	}
 

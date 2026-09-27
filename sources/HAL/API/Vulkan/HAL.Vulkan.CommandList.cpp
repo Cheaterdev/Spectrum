@@ -6,9 +6,9 @@ module HAL:API.CommandList;
 import stl.core;
 import Core;
 import :CommandAllocator;   // full definition needed: allocator.vk_command_pool
-import :RootSignature;      // HAL::RootSignature (no Vulkan objects with descriptor_heap)
+import :RootSignature;      // HAL::RootSignature (owns no Vulkan objects)
 import :API.Device;         // API::Device::get_native_device()
-import :API.DescriptorHeap; // API::DescriptorHeap heap address/size accessors
+import :API.DescriptorHeap; // API::DescriptorHeap::get_vk_set()
 import :API.QueryHeap;      // API::QueryHeap::get_native()
 
 namespace HAL::API
@@ -56,6 +56,9 @@ namespace HAL::API
 
         // Fresh recording: clear any deferred PRESENT barriers from the previous frame.
         deferred_present_barriers.clear();
+
+        // Descriptor set bindings don't carry over into a new command buffer.
+        heaps_dirty = resource_set != VK_NULL_HANDLE;
     }
 
     void CommandList::end()
@@ -556,43 +559,44 @@ namespace HAL::API
         push_full_constants();
     }
 
-    // Push the entire staged 128-byte root-constant block.  With VK_EXT_descriptor_heap
-    // the driver requires EVERY statically-used push-constant byte to have been set via
-    // vkCmdPushDataEXT before a draw/dispatch, so we push the whole block (unset slots
-    // stay zero) rather than only the individually-set constants.
+    // Push the entire staged root-constant block.  A draw after a command-buffer
+    // split would otherwise read undefined values for every slot not re-set since.
     void CommandList::push_full_constants()
     {
+        static_assert(sizeof(push_constants) == API::Device::get_push_constant_size(),
+                      "push-constant staging must match the pipeline layout's range");
         if (vk_cmd == VK_NULL_HANDLE) return;
-        VkPushDataInfoEXT pi{ VK_STRUCTURE_TYPE_PUSH_DATA_INFO_EXT };
-        pi.offset       = 0;
-        pi.data.address = push_constants.data();
-        pi.data.size    = push_constants.size() * sizeof(uint32_t);
-        vkCmdPushDataEXT(vk_cmd, &pi);
+        auto& dev = static_cast<API::Device&>(*m_device);
+        vkCmdPushConstants(vk_cmd, dev.get_pipeline_layout(), VK_SHADER_STAGE_ALL, 0,
+                           static_cast<uint32_t>(sizeof(push_constants)), push_constants.data());
     }
 
-    // Bind resource + sampler heaps (VK_EXT_descriptor_heap).  Like D3D12's
-    // SetDescriptorHeaps the binding persists for the command buffer; we re-flush
-    // when the heaps change or after a recorder-induced command-buffer split.
     void CommandList::flush_heaps()
     {
-        if (!heaps_dirty || vk_cmd == VK_NULL_HANDLE) return;
+        if (!heaps_dirty || vk_cmd == VK_NULL_HANDLE || resource_set == VK_NULL_HANDLE) return;
         heaps_dirty = false;
 
-        if (cbv_srv_uav_addr != 0)
+        auto& dev = static_cast<API::Device&>(*m_device);
+        const VkDescriptorSet sets[] = { resource_set, sampler_set };
+        const uint32_t set_count = sampler_set != VK_NULL_HANDLE ? 2u : 1u;
+
+        // A bind point the queue family doesn't support is invalid to bind to.
+        auto bind = [&](VkPipelineBindPoint point) {
+            vkCmdBindDescriptorSets(vk_cmd, point, dev.get_pipeline_layout(), 0, set_count, sets, 0, nullptr);
+        };
+        switch (type)
         {
-            VkBindHeapInfoEXT bi{ VK_STRUCTURE_TYPE_BIND_HEAP_INFO_EXT };
-            bi.heapRange           = { cbv_srv_uav_addr, cbv_srv_uav_size };
-            bi.reservedRangeOffset = cbv_srv_uav_reserved_off;
-            bi.reservedRangeSize   = cbv_srv_uav_reserved_size;
-            vkCmdBindResourceHeapEXT(vk_cmd, &bi);
-        }
-        if (sampler_addr != 0)
-        {
-            VkBindHeapInfoEXT bi{ VK_STRUCTURE_TYPE_BIND_HEAP_INFO_EXT };
-            bi.heapRange           = { sampler_addr, sampler_size };
-            bi.reservedRangeOffset = sampler_reserved_off;
-            bi.reservedRangeSize   = sampler_reserved_size;
-            vkCmdBindSamplerHeapEXT(vk_cmd, &bi);
+        case CommandListType::DIRECT:
+            bind(VK_PIPELINE_BIND_POINT_GRAPHICS);
+            bind(VK_PIPELINE_BIND_POINT_COMPUTE);
+            break;
+        case CommandListType::COMPUTE:
+        case CommandListType::COMPUTE2:
+        case CommandListType::COMPUTE3:
+            bind(VK_PIPELINE_BIND_POINT_COMPUTE);
+            break;
+        default:
+            break;
         }
     }
 
@@ -621,9 +625,8 @@ namespace HAL::API
         flush_heaps();
     }
 
-    // With VK_EXT_descriptor_heap the root signature owns no Vulkan objects, so
-    // there is nothing to bind here.  Binding mappings are baked into the pipeline
-    // at creation; heaps are bound by set_descriptor_heaps().
+    // Every root signature maps onto the one device-global pipeline layout (the
+    // SIG system uses DefaultLayout everywhere), so there is nothing to bind here.
     void CommandList::set_graphics_signature(const HAL::RootSignature::ptr&) {}
     void CommandList::set_compute_signature(const HAL::RootSignature::ptr&)  {}
 
@@ -634,27 +637,9 @@ namespace HAL::API
         auto* api_cbv     = static_cast<API::DescriptorHeap*>(cbv);
         auto* api_sampler = static_cast<API::DescriptorHeap*>(sampler);
 
-        if (api_cbv)
-        {
-            cbv_srv_uav_addr          = api_cbv->get_device_address();
-            cbv_srv_uav_size          = api_cbv->get_total_size();
-            cbv_srv_uav_reserved_off  = api_cbv->get_reserved_offset();
-            cbv_srv_uav_reserved_size = api_cbv->get_reserved_size();
-        }
-        else { cbv_srv_uav_addr = 0; cbv_srv_uav_size = 0;
-               cbv_srv_uav_reserved_off = 0; cbv_srv_uav_reserved_size = 0; }
-
-        if (api_sampler)
-        {
-            sampler_addr          = api_sampler->get_device_address();
-            sampler_size          = api_sampler->get_total_size();
-            sampler_reserved_off  = api_sampler->get_reserved_offset();
-            sampler_reserved_size = api_sampler->get_reserved_size();
-        }
-        else { sampler_addr = 0; sampler_size = 0;
-               sampler_reserved_off = 0; sampler_reserved_size = 0; }
-
-        heaps_dirty = true;
+        resource_set = api_cbv     ? api_cbv->get_vk_set()     : VK_NULL_HANDLE;
+        sampler_set  = api_sampler ? api_sampler->get_vk_set() : VK_NULL_HANDLE;
+        heaps_dirty  = true;
     }
 
     // ---- Draw / dispatch ---------------------------------------------------
@@ -806,26 +791,20 @@ namespace HAL::API
         // Stage so reapply_draw_state() can re-push the whole block before each draw —
         // push data does not survive a command-buffer split; without re-pushing, the
         // shader reads 0 for every bindless descriptor index → all bindless reads fail.
-        if (idx < push_constants.size()) push_constants[idx] = value;
+        ASSERT(idx < push_constants.size());
+        if (idx >= push_constants.size()) return;
+        push_constants[idx] = value;
 
-        VkPushDataInfoEXT pi{ VK_STRUCTURE_TYPE_PUSH_DATA_INFO_EXT };
-        pi.offset       = idx * sizeof(uint32_t);
-        pi.data.address = &value;
-        pi.data.size    = sizeof(uint32_t);
-        vkCmdPushDataEXT(vk_cmd, &pi);
+        auto& dev = static_cast<API::Device&>(*m_device);
+        vkCmdPushConstants(vk_cmd, dev.get_pipeline_layout(), VK_SHADER_STAGE_ALL,
+                           idx * sizeof(uint32_t), sizeof(uint32_t), &value);
     }
 
+    // Push constants belong to the pipeline layout, not a bind point, so the
+    // graphics and compute variants share one staging block.
     void CommandList::compute_set_constant(UINT slot, UINT offset, UINT value)
     {
-        if (vk_cmd == VK_NULL_HANDLE) return;
-        const uint32_t idx = slot + offset;
-        if (idx < push_constants.size()) push_constants[idx] = value;
-
-        VkPushDataInfoEXT pi{ VK_STRUCTURE_TYPE_PUSH_DATA_INFO_EXT };
-        pi.offset       = idx * sizeof(uint32_t);
-        pi.data.address = &value;
-        pi.data.size    = sizeof(uint32_t);
-        vkCmdPushDataEXT(vk_cmd, &pi);
+        graphics_set_constant(slot, offset, value);
     }
 
     // Phase 5: push descriptors for inline CBV binding
