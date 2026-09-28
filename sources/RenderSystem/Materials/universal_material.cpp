@@ -246,9 +246,6 @@ DynamicData generate_data(std::vector<Uniform::ptr>& un)
 
 void materials::universal_material::update()
 {
-#ifdef HAL_BACKEND_VULKAN
-	return; // material pipeline not active on Vulkan yet
-#endif
 	//std::lock_guard<std::mutex> g(m);
 	PROFILE(L"universal_material");
 
@@ -469,12 +466,6 @@ void materials::universal_material::resolve_transparency_mode()
 
 void materials::universal_material::generate_material()
 {
-#ifdef HAL_BACKEND_VULKAN
-	// Material PSO compilation requires the 3D pipeline (GBufferDraw, Voxelization,
-	// raytracing libs, etc.) which is not yet active on Vulkan. Skip generation
-	// silently — materials will be re-generated when the 3D pipeline is enabled.
-	return;
-#endif
 	//   std::lock_guard<std::mutex> g(m);
 	if (!context)
 		context.reset(new MaterialContext);

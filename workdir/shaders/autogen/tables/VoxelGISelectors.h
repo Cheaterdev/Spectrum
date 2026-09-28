@@ -13,10 +13,12 @@ namespace GI
 	{
 		struct VoxelGISelectors
 		{
+			bool supported; // bool
 			bool voxelize_scene; // bool
 			bool light_scene; // bool
 			bool reflection_enabled; // bool
 			bool debug_voxel_trace; // bool
+			bool GetSupported() { return supported; }
 			bool GetVoxelize_scene() { return voxelize_scene; }
 			bool GetLight_scene() { return light_scene; }
 			bool GetReflection_enabled() { return reflection_enabled; }

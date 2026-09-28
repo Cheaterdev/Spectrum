@@ -12,6 +12,10 @@ export
             class SwapChain
             {
             protected:
+                // Kept so the destructor can release everything without a device ref.
+                VkDevice       owner_device   = VK_NULL_HANDLE;
+                VkInstance     owner_instance = VK_NULL_HANDLE;
+
                 VkSurfaceKHR   vk_surface   = VK_NULL_HANDLE;
                 VkSwapchainKHR  vk_swapchain   = VK_NULL_HANDLE;
                 VkFormat        vk_format      = VK_FORMAT_R8G8B8A8_UNORM;
@@ -63,7 +67,8 @@ export
                 void init_swapchain_layouts(VkDevice vk_dev, VkQueue vk_queue);
 
             public:
-                virtual ~SwapChain() = default;
+                // The caller must have drained the GPU first (HAL::Device::wait_idle).
+                virtual ~SwapChain();
             };
         }
     }

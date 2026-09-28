@@ -33,7 +33,7 @@ export namespace Table
 				void compile(Compiler& compiler) const
 				{
 					compiler.compile(SrcMip, "VoxelMipMap::SrcMip");
-					compiler.compile(OutMips, "VoxelMipMap::OutMips");
+					compiler.compile_auto(OutMips, "VoxelMipMap::OutMips");
 					compiler.compile(params, "VoxelMipMap::params");
 				}
 				struct Compiled

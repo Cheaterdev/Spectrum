@@ -7,13 +7,13 @@ module HAL:Heap;
 import HAL;
 import Core;
 
-void temp_va_log(const std::string& line);   // TEMP: HAL.Vulkan.Resource.cpp
-
 namespace HAL
 {
     Heap::Heap(Device& device, const HeapDesc& desc) : desc(desc)
     {
         auto& api_dev = static_cast<API::Device&>(device);
+        sparse_device = &api_dev;
+        sparse_size   = desc.Size;
 
         // For UPLOAD and READBACK heaps, allocate a single host-visible VMA
         // buffer covering the full heap size, then persistently map it.
@@ -54,7 +54,6 @@ namespace HAL
                 VkBufferDeviceAddressInfo dai{ VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO };
                 dai.buffer = vk_buf;
                 gpu_address = vkGetBufferDeviceAddress(api_dev.vk_device, &dai);
-                temp_va_log(std::format("heap    {} 0x{:x} size 0x{:x} type {}", (void*)this, gpu_address, desc.Size, (int)desc.Type));
 
                 // Store the VkBuffer handle via the allocation so the destructor can free it.
                 // We abuse vk_memory to stash the VkBuffer (both are opaque handles).
@@ -89,9 +88,33 @@ namespace HAL
         {
             if (vma_allocation && vma_allocator_ref)
             {
-                temp_va_log(std::format("heapdel {} 0x{:x}", (void*)this, gpu_address));
                 vmaDestroyBuffer(vma_allocator_ref, heap_vk_buffer, vma_allocation);
             }
+            if (sparse_alloc)
+                vmaFreeMemory(sparse_device->get_vma_allocator(), sparse_alloc);
+        }
+
+        std::pair<VkDeviceMemory, VkDeviceSize> Heap::get_sparse_memory()
+        {
+            std::lock_guard lock(sparse_mutex);
+            if (!sparse_alloc)
+            {
+                VkMemoryRequirements req{};
+                req.size           = sparse_size;
+                req.alignment      = Device::SPARSE_TILE_SIZE;
+                req.memoryTypeBits = sparse_device->get_sparse_memory_type_bits();
+
+                VmaAllocationCreateInfo ci{};
+                ci.flags         = VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
+                ci.requiredFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+
+                VmaAllocationInfo info{};
+                VkResult r = vmaAllocateMemory(sparse_device->get_vma_allocator(), &req, &ci, &sparse_alloc, &info);
+                ASSERT(r == VK_SUCCESS && "tile heap memory allocation failed");
+                sparse_memory = info.deviceMemory;
+                sparse_offset = info.offset;
+            }
+            return { sparse_memory, sparse_offset };
         }
 
         GPUAddressPtr Heap::get_address() const { return gpu_address; }

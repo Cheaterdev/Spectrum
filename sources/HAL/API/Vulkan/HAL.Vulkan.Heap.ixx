@@ -20,9 +20,22 @@ export namespace HAL
             VkBuffer       heap_vk_buffer    = VK_NULL_HANDLE;
             VmaAllocator   vma_allocator_ref = VK_NULL_HANDLE;
 
+            // DEFAULT heaps get memory only once a sparse tile is bound into them.
+            // Placed DEFAULT resources are allocated on their own (see
+            // Resource::init), so eager memory here would double their footprint.
+            std::mutex     sparse_mutex;
+            Device*        sparse_device = nullptr;
+            VkDeviceSize   sparse_size   = 0;
+            VmaAllocation  sparse_alloc  = VK_NULL_HANDLE;
+            VkDeviceMemory sparse_memory = VK_NULL_HANDLE;
+            VkDeviceSize   sparse_offset = 0;
+
         public:
             virtual ~Heap();
             uint64_t get_address() const;
+
+            // Device memory (and offset into it) backing this heap's sparse tiles.
+            std::pair<VkDeviceMemory, VkDeviceSize> get_sparse_memory();
 
             // The single VkBuffer backing a CPU-visible (UPLOAD/READBACK) heap.
             // Placed resources share it and address their slice via resource_offset.

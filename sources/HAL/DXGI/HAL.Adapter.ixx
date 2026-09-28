@@ -41,6 +41,7 @@ export namespace HAL
 		std::string name;
 		bool rtx                    = false;
 		bool mesh_shader            = false;
+		bool tiled_3d               = false;   // Tiled Resources Tier 3
 		bool full_bindless          = false;
 		bool direct_gpu_upload_heap = false;
 		bool dlss                   = false;   // NVIDIA DLSS Super Resolution

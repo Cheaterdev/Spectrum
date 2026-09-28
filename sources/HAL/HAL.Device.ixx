@@ -40,6 +40,7 @@ export namespace HAL
 		friend class CommandList;
 		bool rtx = false;
 		bool mesh_shader = false;
+		bool tiled_3d = false;
 		std::unique_ptr<FrameResourceManager> frame_manager;
 
 		std::unique_ptr<HeapFactory> heap_factory;
@@ -94,11 +95,17 @@ export namespace HAL
 
 		std::shared_ptr<HAL::Queue>& get_queue(HAL::CommandListType type);
 
-		// Optional features. Both can be forced off on capable hardware with the
-		// SPECTRUM_DISABLE_RTX / SPECTRUM_DISABLE_MESH_SHADERS environment
-		// variables, to exercise the fallback paths a lesser GPU would take.
+		// Blocks until every queue has drained. Call before tearing down anything
+		// the GPU may still reference (swapchain, resources, the device itself).
+		void wait_idle();
+
+		// Optional features. Each can be forced off on capable hardware with the
+		// SPECTRUM_DISABLE_RTX / SPECTRUM_DISABLE_MESH_SHADERS /
+		// SPECTRUM_DISABLE_TILED_3D environment variables, to exercise the
+		// fallback paths a lesser GPU would take.
 		bool is_rtx_supported();
 		bool is_mesh_shader_supported();
+		bool is_tiled_3d_supported();
 
 		mutable bool alive = true;
 

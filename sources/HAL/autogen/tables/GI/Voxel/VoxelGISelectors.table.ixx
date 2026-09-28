@@ -21,10 +21,12 @@ export namespace Table
 			struct VoxelGISelectors
 			{
 				static constexpr SlotID ID = SlotID::VoxelGISelectors;
+				bool supported = false;
 				bool voxelize_scene = true;
 				bool light_scene = true;
 				bool reflection_enabled = true;
 				bool debug_voxel_trace = false;
+				bool& GetSupported() { return supported; }
 				bool& GetVoxelize_scene() { return voxelize_scene; }
 				bool& GetLight_scene() { return light_scene; }
 				bool& GetReflection_enabled() { return reflection_enabled; }
@@ -33,6 +35,7 @@ export namespace Table
 				template<class Compiler>
 				void compile(Compiler& compiler) const
 				{
+					compiler.compile(supported, "VoxelGISelectors::supported");
 					compiler.compile(voxelize_scene, "VoxelGISelectors::voxelize_scene");
 					compiler.compile(light_scene, "VoxelGISelectors::light_scene");
 					compiler.compile(reflection_enabled, "VoxelGISelectors::reflection_enabled");
@@ -47,6 +50,7 @@ export namespace Table
 				private:
 				SERIALIZE()
 				{
+					ar& NVP(supported);
 					ar& NVP(voxelize_scene);
 					ar& NVP(light_scene);
 					ar& NVP(reflection_enabled);

@@ -763,7 +763,7 @@ export{
 						max_commands,
 						buffer.resource.get(),
 						buffer.get_data_offset_in_bytes(offset),
-						buffer.get_counter_buffer().get(),
+						buffer.get_indirect_count_buffer().get(),
 						buffer.get_counter_offset()
 					);
 			}
@@ -858,7 +858,7 @@ export{
 						max_commands,
 						buffer.resource.get(),
 						buffer.get_data_offset_in_bytes(offset),
-						buffer.get_counter_buffer().get(),
+						buffer.get_indirect_count_buffer().get(),
 						buffer.get_counter_offset(),
 						operation,
 						check_scope

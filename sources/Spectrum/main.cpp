@@ -144,10 +144,7 @@ public:
 		SMAA smaa;
 		 ~triangle_drawer()
 		 {
-			 RenderSystem::get().device().get_queue(CommandListType::DIRECT)->signal_and_wait();
-			 RenderSystem::get().device().get_queue(CommandListType::COMPUTE)->signal_and_wait();
-	 RenderSystem::get().device().get_queue(CommandListType::COPY)->signal_and_wait();
-
+			 RenderSystem::get().device().wait_idle();
 		 }
 		triangle_drawer() : VariableContext(L"triangle_drawer"), pipeline(), blue_noise(pipeline), smaa(pipeline), sky(pipeline), vsm(pipeline)
 	{
@@ -348,7 +345,9 @@ public:
 		}
 
 
-		voxel_gi = std::make_shared<VoxelGI>(pipeline,scene,vsm);
+		// Its voxel volumes are tiled 3D textures.
+		if (RenderSystem::get().device().is_tiled_3d_supported())
+			voxel_gi = std::make_shared<VoxelGI>(pipeline,scene,vsm);
 
 		// DDGI's [Multiple=5] passes (ddgi.prism) are runtime-wired, not
 		// [Static] -- see DDGI.ixx's own comment on ddgi_register_passes.
@@ -552,7 +551,7 @@ public:
 		// Must run before graph.setup(), and before run_pre_setups() for the
 		// same reason: nothing orders one pass's setup relative to another's.
 		vsm.update_frame(graph);
-		voxel_gi->update_frame(graph);
+		if (voxel_gi) voxel_gi->update_frame(graph);
 		ddgi_update_selectors(graph);
 		tonemap_update_selectors(graph);
 		bloom_update_selectors(graph);
@@ -572,7 +571,7 @@ public:
 			pipeline.run_pre_setups(graph);
 		}
 
-	   	voxel_gi->pass_data(graph.builder);
+		if (voxel_gi) voxel_gi->pass_data(graph.builder);
 
 		vsm.pass_data(graph.builder);
 
@@ -1223,28 +1222,6 @@ public:
 
 			swap_chain->wait_for_free();
 
-			// TEMP: device-lost investigation -- remove once found.
-			// SPECTRUM_FLIP_ONLY=1 skips the frame graph: each frame only makes an
-			// empty submit (it consumes the swapchain's acquire semaphore), presents,
-			// and logs the DIRECT queue's timeline -- UINT64_MAX means device lost.
-			static const bool flip_only = [] {
-				const char* v = std::getenv("SPECTRUM_FLIP_ONLY");
-				return v && *v && *v != '0';
-			}();
-			if (flip_only)
-			{
-				auto list = RenderSystem::get().device().get_upload_list();
-				auto submitted = list->execute();
-				swap_chain->present();
-
-				const auto completed = submitted.fence->get_completed_value();
-				if (frame_counter <= 20 || frame_counter % 100 == 0 || completed == std::numeric_limits<decltype(completed)>::max())
-					Log::get() << "[FlipOnly] frame " << frame_counter << " submitted " << submitted.value
-						<< " completed " << completed
-						<< (completed == std::numeric_limits<decltype(completed)>::max() ? "  DEVICE LOST" : "") << Log::endl;
-			}
-			else
-			{
 			{
 				static float display_poll = 0.0f;
 				display_poll += frame_dt;
@@ -1346,7 +1323,6 @@ public:
 			swap_chain->present();
 			if (frame_counter <= 5)
 				Log::get() << "[Render] present returned frame " << frame_counter << Log::endl;
-			} // TEMP: end of !flip_only
 		}
 
 
@@ -1589,7 +1565,6 @@ public:
 			{
 				return docker->get_tabs()->add_page(name, content);
 			};
-#ifndef HAL_BACKEND_VULKAN
 			{
 				EVENT("Start Drawer");
 				drawer.reset(new triangle_drawer());
@@ -1705,9 +1680,12 @@ public:
 						auto indirect_src_combo = std::make_shared<GUI::Elements::combo_box>();
 						indirect_src_combo->docking = GUI::dock::TOP;
 						indirect_src_combo->size = { 140, 24 };
+						// The voxel sources need VoxelGI, which needs tiled 3D textures.
+						const bool has_voxel_gi = RenderSystem::get().device().is_tiled_3d_supported();
 						for (auto& o : indirect_src_opts)
 						{
 							auto src = o.src;
+							if (src == GI::IndirectSource::MyVCT && !has_voxel_gi) continue;
 							indirect_src_combo->add_item(o.name)->on_select =
 								[this, src]()
 								{
@@ -1730,6 +1708,7 @@ public:
 						for (auto& o : reflection_src_opts)
 						{
 							auto src = o.src;
+							if (src == Reflections::ReflectionSource::MyReflection && !has_voxel_gi) continue;
 							reflection_src_combo->add_item(o.name)->on_select =
 								[this, src]()
 								{
@@ -1883,7 +1862,6 @@ public:
 				d->get_tabs()->add_page("Game", drawer);
 				EVENT("End Drawer");
 			}
-#endif
 
 			{
 				//	auto text = std::make_shared<GUI::Elements::MultiLineLabel>();
@@ -2575,6 +2553,9 @@ protected:
 	{
 		shutdown();
 		main_window->stop();
+		// The window owns the swapchain; its images and semaphores must be idle
+		// before it is destroyed.
+		RenderSystem::get().device().wait_idle();
 		main_window = nullptr;
 		scheduler::reset();
 		GraphicsSystem::reset();
@@ -2640,6 +2621,8 @@ struct test
 #include <shellscalingapi.h>
 
 // TEMP: Vulkan descriptor-model crash investigation -- remove once found.
+void temp_dump_all_stacks_after(int seconds);   // TEMP: HangStacks.cpp
+
 static LONG WINAPI temp_crash_handler(EXCEPTION_POINTERS* ep)
 {
 	auto code = ep->ExceptionRecord->ExceptionCode;
@@ -2656,6 +2639,9 @@ int APIENTRY WinMain(_In_ HINSTANCE hinst,
 {
 //	setlocale(LC_ALL, "");
 	AddVectoredExceptionHandler(1, temp_crash_handler);
+	// TEMP: SPECTRUM_STACKS_AT=<seconds> dumps all thread stacks to hang_stacks.temp.
+	if (const char* s = std::getenv("SPECTRUM_STACKS_AT"))
+		temp_dump_all_stacks_after(std::atoi(s));
 	CoInitialize(NULL);
 	SetProcessDpiAwareness(PROCESS_PER_MONITOR_DPI_AWARE);
 

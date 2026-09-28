@@ -410,7 +410,7 @@ FrameGraph::SetupResult PassDefault<Passes::Meshes::GBufferDownsampler>::setup(
 FrameGraph::SetupResult PassSetupDefault<Passes::GI::Voxel::Dev::VoxelDebug>::setup(
 	Passes::GI::Voxel::Dev::VoxelDebug::Context& data, FrameGraph::TaskBuilder& builder)
 {
-	if (!(builder.graph->get_context<Table::GI::Voxel::VoxelGISelectors>().debug_voxel_trace))
+	if (!(builder.graph->get_context<Table::GI::Voxel::VoxelGISelectors>().supported && builder.graph->get_context<Table::GI::Voxel::VoxelGISelectors>().debug_voxel_trace))
 		return FrameGraph::SetupResult::Disabled;
 	return FrameGraph::SetupResult::NeedsRender;
 }
@@ -482,7 +482,7 @@ FrameGraph::SetupResult PassDefault<Passes::GI::RTXCombine>::setup(
 FrameGraph::SetupResult PassSetupDefault<Passes::GI::Voxel::Voxelize>::setup(
 	Passes::GI::Voxel::Voxelize::Context& data, FrameGraph::TaskBuilder& builder)
 {
-	if (!(builder.graph->get_context<Table::GI::Voxel::VoxelGISelectors>().voxelize_scene))
+	if (!(builder.graph->get_context<Table::GI::Voxel::VoxelGISelectors>().supported && builder.graph->get_context<Table::GI::Voxel::VoxelGISelectors>().voxelize_scene))
 		return FrameGraph::SetupResult::Disabled;
 	return FrameGraph::SetupResult::NeedsRender;
 }
@@ -491,7 +491,7 @@ FrameGraph::SetupResult PassSetupDefault<Passes::GI::Voxel::Voxelize>::setup(
 FrameGraph::SetupResult PassSetupDefault<Passes::GI::Voxel::Lighting>::setup(
 	Passes::GI::Voxel::Lighting::Context& data, FrameGraph::TaskBuilder& builder)
 {
-	if (!(builder.graph->get_context<Table::GI::Voxel::VoxelGISelectors>().light_scene))
+	if (!(builder.graph->get_context<Table::GI::Voxel::VoxelGISelectors>().supported && builder.graph->get_context<Table::GI::Voxel::VoxelGISelectors>().light_scene))
 		return FrameGraph::SetupResult::Disabled;
 	return FrameGraph::SetupResult::NeedsRender;
 }
@@ -500,7 +500,7 @@ FrameGraph::SetupResult PassSetupDefault<Passes::GI::Voxel::Lighting>::setup(
 FrameGraph::SetupResult PassSetupDefault<Passes::GI::Voxel::Mipmapping>::setup(
 	Passes::GI::Voxel::Mipmapping::Context& data, FrameGraph::TaskBuilder& builder)
 {
-	if (!(builder.graph->get_context<Table::GI::Voxel::VoxelGISelectors>().light_scene))
+	if (!(builder.graph->get_context<Table::GI::Voxel::VoxelGISelectors>().supported && builder.graph->get_context<Table::GI::Voxel::VoxelGISelectors>().light_scene))
 		return FrameGraph::SetupResult::Disabled;
 	return FrameGraph::SetupResult::NeedsRender;
 }
@@ -509,7 +509,7 @@ FrameGraph::SetupResult PassSetupDefault<Passes::GI::Voxel::Mipmapping>::setup(
 FrameGraph::SetupResult PassSetupDefault<Passes::GI::Voxel::VoxelScreen>::setup(
 	Passes::GI::Voxel::VoxelScreen::Context& data, FrameGraph::TaskBuilder& builder)
 {
-	if (!(builder.graph->get_context<Table::Denoise::NRD::IndirectGISelectors>().indirect_source == ::GI::IndirectSource::MyVCT && builder.graph->get_context<Table::Post::Upscale::UpscalerSelectors>().upscaler_type != ::Post::Upscale::UpscalerType::DLSSRR && builder.graph->get_context<Table::Raytrace::RenderDeviceCapabilities>().rtx_supported && builder.graph->get_context<Table::Raytrace::RenderDeviceCapabilities>().dlssrr_available))
+	if (!(builder.graph->get_context<Table::GI::Voxel::VoxelGISelectors>().supported && builder.graph->get_context<Table::Denoise::NRD::IndirectGISelectors>().indirect_source == ::GI::IndirectSource::MyVCT && builder.graph->get_context<Table::Post::Upscale::UpscalerSelectors>().upscaler_type != ::Post::Upscale::UpscalerType::DLSSRR && builder.graph->get_context<Table::Raytrace::RenderDeviceCapabilities>().rtx_supported && builder.graph->get_context<Table::Raytrace::RenderDeviceCapabilities>().dlssrr_available))
 		return FrameGraph::SetupResult::Disabled;
 	return FrameGraph::SetupResult::NeedsRender;
 }
@@ -518,7 +518,7 @@ FrameGraph::SetupResult PassSetupDefault<Passes::GI::Voxel::VoxelScreen>::setup(
 FrameGraph::SetupResult PassSetupDefault<Passes::Reflections::ScreenReflection>::setup(
 	Passes::Reflections::ScreenReflection::Context& data, FrameGraph::TaskBuilder& builder)
 {
-	if (!(builder.graph->get_context<Table::Denoise::NRD::IndirectGISelectors>().reflection_source == ::Reflections::ReflectionSource::MyReflection && builder.graph->get_context<Table::Post::Upscale::UpscalerSelectors>().upscaler_type != ::Post::Upscale::UpscalerType::DLSSRR && builder.graph->get_context<Table::Raytrace::RenderDeviceCapabilities>().rtx_supported && builder.graph->get_context<Table::Raytrace::RenderDeviceCapabilities>().dlssrr_available))
+	if (!(builder.graph->get_context<Table::GI::Voxel::VoxelGISelectors>().supported && builder.graph->get_context<Table::Denoise::NRD::IndirectGISelectors>().reflection_source == ::Reflections::ReflectionSource::MyReflection && builder.graph->get_context<Table::Post::Upscale::UpscalerSelectors>().upscaler_type != ::Post::Upscale::UpscalerType::DLSSRR && builder.graph->get_context<Table::Raytrace::RenderDeviceCapabilities>().rtx_supported && builder.graph->get_context<Table::Raytrace::RenderDeviceCapabilities>().dlssrr_available))
 		return FrameGraph::SetupResult::Disabled;
 	return FrameGraph::SetupResult::NeedsRender;
 }

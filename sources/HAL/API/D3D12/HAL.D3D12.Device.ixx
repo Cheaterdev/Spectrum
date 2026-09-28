@@ -34,6 +34,9 @@ export namespace HAL {
 
             HRESULT get_device_removed_reason() const;
 
+            // Fence waits on every queue already cover all D3D12 GPU work.
+            void wait_device_idle() {}
+
             ResourceAllocationInfo get_alloc_info(const ResourceDesc& desc);
             uint Subresources(const ResourceDesc& desc) const;
 

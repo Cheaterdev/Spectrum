@@ -104,6 +104,8 @@ void capture_context_snapshot(Graph& graph, ContextSnapshot& out)
 		encode_context_field(graph.get_context<Table::Post::Upscale::UpscalerSelectors>().upscaler_type);
 	out.values[(unsigned int)ContextFieldID::UpscalerSelectors_upscaling_enabled] =
 		encode_context_field(graph.get_context<Table::Post::Upscale::UpscalerSelectors>().upscaling_enabled);
+	out.values[(unsigned int)ContextFieldID::VoxelGISelectors_supported] =
+		encode_context_field(graph.get_context<Table::GI::Voxel::VoxelGISelectors>().supported);
 	out.values[(unsigned int)ContextFieldID::VoxelGISelectors_voxelize_scene] =
 		encode_context_field(graph.get_context<Table::GI::Voxel::VoxelGISelectors>().voxelize_scene);
 	out.values[(unsigned int)ContextFieldID::VoxelGISelectors_light_scene] =

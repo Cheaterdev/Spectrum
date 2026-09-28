@@ -43,6 +43,16 @@ export namespace HAL
             // Set together with vk_queue in construct().
             std::mutex* vk_queue_mutex = nullptr;
 
+            // Sparse binding. sparse_queue is this queue, or DIRECT's when this
+            // queue's family lacks VK_QUEUE_SPARSE_BINDING_BIT.
+            VkQueue      sparse_queue       = VK_NULL_HANDLE;
+            std::mutex*  sparse_queue_mutex = nullptr;
+            VkSemaphore  sparse_timeline    = VK_NULL_HANDLE;
+            uint64_t     sparse_value       = 0;
+
+            // Binds tiles in submission order with this queue's other work.
+            void bind_sparse(VkBindSparseInfo& info);
+
             void execute(const API::CommandList* list);
             void flush();
             void signal(Fence& fence, Fence::CounterType value);

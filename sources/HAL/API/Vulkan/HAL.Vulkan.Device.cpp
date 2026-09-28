@@ -21,9 +21,36 @@ namespace
     PFN_vkGetDeviceFaultInfoEXT fn_get_fault_info = nullptr;
     std::atomic_bool            fault_reported    = false;
 
+    // TEMP: device-lost investigation -- diagnostic checkpoints.
+    PFN_vkCmdSetCheckpointNV        fn_set_checkpoint      = nullptr;
+    PFN_vkGetQueueCheckpointDataNV  fn_get_checkpoint_data = nullptr;
+    std::mutex                      checkpoint_mutex;
+    std::unordered_set<std::string> checkpoint_labels;   // stable storage: markers are raw pointers
+    std::vector<std::pair<VkQueue, std::string>> checkpoint_queues;
+
+    void log_checkpoints()
+    {
+        if (!fn_get_checkpoint_data) return;
+        std::lock_guard g(checkpoint_mutex);
+        Log::get() << Log::LEVEL_ERROR << "[Vulkan] checkpoint labels recorded: " << checkpoint_labels.size() << Log::endl;
+        for (auto& [queue, name] : checkpoint_queues)
+        {
+            uint32_t count = 0;
+            fn_get_checkpoint_data(queue, &count, nullptr);
+            Log::get() << Log::LEVEL_ERROR << "[Vulkan] checkpoint " << name << ": " << count << " entries" << Log::endl;
+            std::vector<VkCheckpointDataNV> data(count, { VK_STRUCTURE_TYPE_CHECKPOINT_DATA_NV });
+            fn_get_checkpoint_data(queue, &count, data.data());
+            for (auto& d : data)
+                Log::get() << Log::LEVEL_ERROR << "[Vulkan] checkpoint " << name << " "
+                           << std::string(magic_enum::enum_name(d.stage)) << ": "
+                           << (d.pCheckpointMarker ? static_cast<const char*>(d.pCheckpointMarker) : "<none>") << Log::endl;
+        }
+    }
+
     void log_device_fault(const char* where)
     {
         Log::get() << Log::LEVEL_ERROR << "[Vulkan] VK_ERROR_DEVICE_LOST detected at " << where << Log::endl;
+        log_checkpoints();
         if (!fn_get_fault_info || fault_device == VK_NULL_HANDLE)
         {
             Log::get() << Log::LEVEL_ERROR << "[Vulkan] no VK_EXT_device_fault report available" << Log::endl;
@@ -77,6 +104,23 @@ namespace HAL::API
         if (!fault_reported.exchange(true))
             log_device_fault(where);
         return true;
+    }
+
+    void temp_checkpoint(VkCommandBuffer cmd, std::string_view label)
+    {
+        if (!fn_set_checkpoint) return;
+        const char* marker;
+        {
+            std::lock_guard g(checkpoint_mutex);
+            marker = checkpoint_labels.emplace(label).first->c_str();
+        }
+        fn_set_checkpoint(cmd, marker);
+    }
+
+    void temp_register_checkpoint_queue(VkQueue queue, std::string name)
+    {
+        std::lock_guard g(checkpoint_mutex);
+        checkpoint_queues.emplace_back(queue, std::move(name));
     }
 }
 
@@ -273,6 +317,7 @@ namespace HAL
 
                 queue_families[t] = family;
                 queue_indices[t]  = used < qf_props[family].queueCount ? used++ : used - 1;
+                queue_sparse[t]   = (qf_props[family].queueFlags & VK_QUEUE_SPARSE_BINDING_BIT) != 0;
 
                 for (uint32_t other = 0; other < t; ++other)
                     if (queue_families[other] == family && queue_indices[other] == queue_indices[t])
@@ -320,6 +365,8 @@ namespace HAL
                 VK_EXT_ROBUSTNESS_2_EXTENSION_NAME,
                 // TEMP: device-lost investigation -- GPU address bind/unbind reports.
                 VK_EXT_DEVICE_ADDRESS_BINDING_REPORT_EXTENSION_NAME,
+                VK_NV_DEVICE_DIAGNOSTIC_CHECKPOINTS_EXTENSION_NAME,   // TEMP
+                VK_NV_DEVICE_DIAGNOSTICS_CONFIG_EXTENSION_NAME,       // TEMP
                 // Required by DXC SPIRV for 'discard' in pixel shaders.
                 VK_EXT_SHADER_DEMOTE_TO_HELPER_INVOCATION_EXTENSION_NAME,
                 // Optional: ddx/ddy in compute shaders.
@@ -444,6 +491,12 @@ namespace HAL
             }
 
             // TEMP: device-lost investigation.
+            VkPhysicalDeviceDiagnosticsConfigFeaturesNV diag_features{
+                VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DIAGNOSTICS_CONFIG_FEATURES_NV };
+            if (has_ext(VK_NV_DEVICE_DIAGNOSTICS_CONFIG_EXTENSION_NAME)) {
+                diag_features.pNext = feature_head;
+                feature_head = &diag_features;
+            }
             VkPhysicalDeviceAddressBindingReportFeaturesEXT binding_report_features{
                 VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ADDRESS_BINDING_REPORT_FEATURES_EXT };
             if (has_ext(VK_EXT_DEVICE_ADDRESS_BINDING_REPORT_EXTENSION_NAME)) {
@@ -487,6 +540,10 @@ namespace HAL
                     { vk12_features.shaderStorageImageArrayNonUniformIndexing,      "shaderStorageImageArrayNonUniformIndexing" },
                     { vk12_features.shaderStorageBufferArrayNonUniformIndexing,     "shaderStorageBufferArrayNonUniformIndexing" },
                     { vk12_features.shaderUniformBufferArrayNonUniformIndexing,     "shaderUniformBufferArrayNonUniformIndexing" },
+                    // Reserved resources (virtual GPU buffers, the VSM atlas) are sparse.
+                    { features2.features.sparseBinding,                             "sparseBinding" },
+                    { features2.features.sparseResidencyBuffer,                     "sparseResidencyBuffer" },
+                    { features2.features.sparseResidencyImage2D,                    "sparseResidencyImage2D" },
                 };
                 for (auto& [supported, name] : required)
                     if (!supported)
@@ -504,6 +561,18 @@ namespace HAL
             device_ci.ppEnabledExtensionNames = device_extensions.data();
             device_ci.pNext                   = &features2;
 
+            // TEMP: device-lost investigation -- makes the driver keep checkpoint
+            // and resource-tracking data for after a loss.
+            VkDeviceDiagnosticsConfigCreateInfoNV diag_config{ VK_STRUCTURE_TYPE_DEVICE_DIAGNOSTICS_CONFIG_CREATE_INFO_NV };
+            diag_config.flags = VK_DEVICE_DIAGNOSTICS_CONFIG_ENABLE_AUTOMATIC_CHECKPOINTS_BIT_NV
+                              | VK_DEVICE_DIAGNOSTICS_CONFIG_ENABLE_RESOURCE_TRACKING_BIT_NV
+                              | VK_DEVICE_DIAGNOSTICS_CONFIG_ENABLE_SHADER_DEBUG_INFO_BIT_NV;
+            if (has_ext(VK_NV_DEVICE_DIAGNOSTICS_CONFIG_EXTENSION_NAME) && diag_features.diagnosticsConfig)
+            {
+                diag_config.pNext = features2.pNext;
+                features2.pNext   = &diag_config;
+            }
+
             VkResult result = vkCreateDevice(vk_physical, &device_ci, nullptr, &vk_device);
             if (result != VK_SUCCESS)
             {
@@ -518,6 +587,16 @@ namespace HAL
                     vkGetDeviceProcAddr(vk_device, "vkGetDeviceFaultInfoEXT"));
             Log::get() << "[Vulkan] device fault reporting: " << (fn_get_fault_info ? "on" : "unavailable") << Log::endl;
 
+            // TEMP: device-lost investigation.
+            if (has_ext(VK_NV_DEVICE_DIAGNOSTIC_CHECKPOINTS_EXTENSION_NAME))
+            {
+                fn_set_checkpoint = reinterpret_cast<PFN_vkCmdSetCheckpointNV>(
+                    vkGetDeviceProcAddr(vk_device, "vkCmdSetCheckpointNV"));
+                fn_get_checkpoint_data = reinterpret_cast<PFN_vkGetQueueCheckpointDataNV>(
+                    vkGetDeviceProcAddr(vk_device, "vkGetQueueCheckpointDataNV"));
+            }
+            Log::get() << "[Vulkan] diagnostic checkpoints: " << (fn_set_checkpoint ? "on" : "unavailable") << Log::endl;
+
             // ---- DeviceProperties -------------------------------------------
             VkPhysicalDeviceVulkan12Properties vk12_props{
                 VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_PROPERTIES };
@@ -529,6 +608,19 @@ namespace HAL
             p.name = props2.properties.deviceName;
             p.rtx           = false;  // Phase: VK_KHR_ray_tracing_pipeline check
             p.mesh_shader   = has_mesh_shader && (mesh_features.meshShader == VK_TRUE);
+
+            // D3D12 tiled-resource semantics the engine relies on: unmapped tiles
+            // read 0 (voxel mip generation samples them), and tile shapes are the
+            // standard 64 KB ones the tile grid math assumes.
+            {
+                const auto& sparse = props2.properties.sparseProperties;
+                if (!sparse.residencyNonResidentStrict || !sparse.residencyStandard2DBlockShape)
+                {
+                    Log::get().crash_error("[Vulkan] sparse residency needs residencyNonResidentStrict and residencyStandard2DBlockShape");
+                    return;
+                }
+                p.tiled_3d = features2.features.sparseResidencyImage3D && sparse.residencyStandard3DBlockShape;
+            }
             p.min_storage_buffer_offset_alignment =
                 static_cast<uint32_t>(props2.properties.limits.minStorageBufferOffsetAlignment);
             // full_bindless = true whenever the Vulkan device creates successfully.
@@ -546,6 +638,64 @@ namespace HAL
             vma_info.vulkanApiVersion = VK_API_VERSION_1_3;
             vma_info.flags            = VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT;
             vmaCreateAllocator(&vma_info, &vma_allocator);
+
+            // ---- Sparse memory types ----------------------------------------
+            // Tile heaps are allocated before the resources they back exist, so
+            // the memory type must suit every sparse resource kind up front:
+            // intersect the requirements of one probe of each kind in use.
+            {
+                sparse_memory_type_bits = ~0u;
+                auto merge = [&](const VkMemoryRequirements& req, const char* what) {
+                    if (req.alignment != SPARSE_TILE_SIZE)
+                        Log::get().crash_error(std::string("[Vulkan] sparse block size of ") + what + " is "
+                            + std::to_string(req.alignment) + ", the tile grid assumes 64 KB");
+                    sparse_memory_type_bits &= req.memoryTypeBits;
+                };
+
+                VkBufferCreateInfo bci{ VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
+                bci.flags = VK_BUFFER_CREATE_SPARSE_BINDING_BIT | VK_BUFFER_CREATE_SPARSE_RESIDENCY_BIT;
+                bci.size  = SPARSE_TILE_SIZE;
+                bci.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+                VkBuffer probe_buffer = VK_NULL_HANDLE;
+                vkCreateBuffer(vk_device, &bci, nullptr, &probe_buffer);
+                VkMemoryRequirements req{};
+                vkGetBufferMemoryRequirements(vk_device, probe_buffer, &req);
+                merge(req, "a buffer");
+                vkDestroyBuffer(vk_device, probe_buffer, nullptr);
+
+                auto probe_image = [&](VkImageType type, VkFormat format, VkImageUsageFlags usage, const char* what) {
+                    VkImageCreateInfo ici{ VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO };
+                    ici.flags       = VK_IMAGE_CREATE_SPARSE_BINDING_BIT | VK_IMAGE_CREATE_SPARSE_RESIDENCY_BIT;
+                    ici.imageType   = type;
+                    ici.format      = format;
+                    ici.extent      = { 256, 256, type == VK_IMAGE_TYPE_3D ? 64u : 1u };
+                    ici.mipLevels   = 1;
+                    ici.arrayLayers = 1;
+                    ici.samples     = VK_SAMPLE_COUNT_1_BIT;
+                    ici.usage       = usage | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+
+                    uint32_t format_props = 0;
+                    vkGetPhysicalDeviceSparseImageFormatProperties(vk_physical, format, type,
+                        VK_SAMPLE_COUNT_1_BIT, ici.usage, VK_IMAGE_TILING_OPTIMAL, &format_props, nullptr);
+                    VkImage image = VK_NULL_HANDLE;
+                    if (!format_props || vkCreateImage(vk_device, &ici, nullptr, &image) != VK_SUCCESS)
+                    {
+                        Log::get() << Log::LEVEL_WARNING << "[Vulkan] sparse " << what << " unsupported" << Log::endl;
+                        return;
+                    }
+                    VkMemoryRequirements ireq{};
+                    vkGetImageMemoryRequirements(vk_device, image, &ireq);
+                    merge(ireq, what);
+                    vkDestroyImage(vk_device, image, nullptr);
+                };
+                probe_image(VK_IMAGE_TYPE_2D, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_STORAGE_BIT, "2D color image");
+                probe_image(VK_IMAGE_TYPE_2D, VK_FORMAT_D32_SFLOAT, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, "2D depth image");
+                if (p.tiled_3d)
+                    probe_image(VK_IMAGE_TYPE_3D, VK_FORMAT_R16G16B16A16_SFLOAT, VK_IMAGE_USAGE_STORAGE_BIT, "3D image");
+
+                if (!sparse_memory_type_bits)
+                    Log::get().crash_error("[Vulkan] no memory type accepts every sparse resource kind");
+            }
 
             // ---- VRAM info --------------------------------------------------
             VkPhysicalDeviceMemoryProperties mem_props{};
@@ -692,6 +842,19 @@ namespace HAL
             if (vk_device)     vkDestroyDevice(vk_device, nullptr);
             // Instance and debug messenger are owned by the static in HAL::init() /
             // HAL.Impl.cpp — do NOT destroy them here.
+        }
+
+        void Device::wait_device_idle()
+        {
+            if (!vk_device) return;
+
+            // vkDeviceWaitIdle requires every VkQueue to be externally synchronized.
+            std::array<std::unique_lock<std::mutex>, queue_type_count> locks;
+            for (uint32_t i = 0; i < queue_type_count; ++i)
+                if (queue_mutex_slot[i] == i)
+                    locks[i] = std::unique_lock(queue_mutexes[i]);
+
+            check_device_lost(vkDeviceWaitIdle(vk_device), "vkDeviceWaitIdle");
         }
 
         void Device::process_result(VkResult result, std::string_view line) const

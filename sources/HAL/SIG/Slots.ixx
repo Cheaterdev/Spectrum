@@ -168,6 +168,14 @@ template<> struct NullViewFor<HLSL::FeedbackTexture2DMip>
 	}
 };
 
+template<class E> struct NullViewFor<HLSL::RWTexture3D<E>>
+{
+	static HAL::Views::UnorderedAccess make()
+	{
+		return { nullptr, null_format_of<E>(), HAL::Views::UnorderedAccess::Texture3D{ 0, 0, 1 } };
+	}
+};
+
 template<class E> struct NullViewFor<HLSL::RWTexture2DArray<E>>
 {
 	static HAL::Views::UnorderedAccess make()

@@ -14,7 +14,118 @@ namespace HAL
 {
     // ---- native-split members of common HAL::Queue -------------------------
 
-    void Queue::update_tile_mappings(const update_tiling_info&) {}
+    void Queue::update_tile_mappings(const update_tiling_info& infos)
+    {
+        PROFILE(L"update_tile_mappings");
+        ASSERT(!infos.source && "copy_mappings (CopyTileMappings) has no Vulkan implementation");
+
+        auto* res = static_cast<API::Resource*>(infos.resource);
+        ASSERT(res->is_sparse() && "tile mapping on a resource that is not sparse");
+        const auto& layout = res->get_sparse_layout();
+        const auto& desc   = infos.resource->get_desc();
+        constexpr auto tile_size = API::Device::SPARSE_TILE_SIZE;
+
+        std::vector<VkSparseMemoryBind>      opaque;   // buffers, and image mip tails
+        std::vector<VkSparseImageMemoryBind> image;
+
+        for (auto& [heap, tiles] : infos.tiles)
+        {
+            // A null heap unmaps (D3D12_TILE_RANGE_FLAG_NULL).
+            VkDeviceMemory memory = VK_NULL_HANDLE;
+            VkDeviceSize   base   = 0;
+            if (heap)
+                std::tie(memory, base) = heap->get_sparse_memory();
+
+            for (const ResourceTile& tile : tiles)
+            {
+                const auto& hp = tile.heap_position;
+                const VkDeviceSize memory_offset = memory ? base + VkDeviceSize(hp.offset) * tile_size : 0;
+
+                if (desc.is_buffer())
+                {
+                    opaque.push_back({ VkDeviceSize(tile.pos.x) * tile_size, VkDeviceSize(hp.count) * tile_size,
+                                       memory, memory_offset, 0 });
+                    continue;
+                }
+
+                const auto& tex  = desc.as_texture();
+                const uint mip   = tile.subresource % tex.MipLevels;
+                const uint layer = tile.subresource / tex.MipLevels;
+
+                if (mip >= layout.mip_tail_first)
+                {
+                    const VkDeviceSize tail = layout.mip_tail_offset
+                        + (layout.single_mip_tail ? 0 : VkDeviceSize(layer) * layout.mip_tail_stride);
+                    opaque.push_back({ tail, layout.mip_tail_size, memory, memory_offset, 0 });
+                    continue;
+                }
+
+                const uint3 extent = uint3::max({ 1, 1, 1 }, uint3(
+                    tex.Dimensions.x >> mip,
+                    tex.is1D() ? 1u : tex.Dimensions.y >> mip,
+                    tex.is3D() ? tex.Dimensions.z >> mip : 1u));
+                const VkExtent3D g = layout.granularity;
+                const uint3 count = { (extent.x + g.width - 1) / g.width,
+                                      (extent.y + g.height - 1) / g.height,
+                                      (extent.z + g.depth - 1) / g.depth };
+
+                // hp.count tiles from tile.pos, in the x-y-z order D3D12 uses for a
+                // box-less tile region.
+                const uint start = tile.pos.x + tile.pos.y * count.x + tile.pos.z * count.x * count.y;
+                for (uint i = 0; i < hp.count; i++)
+                {
+                    const uint linear = start + i;
+                    const uint3 pos = { linear % count.x, (linear / count.x) % count.y, linear / (count.x * count.y) };
+
+                    VkSparseImageMemoryBind b{};
+                    b.subresource  = { layout.aspect, mip, layer };
+                    b.offset       = { int(pos.x * g.width), int(pos.y * g.height), int(pos.z * g.depth) };
+                    b.extent       = { std::min(g.width,  extent.x - pos.x * g.width),
+                                       std::min(g.height, extent.y - pos.y * g.height),
+                                       std::min(g.depth,  extent.z - pos.z * g.depth) };
+                    b.memory       = memory;
+                    b.memoryOffset = memory ? memory_offset + VkDeviceSize(i) * tile_size : 0;
+                    image.push_back(b);
+                }
+            }
+        }
+
+        if (opaque.empty() && image.empty()) return;
+
+        // TEMP: Vulkan 3D bring-up slowdown -- sparse bind volume over time.
+        {
+            static std::mutex m;
+            static uint64_t calls = 0, binds = 0;
+            static auto start = std::chrono::steady_clock::now();
+            std::lock_guard g(m);
+            ++calls;
+            binds += opaque.size() + image.size();
+            if (calls % 200 == 0)
+                std::ofstream("sparse_binds.temp", std::ios::app)
+                    << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start).count()
+                    << " ms: calls " << calls << " binds " << binds
+                    << " last=" << infos.resource->get_name() << " (" << opaque.size() + image.size() << ")\n";
+        }
+
+        VkSparseBufferMemoryBindInfo      buffer_bind{ res->get_vk_buffer(), uint32_t(opaque.size()), opaque.data() };
+        VkSparseImageOpaqueMemoryBindInfo opaque_bind{ res->get_vk_image(), uint32_t(opaque.size()), opaque.data() };
+        VkSparseImageMemoryBindInfo       image_bind { res->get_vk_image(), uint32_t(image.size()),  image.data() };
+
+        VkBindSparseInfo info{ VK_STRUCTURE_TYPE_BIND_SPARSE_INFO };
+        if (desc.is_buffer())
+        {
+            info.bufferBindCount = 1;
+            info.pBufferBinds    = &buffer_bind;
+        }
+        else
+        {
+            info.imageOpaqueBindCount = opaque.empty() ? 0 : 1;
+            info.pImageOpaqueBinds    = &opaque_bind;
+            info.imageBindCount       = image.empty() ? 0 : 1;
+            info.pImageBinds          = &image_bind;
+        }
+        bind_sparse(info);
+    }
 
     ClockCalibrationInfo Queue::get_clock_time() const
     {
@@ -126,6 +237,37 @@ namespace HAL
             vkGetDeviceQueue(vk_device, family_idx, api_dev.get_queue_index(static_cast<int>(type)), &vk_queue);
             vk_queue_mutex = &api_dev.get_queue_mutex(static_cast<int>(type));
 
+            const int bind_type = api_dev.queue_supports_sparse(static_cast<int>(type))
+                ? static_cast<int>(type) : static_cast<int>(HAL::CommandListType::DIRECT);
+            ASSERT(api_dev.queue_supports_sparse(bind_type) && "the DIRECT queue family cannot bind sparse memory");
+            vkGetDeviceQueue(vk_device, api_dev.get_queue_family(bind_type), api_dev.get_queue_index(bind_type), &sparse_queue);
+            sparse_queue_mutex = &api_dev.get_queue_mutex(bind_type);
+            API::temp_register_checkpoint_queue(vk_queue, std::string(magic_enum::enum_name(type)));   // TEMP
+            // TEMP: Vulkan 3D bring-up hang -- which queues bind sparse elsewhere.
+            Log::get() << "[Vulkan] queue " << magic_enum::enum_name(type) << " family " << family_idx
+                << " binds sparse on " << (sparse_queue == vk_queue ? "itself" : "DIRECT") << Log::endl;
+
+            VkSemaphoreTypeCreateInfo sem_type{ VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO };
+            sem_type.semaphoreType = VK_SEMAPHORE_TYPE_TIMELINE;
+            VkSemaphoreCreateInfo sem_ci{ VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
+            sem_ci.pNext = &sem_type;
+            vkCreateSemaphore(vk_device, &sem_ci, nullptr, &sparse_timeline);
+
+            if (auto set_name = reinterpret_cast<PFN_vkSetDebugUtilsObjectNameEXT>(
+                    vkGetDeviceProcAddr(vk_device, "vkSetDebugUtilsObjectNameEXT")))
+            {
+                auto name = [&](VkSemaphore s, std::string label) {
+                    VkDebugUtilsObjectNameInfoEXT ni{ VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT };
+                    ni.objectType   = VK_OBJECT_TYPE_SEMAPHORE;
+                    ni.objectHandle = reinterpret_cast<uint64_t>(s);
+                    ni.pObjectName  = label.c_str();
+                    set_name(vk_device, &ni);
+                };
+                const std::string queue_name(magic_enum::enum_name(type));
+                name(THIS->commandListCounter.timeline_semaphore, queue_name + " fence");
+                name(sparse_timeline, queue_name + " sparse timeline");
+            }
+
             // Query timestamp frequency (nanoseconds per tick)
             VkPhysicalDeviceProperties props{};
             vkGetPhysicalDeviceProperties(api_dev.get_vk_physical_dev(), &props);
@@ -138,6 +280,59 @@ namespace HAL
         {
             if (init_pool != VK_NULL_HANDLE)
                 vkDestroyCommandPool(vk_device, init_pool, nullptr);
+            if (sparse_timeline != VK_NULL_HANDLE)
+                vkDestroySemaphore(vk_device, sparse_timeline, nullptr);
+        }
+
+        // Unlike D3D12's UpdateTileMappings, vkQueueBindSparse is not ordered
+        // against command buffers submitted to the same queue. Without the
+        // timeline fences on both sides, a remap can land while earlier work still
+        // reads the old tiles, or after later work has already read unmapped ones.
+        void Queue::bind_sparse(VkBindSparseInfo& info)
+        {
+            if (vk_queue == VK_NULL_HANDLE) return;
+            // TEMP: Vulkan 3D bring-up hang experiment.
+            static const bool skip = std::getenv("SPECTRUM_TEMP_NO_BIND") != nullptr;
+            if (skip) return;
+
+            std::unique_lock own(*vk_queue_mutex, std::defer_lock);
+            std::unique_lock bind(*sparse_queue_mutex, std::defer_lock);
+            if (sparse_queue_mutex == vk_queue_mutex)
+                own.lock();
+            else
+                std::lock(own, bind);
+
+            const uint64_t prior = ++sparse_value;
+            const uint64_t bound = ++sparse_value;
+
+            auto submit = [&](bool wait, uint64_t value) {
+                VkSemaphoreSubmitInfo sem{ VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO };
+                sem.semaphore = sparse_timeline;
+                sem.value     = value;
+                sem.stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+                VkSubmitInfo2 submit{ VK_STRUCTURE_TYPE_SUBMIT_INFO_2 };
+                submit.waitSemaphoreInfoCount   = wait ? 1 : 0;
+                submit.pWaitSemaphoreInfos      = wait ? &sem : nullptr;
+                submit.signalSemaphoreInfoCount = wait ? 0 : 1;
+                submit.pSignalSemaphoreInfos    = wait ? nullptr : &sem;
+                check_device_lost(vkQueueSubmit2(vk_queue, 1, &submit, VK_NULL_HANDLE), "vkQueueSubmit2 (sparse fence)");
+            };
+
+            submit(false, prior);
+
+            VkTimelineSemaphoreSubmitInfo timeline{ VK_STRUCTURE_TYPE_TIMELINE_SEMAPHORE_SUBMIT_INFO };
+            timeline.waitSemaphoreValueCount   = 1;
+            timeline.pWaitSemaphoreValues      = &prior;
+            timeline.signalSemaphoreValueCount = 1;
+            timeline.pSignalSemaphoreValues    = &bound;
+            info.pNext                = &timeline;
+            info.waitSemaphoreCount   = 1;
+            info.pWaitSemaphores      = &sparse_timeline;
+            info.signalSemaphoreCount = 1;
+            info.pSignalSemaphores    = &sparse_timeline;
+            check_device_lost(vkQueueBindSparse(sparse_queue, 1, &info, VK_NULL_HANDLE), "vkQueueBindSparse");
+
+            submit(true, bound);
         }
 
         VkCommandBuffer Queue::flush_init_transitions()

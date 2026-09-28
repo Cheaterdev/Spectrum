@@ -89,6 +89,15 @@ namespace HAL
 		return queues[type];
 	}
 
+	void Device::wait_idle()
+	{
+		for (auto& queue : queues)
+			if (queue)
+				queue->signal_and_wait();
+
+		API::Device::wait_device_idle();
+	}
+
 	Device::Device(HAL::DeviceDesc desc)
 	{
 		init(desc);
@@ -113,7 +122,9 @@ namespace HAL
 		};
 		rtx = !Debug::RunForPix && get_properties().rtx && !forced_off("SPECTRUM_DISABLE_RTX", "Raytracing");
 		mesh_shader = get_properties().mesh_shader && !forced_off("SPECTRUM_DISABLE_MESH_SHADERS", "Mesh shaders");
-		Log::get() << "Raytracing: " << (rtx ? "on" : "off") << ", mesh shaders: " << (mesh_shader ? "on" : "off") << Log::endl;
+		tiled_3d = get_properties().tiled_3d && !forced_off("SPECTRUM_DISABLE_TILED_3D", "Tiled 3D textures");
+		Log::get() << "Raytracing: " << (rtx ? "on" : "off") << ", mesh shaders: " << (mesh_shader ? "on" : "off")
+			<< ", tiled 3D textures: " << (tiled_3d ? "on" : "off") << Log::endl;
 
 		heap_factory = std::make_unique<HeapFactory>(*this);
 		descriptor_heap_factory = std::make_unique<DescriptorHeapFactory>(*this);
@@ -202,4 +213,5 @@ namespace HAL
 	const HAL::DeviceProperties& Device::get_properties() const { return properties; }
 	bool Device::is_rtx_supported() { return rtx; }
 	bool Device::is_mesh_shader_supported() { return mesh_shader; }
+	bool Device::is_tiled_3d_supported() { return tiled_3d; }
 }

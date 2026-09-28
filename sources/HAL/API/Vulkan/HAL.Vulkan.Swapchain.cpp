@@ -111,6 +111,8 @@ namespace HAL
         if (api_dev.vk_device == VK_NULL_HANDLE) return;
 
         VkInstance instance = api_dev.vk_instance;
+        owner_device   = api_dev.vk_device;
+        owner_instance = instance;
 
         // ---- Win32 surface --------------------------------------------------
         VkWin32SurfaceCreateInfoKHR surface_ci{
@@ -305,6 +307,8 @@ namespace HAL
         // on_change()'s TextureLayout::PRESENT assumption is valid on frame 0.
         {
             auto& aq = static_cast<API::Queue&>(*device.get_queue(CommandListType::DIRECT));
+            // VkQueue must be externally synchronized: other threads submit to it.
+            std::lock_guard lock(api_dev.get_queue_mutex(static_cast<int>(CommandListType::DIRECT)));
             init_swapchain_layouts(api_dev.vk_device, aq.get_native());
         }
 
@@ -525,6 +529,18 @@ namespace HAL::API
         for (auto s : pres_sems) if (s) vkDestroySemaphore(vk_dev, s, nullptr);
     }
 
+    SwapChain::~SwapChain()
+    {
+        if (owner_device == VK_NULL_HANDLE) return;
+
+        teardown_present_commands(owner_device);
+        for (auto v : swapchain_views)  if (v) vkDestroyImageView(owner_device, v, nullptr);
+        for (auto s : render_finished)  if (s) vkDestroySemaphore(owner_device, s, nullptr);
+        for (auto s : image_available)  if (s) vkDestroySemaphore(owner_device, s, nullptr);
+        if (vk_swapchain) vkDestroySwapchainKHR(owner_device, vk_swapchain, nullptr);
+        if (vk_surface)   vkDestroySurfaceKHR(owner_instance, vk_surface, nullptr);
+    }
+
     void SwapChain::teardown_present_commands(VkDevice vk_dev)
     {
         if (vk_dev == VK_NULL_HANDLE) return;
@@ -670,10 +686,7 @@ namespace HAL
         auto& api_dev = static_cast<API::Device&>(device);
         if (api_dev.vk_device == VK_NULL_HANDLE) return;
 
-        // Wait for all queues idle before destroying swapchain resources.
-        device.get_queue(CommandListType::DIRECT)->signal_and_wait();
-        device.get_queue(CommandListType::COMPUTE)->signal_and_wait();
-        device.get_queue(CommandListType::COPY)->signal_and_wait();
+        device.wait_idle();
 
         // Destroy old views, semaphores, and present-transition resources.
         teardown_present_commands(api_dev.vk_device);
@@ -776,6 +789,8 @@ namespace HAL
         // Transition fresh images UNDEFINED → PRESENT_SRC_KHR.
         {
             auto& aq = static_cast<API::Queue&>(*device.get_queue(CommandListType::DIRECT));
+            // VkQueue must be externally synchronized: other threads submit to it.
+            std::lock_guard lock(api_dev.get_queue_mutex(static_cast<int>(CommandListType::DIRECT)));
             init_swapchain_layouts(api_dev.vk_device, aq.get_native());
         }
 

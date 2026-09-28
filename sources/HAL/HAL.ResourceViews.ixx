@@ -431,6 +431,15 @@ export
 				return resource;
 			}
 
+			// Count buffer for exec_indirect. An uncounted buffer has none: handing
+			// get_counter_buffer()'s fallback (the args buffer itself) to
+			// ExecuteIndirect / vkCmd*IndirectCount reads the first argument as the
+			// command count.
+			Buffer::ptr get_indirect_count_buffer()
+			{
+				return desc.counted == counterType::NONE ? nullptr : get_counter_buffer();
+			}
+
 			uint64 get_count()  const	 override
 			{
 				return desc.size / sizeof(UnderlyingType);

@@ -32,6 +32,19 @@ export namespace HAL
             VkExtent2D  extent     = {};   // pixel dimensions of the image
         };
 
+        // Tile geometry of a sparse (HeapType::RESERVED) resource.
+        struct SparseLayout
+        {
+            VkImageAspectFlags aspect          = 0;
+            VkExtent3D         granularity     = { 1, 1, 1 };   // texels per 64 KB tile
+            uint32_t           mip_tail_first  = 0;             // == mip count when there is no tail
+            VkDeviceSize       mip_tail_size   = 0;
+            VkDeviceSize       mip_tail_offset = 0;             // opaque offset of layer 0's tail
+            VkDeviceSize       mip_tail_stride = 0;             // per-layer tail stride
+            bool               single_mip_tail = false;         // one tail shared by all layers
+            VkDeviceSize       size            = 0;             // buffers: bindable byte range
+        };
+
         class Resource
         {
             uint64_t address = 0;
@@ -52,6 +65,10 @@ export namespace HAL
             // Keyed by (array_layer << 16 | mip_level).
             mutable std::unordered_map<uint32_t, VkImageView> per_mip_views;
 
+            // Cached render-target / depth-stencil views of one mip and a layer
+            // range. Keyed by mip | first_layer << 8 | layer_count << 32.
+            mutable std::unordered_map<uint64_t, VkImageView> attachment_views;
+
             // Format/aspect stored at image creation for per-mip view creation.
             VkFormat           vk_image_format = VK_FORMAT_UNDEFINED;
             VkImageAspectFlags vk_image_aspect = 0;
@@ -68,6 +85,12 @@ export namespace HAL
 
             // Pixel dimensions — set for both imported and owned images.
             VkExtent2D imported_extent = {};
+
+            // Sparse resources own their handle but have no VMA allocation: tile
+            // memory comes from heaps, bound by Queue::update_tile_mappings.
+            bool         sparse = false;
+            SparseLayout sparse_layout;
+            void init_sparse_layout(Device& device, VkImageAspectFlags aspect);
 
         public:
             using ptr = std::shared_ptr<Resource>;
@@ -88,6 +111,8 @@ export namespace HAL
             // Cross-partition friends are unreliable in MSVC; expose via getters.
             VkImage     get_vk_image()        const noexcept { return vk_image; }
             VkBuffer    get_vk_buffer()       const noexcept { return vk_buffer; }
+            bool                is_sparse()          const noexcept { return sparse; }
+            const SparseLayout& get_sparse_layout()  const noexcept { return sparse_layout; }
 
             // Backend-uniform native handle (see HAL.D3D12.Resource.ixx).
             // Prefers an imported (e.g. swapchain) image over an owned one.
@@ -109,6 +134,10 @@ export namespace HAL
             // View for a UAV (STORAGE_IMAGE) descriptor, created from get_uav_view_ci()
             // on first use and cached. Thread-safe: descriptors are placed from many threads.
             VkImageView get_vk_uav_view(VkDevice vk_dev, uint32_t mip, uint32_t layer = 0) const noexcept;
+
+            // View for a render-target / depth-stencil attachment: one mip, a layer
+            // range. An imported (swapchain) image returns its own view.
+            VkImageView get_vk_attachment_view(VkDevice vk_dev, uint32_t mip, uint32_t first_layer, uint32_t layer_count) const noexcept;
 
             // Single-mip create-info for UAV (STORAGE_IMAGE) descriptors.
             // A 3D storage image must keep a 3D view (a 2D view of a 3D image is

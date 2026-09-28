@@ -59,6 +59,7 @@ enum class ContextFieldID : unsigned int
 	UIRenderState_per_pass,
 	UpscalerSelectors_upscaler_type,
 	UpscalerSelectors_upscaling_enabled,
+	VoxelGISelectors_supported,
 	VoxelGISelectors_voxelize_scene,
 	VoxelGISelectors_light_scene,
 	VoxelGISelectors_reflection_enabled,
@@ -111,6 +112,7 @@ namespace ContextField
 	constexpr ContextFieldMask UIRenderState_per_pass = context_field_bit(ContextFieldID::UIRenderState_per_pass);
 	constexpr ContextFieldMask UpscalerSelectors_upscaler_type = context_field_bit(ContextFieldID::UpscalerSelectors_upscaler_type);
 	constexpr ContextFieldMask UpscalerSelectors_upscaling_enabled = context_field_bit(ContextFieldID::UpscalerSelectors_upscaling_enabled);
+	constexpr ContextFieldMask VoxelGISelectors_supported = context_field_bit(ContextFieldID::VoxelGISelectors_supported);
 	constexpr ContextFieldMask VoxelGISelectors_voxelize_scene = context_field_bit(ContextFieldID::VoxelGISelectors_voxelize_scene);
 	constexpr ContextFieldMask VoxelGISelectors_light_scene = context_field_bit(ContextFieldID::VoxelGISelectors_light_scene);
 	constexpr ContextFieldMask VoxelGISelectors_reflection_enabled = context_field_bit(ContextFieldID::VoxelGISelectors_reflection_enabled);
@@ -372,7 +374,8 @@ static inline const PassContextDeps pass_context_deps[] = {
 		  ContextField::None,
 		true },
 	{ PassID::VoxelDebug,
-		  ContextField::VoxelGISelectors_debug_voxel_trace,
+		  ContextField::VoxelGISelectors_supported
+		| ContextField::VoxelGISelectors_debug_voxel_trace,
 		  ContextField::None,
 		true },
 	{ PassID::ReflectionRTXHalf,
@@ -412,29 +415,34 @@ static inline const PassContextDeps pass_context_deps[] = {
 		  ContextField::None,
 		true },
 	{ PassID::Voxelize,
-		  ContextField::VoxelGISelectors_voxelize_scene,
+		  ContextField::VoxelGISelectors_supported
+		| ContextField::VoxelGISelectors_voxelize_scene,
 		  ContextField::None,
 		true },
 	{ PassID::Lighting,
-		  ContextField::VoxelGISelectors_light_scene,
+		  ContextField::VoxelGISelectors_supported
+		| ContextField::VoxelGISelectors_light_scene,
 		  ContextField::None,
 		true },
 	{ PassID::Mipmapping,
-		  ContextField::VoxelGISelectors_light_scene,
+		  ContextField::VoxelGISelectors_supported
+		| ContextField::VoxelGISelectors_light_scene,
 		  ContextField::None,
 		true },
 	{ PassID::VoxelScreen,
 		  ContextField::IndirectGISelectors_indirect_source
 		| ContextField::RenderDeviceCapabilities_rtx_supported
 		| ContextField::RenderDeviceCapabilities_dlssrr_available
-		| ContextField::UpscalerSelectors_upscaler_type,
+		| ContextField::UpscalerSelectors_upscaler_type
+		| ContextField::VoxelGISelectors_supported,
 		  ContextField::None,
 		true },
 	{ PassID::ScreenReflection,
 		  ContextField::IndirectGISelectors_reflection_source
 		| ContextField::RenderDeviceCapabilities_rtx_supported
 		| ContextField::RenderDeviceCapabilities_dlssrr_available
-		| ContextField::UpscalerSelectors_upscaler_type,
+		| ContextField::UpscalerSelectors_upscaler_type
+		| ContextField::VoxelGISelectors_supported,
 		  ContextField::None,
 		true },
 	{ PassID::VSM_GatherDispatch,

@@ -213,7 +213,9 @@ namespace GI
 		[Bind = DefaultLayout::Instance1]
 		struct VoxelMipMap
 		{
-
+			# VoxelDownsample runs as Count(1): only OutMips[0] is bound and written;
+			# [1] and [2] are read only by the COUNT >= 2 / 3 permutations.
+			[Auto = Texture_Null]
 			RWTexture3D<float4> OutMips[3];
 			Texture3D<float4> SrcMip;
 
@@ -407,6 +409,10 @@ namespace GI
 		# enumerators.
 		struct VoxelGISelectors
 		{
+			# Set by VoxelGI::update_frame. VoxelGI is not created without tiled 3D
+			# textures (sparseResidencyImage3D, absent on Adreno), and every pass
+			# reading its voxel volumes is gated on this.
+			bool supported = false;
 			bool voxelize_scene = true;
 			bool light_scene = true;
 			bool reflection_enabled = true;
@@ -483,7 +489,7 @@ namespace GI
 	{
 		namespace Dev
 		{
-			[SetupCondition = VoxelGISelectors::debug_voxel_trace]
+			[SetupCondition = VoxelGISelectors::supported && VoxelGISelectors::debug_voxel_trace]
 			PassNode VoxelDebug
 			{
 				# Flat fields, not the (removed) GBuffer PassView -- see pssm.prism's own
@@ -763,7 +769,7 @@ namespace GI
 
 	namespace Voxel
 	{
-		[SetupCondition = VoxelGISelectors::voxelize_scene]
+		[SetupCondition = VoxelGISelectors::supported && VoxelGISelectors::voxelize_scene]
 		PassNode Voxelize
 		{
 			[Always = UnorderedAccess] Texture VoxelAlbedo;
@@ -775,7 +781,7 @@ namespace GI
 		}
 
 		[Compute]
-		[SetupCondition = VoxelGISelectors::light_scene]
+		[SetupCondition = VoxelGISelectors::supported && VoxelGISelectors::light_scene]
 		PassNode Lighting
 		{
 			[Always = Read] Texture VSM_Atlas;
@@ -792,7 +798,7 @@ namespace GI
 		}
 
 		[Compute]
-		[SetupCondition = VoxelGISelectors::light_scene]
+		[SetupCondition = VoxelGISelectors::supported && VoxelGISelectors::light_scene]
 		PassNode Mipmapping
 		{
 			[Always = UnorderedAccess] Texture3D VoxelLighted;
@@ -809,7 +815,7 @@ namespace GI
 		# migration stays behaviour-preserving. It looks like a copy-paste of the RTX
 		# gate (it makes the VCT path require DLSS-RR to be available-but-unselected,
 		# so it never runs on a non-NVIDIA GPU); revisit separately.
-		[SetupCondition = IndirectGISelectors::indirect_source == IndirectSource::MyVCT && UpscalerSelectors::upscaler_type != UpscalerType::DLSSRR && RenderDeviceCapabilities::rtx_supported && RenderDeviceCapabilities::dlssrr_available]
+		[SetupCondition = VoxelGISelectors::supported && IndirectGISelectors::indirect_source == IndirectSource::MyVCT && UpscalerSelectors::upscaler_type != UpscalerType::DLSSRR && RenderDeviceCapabilities::rtx_supported && RenderDeviceCapabilities::dlssrr_available]
 		PassNode VoxelScreen
 		{
 			# Flat fields, not the (removed) GBuffer PassView -- see pssm.prism's own
@@ -838,7 +844,7 @@ namespace Reflections
 	# [[project-nrd-integration]]). Not [Static], same reasoning as VoxelScreen.
 	[Compute]
 	# Same verbatim-mirror caveat as VoxelScreen above.
-	[SetupCondition = IndirectGISelectors::reflection_source == ReflectionSource::MyReflection && UpscalerSelectors::upscaler_type != UpscalerType::DLSSRR && RenderDeviceCapabilities::rtx_supported && RenderDeviceCapabilities::dlssrr_available]
+	[SetupCondition = VoxelGISelectors::supported && IndirectGISelectors::reflection_source == ReflectionSource::MyReflection && UpscalerSelectors::upscaler_type != UpscalerType::DLSSRR && RenderDeviceCapabilities::rtx_supported && RenderDeviceCapabilities::dlssrr_available]
 	PassNode ScreenReflection
 	{
 		# Flat fields, not the (removed) GBuffer PassView -- see pssm.prism's own

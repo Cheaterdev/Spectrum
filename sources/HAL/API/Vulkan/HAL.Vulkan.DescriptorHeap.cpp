@@ -33,16 +33,6 @@ namespace HAL
         VkDescriptorBufferInfo info{ buffer };
         info.offset = static_cast<VkDeviceSize>(b.FirstElement) * stride;
         info.range  = b.NumElements ? static_cast<VkDeviceSize>(b.NumElements) * stride : VK_WHOLE_SIZE;
-
-        // TEMP: storage-buffer alignment investigation -- remove once fixed.
-        if (info.offset % 16)
-        {
-            static std::mutex m; static int n = 0;
-            std::lock_guard g(m);
-            if (n++ < 40)
-                std::ofstream("misaligned_sb.temp", std::ios::app) << "offset " << info.offset << " stride " << b.StructureByteStride
-                    << " first " << b.FirstElement << " count " << b.NumElements << "\n" << std::stacktrace::current() << "\n----\n";
-        }
         return info;
     }
 
@@ -96,6 +86,13 @@ namespace HAL
         }
         else
         {
+            // TEMP: Vulkan 3D bring-up -- who places an SRV on an empty resource.
+            {
+                auto& d = v.Resource->get_desc();
+                std::ofstream("srv_empty.temp", std::ios::app)
+                    << "name=" << v.Resource->get_name() << " buffer=" << d.is_buffer() << " texture=" << d.is_texture() << "\n"
+                    << std::stacktrace::current() << "\n----\n";
+            }
             ASSERT(!"SRV: resource has neither a VkImage nor a VkBuffer (failed creation?)");
             return;
         }

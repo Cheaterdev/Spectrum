@@ -229,6 +229,12 @@ Format from_native(VkFormat format)
 
 VkImageLayout to_native(TextureLayout layout)
 {
+    // The HAL's depth-attachment state is DEPTH_STENCIL_WRITE | DEPTH_STENCIL_READ
+    // (ResourceStates::DEPTH_STENCIL). Falling through to GENERAL for it left
+    // every depth pass rendering to an image that was never in attachment layout.
+    if (check(layout & TextureLayout::DEPTH_STENCIL_WRITE))
+        return VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
     switch (layout)
     {
     case TextureLayout::UNDEFINED:           return VK_IMAGE_LAYOUT_UNDEFINED;

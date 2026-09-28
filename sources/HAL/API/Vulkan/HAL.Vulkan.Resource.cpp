@@ -14,15 +14,6 @@ import :Device;         // HAL::Device
 import :HeapAllocators;
 import :FrameManager;
 
-// TEMP: device-lost investigation (VK_DEVICE_FAULT write to an unmapped
-// address) -- maps GPU addresses to buffers. Remove once found.
-void temp_va_log(const std::string& line)
-{
-    static std::mutex m;
-    std::lock_guard g(m);
-    std::ofstream("gpu_va.temp", std::ios::app) << line << "\n";
-}
-
 namespace HAL
 {
     namespace API
@@ -102,11 +93,8 @@ namespace HAL
             }
 
 
-            if (THIS->heap_type == HeapType::RESERVED)
-            {
-                THIS->tiled_manager.init_tilings();
-                return;
-            }
+            // Reserved resources are sparse: created without memory, tiles bound later.
+            sparse = THIS->heap_type == HeapType::RESERVED;
 
             // Placed resources — two cases:
             //
@@ -131,8 +119,6 @@ namespace HAL
                     mapped_data = api_heap->cpu_address + placement.offset;
                     address     = api_heap->get_address() + placement.offset;
                     vk_buffer   = api_heap->get_vk_buffer();
-                    temp_va_log(std::format("placed  {} 0x{:x} size 0x{:x}", (void*)this, address,
-                        _desc.is_buffer() ? _desc.as_buffer().SizeInBytes : 0));
                     return;
                 }
                 // Case B: DEFAULT heap — fall through to VMA allocation below.
@@ -166,18 +152,41 @@ namespace HAL
                     vma_ci.usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE;
                 }
 
-                VmaAllocationInfo alloc_info{};
-                vmaCreateBuffer(allocator, &bci, &vma_ci, &vk_buffer, &vma_alloc, &alloc_info);
+                if (sparse)
+                {
+                    // Whole tiles: the last tile's bind must not run past the buffer.
+                    bci.flags = VK_BUFFER_CREATE_SPARSE_BINDING_BIT | VK_BUFFER_CREATE_SPARSE_RESIDENCY_BIT;
+                    bci.size  = Math::roundUp(bci.size, Device::SPARSE_TILE_SIZE);
+                    VkResult r = vkCreateBuffer(device.get_native_device(), &bci, nullptr, &vk_buffer);
+                    ASSERT(r == VK_SUCCESS && "sparse vkCreateBuffer failed");
 
-                if (THIS->heap_type == HeapType::UPLOAD || THIS->heap_type == HeapType::READBACK)
-                    mapped_data = alloc_info.pMappedData;
+                    VkMemoryRequirements req{};
+                    vkGetBufferMemoryRequirements(device.get_native_device(), vk_buffer, &req);
+                    sparse_layout.size = req.size;
+
+                    // TEMP: device-lost READ_INVALID -- sparse buffer VA ranges.
+                    {
+                        VkBufferDeviceAddressInfo dai{ VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO };
+                        dai.buffer = vk_buffer;
+                        const uint64_t va = vkGetBufferDeviceAddress(device.get_native_device(), &dai);
+                        std::ofstream("sparse_va.temp", std::ios::app) << std::hex << "sparse buffer 0x" << va << " - 0x" << va + req.size
+                            << std::dec << " size " << req.size << "\n" << std::stacktrace::current() << "\n----\n";
+                    }
+                }
+                else
+                {
+                    VmaAllocationInfo alloc_info{};
+                    vmaCreateBuffer(allocator, &bci, &vma_ci, &vk_buffer, &vma_alloc, &alloc_info);
+
+                    if (THIS->heap_type == HeapType::UPLOAD || THIS->heap_type == HeapType::READBACK)
+                        mapped_data = alloc_info.pMappedData;
+                }
 
                 if (vk_buffer != VK_NULL_HANDLE)
                 {
                     VkBufferDeviceAddressInfo dai{ VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO };
                     dai.buffer = vk_buffer;
                     address = vkGetBufferDeviceAddress(device.get_native_device(), &dai);
-                    temp_va_log(std::format("buffer  {} 0x{:x} size 0x{:x}", (void*)this, address, buf.SizeInBytes));
                 }
             }
             else if (_desc.is_texture())
@@ -229,7 +238,17 @@ namespace HAL
 
                 vma_ci.usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE;
 
-                VkResult img_res = vmaCreateImage(allocator, &ici, &vma_ci, &vk_image, &vma_alloc, nullptr);
+                VkResult img_res;
+                if (sparse)
+                {
+                    ici.flags |= VK_IMAGE_CREATE_SPARSE_BINDING_BIT | VK_IMAGE_CREATE_SPARSE_RESIDENCY_BIT;
+                    img_res = vkCreateImage(device.get_native_device(), &ici, nullptr, &vk_image);
+                    if (img_res == VK_SUCCESS)
+                        init_sparse_layout(device, check(_desc.Flags & ResFlags::DepthStencil)
+                            ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT);
+                }
+                else
+                    img_res = vmaCreateImage(allocator, &ici, &vma_ci, &vk_image, &vma_alloc, nullptr);
                 if (img_res != VK_SUCCESS)
                     Log::get() << "[Vulkan] vmaCreateImage failed (" << static_cast<int>(img_res)
                                << ") vk_format=" << static_cast<int>(ici.format)
@@ -269,6 +288,36 @@ namespace HAL
                         is_depth ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT);
                 }
             }
+
+            if (sparse)
+                THIS->tiled_manager.init_tilings();
+        }
+
+        void Resource::init_sparse_layout(Device& device, VkImageAspectFlags aspect)
+        {
+            uint32_t count = 0;
+            vkGetImageSparseMemoryRequirements(device.get_native_device(), vk_image, &count, nullptr);
+            std::vector<VkSparseImageMemoryRequirements> reqs(count);
+            vkGetImageSparseMemoryRequirements(device.get_native_device(), vk_image, &count, reqs.data());
+
+            for (auto& r : reqs)
+            {
+                // Metadata needs its own permanently bound mip tail; no current
+                // device/format in use reports one, so it is not handled.
+                ASSERT(!(r.formatProperties.aspectMask & VK_IMAGE_ASPECT_METADATA_BIT) && "sparse metadata aspect unsupported");
+
+                if (!(r.formatProperties.aspectMask & aspect)) continue;
+
+                sparse_layout.aspect          = aspect;
+                sparse_layout.granularity     = r.formatProperties.imageGranularity;
+                sparse_layout.mip_tail_first  = r.imageMipTailFirstLod;
+                sparse_layout.mip_tail_size   = r.imageMipTailSize;
+                sparse_layout.mip_tail_offset = r.imageMipTailOffset;
+                sparse_layout.mip_tail_stride = r.imageMipTailStride;
+                sparse_layout.single_mip_tail = r.formatProperties.flags & VK_SPARSE_IMAGE_FORMAT_SINGLE_MIPTAIL_BIT;
+                return;
+            }
+            ASSERT(!"sparse image has no requirements for its aspect");
         }
 
         void Resource::init(const NativeImportHandle& handle, TextureLayout layout, Device& device)
@@ -342,11 +391,18 @@ namespace HAL
     {
         if (!this->name.empty() && name.empty()) return;
         this->name = name;
-        if (vk_buffer != VK_NULL_HANDLE)
-            temp_va_log(std::format("name    {} 0x{:x} {}", (void*)static_cast<API::Resource*>(this), get_address(), name));
-        else if (vk_image != VK_NULL_HANDLE)
-            temp_va_log(std::format("imgname {} 0x{:x} {}", (void*)static_cast<API::Resource*>(this), (uint64_t)vk_image, name));
-
+        // TEMP: device-lost investigation -- handle -> name for gpu_va.temp's
+        // vabind/vaunbnd lines (placed upload slices share their heap's VkBuffer,
+        // so the address is logged too).
+        {
+            static std::mutex m;
+            std::lock_guard g(m);
+            std::ofstream out("gpu_va.temp", std::ios::app);
+            if (vk_buffer != VK_NULL_HANDLE)
+                out << std::format("name    buffer 0x{:x} addr 0x{:x} {}\n", (uint64_t)vk_buffer, get_address(), name);
+            else if (vk_image != VK_NULL_HANDLE)
+                out << std::format("name    image  0x{:x} {}\n", (uint64_t)vk_image, name);
+        }
         if (!m_device) return;
         auto& api_dev = static_cast<API::Device&>(*m_device);
         VkDevice vk_dev = api_dev.get_native_device();
@@ -401,13 +457,42 @@ namespace HAL
             per_mip_views[key] = v;
             return v;
         }
+
+        VkImageView Resource::get_vk_attachment_view(VkDevice vk_dev, uint32_t mip, uint32_t first_layer, uint32_t layer_count) const noexcept
+        {
+            if (import_handle.image != VK_NULL_HANDLE)
+                return import_handle.image_view;
+            if (vk_image == VK_NULL_HANDLE || vk_view_ci.image == VK_NULL_HANDLE)
+                return VK_NULL_HANDLE;
+
+            // Rendering to slices of a 3D image needs a 2D-array view, which the
+            // image must have been created 2D_ARRAY_COMPATIBLE for; nothing does that.
+            ASSERT(vk_view_ci.viewType != VK_IMAGE_VIEW_TYPE_3D && "render target on a 3D texture is unsupported");
+
+            const uint64_t key = uint64_t(mip) | uint64_t(first_layer) << 8 | uint64_t(layer_count) << 32;
+            std::lock_guard g(per_mip_views_mutex);
+            auto it = attachment_views.find(key);
+            if (it != attachment_views.end())
+                return it->second;
+
+            VkImageViewCreateInfo ivci = vk_view_ci;
+            ivci.viewType = layer_count > 1 ? VK_IMAGE_VIEW_TYPE_2D_ARRAY : VK_IMAGE_VIEW_TYPE_2D;
+            ivci.subresourceRange.baseMipLevel   = mip;
+            ivci.subresourceRange.levelCount     = 1;
+            ivci.subresourceRange.baseArrayLayer = first_layer;
+            ivci.subresourceRange.layerCount     = layer_count;
+            VkImageView v = VK_NULL_HANDLE;
+            vkCreateImageView(vk_dev, &ivci, nullptr, &v);
+            attachment_views[key] = v;
+            return v;
+        }
     }
 
     Resource::~Resource()
     {
         alloc_handle.Free();
 
-        if (vma_alloc)
+        if (vma_alloc || sparse)
         {
             auto& api_dev = static_cast<API::Device&>(*m_device);
             VkDevice vk_dev = api_dev.get_native_device();
@@ -422,6 +507,10 @@ namespace HAL
                 if (view != VK_NULL_HANDLE)
                     vkDestroyImageView(vk_dev, view, nullptr);
             per_mip_views.clear();
+            for (auto& [key, view] : attachment_views)
+                if (view != VK_NULL_HANDLE)
+                    vkDestroyImageView(vk_dev, view, nullptr);
+            attachment_views.clear();
 
             // Destroy the owned image view before destroying the image itself.
             if (vk_image_view != VK_NULL_HANDLE && !import_handle.image)
@@ -432,7 +521,6 @@ namespace HAL
 
             if (vk_buffer != VK_NULL_HANDLE)
             {
-                temp_va_log(std::format("destroy {} 0x{:x}", (void*)static_cast<API::Resource*>(this), get_address()));
                 vmaDestroyBuffer(api_dev.get_vma_allocator(), vk_buffer, vma_alloc);
             }
             else if (vk_image != VK_NULL_HANDLE && !import_handle.image)

@@ -13,6 +13,64 @@ import :API.QueryHeap;      // API::QueryHeap::get_native()
 
 namespace HAL::API
 {
+    // The mip and array slices an RTV/DSV names. Binding the resource's full view
+    // instead renders into (and clears) the wrong subresources -- e.g. every VSM
+    // atlas page instead of the one being drawn.
+    struct Attachment
+    {
+        VkImage     image  = VK_NULL_HANDLE;
+        VkImageView view   = VK_NULL_HANDLE;
+        VkExtent2D  extent = {};
+        uint32_t    mip = 0, first_layer = 0, layers = 1;
+    };
+
+    static Attachment resolve_attachment(VkDevice vk_dev, const Handle& h)
+    {
+        Attachment a;
+        if (!h.is_valid()) return a;
+
+        const auto& ri = h.get_resource_info();
+        std::shared_ptr<HAL::Resource> res;
+        auto slices = [&](uint mip, uint first, uint count) { a.mip = mip; a.first_layer = first; a.layers = std::max(1u, count); };
+
+        if (auto* rtv = std::get_if<Views::RenderTarget>(&ri.view))
+        {
+            res = rtv->Resource;
+            std::visit(overloaded{
+                [&](const Views::RenderTarget::Texture2D& v)      { slices(v.MipSlice, 0, 1); },
+                [&](const Views::RenderTarget::Texture2DArray& v) { slices(v.MipSlice, v.FirstArraySlice, v.ArraySize); },
+                [&](const Views::RenderTarget::Texture1D& v)      { slices(v.MipSlice, 0, 1); },
+                [&](const Views::RenderTarget::Texture1DArray& v) { slices(v.MipSlice, v.FirstArraySlice, v.ArraySize); },
+                [&](const auto&) { ASSERT(!"unsupported render target view on Vulkan"); },
+            }, rtv->View);
+        }
+        else if (auto* dsv = std::get_if<Views::DepthStencil>(&ri.view))
+        {
+            res = dsv->Resource;
+            std::visit(overloaded{
+                [&](const Views::DepthStencil::Texture2D& v)      { slices(v.MipSlice, 0, 1); },
+                [&](const Views::DepthStencil::Texture2DArray& v) { slices(v.MipSlice, v.FirstArraySlice, v.ArraySize); },
+                [&](const Views::DepthStencil::Texture1D& v)      { slices(v.MipSlice, 0, 1); },
+                [&](const Views::DepthStencil::Texture1DArray& v) { slices(v.MipSlice, v.FirstArraySlice, v.ArraySize); },
+                [&](const auto&) { ASSERT(!"unsupported depth-stencil view on Vulkan"); },
+            }, dsv->View);
+        }
+        if (!res) return a;
+
+        auto& api = static_cast<API::Resource&>(*res);
+        a.image = api.get_import_handle().image != VK_NULL_HANDLE ? api.get_import_handle().image : api.get_vk_image();
+        a.view  = api.get_vk_attachment_view(vk_dev, a.mip, a.first_layer, a.layers);
+
+        if (res->get_desc().is_texture())
+        {
+            const auto& td = res->get_desc().as_texture();
+            a.extent = { std::max(1u, td.Dimensions.x >> a.mip), std::max(1u, td.Dimensions.y >> a.mip) };
+        }
+        else
+            a.extent = api.get_imported_extent();
+        return a;
+    }
+
     void CommandList::create(CommandListType t, Device& dev)
     {
         type     = t;
@@ -103,15 +161,20 @@ namespace HAL::API
                                        VkClearValue        depth_clear)
     {
         end_rendering_if_active();
-        if (current_color_view == VK_NULL_HANDLE && current_depth_view == VK_NULL_HANDLE)
+        if (current_color_count == 0 && current_depth_view == VK_NULL_HANDLE)
             return;
 
-        VkRenderingAttachmentInfo color_att{ VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO };
-        color_att.imageView   = current_color_view;
-        color_att.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-        color_att.loadOp      = color_load;
-        color_att.storeOp     = VK_ATTACHMENT_STORE_OP_STORE;
-        color_att.clearValue  = color_clear;
+        std::array<VkRenderingAttachmentInfo, MAX_COLOR_ATTACHMENTS> color_atts{};
+        for (uint32_t i = 0; i < current_color_count; i++)
+        {
+            auto& a = color_atts[i];
+            a.sType       = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
+            a.imageView   = current_color_views[i];
+            a.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+            a.loadOp      = color_load;
+            a.storeOp     = VK_ATTACHMENT_STORE_OP_STORE;
+            a.clearValue  = color_clear;
+        }
 
         VkRenderingAttachmentInfo depth_att{ VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO };
         depth_att.imageView   = current_depth_view;
@@ -122,9 +185,9 @@ namespace HAL::API
 
         VkRenderingInfo ri{ VK_STRUCTURE_TYPE_RENDERING_INFO };
         ri.renderArea             = { {0, 0}, current_extent };
-        ri.layerCount             = 1;
-        ri.colorAttachmentCount   = current_color_view != VK_NULL_HANDLE ? 1 : 0;
-        ri.pColorAttachments      = current_color_view != VK_NULL_HANDLE ? &color_att : nullptr;
+        ri.layerCount             = current_layers;
+        ri.colorAttachmentCount   = current_color_count;
+        ri.pColorAttachments      = current_color_count ? color_atts.data() : nullptr;
         ri.pDepthAttachment       = current_depth_view != VK_NULL_HANDLE ? &depth_att : nullptr;
 
         vkCmdBeginRendering(vk_cmd, &ri);
@@ -212,46 +275,43 @@ namespace HAL::API
 
     // ---- Render target management -------------------------------------------
 
-    void CommandList::set_rtv(int /*count*/, Handles::RTV rt, Handles::DSV dsv)
+    void CommandList::set_rtv(int count, Handles::RTV rt, Handles::DSV dsv)
     {
         if (vk_cmd == VK_NULL_HANDLE) return;
         end_rendering_if_active();
 
-        current_color_view = VK_NULL_HANDLE;
-        current_depth_view = VK_NULL_HANDLE;
-        current_extent     = {};
+        const VkDevice vk_dev = static_cast<API::Device&>(*m_device).get_native_device();
 
-        auto extract_view = [](const Handle& h, bool depth) -> std::pair<VkImageView, VkExtent2D>
+        current_color_count = 0;
+        current_depth_view  = VK_NULL_HANDLE;
+        current_extent      = {};
+        current_layers      = 1;
+
+        // Every attachment must be bound: the pipeline's colorAttachmentCount has
+        // to match the render pass's, where D3D12 would tolerate a short list.
+        ASSERT(count <= int(MAX_COLOR_ATTACHMENTS));
+        for (int i = 0; rt.is_valid() && i < count; i++)
         {
-            if (!h.is_valid()) return { VK_NULL_HANDLE, {} };
-            auto& ri = h.get_resource_info();
-
-            std::shared_ptr<HAL::Resource> res;
-            if (!depth)
+            Attachment a = resolve_attachment(vk_dev, rt[i]);
+            ASSERT(a.view != VK_NULL_HANDLE && "render target has no image view");
+            current_color_views[current_color_count++] = a.view;
+            if (i == 0)
             {
-                auto* rtv = std::get_if<Views::RenderTarget>(&ri.view);
-                if (rtv) res = rtv->Resource;
+                current_extent = a.extent;
+                current_layers = a.layers;
             }
-            else
+        }
+
+        if (dsv.is_valid())
+        {
+            Attachment d = resolve_attachment(vk_dev, dsv);
+            current_depth_view = d.view;
+            if (!current_color_count)
             {
-                auto* dsv = std::get_if<Views::DepthStencil>(&ri.view);
-                if (dsv) res = dsv->Resource;
+                current_extent = d.extent;
+                current_layers = d.layers;
             }
-
-            if (!res) return { VK_NULL_HANDLE, {} };
-            auto& api = static_cast<API::Resource&>(*res);
-
-            // get_vk_image_view() returns the swapchain view if present,
-            // otherwise the owned VkImageView created by Resource::init().
-            return { api.get_vk_image_view(), api.get_imported_extent() };
-        };
-
-        auto [cv, ce] = extract_view(rt, false);
-        auto [dv, de] = extract_view(dsv, true);
-
-        current_color_view = cv;
-        current_depth_view = dv;
-        current_extent     = (cv != VK_NULL_HANDLE) ? ce : de;
+        }
     }
 
     // ---- Clear operations ---------------------------------------------------
@@ -260,33 +320,12 @@ namespace HAL::API
     {
         if (vk_cmd == VK_NULL_HANDLE || !h.is_valid()) return;
 
-        auto& ri  = h.get_resource_info();
-        auto* rtv = std::get_if<Views::RenderTarget>(&ri.view);
-        if (!rtv || !rtv->Resource) return;
-
-        auto& api = static_cast<API::Resource&>(*rtv->Resource);
-        VkImageView view = api.get_vk_image_view();
-        if (view == VK_NULL_HANDLE) return;
+        // No layout barrier here: the caller's state tracking has already moved
+        // this subresource to RENDER_TARGET, as D3D12 requires for a clear.
+        const Attachment a = resolve_attachment(static_cast<API::Device&>(*m_device).get_native_device(), h);
+        if (a.view == VK_NULL_HANDLE) return;
 
         end_rendering_if_active();
-
-        // Transition to COLOR_ATTACHMENT_OPTIMAL before the clear.  UNDEFINED as
-        // oldLayout is always valid; it matches LOAD_OP_CLEAR's "discard" semantics.
-        {
-            VkImageMemoryBarrier2 b{ VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2 };
-            b.srcStageMask  = VK_PIPELINE_STAGE_2_NONE;
-            b.srcAccessMask = 0;
-            b.dstStageMask  = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
-            b.dstAccessMask = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT;
-            b.oldLayout     = VK_IMAGE_LAYOUT_UNDEFINED;
-            b.newLayout     = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-            b.image         = api.get_vk_image();
-            b.subresourceRange = { VK_IMAGE_ASPECT_COLOR_BIT, 0, VK_REMAINING_MIP_LEVELS, 0, VK_REMAINING_ARRAY_LAYERS };
-            VkDependencyInfo dep{ VK_STRUCTURE_TYPE_DEPENDENCY_INFO };
-            dep.imageMemoryBarrierCount = 1;
-            dep.pImageMemoryBarriers    = &b;
-            vkCmdPipelineBarrier2(vk_cmd, &dep);
-        }
 
         VkClearValue cv{};
         cv.color.float32[0] = color.x;
@@ -295,23 +334,15 @@ namespace HAL::API
         cv.color.float32[3] = color.w;
 
         VkRenderingAttachmentInfo att{ VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO };
-        att.imageView   = view;
+        att.imageView   = a.view;
         att.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
         att.loadOp      = VK_ATTACHMENT_LOAD_OP_CLEAR;
         att.storeOp     = VK_ATTACHMENT_STORE_OP_STORE;
         att.clearValue  = cv;
 
-        VkExtent2D ext = api.get_imported_extent();
-        // Fallback: if no imported extent (regular texture), use desc dimensions
-        if (ext.width == 0 && rtv->Resource->get_desc().is_texture())
-        {
-            auto& td = rtv->Resource->get_desc().as_texture();
-            ext = { td.Dimensions.x, td.Dimensions.y };
-        }
-
         VkRenderingInfo rinfo{ VK_STRUCTURE_TYPE_RENDERING_INFO };
-        rinfo.renderArea           = { {0, 0}, ext };
-        rinfo.layerCount           = 1;
+        rinfo.renderArea           = { {0, 0}, a.extent };
+        rinfo.layerCount           = a.layers;
         rinfo.colorAttachmentCount = 1;
         rinfo.pColorAttachments    = &att;
 
@@ -323,53 +354,26 @@ namespace HAL::API
     {
         if (vk_cmd == VK_NULL_HANDLE || !dsv.is_valid()) return;
 
-        auto& ri  = dsv.get_resource_info();
-        auto* dv  = std::get_if<Views::DepthStencil>(&ri.view);
-        if (!dv || !dv->Resource) return;
-
-        auto& api = static_cast<API::Resource&>(*dv->Resource);
-        VkImageView view = api.get_vk_image_view();
-        if (view == VK_NULL_HANDLE) return;
+        // No layout barrier: see clear_rtv. clear_dsv clears one VSM page slice
+        // at a time, so touching the whole image would wipe every other page.
+        const Attachment a = resolve_attachment(static_cast<API::Device&>(*m_device).get_native_device(), dsv);
+        if (a.view == VK_NULL_HANDLE) return;
 
         end_rendering_if_active();
-
-        // Transition to DEPTH_STENCIL_ATTACHMENT_OPTIMAL before the clear.
-        {
-            VkImageMemoryBarrier2 b{ VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2 };
-            b.srcStageMask  = VK_PIPELINE_STAGE_2_NONE;
-            b.srcAccessMask = 0;
-            b.dstStageMask  = VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT;
-            b.dstAccessMask = VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-            b.oldLayout     = VK_IMAGE_LAYOUT_UNDEFINED;
-            b.newLayout     = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-            b.image         = api.get_vk_image();
-            b.subresourceRange = { VK_IMAGE_ASPECT_DEPTH_BIT, 0, VK_REMAINING_MIP_LEVELS, 0, VK_REMAINING_ARRAY_LAYERS };
-            VkDependencyInfo dep{ VK_STRUCTURE_TYPE_DEPENDENCY_INFO };
-            dep.imageMemoryBarrierCount = 1;
-            dep.pImageMemoryBarriers    = &b;
-            vkCmdPipelineBarrier2(vk_cmd, &dep);
-        }
 
         VkClearValue cv;
         cv.depthStencil = { depth, 0 };
 
         VkRenderingAttachmentInfo att{ VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO };
-        att.imageView   = view;
+        att.imageView   = a.view;
         att.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
         att.loadOp      = VK_ATTACHMENT_LOAD_OP_CLEAR;
         att.storeOp     = VK_ATTACHMENT_STORE_OP_STORE;
         att.clearValue  = cv;
 
-        VkExtent2D ext = api.get_imported_extent();
-        if (ext.width == 0 && dv->Resource->get_desc().is_texture())
-        {
-            auto& td = dv->Resource->get_desc().as_texture();
-            ext = { td.Dimensions.x, td.Dimensions.y };
-        }
-
         VkRenderingInfo rinfo{ VK_STRUCTURE_TYPE_RENDERING_INFO };
-        rinfo.renderArea      = { {0, 0}, ext };
-        rinfo.layerCount      = 1;
+        rinfo.renderArea      = { {0, 0}, a.extent };
+        rinfo.layerCount      = a.layers;
         rinfo.pDepthAttachment = &att;
 
         vkCmdBeginRendering(vk_cmd, &rinfo);
@@ -385,37 +389,18 @@ namespace HAL::API
     {
         if (vk_cmd == VK_NULL_HANDLE || !dsv.is_valid()) return;
 
-        auto& ri = dsv.get_resource_info();
-        auto* dv = std::get_if<Views::DepthStencil>(&ri.view);
-        if (!dv || !dv->Resource) return;
-
-        auto& api = static_cast<API::Resource&>(*dv->Resource);
-        VkImageView view = api.get_vk_image_view();
-        if (view == VK_NULL_HANDLE) return;
+        // No layout barrier: see clear_rtv. An UNDEFINED transition here would
+        // also discard everything outside the rects.
+        const Attachment a = resolve_attachment(static_cast<API::Device&>(*m_device).get_native_device(), dsv);
+        if (a.view == VK_NULL_HANDLE) return;
 
         end_rendering_if_active();
-
-        {
-            VkImageMemoryBarrier2 b{ VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2 };
-            b.srcStageMask  = VK_PIPELINE_STAGE_2_NONE;
-            b.srcAccessMask = 0;
-            b.dstStageMask  = VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT;
-            b.dstAccessMask = VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-            b.oldLayout     = VK_IMAGE_LAYOUT_UNDEFINED;
-            b.newLayout     = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-            b.image         = api.get_vk_image();
-            b.subresourceRange = { VK_IMAGE_ASPECT_DEPTH_BIT, 0, VK_REMAINING_MIP_LEVELS, 0, VK_REMAINING_ARRAY_LAYERS };
-            VkDependencyInfo dep{ VK_STRUCTURE_TYPE_DEPENDENCY_INFO };
-            dep.imageMemoryBarrierCount = 1;
-            dep.pImageMemoryBarriers    = &b;
-            vkCmdPipelineBarrier2(vk_cmd, &dep);
-        }
 
         VkClearValue cv;
         cv.depthStencil = { depth, 0 };
 
         VkRenderingAttachmentInfo att{ VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO };
-        att.imageView   = view;
+        att.imageView   = a.view;
         att.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
         att.loadOp      = VK_ATTACHMENT_LOAD_OP_CLEAR;
         att.storeOp     = VK_ATTACHMENT_STORE_OP_STORE;
@@ -430,7 +415,7 @@ namespace HAL::API
             rinfo.renderArea = {
                 { (int32_t)rect.left, (int32_t)rect.top },
                 { (uint32_t)(rect.right - rect.left), (uint32_t)(rect.bottom - rect.top) } };
-            rinfo.layerCount       = 1;
+            rinfo.layerCount       = a.layers;
             rinfo.pDepthAttachment = &att;
 
             vkCmdBeginRendering(vk_cmd, &rinfo);
@@ -516,7 +501,7 @@ namespace HAL::API
     void CommandList::ensure_rendering_active()
     {
         if (in_render_pass) return;
-        if (current_color_view == VK_NULL_HANDLE && current_depth_view == VK_NULL_HANDLE)
+        if (current_color_count == 0 && current_depth_view == VK_NULL_HANDLE)
             return;
         VkClearValue noop{};
         begin_rendering(VK_ATTACHMENT_LOAD_OP_LOAD, noop, VK_ATTACHMENT_LOAD_OP_LOAD, noop);
@@ -648,6 +633,7 @@ namespace HAL::API
                             UINT instance_count, UINT instance_offset)
     {
         if (vk_cmd == VK_NULL_HANDLE) return;
+        temp_mark("draw");
         ensure_rendering_active();
         if (!in_render_pass) return; // no RTV set — skip rather than crash validation
         reapply_draw_state();
@@ -659,6 +645,7 @@ namespace HAL::API
                                     UINT instance_count, UINT instance_offset)
     {
         if (vk_cmd == VK_NULL_HANDLE) return;
+        temp_mark("draw_indexed");
         ensure_rendering_active();
         if (!in_render_pass) return;
         reapply_draw_state();
@@ -672,6 +659,7 @@ namespace HAL::API
     void CommandList::dispatch(ivec3 v)
     {
         if (vk_cmd == VK_NULL_HANDLE) return;
+        temp_mark("dispatch");
         // Compute doesn't use a render pass — end any active one first.
         end_rendering_if_active();
         flush_heaps();
@@ -684,6 +672,7 @@ namespace HAL::API
     void CommandList::dispatch_mesh(ivec3 v)
     {
         if (vk_cmd == VK_NULL_HANDLE) return;
+        temp_mark("dispatch_mesh");
         // Mesh dispatch is a rasterization command — needs an active render pass and
         // the same pipeline/viewport/scissor/heaps as a draw (but no topology).
         ensure_rendering_active();
@@ -816,6 +805,7 @@ namespace HAL::API
     void CommandList::copy_resource(HAL::Resource* dest, HAL::Resource* source)
     {
         if (!dest || !source || vk_cmd == VK_NULL_HANDLE) return;
+        temp_mark("copy_resource");
         auto& dst_api = static_cast<API::Resource&>(*dest);
         auto& src_api = static_cast<API::Resource&>(*source);
 
@@ -833,6 +823,7 @@ namespace HAL::API
                                    HAL::Resource* source, uint64 src_offset, uint64 size)
     {
         if (!dest || !source || vk_cmd == VK_NULL_HANDLE) return;
+        temp_mark("copy_buffer");
         auto& dst_api = static_cast<API::Resource&>(*dest);
         auto& src_api = static_cast<API::Resource&>(*source);
         if (dst_api.get_vk_buffer() == VK_NULL_HANDLE ||
@@ -914,6 +905,7 @@ namespace HAL::API
                                     const Resource::ptr& source, int src_sub)
     {
         if (!dest || !source || vk_cmd == VK_NULL_HANDLE) return;
+        temp_mark("copy_texture");
         auto& dst = static_cast<API::Resource&>(*dest);
         auto& src = static_cast<API::Resource&>(*source);
         if (dst.get_vk_image() == VK_NULL_HANDLE || src.get_vk_image() == VK_NULL_HANDLE) return;
@@ -936,6 +928,7 @@ namespace HAL::API
                                     const Resource::ptr& source, ivec3 src_pos, ivec3 size)
     {
         if (!dest || !source || vk_cmd == VK_NULL_HANDLE) return;
+        temp_mark("copy_texture_region");
         auto& dst = static_cast<API::Resource&>(*dest);
         auto& src = static_cast<API::Resource&>(*source);
         if (dst.get_vk_image() == VK_NULL_HANDLE || src.get_vk_image() == VK_NULL_HANDLE) return;
@@ -987,13 +980,14 @@ namespace HAL::API
     void CommandList::start_event(std::wstring_view name)
     {
         if (vk_cmd == VK_NULL_HANDLE) return;
+        // Narrow wstring → UTF-8 for Vulkan
+        std::string label(name.begin(), name.end());
+        API::temp_checkpoint(vk_cmd, "begin " + label);   // TEMP
         auto* dev = static_cast<API::Device*>(m_device);
         if (!dev) return;
         auto fn = reinterpret_cast<PFN_vkCmdBeginDebugUtilsLabelEXT>(
             vkGetDeviceProcAddr(dev->get_native_device(), "vkCmdBeginDebugUtilsLabelEXT"));
         if (!fn) return;
-        // Narrow wstring → UTF-8 for Vulkan
-        std::string label(name.begin(), name.end());
         VkDebugUtilsLabelEXT info{ VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT };
         info.pLabelName = label.c_str();
         fn(vk_cmd, &info);
@@ -1007,6 +1001,7 @@ namespace HAL::API
         auto fn = reinterpret_cast<PFN_vkCmdEndDebugUtilsLabelEXT>(
             vkGetDeviceProcAddr(dev->get_native_device(), "vkCmdEndDebugUtilsLabelEXT"));
         if (fn) fn(vk_cmd);
+        API::temp_checkpoint(vk_cmd, "end");   // TEMP
     }
 
     // ---- Indirect -----------------------------------------------------------
@@ -1020,6 +1015,7 @@ namespace HAL::API
                                         Resource* counter_buffer, UINT64 counter_offset)
     {
         if (vk_cmd == VK_NULL_HANDLE || !command_buffer) return;
+        temp_mark("execute_indirect");
         VkBuffer args = static_cast<API::Resource&>(*command_buffer).get_vk_buffer();
         if (args == VK_NULL_HANDLE) return;
 
@@ -1085,8 +1081,15 @@ namespace HAL::API
     }
 
     // ---- Misc ---------------------------------------------------------------
+    void CommandList::temp_mark(const char* op)
+    {
+        API::temp_checkpoint(vk_cmd, std::format("{} {} #{}", temp_name, op, temp_op++));
+    }
+
     void CommandList::set_name(std::wstring_view name)
     {
+        temp_name.assign(name.begin(), name.end());   // TEMP
+        temp_op = 0;
         if (vk_cmd == VK_NULL_HANDLE) return;
         auto* dev = static_cast<API::Device*>(m_device);
         if (!dev) return;

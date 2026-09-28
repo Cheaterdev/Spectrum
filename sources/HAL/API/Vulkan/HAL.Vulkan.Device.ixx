@@ -36,6 +36,12 @@ export namespace HAL
         // present, acquire and semaphore wait/query.
         bool check_device_lost(VkResult result, const char* where);
 
+        // TEMP: device-lost investigation (VK_NV_device_diagnostic_checkpoints).
+        // Checkpoints are recorded at every GPU profiling scope; after a device
+        // loss each registered queue's last checkpoints are logged.
+        void temp_checkpoint(VkCommandBuffer cmd, std::string_view label);
+        void temp_register_checkpoint_queue(VkQueue queue, std::string name);
+
         class Device
         {
             std::map<ResourceDesc, ResourceAllocationInfo> alloc_info;
@@ -78,6 +84,15 @@ export namespace HAL
             std::array<std::mutex, queue_type_count> queue_mutexes;
             uint32_t queue_mutex_slot[queue_type_count] = { 0, 1, 2, 3, 4 };
 
+            // Whether each type's queue family has VK_QUEUE_SPARSE_BINDING_BIT.
+            // Adreno's compute-only family does not; those queues bind on DIRECT.
+            bool queue_sparse[queue_type_count] = {};
+
+            // ---- Sparse (reserved) resources ---------------------------------
+            // Memory types every sparse resource kind accepts, probed at init.
+            // Tile-backing heap memory is allocated from these.
+            uint32_t sparse_memory_type_bits = 0;
+
             // Descriptor sizes — interface compat; always 0 in Vulkan.
             enum_array<DescriptorHeapType, uint> descriptor_sizes;
 
@@ -115,6 +130,10 @@ export namespace HAL
             VkDevice get_native_device() const;   // returns vk_device
             VkResult get_device_removed_reason() const;
 
+            // Fence waits on the HAL queues miss work submitted outside them
+            // (swapchain present transitions, presentation itself).
+            void wait_device_idle();
+
             // ---- Backend accessors (used by sibling Vulkan modules) ----------
             // Cross-partition friend declarations are not reliably enforced by
             // MSVC, so we expose the Vulkan internals through thin inline getters
@@ -124,6 +143,11 @@ export namespace HAL
             uint32_t         get_queue_family(int i) const noexcept { return queue_families[i]; }
             uint32_t         get_queue_index(int i)  const noexcept { return queue_indices[i]; }
             std::mutex&      get_queue_mutex(int i)        noexcept { return queue_mutexes[queue_mutex_slot[i]]; }
+            bool             queue_supports_sparse(int i) const noexcept { return queue_sparse[i]; }
+
+            // Sparse block size: D3D12's 64 KB tile, verified against the device at init.
+            static constexpr VkDeviceSize SPARSE_TILE_SIZE = 64 * 1024;
+            uint32_t         get_sparse_memory_type_bits() const noexcept { return sparse_memory_type_bits; }
 
             // ---- Bindless descriptor model accessors -------------------------
             // The types a resource-heap slot can hold. Every slot costs the size of

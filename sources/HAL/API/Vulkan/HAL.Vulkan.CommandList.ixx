@@ -41,11 +41,19 @@ export namespace HAL
             // occur.  Only the canonical begin()/end() pair manages the lock.
             std::mutex* _pool_mutex = nullptr;
 
+            // TEMP: device-lost investigation -- a diagnostic checkpoint per GPU op.
+            std::string temp_name;
+            uint32_t    temp_op = 0;
+            void temp_mark(const char* op);
+
             // Dynamic rendering state — populated by set_rtv(), consumed by draw calls.
-            VkImageView current_color_view = VK_NULL_HANDLE;
-            VkImageView current_depth_view = VK_NULL_HANDLE;
-            VkExtent2D  current_extent     = {};
-            bool        in_render_pass     = false;
+            static constexpr uint32_t MAX_COLOR_ATTACHMENTS = 8;   // D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT
+            std::array<VkImageView, MAX_COLOR_ATTACHMENTS> current_color_views{};
+            uint32_t    current_color_count = 0;
+            VkImageView current_depth_view  = VK_NULL_HANDLE;
+            VkExtent2D  current_extent      = {};
+            uint32_t    current_layers      = 1;
+            bool        in_render_pass      = false;
 
             // Pipeline state
             // Last bound graphics pipeline — re-bound before each draw because the

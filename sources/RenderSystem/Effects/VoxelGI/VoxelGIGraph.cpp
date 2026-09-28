@@ -191,6 +191,7 @@ void VoxelGI::update_frame(FrameGraph::Graph& graph)
 	// generated condition cannot name its enumerators.
 	{
 		auto& sel = graph.get_context<Table::GI::Voxel::VoxelGISelectors>();
+		sel.supported          = true;
 		sel.voxelize_scene     = voxelize_scene;
 		sel.light_scene        = light_scene;
 		sel.reflection_enabled = reflecton;

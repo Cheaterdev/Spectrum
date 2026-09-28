@@ -238,9 +238,6 @@ void materials::MaterialPreviewSession::dispatch()
 
 HAL::Texture2DView materials::MaterialPreviewSession::get_slice_view(int slot)
 {
-#ifdef HAL_BACKEND_VULKAN
-	return HAL::Texture2DView();
-#else
 	// pso vs. pso3d depending on mode -- rebuild_pso() nulls out whichever
 	// one isn't current, so checking the wrong one is always "missing" and
 	// forces a full PSO rebuild (shader recompile) + redispatch on every
@@ -262,7 +259,6 @@ HAL::Texture2DView materials::MaterialPreviewSession::get_slice_view(int slot)
 		return HAL::Texture2DView();
 
 	return slice_views[slot];
-#endif
 }
 
 namespace

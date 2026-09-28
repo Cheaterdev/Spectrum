@@ -25,9 +25,7 @@ public:
 
         if (RenderSystem::get().device().is_rtx_supported())
             RTX::create();
-#ifndef HAL_BACKEND_VULKAN
         AssetRenderer::create();
-#endif
         AssetManager::create();
 
         // Force-load engine assets (brdf, best_fit_normals, sky/SMAA LUTs, etc.)
@@ -46,6 +44,7 @@ public:
 
     ~GraphicsSystem() override
     {
+        RenderSystem::get().device().wait_idle();
         { std::ofstream("teardown.temp", std::ios::app) << "nvidia::NRD::reset();\n" << std::flush; } // TEMP
         nvidia::NRD::reset();
         { std::ofstream("teardown.temp", std::ios::app) << "nvidia::Streamline::reset();\n" << std::flush; } // TEMP

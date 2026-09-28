@@ -2,103 +2,87 @@ module HAL:TiledMemoryManager;
 import Core;
 import HAL;
 
-// Vulkan stub for TiledResourceManager::init_tilings().
+// Vulkan implementation of TiledResourceManager::init_tilings(): the same tile
+// grid the D3D12 version builds from GetResourceTiling, derived from the
+// resource's sparse layout (see API::Resource::init_sparse_layout).
 //
-// Real Vulkan sparse resources (VK_KHR_sparse_resources) are a post-Phase-0
-// feature.  However, we must populate the CPU-side `tiles` grid so that the
-// common streaming code (load_tile, zero_tile, etc.) doesn't crash on
-// out-of-bounds access — it always indexes tiles[subres][pos] without
-// re-checking is_tiled() first.
-//
-// The tile mappings are never sent to the GPU (Queue::update_tile_mappings
-// is a no-op), so RESERVED resources in Vulkan are simply invisible to
-// shaders.  That is acceptable for Phase 0.
+// Vulkan's mip tail is D3D12's packed mips: the mips from mip_tail_first on,
+// bound as one opaque range. As on D3D12, array resources get no per-slice
+// tail support (VSM clamps its mip count to unpacked_mip_count).
 
 namespace HAL
 {
-    static constexpr uint TILE_SIZE = 64 * 1024; // 64 KB — standard Vulkan sparse tile
-
     void TiledResourceManager::init_tilings()
     {
         auto desc = resource->get_desc();
+        const auto& layout = resource->get_sparse_layout();
+        constexpr auto tile_size = API::Device::SPARSE_TILE_SIZE;
+
+        auto fill = [](grid<uint3, ResourceTile>& g, uint3 size, UINT subresource, UINT storage_index) {
+            g.resize(size);
+            for (uint x = 0; x < size.x; x++)
+                for (uint y = 0; y < size.y; y++)
+                    for (uint z = 0; z < size.z; z++)
+                    {
+                        auto& tile = g[{x, y, z}];
+                        tile.pos           = { x, y, z };
+                        tile.subresource   = subresource;
+                        tile.storage_index = storage_index;
+                    }
+        };
 
         if (desc.is_buffer())
         {
-            // Buffers: a flat 1-D array of 64 KB tiles.
-            const size_t bytes     = desc.as_buffer().SizeInBytes;
-            const uint   num_tiles = std::max(1u, static_cast<uint>(
-                                         (bytes + TILE_SIZE - 1) / TILE_SIZE));
+            const uint num_tiles = static_cast<uint>(layout.size / tile_size);
 
-            tile_shape              = { TILE_SIZE, 1, 1 };
-            packed_mip_count        = 0;
-            unpacked_mip_count      = 0;
+            tile_shape                = { static_cast<uint>(tile_size), 1, 1 };
+            packed_mip_count          = 0;
+            unpacked_mip_count        = 0;
             packed_subresource_offset = 0;
 
             tiles.resize(1);
-            tiles[0].resize(uint3{ num_tiles, 1, 1 });
-            for (uint x = 0; x < num_tiles; ++x)
-            {
-                tiles[0][{x, 0, 0}].pos = { x, 0, 0 };
-                tiles[0][{x, 0, 0}].subresource = 0;
-                tiles[0][{x, 0, 0}].storage_index = 0;
-            }
-
             gpu_tiles.resize(1);
-            gpu_tiles[0].resize(uint3{ num_tiles, 1, 1 });
-            for (uint x = 0; x < num_tiles; ++x)
-            {
-                gpu_tiles[0][{x, 0, 0}].pos = { x, 0, 0 };
-                gpu_tiles[0][{x, 0, 0}].subresource = 0;
-                gpu_tiles[0][{x, 0, 0}].storage_index = 0;
-            }
+            fill(tiles[0], { num_tiles, 1, 1 }, 0, 0);
+            fill(gpu_tiles[0], { num_tiles, 1, 1 }, 0, 0);
+            return;
         }
-        else if (desc.is_texture())
-        {
-            auto& tex = desc.as_texture();
 
-            // Simple tile shape: 128 x 128 texels (works for most formats at 32 bpp).
-            // Vulkan sparse block sizes are format-dependent; this approximation is
-            // sufficient to keep the CPU tile grid alive without crashing.
-            const uint tile_w = 128u;
-            const uint tile_h = 128u;
-            const uint tile_d = 1u;
+        auto& tex = desc.as_texture();
+        const UINT array_size = std::max<UINT>(1, tex.ArraySize);
+        const UINT mip_count  = std::min<UINT>(layout.mip_tail_first, tex.MipLevels);
 
-            tile_shape = { tile_w, tile_h, tile_d };
+        tile_shape = { layout.granularity.width, layout.granularity.height, layout.granularity.depth };
 
-            // Standard mip layout: all mips get a tile grid; no packed mips stub.
-            const uint mips = std::max(1u, tex.MipLevels);
-            packed_mip_count        = 0;
-            unpacked_mip_count      = mips;
-            packed_subresource_offset = mips;
+        packed_mip_count          = static_cast<UINT>((layout.mip_tail_size + tile_size - 1) / tile_size);
+        packed_subresource_offset = mip_count;
+        unpacked_mip_count        = mip_count;
 
-            tiles.resize(mips);
-            gpu_tiles.resize(mips);
+        tiles.resize((size_t)mip_count * array_size);
+        gpu_tiles.resize((size_t)mip_count * array_size);
 
-            for (uint m = 0; m < mips; ++m)
+        packed_tiles.pos           = { 0, 0, 0 };
+        packed_tiles.subresource   = mip_count;
+        packed_tiles.storage_index = (UINT)tiles.size();
+
+        for (UINT slice = 0; slice < array_size; slice++)
+            for (UINT mip = 0; mip < mip_count; mip++)
             {
-                uint3 mip_dim = uint3::max({ 1, 1, 1 },
-                    tex.Dimensions / (uint)std::pow(2, m));
+                const uint3 mip_dim = uint3::max({ 1, 1, 1 }, uint3(
+                    tex.Dimensions.x >> mip,
+                    tex.is1D() ? 1u : tex.Dimensions.y >> mip,
+                    tex.is3D() ? tex.Dimensions.z >> mip : 1u));
 
-                uint xt = std::max(1u, (mip_dim.x + tile_w - 1) / tile_w);
-                uint yt = std::max(1u, (mip_dim.y + tile_h - 1) / tile_h);
-                uint zt = std::max(1u, tex.is3D()
-                              ? (mip_dim.z + tile_d - 1) / tile_d : 1u);
+                const uint3 tile_count = {
+                    (mip_dim.x + tile_shape.x - 1) / tile_shape.x,
+                    (mip_dim.y + tile_shape.y - 1) / tile_shape.y,
+                    (mip_dim.z + tile_shape.z - 1) / tile_shape.z };
 
-                tiles[m].resize(uint3(xt, yt, zt));
-                gpu_tiles[m].resize(uint3(xt, yt, zt));
-
-                for (uint x = 0; x < xt; ++x)
-                    for (uint y = 0; y < yt; ++y)
-                        for (uint z = 0; z < zt; ++z)
-                        {
-                            tiles[m][{x,y,z}].pos        = { x, y, z };
-                            tiles[m][{x,y,z}].subresource = m;
-                            tiles[m][{x,y,z}].storage_index = m;
-                            gpu_tiles[m][{x,y,z}].pos        = { x, y, z };
-                            gpu_tiles[m][{x,y,z}].subresource = m;
-                            gpu_tiles[m][{x,y,z}].storage_index = m;
-                        }
+                // Same subresource numbering as D3D12 (mip + slice * MipLevels);
+                // Queue::update_tile_mappings decodes it back to mip and layer.
+                const UINT flat   = mip + slice * mip_count;
+                const UINT subres = tex.CalcSubresource(mip, slice, 0);
+                fill(tiles[flat], tile_count, subres, flat);
+                fill(gpu_tiles[flat], tile_count, subres, flat);
             }
-        }
     }
 }
