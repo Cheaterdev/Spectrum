@@ -7,7 +7,7 @@
 #pragma once
 #include "sig_hlsl.hlsl"
 #include "enums.h"
-#include "VSMDispatchCommandData.h"
+#include "DrawMeshCommand.h"
 #include "VSMLevelDispatchInfo.h"
 namespace Shadows
 {
@@ -19,12 +19,12 @@ namespace Shadows
 			float4x4 light_view; // float4x4
 			uint4 material_pip_ids[2]; // uint4
 			uint levels; // StructuredBuffer<VSMLevelDispatchInfo>
-			uint material_commands[8]; // AppendStructuredBuffer<VSMDispatchCommandData>
+			uint material_commands[8]; // AppendStructuredBuffer<DrawMeshCommand>
 			uint GetLevel_count() { return level_count; }
 			float4x4 GetLight_view() { return light_view; }
 			uint4 GetMaterial_pip_ids(int i) { return material_pip_ids[i]; }
 			StructuredBuffer<VSMLevelDispatchInfo> GetLevels() { return ResourceDescriptorHeap[levels]; }
-			AppendStructuredBuffer<VSMDispatchCommandData> GetMaterial_commands(int i) { return ResourceDescriptorHeap[material_commands[i]]; }
+			AppendStructuredBuffer<DrawMeshCommand> GetMaterial_commands(int i) { return ResourceDescriptorHeap[material_commands[i]]; }
 
 		};
 	}

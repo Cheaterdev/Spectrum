@@ -12,6 +12,10 @@ export namespace GUI
             {
 
                     base::ptr current_block;
+                    // Every line is a label; without a cap a log spammed per draw
+                    // grows the process by gigabytes.
+                    static constexpr size_t MAX_BLOCKS = 50;   // x100 lines
+                    std::deque<base::ptr> blocks;
 
                     virtual void draw(Context& c) override;
                     std::list< base::ptr> add;

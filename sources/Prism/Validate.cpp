@@ -17,7 +17,8 @@ namespace
 	// [Requires = X] on a ComputePSO/GraphicsPSO or one of its defines: the PSO
 	// (or that permutation) is only built when the device supports X. Mesh
 	// shaders need no tag -- a mesh/amplification stage implies it.
-	const std::set<std::string> REQUIRES_VALUES = { "Raytracing" };
+	// TiledDepth: sparse (tiled) depth textures -- VSM's atlas; AMD has none.
+	const std::set<std::string> REQUIRES_VALUES = { "Raytracing", "TiledDepth" };
 	const std::set<std::string> RESOURCE_FIELD_OPTIONS = {
 		"Always", "ArrayCount", "Format", "MipCount", "Optional", "PrevFor", "Recreate", "RecreateFlags",
 		"Size", "SkipEnablement", "Write",
@@ -26,7 +27,10 @@ namespace
 
 	const std::map<std::string, std::set<std::string>> KNOWN_OPTIONS = {
 		// [Access] on a [raypayload] struct is its fields' default; see check_payload.
-		{ "struct", { "Access", "Bind", "IndirectCommand", "RenderTarget", "nobind", "raypayload", "serialize", "shader_only", "Template" } },
+		// No [IndirectCommand]: indirect commands are fixed HAL types (SIG.ixx).
+		// A command carrying slots can't be expressed on Vulkan -- see
+		// meshrender.prism's DrawMeshCommand.
+		{ "struct", { "Access", "Bind", "RenderTarget", "nobind", "raypayload", "serialize", "shader_only", "Template" } },
 		{ "struct field", { "Access", "Auto", "Barrier", "DispatchSize", "dynamic", "Read", "Write" } },
 		// [HLSL] is also the default; [CPP] (emit into the C++ struct) is not implemented yet.
 		{ "function", { "HLSL" } },

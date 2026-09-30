@@ -45,13 +45,13 @@ FrameGraph::SetupResult PassSetupDefault<Passes::{{parsed.passes[pass_name].qn}}
 	Passes::{{parsed.passes[pass_name].qn}}::Context& data, FrameGraph::TaskBuilder& builder)
 {%- endif %}
 {
-{%- if pass_def.options.RunAlways is defined %}
-	return FrameGraph::SetupResult::NeedsRender;
-{%- else %}
 {%- if pass_def.options.SetupCondition is defined %}
 	if (!({{pass_def.options.SetupCondition.value_atom.expr}}))
 		return FrameGraph::SetupResult::Disabled;
 {%- endif %}
+{%- if pass_def.options.RunAlways is defined %}
+	return FrameGraph::SetupResult::NeedsRender;
+{%- else %}
 {%- if pass_def.options.RenderCondition is defined %}
 	return ({{pass_def.options.RenderCondition.value_atom.expr}}) ? FrameGraph::SetupResult::NeedsRender : FrameGraph::SetupResult::IgnoreRender;
 {%- else %}

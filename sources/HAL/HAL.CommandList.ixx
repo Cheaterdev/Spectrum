@@ -380,6 +380,10 @@ export{
 			template<bool compute, bool graphics, class T>
 			void pre_command(T& context, BarrierSync operation, UsedSlots* slots = nullptr, const UsedSlots* check_scope = nullptr)
 			{
+				if (debug_heaviest_barriers.load(std::memory_order_relaxed))
+					add_heaviest_barrier();
+				else if (debug_split_every_command.load(std::memory_order_relaxed))
+					break_op();
 				// Operation batching: open (or continue) a batch of this class
 				// instead of bracketing every op with its own usage point.
 				begin_op(operation);
@@ -450,6 +454,13 @@ export{
 			// operations rather than inside one. NOT free -- it serialises the
 			// queue at this point. Never leave one in committed code.
 			void add_heaviest_barrier();
+
+			// Debug: a heaviest barrier before every draw/dispatch/copy that goes
+			// through pre_command. Driven by the "Sync debug" Properties toggle.
+			static inline std::atomic<bool> debug_heaviest_barriers{ false };
+			// Debug: every command its own operation (own computed barriers), no
+			// global barrier -- separates a batching-merge bug from a weak barrier.
+			static inline std::atomic<bool> debug_split_every_command{ false };
 
 			// whole_resource: see clear_dsv below. Declares the barrier over the
 			// entire resource instead of the subresources this view names, so a

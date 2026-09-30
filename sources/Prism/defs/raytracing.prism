@@ -42,7 +42,6 @@ namespace Raytrace
 	# 100-byte stride, splicing one cascade's real record with the next's into a
 	# garbled D3D12_DISPATCH_RAYS_DESC and hanging the GPU (DRED:
 	# DXGI_ERROR_DEVICE_HUNG on DDGIProbeTrace's own indirect dispatch).
-	[IndirectCommand]
 	[shader_only]
 	struct DispatchRaysArguments
 	{

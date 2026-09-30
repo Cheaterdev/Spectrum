@@ -15,18 +15,6 @@ export
 		{{parsed.layouts|list| map(attribute='name') | join(',\n		')}}
 	};
 
-	enum class IndirectCommands: int
-	{
-{%- set values = create_list('values') -%}
-{%- for v in parsed.tables -%}
-	{%- set t =  parsed.tables[v] -%}
-	{%-if t.options.IndirectCommand is defined -%}
-		{%- do myappend('values', v)-%}
-	{%-endif -%}
-{%- endfor %}
-		{{get_list('values')| join(',\n		')}}
-	};
-
 	enum class PSO: int
 	{
 		{%- set _ = create_list('all_psos') -%}

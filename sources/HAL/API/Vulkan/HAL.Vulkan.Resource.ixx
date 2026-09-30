@@ -57,6 +57,7 @@ export namespace HAL
         protected:
             // Vulkan resource handles — backend-internal.
             VkBuffer      vk_buffer    = VK_NULL_HANDLE;
+            VkDeviceSize  vk_buffer_offset = 0;
             VkImage       vk_image     = VK_NULL_HANDLE;
             VkImageView   vk_image_view= VK_NULL_HANDLE; // owned (non-swapchain) images
             VmaAllocation vma_alloc    = VK_NULL_HANDLE;
@@ -68,6 +69,10 @@ export namespace HAL
             // Cached render-target / depth-stencil views of one mip and a layer
             // range. Keyed by mip | first_layer << 8 | layer_count << 32.
             mutable std::unordered_map<uint64_t, VkImageView> attachment_views;
+
+            // Cached sampled-image (SRV) views: view type + mip range + layer range.
+            mutable std::map<std::array<uint32_t, 5>, VkImageView> srv_views;
+            bool cube_compatible = false;
 
             // Format/aspect stored at image creation for per-mip view creation.
             VkFormat           vk_image_format = VK_FORMAT_UNDEFINED;
@@ -90,6 +95,8 @@ export namespace HAL
             // memory comes from heaps, bound by Queue::update_tile_mappings.
             bool         sparse = false;
             SparseLayout sparse_layout;
+            // Bound into a DEFAULT heap's memory: the heap owns it, destroy frees only the handle.
+            bool         placed = false;
             void init_sparse_layout(Device& device, VkImageAspectFlags aspect);
 
         public:
@@ -111,6 +118,10 @@ export namespace HAL
             // Cross-partition friends are unreliable in MSVC; expose via getters.
             VkImage     get_vk_image()        const noexcept { return vk_image; }
             VkBuffer    get_vk_buffer()       const noexcept { return vk_buffer; }
+            // Byte offset of this resource inside get_vk_buffer(): non-zero for a
+            // buffer placed in an UPLOAD/READBACK heap, which shares the heap's
+            // VkBuffer. Every offset handed to Vulkan must add it.
+            VkDeviceSize get_vk_buffer_offset() const noexcept { return vk_buffer_offset; }
             bool                is_sparse()          const noexcept { return sparse; }
             const SparseLayout& get_sparse_layout()  const noexcept { return sparse_layout; }
 
@@ -138,6 +149,12 @@ export namespace HAL
             // View for a render-target / depth-stencil attachment: one mip, a layer
             // range. An imported (swapchain) image returns its own view.
             VkImageView get_vk_attachment_view(VkDevice vk_dev, uint32_t mip, uint32_t first_layer, uint32_t layer_count) const noexcept;
+
+            // View for an SRV (SAMPLED_IMAGE) descriptor: the view's own type, mips
+            // and layers -- the full image view would read mip 0 for a per-mip SRV.
+            // Counts may be VK_REMAINING_MIP_LEVELS / VK_REMAINING_ARRAY_LAYERS.
+            VkImageView get_vk_srv_view(VkDevice vk_dev, VkImageViewType type, uint32_t first_mip, uint32_t mip_count,
+                                        uint32_t first_layer, uint32_t layer_count) const noexcept;
 
             // Single-mip create-info for UAV (STORAGE_IMAGE) descriptors.
             // A 3D storage image must keep a 3D view (a 2D view of a 3D image is

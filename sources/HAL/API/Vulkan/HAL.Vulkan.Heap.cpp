@@ -113,6 +113,7 @@ namespace HAL
                 ASSERT(r == VK_SUCCESS && "tile heap memory allocation failed");
                 sparse_memory = info.deviceMemory;
                 sparse_offset = info.offset;
+                sparse_memory_type = info.memoryType;
             }
             return { sparse_memory, sparse_offset };
         }

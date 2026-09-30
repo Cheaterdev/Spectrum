@@ -13,6 +13,19 @@ using namespace HAL;
 export
 {
 
+// Indirect mesh draws over DrawMeshCommands (draw_data.hlsl). Vulkan finds each
+// draw's command by DrawIndex through this IndirectDraw binding; on D3D12 the
+// command signature writes the draw id into the same slot per draw, over it.
+// After set_pipeline, which resets the slot to DRAW_ID_NONE.
+inline void exec_draw_mesh_indirect(HAL::GraphicsContext& graphics, HAL::StructuredBufferView<DrawMeshCommand>& commands, UINT max_commands)
+{
+	Slots::Meshes::IndirectDraw draw;
+	draw.GetCommands() = commands.structuredBuffer;
+	draw.GetBase()     = 0;
+	graphics.set(draw);
+	graphics.exec_indirect(commands, max_commands);
+}
+
 class renderer
 {
 
@@ -75,7 +88,7 @@ class mesh_renderer : public renderer, public Events::prop_handler, VariableCont
 
 
 		virtual_gpu_buffer<Table::Meshes::BoxInfo>::ptr commands_boxes;
-		virtual_gpu_buffer<Table::Meshes::CommandData>::ptr commands_buffer[8];
+		virtual_gpu_buffer<DrawMeshCommand>::ptr commands_buffer[8];
 
 
 		// Indirect args written by the producer shaders (InterlockedMax) and

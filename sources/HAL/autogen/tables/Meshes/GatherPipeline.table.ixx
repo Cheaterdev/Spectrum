@@ -11,7 +11,6 @@ import :SIG;
 import :Types;
 import :HLSL;
 import :Enums;
-import :Autogen.Tables.Meshes.CommandData;
 export namespace Table
 {
 	#pragma pack(push, 1)
@@ -21,9 +20,9 @@ export namespace Table
 		{
 			static constexpr SlotID ID = SlotID::GatherPipeline;
 			uint4 pip_ids[2];
-			HLSL::AppendStructuredBuffer<Table::Meshes::CommandData> commands[8];
+			HLSL::AppendStructuredBuffer<DrawMeshCommand> commands[8];
 			uint4* GetPip_ids() { return pip_ids; }
-			HLSL::AppendStructuredBuffer<Table::Meshes::CommandData>* GetCommands() { return commands; }
+			HLSL::AppendStructuredBuffer<DrawMeshCommand>* GetCommands() { return commands; }
 			static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 			template<class Compiler>
 			void compile(Compiler& compiler) const
@@ -34,7 +33,7 @@ export namespace Table
 			struct Compiled
 			{
 				uint4 pip_ids[2]; // uint4
-				uint commands[8]; // AppendStructuredBuffer<CommandData>
+				uint commands[8]; // AppendStructuredBuffer<DrawMeshCommand>
 
 			
 				private:

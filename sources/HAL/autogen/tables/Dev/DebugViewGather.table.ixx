@@ -11,7 +11,6 @@ import :SIG;
 import :Types;
 import :HLSL;
 import :Enums;
-import :Autogen.Tables.Meshes.CommandData;
 export namespace Table
 {
 	#pragma pack(push, 1)
@@ -23,8 +22,8 @@ export namespace Table
 			uint capture_frame;
 			::Dev::DebugViewSource source;
 			HLSL::StructuredBuffer<uint> stamps;
-			HLSL::AppendStructuredBuffer<Table::Meshes::CommandData> commands[4];
-			HLSL::AppendStructuredBuffer<Table::Meshes::CommandData>* GetCommands() { return commands; }
+			HLSL::AppendStructuredBuffer<DrawMeshCommand> commands[4];
+			HLSL::AppendStructuredBuffer<DrawMeshCommand>* GetCommands() { return commands; }
 			HLSL::StructuredBuffer<uint>& GetStamps() { return stamps; }
 			uint& GetCapture_frame() { return capture_frame; }
 			::Dev::DebugViewSource& GetSource() { return source; }
@@ -42,7 +41,7 @@ export namespace Table
 				uint capture_frame; // uint
 				::Dev::DebugViewSource source; // DebugViewSource
 				uint stamps; // StructuredBuffer<uint>
-				uint commands[4]; // AppendStructuredBuffer<CommandData>
+				uint commands[4]; // AppendStructuredBuffer<DrawMeshCommand>
 
 			
 				private:

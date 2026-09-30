@@ -15,16 +15,36 @@
 
 #include "../../common/common.hlsl"
 
-#include "../../autogen/MeshInfo.h"
-#include "../../autogen/SceneData.h"
-#include "../../autogen/MeshInstanceInfo.h"
+#include "../../common/draw_data.hlsl"
 #include "../../autogen/VSMPageBatch.h"
 #include "../../autogen/VSMPageTableData.h"
 #include "../../autogen/VSMPageHiZ.h"
 
-static const MeshInfo meshInfo = GetMeshInfo();
 static const SceneData sceneData = GetSceneData();
-static const MeshInstanceInfo meshInstanceInfo = GetMeshInstanceInfo();
+
+// This draw's tables, set first thing in every entry: the task stage reads the
+// draw id, the mesh stage gets it through the payload (a mesh shader behind a
+// task shader may not read DrawIndex, VUID-VkGraphicsPipelineCreateInfo-pStages-09631).
+static uint draw_id;
+static MeshInfo meshInfo;
+static MeshInstanceInfo meshInstanceInfo;
+void bind_draw(uint id)
+{
+	draw_id          = id;
+	meshInfo         = draw_mesh_info(id);
+	meshInstanceInfo = draw_mesh_instance_info(id);
+}
+
+// The draw's clipmap level is the draw id's high byte (vsm_gather_dispatch.hlsl);
+// its VSMPageBatch comes from the level table VSM_RenderPages binds.
+ConstantBuffer<VSMPageBatch> vsm_page_batch()
+{
+	const uint index = draw_id == DRAW_ID_NONE
+		? pass_VSMPageBatch.offset
+		: GetVSMPageTableData().GetLevels()[draw_id >> 24].GetPage_batch_cb();
+	return ResourceDescriptorHeap[index];
+}
+#define GetVSMPageBatch() vsm_page_batch()
 
 // pages_per_level side/total, matching VSM.cpp / VSMClipmap. No longer
 // bound by the 16-viewport cap (routing is by array slice), but must stay
@@ -64,10 +84,15 @@ struct vsm_prim_attrs
 	// Array slice, not viewport: the atlas is one slice per page, which also
 	// lifts the D3D12 16-viewport-per-draw cap.
 	uint slice : SV_RenderTargetArrayIndex;
+#ifdef __spirv__
+	// Vulkan pixel shaders have no DrawIndex (PS_VSM_DEPTH's DRAW_ID_INPUT).
+	uint draw_id : DRAW_ID;
+#endif
 };
 
 struct Payload
 {
+	uint draw_id;
 	uint PackedPairIndices[32];
 };
 
@@ -207,6 +232,8 @@ groupshared Payload s_Payload;
 [NumThreads(32, 1, 1)]
 void AS(uint gtid : SV_GroupThreadID, uint dtid : SV_DispatchThreadID)
 {
+	bind_draw(read_draw_id());
+	s_Payload.draw_id = draw_id;
 	uint totalPairs = meshInfo.GetMeshlet_count() * VSM_PAGES_PER_LEVEL;
 	bool valid = dtid < totalPairs;
 	uint safePair = valid ? dtid : 0;
@@ -259,6 +286,7 @@ void VS(
 	out primitives vsm_prim_attrs prims[124]
 )
 {
+	bind_draw(payload.draw_id);
 	uint pairIndex = payload.PackedPairIndices[gid];
 	uint meshletIndex = pairIndex / VSM_PAGES_PER_LEVEL;
 	uint pageLocal = pairIndex % VSM_PAGES_PER_LEVEL;
@@ -281,6 +309,9 @@ void VS(
 			meshInstanceInfo.GetPrimitive_indices()[index_offset + 1],
 			meshInstanceInfo.GetPrimitive_indices()[index_offset + 2]);
 		prims[gtid].slice = slot;
+#ifdef __spirv__
+		prims[gtid].draw_id = draw_id;
+#endif
 	}
 
 	if (gtid < m.GetVertexCount())

@@ -45,6 +45,8 @@ export namespace HAL
             std::string temp_name;
             uint32_t    temp_op = 0;
             void temp_mark(const char* op);
+            bool temp_dumping() const;
+            void temp_dump(const std::string& line);
 
             // Dynamic rendering state — populated by set_rtv(), consumed by draw calls.
             static constexpr uint32_t MAX_COLOR_ATTACHMENTS = 8;   // D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT
@@ -59,6 +61,7 @@ export namespace HAL
             // Last bound graphics pipeline — re-bound before each draw because the
             // recorder may split set_pipeline and the draw across command buffers.
             VkPipeline       current_graphics_pipeline = VK_NULL_HANDLE;
+            VkPipeline       current_compute_pipeline  = VK_NULL_HANDLE;
             // Mesh pipelines have no primitive-topology dynamic state, so the
             // per-draw topology re-apply must be skipped for them.
             bool             current_is_mesh = false;
@@ -131,6 +134,10 @@ export namespace HAL
             void global_barrier();
             void clear_uav(const Handles::UAV& h, vec4 ClearColor);
             void clear_uav_uint(const Handles::UAV& h, uint4 ClearColor);
+        private:
+            void clear_storage_image(VkImage img, const Views::UnorderedAccess& uav, const VkClearColorValue& cv);
+            void clear_storage_buffer(const API::Resource& res, const Views::UnorderedAccess& uav, uint4 bits);
+        public:
             void clear_rtv(const Handles::RTV& h, vec4 ClearColor);
             void clear_stencil(const Handles::DSV& dsv, UINT8 stencil);
             void clear_depth(const Handles::DSV& dsv, float depth);

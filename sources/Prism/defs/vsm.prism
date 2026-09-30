@@ -93,6 +93,9 @@ namespace Shadows
 
 		struct VSMSelectors
 		{
+			# Set by VSM::update_frame when the device has sparse depth textures
+			# (the atlas); every VSM pass is gated on it. AMD has none.
+			bool supported = false;
 			bool use_vsm_penumbra = true;
 			bool use_vsm_contact_shadow = true;
 			VSMDebugView vsm_debug_view = None;
@@ -220,6 +223,11 @@ namespace Shadows
 		{
 			Texture2DArray<uint> page_table;
 			StructuredBuffer<Camera> page_cameras;
+			# VSM_RenderPages' draws: the level half of a DrawMeshCommand's draw_id
+			# indexes this for the level's VSMPageBatch. [Auto]: the resolve and
+			# Hi-Z passes bind this table but draw nothing.
+			[Auto = Texture_Null]
+			StructuredBuffer<VSMLevelDispatchInfo> levels;
 		}
 
 		# Phase 3: per-physical-atlas-slot Hi-Z pyramid, one array slice per slot
@@ -524,6 +532,14 @@ namespace Shadows
 			compute = "shadows/vsm/vsm.hlsl";
 		}
 
+		ComputePSO VSMUnshadowed
+		{
+			root = DefaultLayout;
+
+			[EntryPoint = CS_UNSHADOWED]
+			compute = "shadows/vsm/vsm.hlsl";
+		}
+
 		# Blocker-search extraction: INDIRECT dispatch (Phase 5.18 Part A follow-up:
 		# groupshared tile classification) over only search_tiles -- the tiles
 		# VSM_BlockerClassify actually bucketed as needing real work. Runs the wide,
@@ -659,6 +675,7 @@ namespace Shadows
 		# all (earlier version culled inside the MS, which still launched every
 		# group and wrote degenerate triangles for culled ones). Mesh shader routes
 		# each output primitive to a viewport via SV_ViewportArrayIndex.
+		[Requires = TiledDepth]
 		GraphicsPSO VSMDepthDraw
 		{
 			root = DefaultLayout;
@@ -707,6 +724,7 @@ namespace Shadows
 		# a sample, at the cost of a wider/blockier recorded silhouette. Only the
 		# opaque path for now; VSMDepthDrawMaterial's per-material alpha-cutout PSOs
 		# are unaffected.
+		[Requires = TiledDepth]
 		GraphicsPSO VSMDepthDrawConservative
 		{
 			root = DefaultLayout;
@@ -743,6 +761,7 @@ namespace Shadows
 		# is actually driven (see PipelinePasses' constructor) -- opaque materials
 		# never get one of these at all, keeping VSMDepthDraw the common case.
 		[Base]
+		[Requires = TiledDepth]
 		GraphicsPSO VSMDepthDrawMaterial
 		{
 			root = DefaultLayout;
@@ -757,50 +776,16 @@ namespace Shadows
 			cull = Front;
 		}
 
-		# Phase 5.8: per-(level,mesh) indirect draw entry, replacing the CPU
-		# "for level { for mesh { dispatch_mesh() } }" loop with one exec_indirect
-		# call. Shaped exactly like meshrender.prism's CommandData (pointer fields to
-		# Bind-tagged CBV structs + a DispatchMeshArguments) -- page_batch_cb takes
-		# VSMPageBatch's place of CommandData's MaterialInfo*, carrying this entry's
-		# level/dirty_mask/skip_occlusion instead of per-level root-constant binds.
-		# No [shader_only] (unlike Dispatch*Arguments) -- CommandData is the
-		# precedent: this needs a C++-side Table:: struct too, since entries are
-		# built CPU-side in plan_frame(), not GPU-populated like CommandData is.
-		#
-		# Field order matters: D3D12 requires a command signature's root-parameter
-		# updates to be in strictly increasing {RootParameterIndex, offset} order.
-		# VSMPageBatch is DefaultLayout::Instance0, MeshInfo is Instance1,
-		# MeshInstanceInfo is Instance2, MaterialInfo is DefaultLayout::MaterialData
-		# (declared AFTER Instance0-5/Raytracing in defaultlayout.prism, so its root
-		# index is higher than all three Instance ones) -- material_cb must come
-		# last of the pointer fields, matching meshrender.prism's CommandData's own
-		# order, or CreateCommandSignature fails with "Root parameter {slots,
-		# offset} must be increasing" (confirmed the hard way, twice now).
-		#
-		# Phase 5.19: material_cb is populated for EVERY entry, not just alpha-
-		# cutout ones -- vsm_gather_dispatch.hlsl's CS (default/opaque list) sets it
-		# too, even though VSMDepthDraw's shader (pixel=null) never reads it, since
-		# both the default and material-bucketed lists share this one struct/one
-		# command signature. Harmless for the opaque case; required for
-		# VSMDepthDrawMaterial's real pixel shader (UniversalMaterial.hlsl's PS),
-		# which needs MaterialInfo bound to sample its textures at all -- its
-		# absence here (before this fix) surfaced as "Possible null slot
-		# MaterialInfo" followed by a null-PSO crash.
-		[IndirectCommand]
-		struct VSMDispatchCommandData
-		{
-			VSMPageBatch* page_batch_cb;
-			MeshInfo* mesh_cb;
-			MeshInstanceInfo* meshinstance_cb;
-			MaterialInfo* material_cb;
-			DispatchMeshArguments draw_commands;
-		}
+		# Per-(level,mesh) indirect draws are meshrender.prism's DrawMeshCommand:
+		# draw_id = mesh id | level << 24. The mesh shader resolves the level's
+		# VSMPageBatch through VSMPageTableData.levels, and mesh/material through
+		# SceneData, like every other indirect mesh draw (draw_data.hlsl).
 
 		# Phase 5.12: one entry per active+dirty LEVEL this frame (bounded by level
 		# count, not mesh count -- plan_frame() already decided this list, same as
 		# the VSMPageBatch CBs it already compiles per level). VSM_GatherDispatch
 		# tests every scene mesh's AABB against every entry's bounds and appends a
-		# VSMDispatchCommandData for each overlap, replacing VSM.cpp's old CPU
+		# DrawMeshCommand for each overlap, replacing VSM.cpp's old CPU
 		# "for level { for mesh { ... } }" loop.
 		struct VSMLevelDispatchInfo
 		{
@@ -819,7 +804,7 @@ namespace Shadows
 			# to compare against each level's bounds_min/bounds_max, computed in the
 			# same space CPU-side.
 			float4x4 light_view;
-			AppendStructuredBuffer<VSMDispatchCommandData> dispatch_commands;
+			AppendStructuredBuffer<DrawMeshCommand> dispatch_commands;
 		}
 
 		ComputePSO VSMGatherDispatch
@@ -836,8 +821,7 @@ namespace Shadows
 		# routes matching entries into one of up to 8 per-material-pipeline bucket
 		# lists instead of the single default list -- mirrors meshrender.prism's
 		# GatherPipeline (pip_ids[2]/commands[8]) and gather_pipeline.hlsl's
-		# get_index exactly, just producing VSMDispatchCommandData instead of
-		# CommandData. VSM.cpp runs this once per batch of <=8 distinct transparent
+		# get_index exactly, with a level in the draw id's high byte. VSM.cpp runs this once per batch of <=8 distinct transparent
 		# material pipelines actually present in the scene (same batching loop
 		# shape as MeshRenderer::render_meshes), reusing 8 fixed VSM-owned bucket
 		# buffers across batches -- see VSM.cpp's own comment at the call site.
@@ -853,7 +837,7 @@ namespace Shadows
 			# set to 0xFFFFFFFF (never a real pipeline id) so it can't spuriously
 			# match.
 			uint4 material_pip_ids[2];
-			AppendStructuredBuffer<VSMDispatchCommandData> material_commands[8];
+			AppendStructuredBuffer<DrawMeshCommand> material_commands[8];
 		}
 
 		ComputePSO VSMGatherDispatchMaterial
@@ -873,6 +857,7 @@ namespace Shadows
 		# is owned or created by VSM.
 		[Compute]
 		[RunAlways]
+		[SetupCondition = VSMSelectors::supported]
 		PassNode VSM_GatherDispatch
 		{
 			[Always = CopyDest | Static] [Size = 26] StructuredBuffer<VSMLevelDispatchInfo> VSM_LevelDispatchInfo;
@@ -889,13 +874,14 @@ namespace Shadows
 			# GPU-computed count both read the real counter an AppendStructuredBuffer
 			# needs.
 			[Always = UnorderedAccess | Static] [Size = Constants::MaxDispatchEntries] [Counted]
-			StructuredBuffer<VSMDispatchCommandData> VSM_DispatchCommands;
+			StructuredBuffer<DrawMeshCommand> VSM_DispatchCommands;
 		}
 
 		# Single pass, not [Multiple=N]: VSM_GatherDispatch already decided exactly
 		# which (level,mesh) pairs need drawing and appended them; this pass just
 		# issues one exec_indirect() call over the resulting (GPU-counted) list.
 		[RunAlways]
+		[SetupCondition = VSMSelectors::supported]
 		PassNode VSM_RenderPages
 		{
 			[Always = DepthStencil] Texture VSM_Atlas;
@@ -919,7 +905,7 @@ namespace Shadows
 			# page), MipCount=VSM_PyramidMipCount (full chain down to 1x1).
 			[Always = UnorderedAccess | Static] [Size = Constants::VSM_PageSize] [Format = R32G32_FLOAT] [ArrayCount = Constants::VSM_PhysicalPageCount] [MipCount = Constants::VSM_PyramidMipCount]
 			Texture VSM_PageHiZ;
-			[Always = Read] StructuredBuffer<VSMDispatchCommandData> VSM_DispatchCommands;
+			[Always = Read] StructuredBuffer<DrawMeshCommand> VSM_DispatchCommands;
 			# Phase 5.19: read here too (not just by VSM_GatherDispatch that wrote
 			# it) -- this pass's render() also dispatches VSMGatherDispatchMaterial
 			# (CS_MATERIAL) per batch of transparent-material pipelines, immediately
@@ -945,6 +931,7 @@ namespace Shadows
 		# draw).
 		[Compute]
 		[RunAlways]
+		[SetupCondition = VSMSelectors::supported]
 		PassNode VSM_HiZRebuild
 		{
 			[Always = Read] Texture VSM_Atlas;
@@ -974,7 +961,7 @@ namespace Shadows
 		# across a PassNode boundary, confirmed live earlier this session), just via
 		# a copy instead of a dispatch now.
 		[Compute]
-		[SetupCondition = VSMSelectors::use_vsm_penumbra]
+		[SetupCondition = VSMSelectors::supported && VSMSelectors::use_vsm_penumbra]
 		PassNode VSM_BlockerClassify
 		{
 			# Flat fields, not the (removed) GBuffer PassView -- see pssm.prism's own
@@ -1015,7 +1002,7 @@ namespace Shadows
 		# before stage 1 in test.prism's listing -- the pyramid both stage 1 and
 		# stage 2 read must be this frame's freshly-rebuilt one, not last frame's.
 		[Compute]
-		[SetupCondition = VSMSelectors::use_vsm_penumbra]
+		[SetupCondition = VSMSelectors::supported && VSMSelectors::use_vsm_penumbra]
 		PassNode VSM_BlockerSearch
 		{
 			# Flat fields, not the (removed) GBuffer PassView -- see pssm.prism's own
@@ -1111,7 +1098,7 @@ namespace Shadows
 		}
 
 		[Compute]
-		[SetupCondition = VSMSelectors::use_vsm_penumbra && VSMSelectors::use_vsm_contact_shadow]
+		[SetupCondition = VSMSelectors::supported && VSMSelectors::use_vsm_penumbra && VSMSelectors::use_vsm_contact_shadow]
 		PassNode VSM_ScreenSpaceShadow
 		{
 			# Flat fields, not the (removed) GBuffer PassView -- see pssm.prism's own
@@ -1153,7 +1140,7 @@ namespace Shadows
 		# NRD_ShadowCombine own ResultTexture's shadow term instead, and this
 		# PassNode is gated off entirely.
 		[Compute]
-		[SetupCondition = VSMSelectors::use_vsm_penumbra && VSMSelectors::shadow_source == ShadowSource::VSM]
+		[SetupCondition = VSMSelectors::supported && VSMSelectors::use_vsm_penumbra && VSMSelectors::shadow_source == ShadowSource::VSM]
 		PassNode VSM_ShadowResolve
 		{
 			# Flat fields, not the (removed) GBuffer PassView -- see pssm.prism's own
@@ -1211,7 +1198,7 @@ namespace Shadows
 		# The PCSS path's fallback: VSM_ShadowResolve replaces this whenever penumbra
 		# is on, so the two are exact complements. Also gated off by shadow_source,
 		# same as VSM_ShadowResolve above.
-		[SetupCondition = !VSMSelectors::use_vsm_penumbra && VSMSelectors::shadow_source == ShadowSource::VSM]
+		[SetupCondition = VSMSelectors::supported && !VSMSelectors::use_vsm_penumbra && VSMSelectors::shadow_source == ShadowSource::VSM]
 		PassNode VSM_Combine
 		{
 			# Flat fields, not the (removed) GBuffer PassView -- see pssm.prism's own
@@ -1234,6 +1221,20 @@ namespace Shadows
 			# read (see the struct's own comment).
 			[Always = Read] [Optional = VSMSelectors::vsm_debug_view == VSMDebugView::RtxReference && exists(ShadowMask)]
 			Texture ShadowMask;
+			[Always = UnorderedAccess] Texture ResultTexture;
+		}
+
+		# Without sparse depth textures VSM does not run, and nothing else writes
+		# the direct lighting into ResultTexture: this does, unshadowed.
+		[Compute]
+		[SetupCondition = !VSMSelectors::supported]
+		PassNode VSM_Unshadowed
+		{
+			[Always = Read] Texture GBuffer_Albedo;
+			[Always = Read] Texture GBuffer_Normals;
+			[Always = Read] Texture GBuffer_Specular;
+			[Always = Read] Texture GBuffer_Speed;
+			[Always = None] Texture GBuffer_DepthMips;
 			[Always = UnorderedAccess] Texture ResultTexture;
 		}
 
@@ -1268,7 +1269,7 @@ namespace Shadows
 			# in this PassNode) -- see VSM_DebugTileOverlay.hlsl's own CS_OVERLAY_PAGE_
 			# GRID/CS_OVERLAY_RTX_REFERENCE.
 			[Compute]
-			[SetupCondition = VSMSelectors::use_vsm_penumbra && VSMSelectors::vsm_debug_view != VSMDebugView::None]
+			[SetupCondition = VSMSelectors::supported && VSMSelectors::use_vsm_penumbra && VSMSelectors::vsm_debug_view != VSMDebugView::None]
 			PassNode VSM_DebugClassifyOverlay
 			{
 				# Flat fields, not the (removed) GBuffer PassView -- see pssm.prism's own
@@ -1339,6 +1340,7 @@ namespace Shadows
 		[Compute]
 		[Required]
 		[RunAlways]
+		[SetupCondition = VSMSelectors::supported]
 		PassNode VSM_DepthAnalysis
 		{
 			# Flat fields, not the (removed) GBuffer PassView -- see pssm.prism's own

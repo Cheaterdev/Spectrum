@@ -132,6 +132,18 @@ namespace HAL
         tracked_info.reset(new API::TrackedPipeline());
         name = desc.name;
 
+        // The slots every stage reads (SPIR-V reflection, HAL.Vulkan.
+        // ShaderReflection.cpp). commit_tables records resource usage -- and so
+        // the barrier compiler emits barriers -- only for these.
+        slots.clear();
+        if (desc.vertex)       slots.merge(desc.vertex->slots_usage);
+        if (desc.pixel)         slots.merge(desc.pixel->slots_usage);
+        if (desc.geometry)      slots.merge(desc.geometry->slots_usage);
+        if (desc.hull)          slots.merge(desc.hull->slots_usage);
+        if (desc.domain)        slots.merge(desc.domain->slots_usage);
+        if (desc.amplification) slots.merge(desc.amplification->slots_usage);
+        if (desc.mesh)          slots.merge(desc.mesh->slots_usage);
+
         // root_signature is set before on_change() is called (see HAL.PipelineState.cpp).
         if (!root_signature) return;
 
@@ -204,9 +216,23 @@ namespace HAL
         raster.frontFace   = VK_FRONT_FACE_CLOCKWISE;
         raster.lineWidth   = 1.0f;
 
-        // Conservative rasterization (Phase 5: check extension availability)
-        // raster.conservativeRasterizationMode = desc.rasterizer.conservative ?
-        //     VK_CONSERVATIVE_RASTERIZATION_MODE_OVERESTIMATE_EXT : VK_CONSERVATIVE_RASTERIZATION_MODE_DISABLED_EXT;
+        // D3D12 DepthBias / DepthBiasClamp / SlopeScaledDepthBias.
+        raster.depthBiasEnable         = (desc.rasterizer.depth_bias != 0 || desc.rasterizer.slope_scaled_depth_bias != 0.0f) ? VK_TRUE : VK_FALSE;
+        raster.depthBiasConstantFactor = float(desc.rasterizer.depth_bias);
+        raster.depthBiasClamp          = desc.rasterizer.depth_bias_clamp;
+        raster.depthBiasSlopeFactor    = desc.rasterizer.slope_scaled_depth_bias;
+
+        VkPipelineRasterizationConservativeStateCreateInfoEXT conservative{
+            VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_CONSERVATIVE_STATE_CREATE_INFO_EXT };
+        if (desc.rasterizer.conservative)
+        {
+            ASSERT(api_dev.supports_conservative_raster() && "conservative PSO on a device without VK_EXT_conservative_rasterization");
+            if (api_dev.supports_conservative_raster())
+            {
+                conservative.conservativeRasterizationMode = VK_CONSERVATIVE_RASTERIZATION_MODE_OVERESTIMATE_EXT;
+                raster.pNext = &conservative;
+            }
+        }
 
         // ---- Multisample (1× for now) ---------------------------------------
         VkPipelineMultisampleStateCreateInfo ms{
@@ -299,10 +325,12 @@ namespace HAL
             VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR };
         rendering_ci.colorAttachmentCount    = static_cast<uint32_t>(color_formats.size());
         rendering_ci.pColorAttachmentFormats = color_formats.data();
-        rendering_ci.depthAttachmentFormat   = desc.rtv.enable_depth
-            ? to_native(desc.rtv.ds_format) : VK_FORMAT_UNDEFINED;
-        rendering_ci.stencilAttachmentFormat = (desc.rtv.enable_stencil && desc.rtv.enable_depth)
-            ? to_native(desc.rtv.ds_format) : VK_FORMAT_UNDEFINED;
+        // Like D3D12's DSVFormat: the bound depth buffer's format whether or not
+        // this PSO tests against it -- a depth attachment bound with test off must
+        // still match the pipeline's format.
+        const VkFormat ds_native = desc.rtv.ds_format != Format::UNKNOWN ? to_native(desc.rtv.ds_format) : VK_FORMAT_UNDEFINED;
+        rendering_ci.depthAttachmentFormat   = ds_native;
+        rendering_ci.stencilAttachmentFormat = (desc.rtv.enable_stencil && desc.rtv.enable_depth) ? ds_native : VK_FORMAT_UNDEFINED;
 
         // ---- Tessellation state (required when hull/domain shaders are present) ---
         VkPipelineTessellationStateCreateInfo tess_ci{
@@ -354,6 +382,10 @@ namespace HAL
     {
         tracked_info.reset(new API::TrackedPipeline());
         name = desc.name;
+
+        slots.clear();
+        if (desc.shader)
+            slots.merge(desc.shader->slots_usage);
 
         if (!root_signature || !desc.shader) return;
 

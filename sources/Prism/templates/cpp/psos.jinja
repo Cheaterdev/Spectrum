@@ -17,19 +17,6 @@ void init_signatures(HAL::Device& device, enum_array<Layouts, HAL::RootLayout::p
 {% endfor -%}
 }
 
-void init_indirect_commands(HAL::Device& device, enum_array<IndirectCommands, HAL::IndirectCommand>& commands)
-{
-{% for v in parsed.tables -%}
-{%- set t =  parsed.tables[v] -%}
-{%- if t.options.IndirectCommand is defined -%}
-{% if t.options.shader_only is defined -%}
-	commands[IndirectCommands::{{t.name}}] = AutoGenIndirectCommand<{{t.name}}>(device).create_command();
-{%else-%}
-	commands[IndirectCommands::{{t.name}}] = AutoGenIndirectCommand<Table::{{t.qn}}>(device).create_command();	
-{%endif-%}
-{%endif-%}
-{%endfor -%}
-}
 
 // [Template]-tagged PSOs are skipped here entirely -- they're never built
 // with their .prism default file/entry point (some caller always drives

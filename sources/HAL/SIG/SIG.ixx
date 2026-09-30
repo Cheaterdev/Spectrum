@@ -23,6 +23,18 @@ export
 
 	using GPUAddress = uint64_t;
 
+	// The only indirect command layouts: plain hardware arguments, plus
+	// DrawMeshCommand. Commands carry no slots -- per-draw data is fetched by
+	// draw id (see DrawMeshCommand), which is what Vulkan can express.
+	enum class IndirectCommands : int
+	{
+		DrawIndexedArguments,
+		DispatchMeshArguments,
+		DispatchArguments,
+		DispatchRaysArguments,
+		DrawMeshCommand
+	};
+
 	template<class T>
 	class Pointer
 	{
@@ -190,6 +202,32 @@ export
 			ar& NVP(Depth);
 		}
 	};
+
+	// One indirect mesh draw (meshrender.prism's DrawMeshCommand). draw_id is
+	// consumed by the D3D12 command signature as the IndirectDraw slot's root
+	// constant; Vulkan skips it and passes the draw's index as DrawIndex, which
+	// the shader resolves back to this entry.
+	class DrawMeshCommand
+	{
+	public:
+		UINT draw_id;
+		DispatchMeshArguments args;
+
+		using Compiled = DrawMeshCommand;
+		static const IndirectCommands CommandID = IndirectCommands::DrawMeshCommand;
+
+	private:
+		SERIALIZE()
+		{
+			ar& NVP(draw_id);
+			ar& NVP(args);
+		}
+	};
+	static_assert(sizeof(DrawMeshCommand) == 16);
+
+	// IndirectDraw slot value for a direct draw: the shader reads its per-draw
+	// slots instead. Must match draw_data.hlsl.
+	constexpr UINT DRAW_ID_NONE = 0xFFFFFFFF;
 
 	using DefaultCB = HAL::Buffer*;// std::vector<std::byte>;
 	using DynamicData = std::vector<std::byte>;// std::vector<std::byte>;

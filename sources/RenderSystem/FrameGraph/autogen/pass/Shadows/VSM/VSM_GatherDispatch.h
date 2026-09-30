@@ -24,7 +24,8 @@ namespace Shadows
 
 				Handlers::StructuredBuffer<Table::Shadows::VSM::VSMLevelDispatchInfo> VSM_LevelDispatchInfo = ResourceID::VSM_LevelDispatchInfo;
 
-				Handlers::StructuredBuffer<Table::Shadows::VSM::VSMDispatchCommandData> VSM_DispatchCommands = ResourceID::VSM_DispatchCommands;
+
+				Handlers::StructuredBuffer<DrawMeshCommand> VSM_DispatchCommands = ResourceID::VSM_DispatchCommands;
 
 
 				// Resources this pass always creates with a fixed desc, generated from

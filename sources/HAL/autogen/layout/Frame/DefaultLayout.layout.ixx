@@ -55,7 +55,7 @@ namespace Frame
 			static const uint ID = 7;
 			static const uint CB = 5;
 			static const uint CB_ID = 23;
-			static const uint SRV = 2;
+			static const uint SRV = 3;
 			static const uint SRV_ID = 25;
 			static const uint UAV = 3;
 			static const uint UAV_ID = 26;
@@ -134,9 +134,19 @@ namespace Frame
 			static inline const std::vector<uint> tables = { 46, 48 };
 		};
 
+		struct DrawId
+		{
+			static const uint ID = 15;
+			static const uint CB = 2;
+			static const uint CB_ID = 49;
+			static const uint SRV = 1;
+			static const uint SRV_ID = 51;
+			static inline const std::vector<uint> tables = { 49, 51 };
+		};
+
 		template<class Processor> static void for_each(Processor& processor)
 		{
-			processor.template process<CameraData, SceneData, PassData, DebugInfo, Instance0, Instance1, Instance2, Instance3, Instance4, Instance5, Raytracing, MaterialData, WorkGR_ClassifyPixels_NodeEmulation, WorkGR_Shadows_NodeEmulation, VSMShadow>({ HAL::Samplers::SamplerLinearWrapDesc, HAL::Samplers::SamplerPointClampDesc, HAL::Samplers::SamplerLinearClampDesc, HAL::Samplers::SamplerAnisoBorderDesc, HAL::Samplers::SamplerPointBorderDesc, HAL::Samplers::SamplerShadowComparisonDesc, HAL::Samplers::SamplerLinearBorderBlackDesc });
+			processor.template process<CameraData, SceneData, PassData, DebugInfo, Instance0, Instance1, Instance2, Instance3, Instance4, Instance5, Raytracing, MaterialData, WorkGR_ClassifyPixels_NodeEmulation, WorkGR_Shadows_NodeEmulation, VSMShadow, DrawId>({ HAL::Samplers::SamplerLinearWrapDesc, HAL::Samplers::SamplerPointClampDesc, HAL::Samplers::SamplerLinearClampDesc, HAL::Samplers::SamplerAnisoBorderDesc, HAL::Samplers::SamplerPointBorderDesc, HAL::Samplers::SamplerShadowComparisonDesc, HAL::Samplers::SamplerLinearBorderBlackDesc });
 		}
 	};
 }

@@ -95,6 +95,8 @@ FrameGraph::SetupResult PassSetupDefault<Passes::Utility::BlueNoise>::setup(
 FrameGraph::SetupResult PassSetupDefault<Passes::GI::DDGI::DDGIProbeSelect>::setup(
 	Passes::GI::DDGI::DDGIProbeSelect::Context& data, FrameGraph::TaskBuilder& builder)
 {
+	if (!(builder.graph->get_context<Table::GI::DDGI::DDGISelectors>().enabled))
+		return FrameGraph::SetupResult::Disabled;
 	return FrameGraph::SetupResult::NeedsRender;
 }
 
@@ -527,6 +529,8 @@ FrameGraph::SetupResult PassSetupDefault<Passes::Reflections::ScreenReflection>:
 FrameGraph::SetupResult PassSetupDefault<Passes::Shadows::VSM::VSM_GatherDispatch>::setup(
 	Passes::Shadows::VSM::VSM_GatherDispatch::Context& data, FrameGraph::TaskBuilder& builder)
 {
+	if (!(builder.graph->get_context<Table::Shadows::VSM::VSMSelectors>().supported))
+		return FrameGraph::SetupResult::Disabled;
 	return FrameGraph::SetupResult::NeedsRender;
 }
 
@@ -534,6 +538,8 @@ FrameGraph::SetupResult PassSetupDefault<Passes::Shadows::VSM::VSM_GatherDispatc
 FrameGraph::SetupResult PassSetupDefault<Passes::Shadows::VSM::VSM_RenderPages>::setup(
 	Passes::Shadows::VSM::VSM_RenderPages::Context& data, FrameGraph::TaskBuilder& builder)
 {
+	if (!(builder.graph->get_context<Table::Shadows::VSM::VSMSelectors>().supported))
+		return FrameGraph::SetupResult::Disabled;
 	return FrameGraph::SetupResult::NeedsRender;
 }
 
@@ -541,6 +547,8 @@ FrameGraph::SetupResult PassSetupDefault<Passes::Shadows::VSM::VSM_RenderPages>:
 FrameGraph::SetupResult PassSetupDefault<Passes::Shadows::VSM::VSM_HiZRebuild>::setup(
 	Passes::Shadows::VSM::VSM_HiZRebuild::Context& data, FrameGraph::TaskBuilder& builder)
 {
+	if (!(builder.graph->get_context<Table::Shadows::VSM::VSMSelectors>().supported))
+		return FrameGraph::SetupResult::Disabled;
 	return FrameGraph::SetupResult::NeedsRender;
 }
 
@@ -548,7 +556,7 @@ FrameGraph::SetupResult PassSetupDefault<Passes::Shadows::VSM::VSM_HiZRebuild>::
 FrameGraph::SetupResult PassSetupDefault<Passes::Shadows::VSM::VSM_BlockerClassify>::setup(
 	Passes::Shadows::VSM::VSM_BlockerClassify::Context& data, FrameGraph::TaskBuilder& builder)
 {
-	if (!(builder.graph->get_context<Table::Shadows::VSM::VSMSelectors>().use_vsm_penumbra))
+	if (!(builder.graph->get_context<Table::Shadows::VSM::VSMSelectors>().supported && builder.graph->get_context<Table::Shadows::VSM::VSMSelectors>().use_vsm_penumbra))
 		return FrameGraph::SetupResult::Disabled;
 	return FrameGraph::SetupResult::NeedsRender;
 }
@@ -557,7 +565,7 @@ FrameGraph::SetupResult PassSetupDefault<Passes::Shadows::VSM::VSM_BlockerClassi
 FrameGraph::SetupResult PassSetupDefault<Passes::Shadows::VSM::VSM_BlockerSearch>::setup(
 	Passes::Shadows::VSM::VSM_BlockerSearch::Context& data, FrameGraph::TaskBuilder& builder)
 {
-	if (!(builder.graph->get_context<Table::Shadows::VSM::VSMSelectors>().use_vsm_penumbra))
+	if (!(builder.graph->get_context<Table::Shadows::VSM::VSMSelectors>().supported && builder.graph->get_context<Table::Shadows::VSM::VSMSelectors>().use_vsm_penumbra))
 		return FrameGraph::SetupResult::Disabled;
 	return FrameGraph::SetupResult::NeedsRender;
 }
@@ -566,7 +574,7 @@ FrameGraph::SetupResult PassSetupDefault<Passes::Shadows::VSM::VSM_BlockerSearch
 FrameGraph::SetupResult PassSetupDefault<Passes::Shadows::VSM::VSM_ScreenSpaceShadow>::setup(
 	Passes::Shadows::VSM::VSM_ScreenSpaceShadow::Context& data, FrameGraph::TaskBuilder& builder)
 {
-	if (!(builder.graph->get_context<Table::Shadows::VSM::VSMSelectors>().use_vsm_penumbra && builder.graph->get_context<Table::Shadows::VSM::VSMSelectors>().use_vsm_contact_shadow))
+	if (!(builder.graph->get_context<Table::Shadows::VSM::VSMSelectors>().supported && builder.graph->get_context<Table::Shadows::VSM::VSMSelectors>().use_vsm_penumbra && builder.graph->get_context<Table::Shadows::VSM::VSMSelectors>().use_vsm_contact_shadow))
 		return FrameGraph::SetupResult::Disabled;
 	return FrameGraph::SetupResult::NeedsRender;
 }
@@ -575,7 +583,7 @@ FrameGraph::SetupResult PassSetupDefault<Passes::Shadows::VSM::VSM_ScreenSpaceSh
 FrameGraph::SetupResult PassSetupDefault<Passes::Shadows::VSM::VSM_ShadowResolve>::setup(
 	Passes::Shadows::VSM::VSM_ShadowResolve::Context& data, FrameGraph::TaskBuilder& builder)
 {
-	if (!(builder.graph->get_context<Table::Shadows::VSM::VSMSelectors>().use_vsm_penumbra && builder.graph->get_context<Table::Shadows::VSM::VSMSelectors>().shadow_source == ::Shadows::VSM::ShadowSource::VSM))
+	if (!(builder.graph->get_context<Table::Shadows::VSM::VSMSelectors>().supported && builder.graph->get_context<Table::Shadows::VSM::VSMSelectors>().use_vsm_penumbra && builder.graph->get_context<Table::Shadows::VSM::VSMSelectors>().shadow_source == ::Shadows::VSM::ShadowSource::VSM))
 		return FrameGraph::SetupResult::Disabled;
 	return FrameGraph::SetupResult::NeedsRender;
 }
@@ -584,7 +592,16 @@ FrameGraph::SetupResult PassSetupDefault<Passes::Shadows::VSM::VSM_ShadowResolve
 FrameGraph::SetupResult PassSetupDefault<Passes::Shadows::VSM::VSM_Combine>::setup(
 	Passes::Shadows::VSM::VSM_Combine::Context& data, FrameGraph::TaskBuilder& builder)
 {
-	if (!(!builder.graph->get_context<Table::Shadows::VSM::VSMSelectors>().use_vsm_penumbra && builder.graph->get_context<Table::Shadows::VSM::VSMSelectors>().shadow_source == ::Shadows::VSM::ShadowSource::VSM))
+	if (!(builder.graph->get_context<Table::Shadows::VSM::VSMSelectors>().supported && !builder.graph->get_context<Table::Shadows::VSM::VSMSelectors>().use_vsm_penumbra && builder.graph->get_context<Table::Shadows::VSM::VSMSelectors>().shadow_source == ::Shadows::VSM::ShadowSource::VSM))
+		return FrameGraph::SetupResult::Disabled;
+	return FrameGraph::SetupResult::NeedsRender;
+}
+
+
+FrameGraph::SetupResult PassSetupDefault<Passes::Shadows::VSM::VSM_Unshadowed>::setup(
+	Passes::Shadows::VSM::VSM_Unshadowed::Context& data, FrameGraph::TaskBuilder& builder)
+{
+	if (!(!builder.graph->get_context<Table::Shadows::VSM::VSMSelectors>().supported))
 		return FrameGraph::SetupResult::Disabled;
 	return FrameGraph::SetupResult::NeedsRender;
 }
@@ -593,7 +610,7 @@ FrameGraph::SetupResult PassSetupDefault<Passes::Shadows::VSM::VSM_Combine>::set
 FrameGraph::SetupResult PassSetupDefault<Passes::Shadows::VSM::Dev::VSM_DebugClassifyOverlay>::setup(
 	Passes::Shadows::VSM::Dev::VSM_DebugClassifyOverlay::Context& data, FrameGraph::TaskBuilder& builder)
 {
-	if (!(builder.graph->get_context<Table::Shadows::VSM::VSMSelectors>().use_vsm_penumbra && builder.graph->get_context<Table::Shadows::VSM::VSMSelectors>().vsm_debug_view != ::Shadows::VSM::VSMDebugView::None))
+	if (!(builder.graph->get_context<Table::Shadows::VSM::VSMSelectors>().supported && builder.graph->get_context<Table::Shadows::VSM::VSMSelectors>().use_vsm_penumbra && builder.graph->get_context<Table::Shadows::VSM::VSMSelectors>().vsm_debug_view != ::Shadows::VSM::VSMDebugView::None))
 		return FrameGraph::SetupResult::Disabled;
 	return FrameGraph::SetupResult::NeedsRender;
 }
@@ -602,6 +619,8 @@ FrameGraph::SetupResult PassSetupDefault<Passes::Shadows::VSM::Dev::VSM_DebugCla
 FrameGraph::SetupResult PassSetupDefault<Passes::Shadows::VSM::VSM_DepthAnalysis>::setup(
 	Passes::Shadows::VSM::VSM_DepthAnalysis::Context& data, FrameGraph::TaskBuilder& builder)
 {
+	if (!(builder.graph->get_context<Table::Shadows::VSM::VSMSelectors>().supported))
+		return FrameGraph::SetupResult::Disabled;
 	return FrameGraph::SetupResult::NeedsRender;
 }
 

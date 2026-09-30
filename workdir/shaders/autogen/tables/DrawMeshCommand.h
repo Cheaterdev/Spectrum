@@ -8,20 +8,14 @@
 #include "sig_hlsl.hlsl"
 #include "enums.h"
 #include "DispatchMeshArguments.h"
-#include "MeshInfo.h"
-#include "MeshInstanceInfo.h"
 namespace Meshes
 {
-	struct CommandData
+	struct DrawMeshCommand
 	{
-		uint mesh_cb; // MeshInfo
-		uint meshinstance_cb; // MeshInstanceInfo
-		uint material_cb; // MaterialInfo
-		DispatchMeshArguments draw_commands; // DispatchMeshArguments
-		uint GetMesh_cb() { return mesh_cb; }
-		uint GetMeshinstance_cb() { return meshinstance_cb; }
-		uint GetMaterial_cb() { return material_cb; }
-		DispatchMeshArguments GetDraw_commands() { return draw_commands; }
+		uint draw_id; // uint
+		DispatchMeshArguments args; // DispatchMeshArguments
+		uint GetDraw_id() { return draw_id; }
+		DispatchMeshArguments GetArgs() { return args; }
 	};
 }
-using Meshes::CommandData;
+using Meshes::DrawMeshCommand;

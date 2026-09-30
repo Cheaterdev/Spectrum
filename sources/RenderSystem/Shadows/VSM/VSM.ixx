@@ -233,7 +233,7 @@ private:
 	// pool. Sized much smaller than MaxDispatchEntries: scoped to whichever
 	// meshes belong to ONE material at a time, not the whole scene.
 	static constexpr int MaxMaterialDispatchEntries = 512;
-	HAL::StructuredBufferView<Table::Shadows::VSM::VSMDispatchCommandData> vsm_material_commands_buffer[8];
+	HAL::StructuredBufferView<DrawMeshCommand> vsm_material_commands_buffer[8];
 
 	VSMPageTable page_table;
 	VSMInvalidationTracker tracker;
@@ -506,6 +506,9 @@ private:
 
 	Passes::Shadows::VSM::VSM_Combine::render_func_type m_combine_render;
 
+	// Devices without sparse depth: direct lighting, unshadowed.
+	Passes::Shadows::VSM::VSM_Unshadowed::render_func_type m_unshadowed_render;
+
 	// Debug tile-classification overlay -- reads stage 1's real
 	// VSM_LitTiles/VSM_DarkTiles lists and paints over the already-shaded
 	// ResultTexture, only when vsm_debug_view is HizClassify. See vsm.prism's
@@ -581,6 +584,7 @@ public:
 		pipeline.vSM_ScreenSpaceShadow.render_func = m_screenspaceshadow_render;
 		pipeline.vSM_ShadowResolve.render_func = m_shadowresolve_render;
 		pipeline.vSM_Combine.render_func = m_combine_render;
+		pipeline.vSM_Unshadowed.render_func = m_unshadowed_render;
 		pipeline.vSM_DebugClassifyOverlay.render_func = m_debugoverlay_render;
 		pipeline.vSM_DepthAnalysis.render_func = m_depth_analysis_render;
 	}

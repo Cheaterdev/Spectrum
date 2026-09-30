@@ -17,7 +17,8 @@ import crc32c;
 namespace HAL
 {
     void reflect_shader(IDxcUtils* library, const DxcBuffer& reflectionBuffer,
-                        const std::string& entry_point, CompiledShader& out);
+                        const std::string& entry_point, const std::set<std::string>& included_names,
+                        CompiledShader& out);
 
     // Backend-specific extra DXC compilation flags.
     // D3D12 backend: returns {} (no-op).
@@ -84,6 +85,11 @@ namespace HAL
 		{
 			HAL::shader_include* includer;
 			std::set<std::unique_ptr<std::string>> includes;
+		public:
+			// File stems of everything included; a table's generated header is
+			// named after its slot, which is how SPIR-V reflection maps the push
+			// constant indices it finds back to SlotIDs.
+			std::set<std::string> included_names;
 		private:
 			DXC_MICROCOM_REF_FIELD(m_dwRef)
 		public:
@@ -119,6 +125,7 @@ namespace HAL
 				auto ppData = reinterpret_cast<const void*>(data->data());
 				auto pBytes = static_cast<unsigned int>(data->size());
 				includes.insert(std::move(data));
+				included_names.insert(std::filesystem::path(pFilename).stem().string());
 				ComPtr<IDxcBlobEncoding> pEncodingIncludeSource;
 				HAL::ShaderCompiler::get().library->CreateBlobFromPinned((LPBYTE)ppData, pBytes, CP_ACP, &pEncodingIncludeSource);
 				*ppIncludeSource = pEncodingIncludeSource.Detach();
@@ -567,7 +574,7 @@ namespace HAL
 		// Backend-specific: D3D12 uses ID3D12ShaderReflection to extract per-pass
 		// constant-buffer slot usage; Vulkan stubs this for now (Phase 4 will use
 		// SPIR-V reflection).  See reflect_shader() seam at top of this TU.
-		reflect_shader(library, reflectionBuffer, entry_point, blob_str);
+		reflect_shader(library, reflectionBuffer, entry_point, dxil_include.included_names, blob_str);
 		blob_str.entry_point = entry_point; // store so pipeline creation can use it
 		blob_str.debug_log_formats = std::move(debug_log_formats);
 		return std::move(blob_str);

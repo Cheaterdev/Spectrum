@@ -77,6 +77,7 @@ namespace FrameGraph
 		VSM_ScreenSpaceShadow,
 		VSM_ShadowResolve,
 		VSM_Combine,
+		VSM_Unshadowed,
 		VSM_DebugClassifyOverlay,
 		VSM_DepthAnalysis,
 		Count

@@ -17,7 +17,7 @@ import :Enums;
 {%- for v in table.used_tables -%}
 {%- set t =  parsed.tables[v] -%}
 {%-if t.options.shader_only is undefined %}
-import :Autogen.{{"Slots" if table.options.IndirectCommand is defined else "Tables"}}.{{t.dqn}};
+import :Autogen.Tables.{{t.dqn}};
 {%-endif -%}
 {%- endfor -%}
 
@@ -134,17 +134,6 @@ export namespace Table
 {%-endif-%}
 {%-endif-%}
 
-{%if table.options.IndirectCommand is defined-%}
-		static const IndirectCommands CommandID = IndirectCommands::{{table.name}};
-		template<class Processor> static void for_each(Processor& processor)
-		{
-{%- set values = create_list('values') -%}
-{%- for v in (table.values) -%}
-{%- do myappend('values',("Slots::" + parsed.tables[v.type].qn) if (parsed.tables[v.type] is defined) and (parsed.tables[v.type].options.shader_only is undefined) else v.type)-%}
-{%- endfor %}
-			processor.template process<{{get_list('values')|join(', ')}}>();
-		}
-{%-endif-%}
 
 		static std::string get_typename()
 		{

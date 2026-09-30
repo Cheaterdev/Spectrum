@@ -182,6 +182,7 @@ void VSM::update_frame(FrameGraph::Graph& graph)
 	// Now every VSM pass's generated setup does, and nothing orders one pass's
 	// setup before another's.
 	auto& sel = graph.get_context<Table::Shadows::VSM::VSMSelectors>();
+	sel.supported              = RenderSystem::get().device().is_tiled_depth_supported();
 	sel.use_vsm_penumbra       = use_vsm_penumbra;
 	sel.use_vsm_contact_shadow = use_vsm_contact_shadow;
 	sel.vsm_debug_view         = vsm_debug_view;
@@ -214,6 +215,9 @@ void VSM::init_penumbra_dispatch_buffers()
 
 void VSM::pass_data(FrameGraph::TaskBuilder& builder)
 {
+	// The atlas is a sparse depth texture; without those, VSM's passes are off.
+	if (!RenderSystem::get().device().is_tiled_depth_supported())
+		return;
 	if (!vsm_atlas_tex)
 		vsm_atlas_tex.reset(new HAL::Texture(RenderSystem::get().device(), HAL::ResourceDesc::Tex2D(HAL::Format::R32_TYPELESS, uint2(page_table.page_size, page_table.page_size), (uint)MaxPhysicalSlots, 1, HAL::ResFlags::DepthStencil | HAL::ResFlags::ShaderResource | HAL::ResFlags::Virtual)));
 	builder.pass_texture(FrameGraph::ResourceID::VSM_Atlas, vsm_atlas_tex->resource);
@@ -895,6 +899,7 @@ VSM::VSM() : VariableContext(L"VSM")
 				Slots::Shadows::VSM::VSMPageTableData pageTableData;
 				pageTableData.GetPage_table()   = data.VSM_PageTable->texture2DArray;
 				pageTableData.GetPage_cameras() = data.VSM_PageCameras->structuredBuffer;
+				pageTableData.GetLevels()       = data.VSM_LevelDispatchInfo->structuredBuffer;
 				graphics.set(pageTableData);
 			}
 			// No manual transition needed: like VSM_PageTable, graphics.set()
@@ -930,12 +935,9 @@ VSM::VSM() : VariableContext(L"VSM")
 			graphics.set_scissor(data.VSM_Atlas->get_scissor());
 			graphics.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::LIST);
 
-			// Every (level,mesh) pair's AS/MS dispatch in one call -- D3D12's
-			// command signature rebinds mesh_cb/meshinstance_cb/page_batch_cb
-			// per entry from the buffer just uploaded above, exactly as if a
-			// live graphics.set(...) had preceded each dispatch_mesh() the
-			// old per-level CPU loop issued.
-			graphics.exec_indirect(*data.VSM_DispatchCommands, (UINT)MaxDispatchEntries);
+			// Every (level,mesh) pair's AS/MS dispatch in one call; each entry's
+			// draw id names its mesh and level (vsm_gather_dispatch.hlsl).
+			exec_draw_mesh_indirect(graphics, *data.VSM_DispatchCommands, (UINT)MaxDispatchEntries);
 
 			// (Was a post-mortem on assert_shared_state / SubResourcesCPU folding.
 			//  That whole tracking layer is gone as of the 2026-08 barrier
@@ -966,7 +968,7 @@ VSM::VSM() : VariableContext(L"VSM")
 				if (!vsm_material_commands_buffer[0].resource)
 				{
 					for (int i = 0; i < 8; i++)
-						vsm_material_commands_buffer[i] = HAL::StructuredBufferView<Table::Shadows::VSM::VSMDispatchCommandData>(
+						vsm_material_commands_buffer[i] = HAL::StructuredBufferView<DrawMeshCommand>(
 							RenderSystem::get().device(), (size_t)MaxMaterialDispatchEntries, HAL::counterType::SELF,
 							HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess);
 				}
@@ -1061,6 +1063,7 @@ VSM::VSM() : VariableContext(L"VSM")
 							Slots::Shadows::VSM::VSMPageTableData pageTableData;
 							pageTableData.GetPage_table()   = data.VSM_PageTable->texture2DArray;
 							pageTableData.GetPage_cameras() = data.VSM_PageCameras->structuredBuffer;
+							pageTableData.GetLevels()       = data.VSM_LevelDispatchInfo->structuredBuffer;
 							graphics.set(pageTableData);
 						}
 						{
@@ -1069,7 +1072,7 @@ VSM::VSM() : VariableContext(L"VSM")
 							graphics.set(pageHiZ);
 						}
 						graphics.set(scene->compiledScene);
-						graphics.exec_indirect(vsm_material_commands_buffer[i], (UINT)MaxMaterialDispatchEntries);
+						exec_draw_mesh_indirect(graphics, vsm_material_commands_buffer[i], (UINT)MaxMaterialDispatchEntries);
 					}
 				}
 			}
@@ -1595,6 +1598,25 @@ VSM::VSM() : VariableContext(L"VSM")
 	// ---- Combine lighting ------------------------------------------------
 
 	// setup() is fully generated (vsm.prism's own [SetupCondition]).
+
+	m_unshadowed_render = [](Passes::Shadows::VSM::VSM_Unshadowed::Context& data, FrameGraph::FrameContext& context)
+	{
+		GBuffer gbuffer = GBufferViewDesc::actualize(data);
+
+		auto& compute = context.get_list()->get_compute();
+		context.graph->set_slot(SlotID::FrameInfo, compute);
+
+		Slots::Shadows::VSM::VSMLighting lighting;
+		gbuffer.SetTable(lighting.GetGbuffer());
+		lighting.GetResult() = data.ResultTexture->rwTexture2D;
+		compute.set(lighting);
+
+		compute.set_pipeline<PSOS::Shadows::VSM::VSMUnshadowed>();
+		{
+			PROFILE_GPU(L"vsm_unshadowed");
+			compute.dispatch(context.graph->get_context<ViewportInfo>().frame_size, ivec2{ 16, 16 });
+		}
+	};
 
 	m_combine_render = [this](Passes::Shadows::VSM::VSM_Combine::Context& data, FrameGraph::FrameContext& context)
 	{

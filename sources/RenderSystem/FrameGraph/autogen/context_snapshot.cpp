@@ -114,6 +114,8 @@ void capture_context_snapshot(Graph& graph, ContextSnapshot& out)
 		encode_context_field(graph.get_context<Table::GI::Voxel::VoxelGISelectors>().reflection_enabled);
 	out.values[(unsigned int)ContextFieldID::VoxelGISelectors_debug_voxel_trace] =
 		encode_context_field(graph.get_context<Table::GI::Voxel::VoxelGISelectors>().debug_voxel_trace);
+	out.values[(unsigned int)ContextFieldID::VSMSelectors_supported] =
+		encode_context_field(graph.get_context<Table::Shadows::VSM::VSMSelectors>().supported);
 	out.values[(unsigned int)ContextFieldID::VSMSelectors_use_vsm_penumbra] =
 		encode_context_field(graph.get_context<Table::Shadows::VSM::VSMSelectors>().use_vsm_penumbra);
 	out.values[(unsigned int)ContextFieldID::VSMSelectors_use_vsm_contact_shadow] =

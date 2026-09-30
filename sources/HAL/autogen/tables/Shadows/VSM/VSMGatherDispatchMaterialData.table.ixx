@@ -11,7 +11,6 @@ import :SIG;
 import :Types;
 import :HLSL;
 import :Enums;
-import :Autogen.Tables.Shadows.VSM.VSMDispatchCommandData;
 import :Autogen.Tables.Shadows.VSM.VSMLevelDispatchInfo;
 export namespace Table
 {
@@ -27,12 +26,12 @@ export namespace Table
 				float4x4 light_view;
 				uint4 material_pip_ids[2];
 				HLSL::StructuredBuffer<Table::Shadows::VSM::VSMLevelDispatchInfo> levels;
-				HLSL::AppendStructuredBuffer<Table::Shadows::VSM::VSMDispatchCommandData> material_commands[8];
+				HLSL::AppendStructuredBuffer<DrawMeshCommand> material_commands[8];
 				HLSL::StructuredBuffer<Table::Shadows::VSM::VSMLevelDispatchInfo>& GetLevels() { return levels; }
 				uint& GetLevel_count() { return level_count; }
 				float4x4& GetLight_view() { return light_view; }
 				uint4* GetMaterial_pip_ids() { return material_pip_ids; }
-				HLSL::AppendStructuredBuffer<Table::Shadows::VSM::VSMDispatchCommandData>* GetMaterial_commands() { return material_commands; }
+				HLSL::AppendStructuredBuffer<DrawMeshCommand>* GetMaterial_commands() { return material_commands; }
 				static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 				template<class Compiler>
 				void compile(Compiler& compiler) const
@@ -49,7 +48,7 @@ export namespace Table
 					float4x4 light_view; // float4x4
 					uint4 material_pip_ids[2]; // uint4
 					uint levels; // StructuredBuffer<VSMLevelDispatchInfo>
-					uint material_commands[8]; // AppendStructuredBuffer<VSMDispatchCommandData>
+					uint material_commands[8]; // AppendStructuredBuffer<DrawMeshCommand>
 
 			
 					private:

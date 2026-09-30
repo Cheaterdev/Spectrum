@@ -39,6 +39,7 @@ export namespace HAL
         bool rtx                    = false;
         bool mesh_shader            = false;
         bool tiled_3d               = false;   // sparseResidencyImage3D
+        bool tiled_depth            = false;   // sparse depth images (VSM atlas)
         bool full_bindless          = false;
         bool direct_gpu_upload_heap = false;
         bool dlss                   = false;   // Streamline is stubbed on Vulkan

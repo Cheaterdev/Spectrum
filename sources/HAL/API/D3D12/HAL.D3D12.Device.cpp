@@ -367,6 +367,7 @@ namespace HAL
             properties.full_bindless          = supportedShaderModel.HighestShaderModel >= D3D_SHADER_MODEL_6_6;
             properties.mesh_shader            = options7.MeshShaderTier >= D3D12_MESH_SHADER_TIER_1;
             properties.tiled_3d               = options.TiledResourcesTier >= D3D12_TILED_RESOURCES_TIER_3;
+            properties.tiled_depth            = options.TiledResourcesTier >= D3D12_TILED_RESOURCES_TIER_2;
             properties.direct_gpu_upload_heap = options16.GPUUploadHeapSupported;
 
             if constexpr (HAL::Debug::ValidationErrors)

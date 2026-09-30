@@ -12,6 +12,7 @@ import :Types;
 import :HLSL;
 import :Enums;
 import :Autogen.Tables.Frame.Camera;
+import :Autogen.Tables.Shadows.VSM.VSMLevelDispatchInfo;
 export namespace Table
 {
 	#pragma pack(push, 1)
@@ -24,19 +25,23 @@ export namespace Table
 				static constexpr SlotID ID = SlotID::VSMPageTableData;
 				HLSL::Texture2DArray<uint> page_table;
 				HLSL::StructuredBuffer<Table::Frame::Camera> page_cameras;
+				HLSL::StructuredBuffer<Table::Shadows::VSM::VSMLevelDispatchInfo> levels;
 				HLSL::Texture2DArray<uint>& GetPage_table() { return page_table; }
 				HLSL::StructuredBuffer<Table::Frame::Camera>& GetPage_cameras() { return page_cameras; }
+				HLSL::StructuredBuffer<Table::Shadows::VSM::VSMLevelDispatchInfo>& GetLevels() { return levels; }
 				static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 				template<class Compiler>
 				void compile(Compiler& compiler) const
 				{
 					compiler.compile(page_table, "VSMPageTableData::page_table");
 					compiler.compile(page_cameras, "VSMPageTableData::page_cameras");
+					compiler.compile_auto(levels, "VSMPageTableData::levels");
 				}
 				struct Compiled
 				{
 					uint page_table; // Texture2DArray<uint>
 					uint page_cameras; // StructuredBuffer<Camera>
+					uint levels; // StructuredBuffer<VSMLevelDispatchInfo>
 
 			
 					private:

@@ -15,7 +15,14 @@ std::shared_ptr<HAL::Device> RenderSystem::select_adapter()
 
         const auto props = HAL::Device::probe(adapter);
 
-       //  if (std::wstring(desc.Description).find(L"AMD") == std::wstring::npos) return;
+        // SPECTRUM_ADAPTER=<part of the name> (e.g. AMD) restricts selection to
+        // matching adapters -- to run on a second GPU of the same machine.
+        if (const char* wanted = std::getenv("SPECTRUM_ADAPTER"); wanted && *wanted)
+        {
+            const std::wstring wanted_w(wanted, wanted + std::strlen(wanted));
+            if (!std::wstring(desc.Description).contains(wanted_w))
+                return;
+        }
 
 
         if (!result && props.mesh_shader && props.full_bindless &&

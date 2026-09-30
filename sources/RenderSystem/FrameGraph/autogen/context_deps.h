@@ -35,7 +35,7 @@ namespace FrameGraph
 // .prism edit renumbers those enums, a plan from before the edit would not fail
 // to load, it would misapply -- wrong resource, wrong barriers. A plan whose
 // header does not carry this exact value must be rejected.
-constexpr unsigned long long generated_id_space_hash = 12899329444083710375ull;
+constexpr unsigned long long generated_id_space_hash = 15990257356094923416ull;
 
 // One bit per context field, in (struct, field) declaration order.
 enum class ContextFieldID : unsigned int
@@ -64,6 +64,7 @@ enum class ContextFieldID : unsigned int
 	VoxelGISelectors_light_scene,
 	VoxelGISelectors_reflection_enabled,
 	VoxelGISelectors_debug_voxel_trace,
+	VSMSelectors_supported,
 	VSMSelectors_use_vsm_penumbra,
 	VSMSelectors_use_vsm_contact_shadow,
 	VSMSelectors_vsm_debug_view,
@@ -117,6 +118,7 @@ namespace ContextField
 	constexpr ContextFieldMask VoxelGISelectors_light_scene = context_field_bit(ContextFieldID::VoxelGISelectors_light_scene);
 	constexpr ContextFieldMask VoxelGISelectors_reflection_enabled = context_field_bit(ContextFieldID::VoxelGISelectors_reflection_enabled);
 	constexpr ContextFieldMask VoxelGISelectors_debug_voxel_trace = context_field_bit(ContextFieldID::VoxelGISelectors_debug_voxel_trace);
+	constexpr ContextFieldMask VSMSelectors_supported = context_field_bit(ContextFieldID::VSMSelectors_supported);
 	constexpr ContextFieldMask VSMSelectors_use_vsm_penumbra = context_field_bit(ContextFieldID::VSMSelectors_use_vsm_penumbra);
 	constexpr ContextFieldMask VSMSelectors_use_vsm_contact_shadow = context_field_bit(ContextFieldID::VSMSelectors_use_vsm_contact_shadow);
 	constexpr ContextFieldMask VSMSelectors_vsm_debug_view = context_field_bit(ContextFieldID::VSMSelectors_vsm_debug_view);
@@ -446,48 +448,58 @@ static inline const PassContextDeps pass_context_deps[] = {
 		  ContextField::None,
 		true },
 	{ PassID::VSM_GatherDispatch,
-		  ContextField::None,
+		  ContextField::VSMSelectors_supported,
 		  ContextField::None,
 		true },
 	{ PassID::VSM_RenderPages,
-		  ContextField::None,
+		  ContextField::VSMSelectors_supported,
 		  ContextField::None,
 		true },
 	{ PassID::VSM_HiZRebuild,
-		  ContextField::None,
+		  ContextField::VSMSelectors_supported,
 		  ContextField::None,
 		true },
 	{ PassID::VSM_BlockerClassify,
-		  ContextField::VSMSelectors_use_vsm_penumbra,
+		  ContextField::VSMSelectors_supported
+		| ContextField::VSMSelectors_use_vsm_penumbra,
 		  ContextField::None,
 		true },
 	{ PassID::VSM_BlockerSearch,
-		  ContextField::VSMSelectors_use_vsm_penumbra,
+		  ContextField::VSMSelectors_supported
+		| ContextField::VSMSelectors_use_vsm_penumbra,
 		  ContextField::None,
 		true },
 	{ PassID::VSM_ScreenSpaceShadow,
-		  ContextField::VSMSelectors_use_vsm_penumbra
+		  ContextField::VSMSelectors_supported
+		| ContextField::VSMSelectors_use_vsm_penumbra
 		| ContextField::VSMSelectors_use_vsm_contact_shadow,
 		  ContextField::None,
 		true },
 	{ PassID::VSM_ShadowResolve,
-		  ContextField::VSMSelectors_use_vsm_penumbra
+		  ContextField::VSMSelectors_supported
+		| ContextField::VSMSelectors_use_vsm_penumbra
 		| ContextField::VSMSelectors_shadow_source,
 		  ContextField::VSMSelectors_use_vsm_contact_shadow,
 		true },
 	{ PassID::VSM_Combine,
-		  ContextField::VSMSelectors_use_vsm_penumbra
+		  ContextField::VSMSelectors_supported
+		| ContextField::VSMSelectors_use_vsm_penumbra
 		| ContextField::VSMSelectors_shadow_source,
 		  ContextField::VSMSelectors_vsm_debug_view,
 		true },
+	{ PassID::VSM_Unshadowed,
+		  ContextField::VSMSelectors_supported,
+		  ContextField::None,
+		true },
 	{ PassID::VSM_DebugClassifyOverlay,
-		  ContextField::VSMSelectors_use_vsm_penumbra
+		  ContextField::VSMSelectors_supported
+		| ContextField::VSMSelectors_use_vsm_penumbra
 		| ContextField::VSMSelectors_vsm_debug_view,
 		  ContextField::VSMSelectors_use_vsm_contact_shadow
 		| ContextField::VSMSelectors_vsm_debug_view,
 		true },
 	{ PassID::VSM_DepthAnalysis,
-		  ContextField::None,
+		  ContextField::VSMSelectors_supported,
 		  ContextField::None,
 		true },
 };

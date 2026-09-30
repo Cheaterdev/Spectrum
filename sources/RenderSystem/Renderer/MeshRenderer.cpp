@@ -356,7 +356,7 @@ void  mesh_renderer::render_meshes(MeshRenderContext::ptr mesh_render_context, S
 				{
 					PROFILE_GPU(L"execute_indirect");
 
-					graphics.exec_indirect( commands_buffer[current]->buffer, meshes_count);
+					exec_draw_mesh_indirect(graphics, commands_buffer[current]->buffer, meshes_count);
 
 				}
 
@@ -383,7 +383,7 @@ mesh_renderer::mesh_renderer() :VariableContext(L"mesh_renderer")
 	meshes_ids = std::make_shared<virtual_gpu_buffer<UINT>>(RenderSystem::get().device(), max_meshes, counterType::HELP_BUFFER, HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess);
 	meshes_invisible_ids = std::make_shared<virtual_gpu_buffer<UINT>>(RenderSystem::get().device(), max_meshes, counterType::HELP_BUFFER, HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess);
 	for (int i = 0; i < 8; i++)
-		commands_buffer[i] = std::make_shared<virtual_gpu_buffer<Table::Meshes::CommandData>>(RenderSystem::get().device(), max_meshes, counterType::HELP_BUFFER, HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess);
+		commands_buffer[i] = std::make_shared<virtual_gpu_buffer<DrawMeshCommand>>(RenderSystem::get().device(), max_meshes, counterType::HELP_BUFFER, HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess);
 
 		auto list = (RenderSystem::get().device().get_upload_list());
 			

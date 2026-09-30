@@ -205,6 +205,11 @@ export
     VkFormat             to_native(Format format);
     Format               from_native(VkFormat format);
 
+    // D24_UNORM_S8_UINT is optional in Vulkan (AMD has none). The device reports
+    // it at init; without it, to_native() maps the D24S8 formats to
+    // D32_SFLOAT_S8_UINT, which images, views and pipelines then agree on.
+    void                 set_d24s8_supported(bool supported);
+
     VkImageLayout        to_native(TextureLayout layout);
 
     // Backend-native resource-state value as a plain uint32_t, mirroring

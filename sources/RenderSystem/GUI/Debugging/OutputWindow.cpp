@@ -124,6 +124,12 @@ namespace GUI
                         current_block->width_size = size_type::MATCH_CHILDREN;
                         current_block->height_size = size_type::MATCH_CHILDREN;
                         add_child(current_block);
+                        blocks.push_back(current_block);
+                        if (blocks.size() > MAX_BLOCKS)
+                        {
+                            remove_child(blocks.front());
+                            blocks.pop_front();
+                        }
                     }
 
                     current_block->add_child(item);

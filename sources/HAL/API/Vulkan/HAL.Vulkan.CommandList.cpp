@@ -71,6 +71,13 @@ namespace HAL::API
         return a;
     }
 
+    static VkExtent3D mip_extent(const TextureDesc& t, uint mip)
+    {
+        return { std::max(1u, t.Dimensions.x >> mip),
+                 t.is1D() ? 1u : std::max(1u, t.Dimensions.y >> mip),
+                 t.is3D() ? std::max(1u, t.Dimensions.z >> mip) : 1u };
+    }
+
     void CommandList::create(CommandListType t, Device& dev)
     {
         type     = t;
@@ -87,30 +94,34 @@ namespace HAL::API
         _pool_mutex = &api_alloc.pool_mutex;
         _pool_mutex->lock();
 
-        if (vk_cmd != VK_NULL_HANDLE && vk_cmd_pool == api_alloc.vk_command_pool)
-        {
-            // Same pool as before — we hold its mutex so reset is safe.
-            vkResetCommandBuffer(vk_cmd, 0);
-        }
-        else
-        {
-            // First use, or the compile() rotation gave us a different allocator.
-            // Allocate a fresh buffer from this pool.  The old vk_cmd (if any)
-            // remains allocated from its original pool and will be freed when
-            // CommandAllocator::reset() is called on that pool — no explicit free
-            // needed here because VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT
-            // lets the pool reclaim its buffers on pool reset.
-            VkCommandBufferAllocateInfo alloc{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
-            alloc.commandPool        = api_alloc.vk_command_pool;
-            alloc.level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-            alloc.commandBufferCount = 1;
-            vkAllocateCommandBuffers(api_dev.get_native_device(), &alloc, &vk_cmd);
-            vk_cmd_pool = api_alloc.vk_command_pool;
-        }
+        // Like a D3D12 allocator, the pool's buffers are reused only after its
+        // reset(), so the buffer we get here is not in flight.
+        vk_cmd      = api_alloc.acquire(api_dev.get_native_device());
+        vk_cmd_pool = api_alloc.vk_command_pool;
 
         VkCommandBufferBeginInfo info{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
         info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
         vkBeginCommandBuffer(vk_cmd, &info);
+
+        // The barrier compiler (compile_transitions) is written against D3D12's
+        // ExecuteCommandLists scope: at a group's first touch it skips a barrier
+        // whose layout already matches, or emits SyncBefore=NONE, because on D3D12
+        // everything submitted earlier on the queue has retired and is visible by
+        // then. Vulkan gives no such guarantee between submissions -- earlier
+        // batches may still be running and their writes are not made visible --
+        // so recreate that boundary here. Without it: bloom flicker, GBuffer data
+        // in freshly aliased targets, garbage after resize.
+        {
+            VkMemoryBarrier2 scope{ VK_STRUCTURE_TYPE_MEMORY_BARRIER_2 };
+            scope.srcStageMask  = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+            scope.srcAccessMask = VK_ACCESS_2_MEMORY_WRITE_BIT;
+            scope.dstStageMask  = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+            scope.dstAccessMask = VK_ACCESS_2_MEMORY_READ_BIT | VK_ACCESS_2_MEMORY_WRITE_BIT;
+            VkDependencyInfo dep{ VK_STRUCTURE_TYPE_DEPENDENCY_INFO };
+            dep.memoryBarrierCount = 1;
+            dep.pMemoryBarriers    = &scope;
+            vkCmdPipelineBarrier2(vk_cmd, &dep);
+        }
 
         // Fresh recording: clear any deferred PRESENT barriers from the previous frame.
         deferred_present_barriers.clear();
@@ -196,6 +207,17 @@ namespace HAL::API
 
     // ---- Barriers (synchronization2) ----------------------------------------
 
+    // D3D12 describes a UAV clear with UNORDERED_ACCESS access; Vulkan clears
+    // are transfer writes, and shader access bits are invalid on a clear-only stage.
+    static void fix_clear_access(VkPipelineStageFlags2 stage, VkAccessFlags2& access, BarrierSync sync)
+    {
+        if (!check(sync & BarrierSync::CLEAR_UNORDERED_ACCESS_VIEW)) return;
+        constexpr VkPipelineStageFlags2 clear_stages = VK_PIPELINE_STAGE_2_CLEAR_BIT | VK_PIPELINE_STAGE_2_COPY_BIT;
+        if ((stage & ~clear_stages) == 0)
+            access &= VK_ACCESS_2_TRANSFER_READ_BIT | VK_ACCESS_2_TRANSFER_WRITE_BIT;
+        access |= VK_ACCESS_2_TRANSFER_WRITE_BIT;
+    }
+
     void CommandList::transitions(const HAL::Barriers& barriers)
     {
         if (vk_cmd == VK_NULL_HANDLE) return;
@@ -205,6 +227,19 @@ namespace HAL::API
 
         std::vector<VkImageMemoryBarrier2> image_barriers;
         std::vector<VkBufferMemoryBarrier2> buffer_barriers;
+
+        if (temp_dumping())   // TEMP: what the engine handed us, before any filtering
+        {
+            temp_dump(std::format("TRANSITIONS n={}", barriers.get_barriers().size()));
+            for (auto& b : barriers.get_barriers())
+                temp_dump(std::format("  in: {} type={} img={:x} range(all={} mip {}+{} slice {}+{}) sync {:x}->{:x} access {:x}->{:x} layout {:x}->{:x} flags {:x}",
+                    b.resource ? std::string(b.resource->name) : std::string("null"),
+                    b.resource ? int(b.resource->get_type()) : -1,
+                    b.resource ? uint64_t(static_cast<const API::Resource*>(b.resource)->get_vk_image()) : 0,
+                    b.range.is_all(), b.range.first_mip, b.range.num_mips, b.range.first_slice, b.range.num_slices,
+                    uint(b.before.operation), uint(b.after.operation), uint(b.before.access), uint(b.after.access),
+                    uint(b.before.layout), uint(b.after.layout), uint(b.flags)));
+        }
 
         for (auto& b : barriers.get_barriers())
         {
@@ -221,8 +256,29 @@ namespace HAL::API
                 ib.srcAccessMask       = to_native_access(b.before.access);
                 ib.dstStageMask        = to_native_stage(b.after.operation);
                 ib.dstAccessMask       = to_native_access(b.after.access);
-                ib.oldLayout           = to_native(b.before.layout);
+                fix_clear_access(ib.srcStageMask, ib.srcAccessMask, b.before.operation);
+                fix_clear_access(ib.dstStageMask, ib.dstAccessMask, b.after.operation);
+                // A resource entered from UNDEFINED may alias heap memory another
+                // resource was still using. D3D12 orders that through the heap;
+                // Vulkan needs the dependency spelled out, or the new contents race
+                // the old resource's in-flight writes.
+                // The DISCARD barrier of a freshly aliased resource often names a
+                // before-state inherited from last frame (a compute read), so its
+                // stages don't cover the previous occupant's draws. Wait on
+                // everything and drop the contents, as D3D12's aliasing does.
+                const bool discard = check(b.flags & BarrierFlags::DISCARD);
+                if (discard || (to_native(b.before.layout) == VK_IMAGE_LAYOUT_UNDEFINED && ib.srcStageMask == VK_PIPELINE_STAGE_2_NONE))
+                {
+                    ib.srcStageMask  = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+                    ib.srcAccessMask = VK_ACCESS_2_MEMORY_WRITE_BIT;
+                }
+                ib.oldLayout           = discard ? VK_IMAGE_LAYOUT_UNDEFINED : to_native(b.before.layout);
                 ib.newLayout           = to_native(b.after.layout);
+                if (DebugSync::widen_barriers.load(std::memory_order_relaxed))
+                {
+                    ib.srcStageMask  = ib.dstStageMask  = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+                    ib.srcAccessMask = ib.dstAccessMask = VK_ACCESS_2_MEMORY_READ_BIT | VK_ACCESS_2_MEMORY_WRITE_BIT;
+                }
                 // D3D12 allows transitioning TO "undefined" (discard).
                 // Vulkan forbids VK_IMAGE_LAYOUT_UNDEFINED as newLayout — skip it.
                 if (ib.newLayout == VK_IMAGE_LAYOUT_UNDEFINED) continue;
@@ -234,6 +290,20 @@ namespace HAL::API
                     0, VK_REMAINING_MIP_LEVELS,
                     0, VK_REMAINING_ARRAY_LAYERS
                 };
+                // Per-subresource barriers must stay per-subresource: a whole-image
+                // UNDEFINED -> X for one mip's first use discards the other mips.
+                if (!b.range.is_all())
+                {
+                    ib.subresourceRange.baseMipLevel   = b.range.first_mip;
+                    ib.subresourceRange.levelCount     = b.range.num_mips;
+                    ib.subresourceRange.baseArrayLayer = b.range.first_slice;
+                    ib.subresourceRange.layerCount     = b.range.num_slices;
+                    if (res->get_desc().as_texture().is3D())
+                    {
+                        ib.subresourceRange.baseArrayLayer = 0;
+                        ib.subresourceRange.layerCount     = 1;
+                    }
+                }
 
                 // Defer PRESENT_SRC_KHR transitions to end() so they always fire
                 // after ALL draw calls.  The FrameGraph non_tracked_resources loop
@@ -256,6 +326,13 @@ namespace HAL::API
                 bb.srcAccessMask = to_native_access(b.before.access);
                 bb.dstStageMask  = to_native_stage(b.after.operation);
                 bb.dstAccessMask = to_native_access(b.after.access);
+                fix_clear_access(bb.srcStageMask, bb.srcAccessMask, b.before.operation);
+                fix_clear_access(bb.dstStageMask, bb.dstAccessMask, b.after.operation);
+                if (DebugSync::widen_barriers.load(std::memory_order_relaxed))
+                {
+                    bb.srcStageMask  = bb.dstStageMask  = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+                    bb.srcAccessMask = bb.dstAccessMask = VK_ACCESS_2_MEMORY_READ_BIT | VK_ACCESS_2_MEMORY_WRITE_BIT;
+                }
                 bb.buffer        = api_res.get_vk_buffer();
                 bb.offset        = 0;
                 bb.size          = VK_WHOLE_SIZE;
@@ -265,7 +342,34 @@ namespace HAL::API
 
         if (image_barriers.empty() && buffer_barriers.empty()) return;
 
+        // A DISCARD starts a resource's life in heap memory another resource
+        // (aliased) was just using. An image barrier's memory dependency covers
+        // only its own image, so the previous occupant's in-flight writes to the
+        // same memory are not flushed by it and can land on top of the new
+        // contents later. A global memory barrier covers them.
+        bool any_discard = false;
+        for (auto& b : barriers.get_barriers())
+            any_discard |= check(b.flags & BarrierFlags::DISCARD);
+        VkMemoryBarrier2 alias_flush{ VK_STRUCTURE_TYPE_MEMORY_BARRIER_2 };
+        alias_flush.srcStageMask  = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+        alias_flush.srcAccessMask = VK_ACCESS_2_MEMORY_WRITE_BIT;
+        alias_flush.dstStageMask  = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+        alias_flush.dstAccessMask = VK_ACCESS_2_MEMORY_READ_BIT | VK_ACCESS_2_MEMORY_WRITE_BIT;
+
+        for (auto& ib : image_barriers)
+            temp_dump(std::format("  BARRIER img={:x} mip {}+{} layer {}+{} stage {:x}->{:x} access {:x}->{:x} layout {}->{}",
+                uint64_t(ib.image), ib.subresourceRange.baseMipLevel, ib.subresourceRange.levelCount,
+                ib.subresourceRange.baseArrayLayer, ib.subresourceRange.layerCount,
+                uint64_t(ib.srcStageMask), uint64_t(ib.dstStageMask), uint64_t(ib.srcAccessMask), uint64_t(ib.dstAccessMask),
+                int(ib.oldLayout), int(ib.newLayout)));
+        if (any_discard) temp_dump("  GLOBAL alias flush");
+
         VkDependencyInfo dep{ VK_STRUCTURE_TYPE_DEPENDENCY_INFO };
+        if (any_discard)
+        {
+            dep.memoryBarrierCount = 1;
+            dep.pMemoryBarriers    = &alias_flush;
+        }
         dep.imageMemoryBarrierCount  = static_cast<uint32_t>(image_barriers.size());
         dep.pImageMemoryBarriers     = image_barriers.data();
         dep.bufferMemoryBarrierCount = static_cast<uint32_t>(buffer_barriers.size());
@@ -427,6 +531,9 @@ namespace HAL::API
     void CommandList::global_barrier()
     {
         if (vk_cmd == VK_NULL_HANDLE) return;
+        // A barrier inside dynamic rendering is only legal as a by-region
+        // self-dependency; close the pass (the next draw reopens it with LOAD).
+        end_rendering_if_active();
 
         // Vulkan equivalent of a D3D12 global barrier: one memory barrier over
         // ALL_COMMANDS with every access bit, no image layout involved.
@@ -452,22 +559,119 @@ namespace HAL::API
 
         auto& api = static_cast<API::Resource&>(*uav->Resource);
         VkImage img = api.get_vk_image();
-        if (img == VK_NULL_HANDLE) return;
-
         end_rendering_if_active();
+        if (img == VK_NULL_HANDLE)
+        {
+            clear_storage_buffer(api, *uav, { std::bit_cast<uint32_t>(color.x), std::bit_cast<uint32_t>(color.y),
+                                              std::bit_cast<uint32_t>(color.z), std::bit_cast<uint32_t>(color.w) });
+            return;
+        }
 
         VkClearColorValue cv{};
         cv.float32[0] = color.x;
         cv.float32[1] = color.y;
         cv.float32[2] = color.z;
         cv.float32[3] = color.w;
+        clear_storage_image(img, *uav, cv);
+    }
 
-        // UAV/storage images live in GENERAL layout (the HAL transitions to
-        // UNORDERED_ACCESS before this call).
-        VkImageSubresourceRange range{ VK_IMAGE_ASPECT_COLOR_BIT,
-                                       0, VK_REMAINING_MIP_LEVELS,
-                                       0, VK_REMAINING_ARRAY_LAYERS };
+    // ClearUnorderedAccessView on a typed/raw buffer view. vkCmdFillBuffer
+    // repeats one 32-bit word, which is exact when every channel holds the same
+    // value (zero included) -- what buffer clears use in practice.
+    void CommandList::clear_storage_buffer(const API::Resource& res, const Views::UnorderedAccess& uav, uint4 bits)
+    {
+        if (res.get_vk_buffer() == VK_NULL_HANDLE) return;
+
+        VkDeviceSize offset = res.get_vk_buffer_offset();
+        VkDeviceSize size   = VK_WHOLE_SIZE;
+        VkDeviceSize elem   = 4;
+        if (auto* b = std::get_if<Views::UnorderedAccess::Buffer>(&uav.View))
+        {
+            elem = b->StructureByteStride ? b->StructureByteStride
+                 : (uav.Format != Format::UNKNOWN ? uav.Format.size() / 8 : 4u);   // size() is in bits
+            offset += VkDeviceSize(b->FirstElement) * elem;
+            if (b->NumElements)
+                size = VkDeviceSize(b->NumElements) * elem;
+        }
+
+        const uint channels = uint(std::max<VkDeviceSize>(1, elem / 4));
+        uint32_t value = bits.x;
+        bool exact = elem % 4 == 0;
+        if (elem == 2) { value = (bits.x & 0xFFFFu) * 0x00010001u; exact = true; }
+        if (elem == 1) { value = (bits.x & 0xFFu) * 0x01010101u;   exact = true; }
+        if (size != VK_WHOLE_SIZE) size &= ~VkDeviceSize(3);   // vkCmdFillBuffer: multiple of 4
+        for (uint c = 1; c < channels && c < 4; c++)
+            exact &= bits[c] == bits.x;
+        if (!exact)
+        {
+            static bool warned = false;
+            if (!warned) { warned = true; Log::get() << Log::LEVEL_WARNING << "[Vulkan] buffer UAV clear with mixed channels or sub-32-bit elements: filling with channel 0" << Log::endl; }
+        }
+        if (size == VK_WHOLE_SIZE && res.get_vk_buffer_offset() != 0)
+            size = static_cast<const HAL::Resource&>(res).get_desc().as_buffer().SizeInBytes;
+
+        VkBufferMemoryBarrier2 b{ VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2 };
+        b.buffer = res.get_vk_buffer();
+        b.offset = offset;
+        b.size   = size;
+        VkDependencyInfo dep{ VK_STRUCTURE_TYPE_DEPENDENCY_INFO };
+        dep.bufferMemoryBarrierCount = 1;
+        dep.pBufferMemoryBarriers    = &b;
+
+        b.srcStageMask  = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+        b.srcAccessMask = VK_ACCESS_2_MEMORY_READ_BIT | VK_ACCESS_2_MEMORY_WRITE_BIT;
+        b.dstStageMask  = VK_PIPELINE_STAGE_2_ALL_TRANSFER_BIT;
+        b.dstAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT;
+        vkCmdPipelineBarrier2(vk_cmd, &dep);
+
+        vkCmdFillBuffer(vk_cmd, res.get_vk_buffer(), offset, size, value);
+
+        b.srcStageMask  = VK_PIPELINE_STAGE_2_ALL_TRANSFER_BIT;
+        b.srcAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT;
+        b.dstStageMask  = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+        b.dstAccessMask = VK_ACCESS_2_MEMORY_READ_BIT | VK_ACCESS_2_MEMORY_WRITE_BIT;
+        vkCmdPipelineBarrier2(vk_cmd, &dep);
+    }
+
+    // Like ClearUnorderedAccessView: only the view's subresource. The HAL
+    // transitions the image to UNORDERED_ACCESS (GENERAL) for a compute-stage
+    // access, but vkCmdClearColorImage is a transfer-stage write, so it needs
+    // its own ordering against the shader work on either side.
+    void CommandList::clear_storage_image(VkImage img, const Views::UnorderedAccess& uav, const VkClearColorValue& cv)
+    {
+        VkImageSubresourceRange range{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
+        std::visit(overloaded{
+            [&](const Views::UnorderedAccess::Texture2D& t)      { range.baseMipLevel = t.MipSlice; },
+            [&](const Views::UnorderedAccess::Texture2DArray& t) { range.baseMipLevel = t.MipSlice; range.baseArrayLayer = t.FirstArraySlice; range.layerCount = t.ArraySize; },
+            [&](const Views::UnorderedAccess::Texture3D& t)      { range.baseMipLevel = t.MipSlice; },
+            [&](const Views::UnorderedAccess::Texture1DArray& t) { range.baseMipLevel = t.MipSlice; range.baseArrayLayer = t.FirstArraySlice; range.layerCount = t.ArraySize; },
+            [&](auto&&) {}
+        }, uav.View);
+        if (range.layerCount == 0 || range.layerCount == uint32_t(-1))
+            range.layerCount = VK_REMAINING_ARRAY_LAYERS;
+
+        VkImageMemoryBarrier2 b{ VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2 };
+        b.oldLayout        = VK_IMAGE_LAYOUT_GENERAL;
+        b.newLayout        = VK_IMAGE_LAYOUT_GENERAL;
+        b.image            = img;
+        b.subresourceRange = range;
+        VkDependencyInfo dep{ VK_STRUCTURE_TYPE_DEPENDENCY_INFO };
+        dep.imageMemoryBarrierCount = 1;
+        dep.pImageMemoryBarriers    = &b;
+
+        b.srcStageMask  = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+        b.srcAccessMask = VK_ACCESS_2_MEMORY_READ_BIT | VK_ACCESS_2_MEMORY_WRITE_BIT;
+        b.dstStageMask  = VK_PIPELINE_STAGE_2_CLEAR_BIT;
+        b.dstAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT;
+        vkCmdPipelineBarrier2(vk_cmd, &dep);
+
         vkCmdClearColorImage(vk_cmd, img, VK_IMAGE_LAYOUT_GENERAL, &cv, 1, &range);
+
+        b.srcStageMask  = VK_PIPELINE_STAGE_2_CLEAR_BIT;
+        b.srcAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT;
+        b.dstStageMask  = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+        b.dstAccessMask = VK_ACCESS_2_MEMORY_READ_BIT | VK_ACCESS_2_MEMORY_WRITE_BIT;
+        vkCmdPipelineBarrier2(vk_cmd, &dep);
     }
 
     void CommandList::clear_uav_uint(const Handles::UAV& h, uint4 color)
@@ -480,20 +684,19 @@ namespace HAL::API
 
         auto& api = static_cast<API::Resource&>(*uav->Resource);
         VkImage img = api.get_vk_image();
-        if (img == VK_NULL_HANDLE) return;
-
         end_rendering_if_active();
+        if (img == VK_NULL_HANDLE)
+        {
+            clear_storage_buffer(api, *uav, color);
+            return;
+        }
 
         VkClearColorValue cv{};
         cv.uint32[0] = color.x;
         cv.uint32[1] = color.y;
         cv.uint32[2] = color.z;
         cv.uint32[3] = color.w;
-
-        VkImageSubresourceRange range{ VK_IMAGE_ASPECT_COLOR_BIT,
-                                       0, VK_REMAINING_MIP_LEVELS,
-                                       0, VK_REMAINING_ARRAY_LAYERS };
-        vkCmdClearColorImage(vk_cmd, img, VK_IMAGE_LAYOUT_GENERAL, &cv, 1, &range);
+        clear_storage_image(img, *uav, cv);
     }
 
     // ---- Lazy render-pass start (for draw calls) ----------------------------
@@ -606,6 +809,9 @@ namespace HAL::API
       //      current_topology = pipeline->vk_topology;
         }
 
+        else
+            current_compute_pipeline = pipeline->vk_pipeline;
+
         vkCmdBindPipeline(vk_cmd, bind_point, pipeline->vk_pipeline);
         flush_heaps();
     }
@@ -662,6 +868,10 @@ namespace HAL::API
         temp_mark("dispatch");
         // Compute doesn't use a render pass — end any active one first.
         end_rendering_if_active();
+        // Same reason as reapply_draw_state: the pipeline may have been bound in
+        // an earlier command buffer of a split recording.
+        if (current_compute_pipeline != VK_NULL_HANDLE)
+            vkCmdBindPipeline(vk_cmd, VK_PIPELINE_BIND_POINT_COMPUTE, current_compute_pipeline);
         flush_heaps();
         push_full_constants();  // compute shaders read bindless indices from push data
         vkCmdDispatch(vk_cmd, static_cast<uint32_t>(v.x),
@@ -705,10 +915,9 @@ namespace HAL::API
             ? VK_INDEX_TYPE_UINT32 : VK_INDEX_TYPE_UINT16;
 
         current_index_buffer = api_res.get_vk_buffer();
-        current_index_offset = index.OffsetInBytes;
+        current_index_offset = api_res.get_vk_buffer_offset() + index.OffsetInBytes;
         current_index_type   = idx_type;
-        vkCmdBindIndexBuffer(vk_cmd, api_res.get_vk_buffer(),
-                             index.OffsetInBytes, idx_type);
+        vkCmdBindIndexBuffer(vk_cmd, current_index_buffer, current_index_offset, idx_type);
     }
 
     // ---- Viewport / scissor ------------------------------------------------
@@ -813,9 +1022,33 @@ namespace HAL::API
             src_api.get_vk_buffer() != VK_NULL_HANDLE)
         {
             VkBufferCopy region{};
-            region.size = dest->get_desc().as_buffer().SizeInBytes;
+            region.srcOffset = src_api.get_vk_buffer_offset();
+            region.dstOffset = dst_api.get_vk_buffer_offset();
+            region.size      = dest->get_desc().as_buffer().SizeInBytes;
             vkCmdCopyBuffer(vk_cmd, src_api.get_vk_buffer(),
                             dst_api.get_vk_buffer(), 1, &region);
+            return;
+        }
+
+        // CopyResource on textures: every mip of every layer.
+        if (dst_api.get_vk_image() != VK_NULL_HANDLE && src_api.get_vk_image() != VK_NULL_HANDLE
+            && dest->get_desc().is_texture())
+        {
+            const auto& td = dest->get_desc().as_texture();
+            const uint mips   = std::max(1u, (uint)td.MipLevels);
+            const uint layers = td.is3D() ? 1u : std::max(1u, (uint)td.ArraySize);
+            std::vector<VkImageCopy> regions(mips);
+            for (uint m = 0; m < mips; m++)
+            {
+                auto& r = regions[m];
+                r.srcSubresource = { src_api.get_vk_aspect(), m, 0, layers };
+                r.dstSubresource = { dst_api.get_vk_aspect(), m, 0, layers };
+                r.extent = mip_extent(td, m);
+            }
+            vkCmdCopyImage(vk_cmd,
+                src_api.get_vk_image(), VK_IMAGE_LAYOUT_GENERAL,
+                dst_api.get_vk_image(), VK_IMAGE_LAYOUT_GENERAL,
+                mips, regions.data());
         }
     }
 
@@ -830,8 +1063,8 @@ namespace HAL::API
             src_api.get_vk_buffer() == VK_NULL_HANDLE) return;
 
         VkBufferCopy region{};
-        region.srcOffset = src_offset;
-        region.dstOffset = dest_offset;
+        region.srcOffset = src_api.get_vk_buffer_offset() + src_offset;
+        region.dstOffset = dst_api.get_vk_buffer_offset() + dest_offset;
         region.size      = size;
         vkCmdCopyBuffer(vk_cmd, src_api.get_vk_buffer(),
                         dst_api.get_vk_buffer(), 1, &region);
@@ -859,7 +1092,7 @@ namespace HAL::API
         VkImageAspectFlags aspect = static_cast<const API::Resource&>(resource).get_vk_aspect();
 
         VkBufferImageCopy region{};
-        region.bufferOffset      = address.resource_offset;
+        region.bufferOffset      = static_cast<const API::Resource&>(*address.resource).get_vk_buffer_offset() + address.resource_offset;
         region.bufferRowLength   = (layout.row_stride / bpt);
         region.bufferImageHeight = 0; // tight vertically: rows = imageExtent.height
         region.imageSubresource  = { aspect,
@@ -882,7 +1115,7 @@ namespace HAL::API
         // The HAL transitions `resource` to COPY_DEST (→ TRANSFER_DST_OPTIMAL) before this call.
         VkBufferImageCopy region = make_buffer_image_copy(*resource, offset, box, sub_resource, address, layout);
         vkCmdCopyBufferToImage(vk_cmd, staging.get_vk_buffer(), dst.get_vk_image(),
-            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+            VK_IMAGE_LAYOUT_GENERAL, 1, &region);
     }
 
     void CommandList::read_texture(const HAL::Resource* resource, ivec3 offset, ivec3 box,
@@ -898,7 +1131,7 @@ namespace HAL::API
         // The HAL transitions `resource` to COPY_SOURCE (→ TRANSFER_SRC_OPTIMAL) before this call.
         VkBufferImageCopy region = make_buffer_image_copy(*resource, offset, box, sub_resource, target, layout);
         vkCmdCopyImageToBuffer(vk_cmd, src.get_vk_image(),
-            VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, staging.get_vk_buffer(), 1, &region);
+            VK_IMAGE_LAYOUT_GENERAL, staging.get_vk_buffer(), 1, &region);
     }
 
     void CommandList::copy_texture(const Resource::ptr& dest, int dest_sub,
@@ -910,17 +1143,22 @@ namespace HAL::API
         auto& src = static_cast<API::Resource&>(*source);
         if (dst.get_vk_image() == VK_NULL_HANDLE || src.get_vk_image() == VK_NULL_HANDLE) return;
 
-        // Use imported_extent for the copy region (covers swapchain backbuffers).
-        // For regular textures, get_imported_extent() falls back to {0,0}; use 1 as minimum.
-        VkExtent2D ext = dst.get_imported_extent();
+        // Subresource to subresource, sized by the source subresource like
+        // CopyTextureRegion with no box. Flat index = mip + layer * mips.
+        const auto& sd = static_cast<const HAL::Resource&>(*source).get_desc().as_texture();
+        const auto& dd = static_cast<const HAL::Resource&>(*dest).get_desc().as_texture();
+        const uint src_mips = std::max(1u, (uint)sd.MipLevels);
+        const uint dst_mips = std::max(1u, (uint)dd.MipLevels);
+        const uint src_mip = uint(src_sub) % src_mips, src_layer = uint(src_sub) / src_mips;
+        const uint dst_mip = uint(dest_sub) % dst_mips, dst_layer = uint(dest_sub) / dst_mips;
+
         VkImageCopy region{};
-        region.srcSubresource = { src.get_vk_aspect(), 0, 0, 1 };
-        region.dstSubresource = { dst.get_vk_aspect(), 0, 0, 1 };
-        region.extent         = { ext.width  ? ext.width  : 1,
-                                   ext.height ? ext.height : 1, 1 };
+        region.srcSubresource = { src.get_vk_aspect(), src_mip, sd.is3D() ? 0u : src_layer, 1 };
+        region.dstSubresource = { dst.get_vk_aspect(), dst_mip, dd.is3D() ? 0u : dst_layer, 1 };
+        region.extent         = mip_extent(sd, src_mip);
         vkCmdCopyImage(vk_cmd,
-            src.get_vk_image(), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-            dst.get_vk_image(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+            src.get_vk_image(), VK_IMAGE_LAYOUT_GENERAL,
+            dst.get_vk_image(), VK_IMAGE_LAYOUT_GENERAL,
             1, &region);
     }
 
@@ -942,8 +1180,8 @@ namespace HAL::API
                                    static_cast<uint32_t>(size.y),
                                    static_cast<uint32_t>(size.z) };
         vkCmdCopyImage(vk_cmd,
-            src.get_vk_image(), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-            dst.get_vk_image(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+            src.get_vk_image(), VK_IMAGE_LAYOUT_GENERAL,
+            dst.get_vk_image(), VK_IMAGE_LAYOUT_GENERAL,
             1, &region);
     }
 
@@ -1016,12 +1254,19 @@ namespace HAL::API
     {
         if (vk_cmd == VK_NULL_HANDLE || !command_buffer) return;
         temp_mark("execute_indirect");
-        VkBuffer args = static_cast<API::Resource&>(*command_buffer).get_vk_buffer();
+        auto& args_res = static_cast<API::Resource&>(*command_buffer);
+        VkBuffer args = args_res.get_vk_buffer();
         if (args == VK_NULL_HANDLE) return;
 
         const uint32_t stride = command.stride;
-        VkBuffer count_buf = counter_buffer
-            ? static_cast<API::Resource&>(*counter_buffer).get_vk_buffer() : VK_NULL_HANDLE;
+        command_offset += command.args_offset + args_res.get_vk_buffer_offset();
+        VkBuffer count_buf = VK_NULL_HANDLE;
+        if (counter_buffer)
+        {
+            auto& count_res = static_cast<API::Resource&>(*counter_buffer);
+            count_buf = count_res.get_vk_buffer();
+            counter_offset += count_res.get_vk_buffer_offset();
+        }
 
         switch (command.kind)
         {
@@ -1067,6 +1312,8 @@ namespace HAL::API
         case IndirectKind::Dispatch:
         {
             end_rendering_if_active();
+            if (current_compute_pipeline != VK_NULL_HANDLE)
+                vkCmdBindPipeline(vk_cmd, VK_PIPELINE_BIND_POINT_COMPUTE, current_compute_pipeline);
             flush_heaps();
             push_full_constants();  // compute shaders read bindless indices from push data
             // Vulkan has no indirect-count dispatch; issue up to max_commands
@@ -1084,6 +1331,24 @@ namespace HAL::API
     void CommandList::temp_mark(const char* op)
     {
         API::temp_checkpoint(vk_cmd, std::format("{} {} #{}", temp_name, op, temp_op++));
+        temp_dump(std::format("  CMD {}", op));
+    }
+
+    // TEMP: bloom sync investigation -- writes this list's barriers and
+    // commands to barrier_dump.temp for the DebugSync frame range.
+    bool CommandList::temp_dumping() const
+    {
+        const uint64_t f = DebugSync::temp_frame.load(std::memory_order_relaxed);
+        return f >= DebugSync::temp_dump_first && f <= DebugSync::temp_dump_last
+            && temp_name.find("Bloom") != std::string::npos;
+    }
+
+    void CommandList::temp_dump(const std::string& line)
+    {
+        if (!temp_dumping()) return;
+        static std::mutex m;
+        std::lock_guard g(m);
+        std::ofstream("barrier_dump.temp", std::ios::app) << "f" << DebugSync::temp_frame.load() << " [" << temp_name << "] " << line << "\n";
     }
 
     void CommandList::set_name(std::wstring_view name)
@@ -1108,9 +1373,13 @@ namespace HAL::API
         static bool warned = false;
         if (!warned) { warned = true; Log::get() << Log::LEVEL_WARNING << "[Vulkan] CommandList::discard not implemented" << Log::endl; }
     }
+    // TEMP: Vulkan device-lost experiment -- SPECTRUM_TEMP_NO_TIMESTAMPS skips
+    // every timestamp write and resolve.
+    static const bool temp_no_timestamps = std::getenv("SPECTRUM_TEMP_NO_TIMESTAMPS") != nullptr;
+
     void CommandList::insert_time(const QueryHandle& handle, uint index)
     {
-        if (vk_cmd == VK_NULL_HANDLE) return;
+        if (vk_cmd == VK_NULL_HANDLE || temp_no_timestamps) return;
         auto* heap = handle.get_heap().get();
         if (!heap) return;
         auto& api_heap = static_cast<API::QueryHeap&>(*heap);
@@ -1128,7 +1397,7 @@ namespace HAL::API
     void CommandList::resolve_times(const QueryHeap* heap, uint32_t count,
                                      ResourceAddress dest)
     {
-        if (!heap || vk_cmd == VK_NULL_HANDLE || !dest.resource) return;
+        if (!heap || vk_cmd == VK_NULL_HANDLE || !dest.resource || temp_no_timestamps) return;
 
         auto& api_heap = static_cast<const API::QueryHeap&>(*heap);
         if (api_heap.get_native() == VK_NULL_HANDLE) return;
@@ -1136,12 +1405,15 @@ namespace HAL::API
         auto& dst_res = static_cast<API::Resource&>(*dest.resource);
         if (dst_res.get_vk_buffer() == VK_NULL_HANDLE) return;
 
+        // No WAIT_BIT: a slot reset but not written this frame never becomes
+        // available, and waiting on it stalls the queue forever. D3D12's
+        // ResolveQueryData just returns stale data for such slots; so does this.
         vkCmdCopyQueryPoolResults(vk_cmd,
             api_heap.get_native(),
             0, count,
             dst_res.get_vk_buffer(),
-            dest.resource_offset,
+            dst_res.get_vk_buffer_offset() + dest.resource_offset,
             sizeof(uint64_t),
-            VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WAIT_BIT);
+            VK_QUERY_RESULT_64_BIT);
     }
 }

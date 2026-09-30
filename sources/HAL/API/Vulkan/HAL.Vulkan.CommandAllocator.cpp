@@ -25,6 +25,7 @@ namespace HAL
         info.queueFamilyIndex = family;
 
         vkCreateCommandPool(api_dev.vk_device, &info, nullptr, &vk_command_pool);
+        API::temp_live[API::TL_CmdPools]++;   // TEMP
     }
 
     CommandAllocator::~CommandAllocator()
@@ -34,12 +35,34 @@ namespace HAL
         if (api_dev.vk_device == VK_NULL_HANDLE) return;
         vkDestroyCommandPool(api_dev.vk_device, vk_command_pool, nullptr);
         vk_command_pool = VK_NULL_HANDLE;
+        API::temp_live[API::TL_CmdPools]--;   // TEMP
     }
 
     void CommandAllocator::reset()
     {
         if (vk_command_pool == VK_NULL_HANDLE) return;
         auto& api_dev = static_cast<API::Device&>(device);
+        std::lock_guard g(pool_mutex);
         vkResetCommandPool(api_dev.vk_device, vk_command_pool, 0);
+        next_buffer = 0;
+    }
+
+    namespace API
+    {
+        VkCommandBuffer CommandAllocator::acquire(VkDevice vk_dev)
+        {
+            if (next_buffer == buffers.size())
+            {
+                VkCommandBufferAllocateInfo alloc{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
+                alloc.commandPool        = vk_command_pool;
+                alloc.level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+                alloc.commandBufferCount = 1;
+                VkCommandBuffer cb = VK_NULL_HANDLE;
+                vkAllocateCommandBuffers(vk_dev, &alloc, &cb);
+                buffers.push_back(cb);
+                temp_live[TL_Pipelines]++;   // TEMP: command buffers allocated (slot reused)
+            }
+            return buffers[next_buffer++];
+        }
     }
 }

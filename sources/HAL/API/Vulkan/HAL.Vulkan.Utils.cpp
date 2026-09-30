@@ -11,6 +11,12 @@ module HAL:Utils;
 import stl.core;
 import Core;
 
+namespace
+{
+    bool d24s8_supported = true;
+    VkFormat d24s8() { return d24s8_supported ? VK_FORMAT_D24_UNORM_S8_UINT : VK_FORMAT_D32_SFLOAT_S8_UINT; }
+}
+
 // Vulkan conversion helpers: HAL abstract types → Vulkan native types.
 // These mirror the to_native() / from_native() functions provided by the
 // D3D12 Utils for D3D12 types.  Only the conversions needed through Phase 3
@@ -25,6 +31,11 @@ using namespace HAL;
 // ============================================================================
 //  Format
 // ============================================================================
+
+void set_d24s8_supported(bool supported)
+{
+    d24s8_supported = supported;
+}
 
 VkFormat to_native(Format format)
 {
@@ -86,7 +97,7 @@ VkFormat to_native(Format format)
     case Format::B5G5R5A1_UNORM:        return VK_FORMAT_A1R5G5B5_UNORM_PACK16;
     // ---- depth/stencil -------------------------------------------------------
     case Format::D16_UNORM:             return VK_FORMAT_D16_UNORM;
-    case Format::D24_UNORM_S8_UINT:     return VK_FORMAT_D24_UNORM_S8_UINT;
+    case Format::D24_UNORM_S8_UINT:     return d24s8();
     case Format::D32_FLOAT:             return VK_FORMAT_D32_SFLOAT;
     case Format::D32_FLOAT_S8X24_UINT:  return VK_FORMAT_D32_SFLOAT_S8_UINT;
     // ---- block-compressed ----------------------------------------------------
@@ -120,7 +131,7 @@ VkFormat to_native(Format format)
     case Format::R8G8_TYPELESS:         return VK_FORMAT_R8G8_UNORM;
     case Format::R16_TYPELESS:          return VK_FORMAT_R16_SFLOAT;
     case Format::R8_TYPELESS:           return VK_FORMAT_R8_UNORM;
-    case Format::R24G8_TYPELESS:        return VK_FORMAT_D24_UNORM_S8_UINT;
+    case Format::R24G8_TYPELESS:        return d24s8();
     case Format::R32G8X24_TYPELESS:     return VK_FORMAT_D32_SFLOAT_S8_UINT;
     case Format::BC1_TYPELESS:          return VK_FORMAT_BC1_RGBA_UNORM_BLOCK;
     case Format::BC2_TYPELESS:          return VK_FORMAT_BC2_UNORM_BLOCK;
@@ -253,8 +264,13 @@ VkImageLayout to_native(TextureLayout layout)
     // match D3D12 semantics: one stable layout for any shader access.
     // (GENERAL is a valid layout for VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE per spec.)
     case TextureLayout::SHADER_RESOURCE:     return VK_IMAGE_LAYOUT_GENERAL;
-    case TextureLayout::COPY_SOURCE:         return VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-    case TextureLayout::COPY_DEST:           return VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+    // GENERAL, not TRANSFER_*_OPTIMAL: the HAL merges read layouts
+    // (SHADER_RESOURCE|COPY_SOURCE, D3D12's GENERIC_READ) and has COPY_QUEUE
+    // combinations, all of which land on GENERAL below. The copy commands then
+    // had to guess the image's layout; with every copy layout GENERAL they
+    // always name the one the image is actually in.
+    case TextureLayout::COPY_SOURCE:         return VK_IMAGE_LAYOUT_GENERAL;
+    case TextureLayout::COPY_DEST:           return VK_IMAGE_LAYOUT_GENERAL;
    // case TextureLayout::RESOLVE_SOURCE:      return VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
    // case TextureLayout::RESOLVE_DEST:        return VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
     default:                                 return VK_IMAGE_LAYOUT_GENERAL;
@@ -287,6 +303,8 @@ VkPipelineStageFlags2 to_native_stage(BarrierSync sync)
     if (check(sync & BarrierSync::COPY))             result |= VK_PIPELINE_STAGE_2_ALL_TRANSFER_BIT;
     if (check(sync & BarrierSync::RESOLVE))          result |= VK_PIPELINE_STAGE_2_RESOLVE_BIT;
     if (check(sync & BarrierSync::EXECUTE_INDIRECT)) result |= VK_PIPELINE_STAGE_2_DRAW_INDIRECT_BIT;
+    // UAV clears are vkCmdClearColorImage / vkCmdFillBuffer: transfer-class work.
+    if (check(sync & BarrierSync::CLEAR_UNORDERED_ACCESS_VIEW)) result |= VK_PIPELINE_STAGE_2_CLEAR_BIT | VK_PIPELINE_STAGE_2_COPY_BIT;
     if (check(sync & BarrierSync::ALL_SHADING))      result |= VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT | VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT;
     if (check(sync & BarrierSync::BUILD_RAYTRACING_ACCELERATION_STRUCTURE)) result |= VK_PIPELINE_STAGE_2_ACCELERATION_STRUCTURE_BUILD_BIT_KHR;
     return result;
@@ -299,6 +317,8 @@ VkPipelineStageFlags2 to_native_stage(BarrierSync sync)
 VkAccessFlags2 to_native_access(BarrierAccess access)
 {
     if (check(access & BarrierAccess::NO_ACCESS)) return VK_ACCESS_2_NONE;
+    // D3D12_BARRIER_ACCESS_COMMON (0) is "every access the layout allows", not none.
+    if (access == BarrierAccess::COMMON) return VK_ACCESS_2_MEMORY_READ_BIT | VK_ACCESS_2_MEMORY_WRITE_BIT;
 
     VkAccessFlags2 result = VK_ACCESS_2_NONE;
     if (check(access & BarrierAccess::VERTEX_BUFFER))       result |= VK_ACCESS_2_VERTEX_ATTRIBUTE_READ_BIT;

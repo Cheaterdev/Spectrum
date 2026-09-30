@@ -7,15 +7,15 @@
 #pragma once
 #include "sig_hlsl.hlsl"
 #include "enums.h"
-#include "CommandData.h"
+#include "DrawMeshCommand.h"
 namespace Meshes
 {
 	struct GatherPipeline
 	{
 		uint4 pip_ids[2]; // uint4
-		uint commands[8]; // AppendStructuredBuffer<CommandData>
+		uint commands[8]; // AppendStructuredBuffer<DrawMeshCommand>
 		uint4 GetPip_ids(int i) { return pip_ids[i]; }
-		AppendStructuredBuffer<CommandData> GetCommands(int i) { return ResourceDescriptorHeap[commands[i]]; }
+		AppendStructuredBuffer<DrawMeshCommand> GetCommands(int i) { return ResourceDescriptorHeap[commands[i]]; }
 
 	};
 }

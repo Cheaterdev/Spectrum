@@ -39,6 +39,11 @@ namespace Frame
 		# shared RTX hit shader, and every Instance0-5 slot is already taken
 		# inside that one library.
 		slot VSMShadow;
+
+		# IndirectDraw (meshrender.prism): the draw id of an indirect mesh draw.
+		# D3D12 writes it per draw from the command signature; Vulkan binds the
+		# command buffer here and reads it back at DrawIndex.
+		slot DrawId;
 	}
 }
 

@@ -42,6 +42,10 @@ export namespace HAL
         void temp_checkpoint(VkCommandBuffer cmd, std::string_view label);
         void temp_register_checkpoint_queue(VkQueue queue, std::string name);
 
+        // TEMP: Vulkan memory leak -- live object counts, dumped to vma_stats.temp.
+        enum TempLive { TL_DescHeaps, TL_DescSlots, TL_ImageViews, TL_Resources, TL_Pipelines, TL_CmdPools, TL_COUNT };
+        inline std::atomic<int64_t> temp_live[TL_COUNT];
+
         class Device
         {
             std::map<ResourceDesc, ResourceAllocationInfo> alloc_info;
@@ -109,6 +113,7 @@ export namespace HAL
             uint32_t              resource_heap_capacity = 0;
             uint32_t              sampler_heap_capacity  = 0;
             bool                  null_descriptor        = false;   // VK_EXT_robustness2
+            bool                  conservative_raster    = false;   // VK_EXT_conservative_rasterization
 
             // ---- Pending initial-layout transitions --------------------------
             // D3D12 creates resources directly in their initial state; Vulkan
@@ -167,6 +172,7 @@ export namespace HAL
             uint32_t              get_sampler_heap_capacity()  const noexcept { return sampler_heap_capacity; }
             // Whether a descriptor may be written with a null resource (D3D12 null view).
             bool                  supports_null_descriptor()   const noexcept { return null_descriptor; }
+            bool                  supports_conservative_raster() const noexcept { return conservative_raster; }
             static constexpr uint32_t get_push_constant_size()  noexcept { return PUSH_CONSTANT_SIZE; }
             static constexpr uint32_t get_inline_sampler_count() noexcept { return NUM_INLINE_SMP; }
 

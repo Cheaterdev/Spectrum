@@ -1,10 +1,36 @@
 #include "common/common.hlsl"
 
 #include "autogen/FrameInfo.h"
-#include "autogen/MaterialInfo.h"
-#include "autogen/SceneData.h"
-#include "autogen/MeshInfo.h"
+#define DRAW_DATA_MATERIAL
+#include "common/draw_data.hlsl"
 #include "autogen/rt/GBuffer.h"
+
+// The draw a pixel belongs to (draw_data.hlsl), set at the top of every pixel
+// entry. D3D12 reads the IndirectDraw root constant, which every stage sees.
+// Vulkan has no DrawIndex in pixel shaders: a mesh front end passes the id
+// down per primitive (DRAW_ID_INPUT, set by PipelinePasses); other front ends
+// (tessellation) are only drawn directly.
+static uint ps_draw_id = DRAW_ID_NONE;
+
+#if defined(__spirv__) && defined(DRAW_ID_INPUT)
+struct draw_id_input
+{
+    PER_PRIMITIVE_INPUT uint draw_id : DRAW_ID;
+};
+#define DRAW_ID_PARAM , draw_id_input prim
+#define SET_DRAW_ID() ps_draw_id = prim.draw_id
+#elif defined(__spirv__)
+#define DRAW_ID_PARAM
+#define SET_DRAW_ID() ps_draw_id = DRAW_ID_NONE
+#else
+#define DRAW_ID_PARAM
+#define SET_DRAW_ID() ps_draw_id = pass_IndirectDraw.offset
+#endif
+
+// Material and mesh tables of this pixel's draw; the generated material code
+// reads GetMaterialInfo() too.
+#define GetMaterialInfo() draw_material_info(ps_draw_id)
+#define GetMeshInfo() draw_mesh_info(ps_draw_id)
 
 static const Camera camera = GetFrameInfo().GetCamera();
 static const Camera prev_camera = GetFrameInfo().GetPrevCamera();
@@ -19,9 +45,15 @@ float3 normal : NORMAL;
 float3 binormal : BINORMAL;
 float3 tangent : TANGENT;
 float2 tc : TEXCOORD;
-    float4 cur_pos : CUR_POSITION; 
-  
-    float4 prev_pos : PREV_POSITION; 
+    float4 cur_pos : CUR_POSITION;
+
+    float4 prev_pos : PREV_POSITION;
+#ifdef DRAW_ID_INPUT
+    // The mesh shaders' last per-vertex output, unused here: declared so the
+    // per-primitive DRAW_ID after it lands on the same location on both sides
+    // (DXC numbers interface variables in declaration order).
+    float dist : DISTANCE;
+#endif
 };
 struct vertex_output2
 { 
@@ -75,8 +107,9 @@ GBuffer universal(vertex_output i, float4 albedo, float metallic,float roughness
 }    
 
 void COMPILED_FUNC(in float3 a, in float2 b, out float4 c, out float d, out float e, out float4 f, out float4 g, out float h, out float ior, out float thickness, out float transmission, out float absorption_distance, float lod);
-GBuffer PS(vertex_output i)
+GBuffer PS(vertex_output i DRAW_ID_PARAM)
 {
+	SET_DRAW_ID();
 	float4 color = 1;
 	float metallic = 0.001;
 	float roughness = 1;
@@ -109,8 +142,9 @@ struct vsm_depth_vertex_output
 };
 
 void COMPILED_FUNC(in float3 a, in float2 b, out float4 c, out float d, out float e, out float4 f, out float4 g, out float h, out float ior, out float thickness, out float transmission, out float absorption_distance, float lod);
-void PS_VSM_DEPTH(vsm_depth_vertex_output i)
+void PS_VSM_DEPTH(vsm_depth_vertex_output i DRAW_ID_PARAM)
 {
+	SET_DRAW_ID();
 	float4 color = 1;
 	float metallic = 0.001;
 	float roughness = 1;
@@ -152,8 +186,9 @@ void universal_voxel(vertex_output i, float4 albedo, float metallic, float rough
     
 }
 void COMPILED_FUNC(in float3 a, in float2 b, out float4 c, out float d, out float e, out float4 f, out float4 g, out float h, out float ior, out float thickness, out float transmission, out float absorption_distance, float lod);
-void PS_VOXEL(vertex_output i)
+void PS_VOXEL(vertex_output i DRAW_ID_PARAM)
 {
+	SET_DRAW_ID();
 	float4 color = 1;
 	float metallic = 1;
 	float roughness = 1;

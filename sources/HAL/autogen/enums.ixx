@@ -17,16 +17,6 @@ export
 		NoneLayout
 	};
 
-	enum class IndirectCommands: int
-	{
-		DrawIndexedArguments,
-		DispatchMeshArguments,
-		DispatchArguments,
-		CommandData,
-		DispatchRaysArguments,
-		VSMDispatchCommandData
-	};
-
 	enum class PSO: int
 	{
 		BloomDownsample,
@@ -126,6 +116,7 @@ export
 		VSMDownsampleHiZBatch,
 		VSMBlockerClassify,
 		VSMApplyCompute,
+		VSMUnshadowed,
 		VSMBlockerSearchCompute,
 		VSMFullLit,
 		VSMFullShadow,
@@ -243,7 +234,8 @@ export
 		DispatchArguments = "DispatchArguments"_crc32,
 		GPUAddress = "GPUAddress"_crc32,
 		MeshInstance = "MeshInstance"_crc32,
-		CommandData = "CommandData"_crc32,
+		DrawMeshCommand = "DrawMeshCommand"_crc32,
+		IndirectDraw = "IndirectDraw"_crc32,
 		MeshCommandData = "MeshCommandData"_crc32,
 		MaterialCommandData = "MaterialCommandData"_crc32,
 		GatherPipelineGlobal = "GatherPipelineGlobal"_crc32,
@@ -385,7 +377,6 @@ export
 		VSMSearchVerdictAppend = "VSMSearchVerdictAppend"_crc32,
 		VSMBlockerSearchOutput = "VSMBlockerSearchOutput"_crc32,
 		VSMShadowResolveIO = "VSMShadowResolveIO"_crc32,
-		VSMDispatchCommandData = "VSMDispatchCommandData"_crc32,
 		VSMLevelDispatchInfo = "VSMLevelDispatchInfo"_crc32,
 		VSMGatherDispatchData = "VSMGatherDispatchData"_crc32,
 		VSMGatherDispatchMaterialData = "VSMGatherDispatchMaterialData"_crc32,

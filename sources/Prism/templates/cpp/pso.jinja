@@ -83,6 +83,9 @@ export namespace PSOS
 {%- if pso.options.Requires is defined and pso.options.Requires.value_atom.expr == "Raytracing" %}
 			mpso.requires_raytracing = true;
 {% endif %}
+{%- if pso.options.Requires is defined and pso.options.Requires.value_atom.expr == "TiledDepth" %}
+			mpso.requires_tiled_depth = true;
+{% endif %}
 {%- for v in (pso.defines|list) %}
 {%- set d = pso.defines[v]-%}
 {%- if d.options.Requires is defined and d.options.Requires.value_atom.expr == "Raytracing" %}

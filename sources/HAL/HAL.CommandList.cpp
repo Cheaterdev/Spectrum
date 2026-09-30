@@ -523,9 +523,14 @@ namespace HAL
 					auto& pipeline_formats = graphics->desc.rtv.rtv_formats;
 					std::vector<HAL::Format> rtv_formats = compiled_rt.get_formats();
 
+					// Once per pipeline: this runs per draw.
+					static std::mutex reported_mutex;
+					static std::set<std::string> reported;
 					if (pipeline_formats != rtv_formats)
 					{
-						Log::get() << "Wrong rendertarget format for pipeline " << graphics->name << Log::endl;
+						std::lock_guard g(reported_mutex);
+						if (reported.insert(std::string(graphics->name)).second)
+							Log::get() << "Wrong rendertarget format for pipeline " << graphics->name << Log::endl;
 					}
 				}
 
@@ -534,9 +539,13 @@ namespace HAL
 					auto& pipeline_format = graphics->desc.rtv.ds_format;
 					HAL::Format ds_format = compiled_rt.get_depth_format();
 
+					static std::mutex reported_mutex;
+					static std::set<std::string> reported;
 					if (pipeline_format != ds_format)
 					{
-						Log::get() << "Wrong depthstencil format for pipeline " << graphics->name << Log::endl;
+						std::lock_guard g(reported_mutex);
+						if (reported.insert(std::string(graphics->name)).second)
+							Log::get() << "Wrong depthstencil format for pipeline " << graphics->name << Log::endl;
 					}
 				}
 			}
@@ -1931,6 +1940,12 @@ namespace HAL
 					{
 						found = slots->uses(slot);
 					}
+					// Another slot this pipeline reads sits at the same root index
+					// and is bound there. SPIR-V reflection only knows root indices,
+					// so it reports every included slot sharing one; the bound one
+					// is the one read.
+					if (!found && tables[id].bound && checked.uses(tables[id].slot_id))
+						found = true;
 
 					if (!found)
 					{
@@ -1969,6 +1984,28 @@ namespace HAL
 
 
 		used_slots = pipeline->slots;
+
+		// Shaders that also run under indirect draws read IndirectDraw to tell the
+		// two apart (draw_data.hlsl). Default it to "direct" here: an indirect
+		// draw rebinds it afterwards (Vulkan) or its command signature writes it
+		// per draw (D3D12), and a stale value from an earlier indirect draw would
+		// send a direct draw to the wrong mesh.
+		// Vulkan does not reflect slot usage yet (its slot list is empty), so any
+		// DefaultLayout pipeline there may read it. The root signature check keeps
+		// the write off other layouts, where this index is a different parameter.
+		const bool default_layout = root_sig == base.get_device().get_engine_root_layout_holder().GetSignature(Layouts::DefaultLayout);
+		const bool reads_draw_id  = pipeline->slots.slots_usage.contains(SlotID::IndirectDraw)
+		                         || pipeline->slots.slots_usage.empty();
+		if (default_layout && reads_draw_id)
+		{
+			const auto i = get_table_index(SlotID::IndirectDraw);
+			set_const_buffer(i, 0, DRAW_ID_NONE);
+			auto& row = tables[i];
+			row.slot_id = SlotID::IndirectDraw;
+			row.dirty   = false;
+			row.bound   = true;
+			row.resources.clear();
+		}
 	}
 
 

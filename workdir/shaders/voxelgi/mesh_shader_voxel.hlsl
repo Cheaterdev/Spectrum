@@ -17,16 +17,33 @@ struct vertex_output
 #include "../common/common.hlsl"
 
 #include "../autogen/FrameInfo.h"
-#include "../autogen/MeshInfo.h" 
-#include "../autogen/SceneData.h"
+#include "../common/draw_data.hlsl"
 #include "../autogen/Voxelization.h"
-#include "../autogen/MeshInstanceInfo.h" 
 
 static const FrameInfo frameInfo = GetFrameInfo();
-static const MeshInfo meshInfo = GetMeshInfo();
 static const SceneData sceneData = GetSceneData();
 static const VoxelInfo voxel_info = GetVoxelization().GetInfo();
-static const MeshInstanceInfo meshInstanceInfo = GetMeshInstanceInfo();
+
+// This draw's tables, set first thing in every entry: the task stage reads the
+// draw id, the mesh stage gets it through the payload (a mesh shader behind a
+// task shader may not read DrawIndex, VUID-VkGraphicsPipelineCreateInfo-pStages-09631).
+static uint draw_id;
+static MeshInfo meshInfo;
+static MeshInstanceInfo meshInstanceInfo;
+void bind_draw(uint id)
+{
+    draw_id          = id;
+    meshInfo         = draw_mesh_info(id);
+    meshInstanceInfo = draw_mesh_instance_info(id);
+}
+
+#ifdef __spirv__
+// Vulkan pixel shaders have no DrawIndex (PS_VOXEL's DRAW_ID_INPUT).
+struct primitive_output
+{
+    uint draw_id : DRAW_ID;
+};
+#endif
 
 
 //#include "../autogen/DebugInfo.h"
@@ -66,6 +83,7 @@ float4 TransformPosition(float2 In)
 
 struct Payload
 {
+    uint draw_id;
     uint MeshletIndices[32];
 };
 
@@ -77,6 +95,8 @@ groupshared Payload s_Payload;
 [NumThreads(32, 1, 1)]
 void AS(uint gtid : SV_GroupThreadID, uint dtid : SV_DispatchThreadID, uint gid : SV_GroupID)
 {
+    bind_draw(read_draw_id());
+    s_Payload.draw_id = draw_id;
 
     bool visible = false;
 
@@ -118,8 +138,12 @@ void VS(
     // triangles, un-indexed: 42 triangles, 126 vertices.
     out indices uint3 tris[42],
     out vertices vertex_output verts[126]
+#ifdef __spirv__
+    , out primitives primitive_output prims[42]
+#endif
 )
 {
+   bind_draw(payload.draw_id);
    uint gid = gid2.x;
    
     uint meshletIndex = payload.MeshletIndices[gid];
@@ -143,6 +167,9 @@ void VS(
     {
 	
 	      tris[gtid] = uint3(3 * gtid, 3 * gtid + 1, 3 * gtid + 2);
+#ifdef __spirv__
+        prims[gtid].draw_id = draw_id;
+#endif
         uint index_offset = 3 * (m.GetPrimitiveOffset() + primIndex);
         uint index_offset0 = meshInstanceInfo.GetPrimitive_indices()[index_offset];
         uint index_offset1 = meshInstanceInfo.GetPrimitive_indices()[index_offset + 1];

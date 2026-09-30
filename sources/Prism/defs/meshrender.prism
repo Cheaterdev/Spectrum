@@ -152,21 +152,20 @@ namespace Meshes
 
 
 
-	[IndirectCommand]
+	# Indirect argument layouts. The C++ side and the command signatures are
+	# fixed in the HAL (SIG.ixx); these declare the HLSL mirrors only.
 	[shader_only]
 	struct DrawIndexedArguments
 	{
 		uint data[5];
 	}
 
-	[IndirectCommand]
 	[shader_only]
 	struct DispatchMeshArguments
 	{
 		uint3 counts;
 	}
 
-	[IndirectCommand]
 	[shader_only]
 	struct DispatchArguments
 	{
@@ -186,13 +185,28 @@ namespace Meshes
 		uint index_offset;
 	}
 
-	[IndirectCommand]
-	struct CommandData
+	# One indirect mesh draw. Indirect commands carry no slots: Vulkan cannot
+	# set per-draw constants from a command buffer, so a draw only names itself
+	# (draw_id) and its shaders fetch everything else by that id -- see
+	# draw_data.hlsl. draw_id: the mesh id (SceneData.meshes) in the low 24
+	# bits; the high 8 bits are free for the pass (VSM: the clipmap level).
+	[shader_only]
+	struct DrawMeshCommand
 	{
-		MeshInfo* mesh_cb;
-		MeshInstanceInfo* meshinstance_cb;
-		MaterialInfo* material_cb;
-		DispatchMeshArguments draw_commands;
+		uint draw_id;
+		DispatchMeshArguments args;
+	}
+
+	# The draw id of the indirect draw in flight. D3D12: the slot's root
+	# constant IS the draw id, written per draw by the command signature.
+	# Vulkan: this table, and the shader reads commands[base + DrawIndex].
+	# DRAW_ID_NONE (set by the HAL on set_pipeline) marks a direct draw, whose
+	# shaders read the MeshInfo/MeshInstanceInfo/MaterialInfo slots instead.
+	[Bind = DefaultLayout::DrawId]
+	struct IndirectDraw
+	{
+		StructuredBuffer<DrawMeshCommand> commands;
+		uint base;
 	}
 
 	struct MeshCommandData
@@ -270,7 +284,7 @@ namespace Meshes
 	struct GatherPipeline
 	{
 		uint4 pip_ids[2]; # PACK TO!!!! uint4 pip_ids[2];
-		AppendStructuredBuffer<CommandData> commands[8];
+		AppendStructuredBuffer<DrawMeshCommand> commands[8];
 	}
 
 	# Debug view culling capture (Graphics:CullCapture): every mesh this gather

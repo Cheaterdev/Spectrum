@@ -2089,15 +2089,41 @@ public:
 		}
 
 
+		// TEMP: Vulkan 3D bring-up bisection. SPECTRUM_TEMP_PASSES=A,B,C registers
+		// only pipeline passes whose name starts with one of the listed names.
+		static bool temp_pass_allowed(std::wstring_view name)
+		{
+			static const std::vector<std::wstring> allowed = [] {
+				std::vector<std::wstring> list;
+				const char* v = std::getenv("SPECTRUM_TEMP_PASSES");
+				if (!v || !*v) return list;
+				std::string s(v);
+				for (size_t start = 0; start <= s.size();)
+				{
+					size_t end = s.find(',', start);
+					if (end == std::string::npos) end = s.size();
+					if (end > start) list.emplace_back(s.begin() + start, s.begin() + end);
+					start = end + 1;
+				}
+				return list;
+			}();
+			if (allowed.empty()) return true;
+			for (auto& a : allowed)
+				if (name.starts_with(a)) return true;
+			return false;
+		}
+
 		template<class T>
 		void add_library_pass(typename T::setup_func_type s, typename T::render_func_type r, PassFlags flags = PassFlags::General)
 		{
+			if (!temp_pass_allowed(T::Name.ptr)) return;
 			internal_pass<TypedPass<T::Context>>(T::Name, s, r, flags, 0, T::ID);
 		}
 
 		template<class T>
 		void add_library_pass(uint32_t index, typename T::setup_func_type s, typename T::render_func_type r, PassFlags flags = PassFlags::General)
 		{
+			if (!temp_pass_allowed(T::Names[index].ptr)) return;
 			internal_pass<TypedPass<T::Context>>(T::Names[index], s, r, flags, index, T::ID);
 		}
 

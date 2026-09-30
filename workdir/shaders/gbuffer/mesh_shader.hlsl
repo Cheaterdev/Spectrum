@@ -17,14 +17,24 @@ struct vertex_output
 #include "../common/common.hlsl"
 
 #include "../autogen/FrameInfo.h"
-#include "../autogen/MeshInfo.h" 
-#include "../autogen/SceneData.h"
-#include "../autogen/MeshInstanceInfo.h" 
+#include "../common/draw_data.hlsl"
 
 static const FrameInfo frameInfo = GetFrameInfo();
-static const MeshInfo meshInfo = GetMeshInfo();
 static const SceneData sceneData = GetSceneData();
-static const MeshInstanceInfo meshInstanceInfo = GetMeshInstanceInfo();
+
+// This draw's tables, set first thing in every entry. The task stage reads the
+// draw id; the mesh stage gets it through the payload, because a mesh shader
+// behind a task shader may not read DrawIndex
+// (VUID-VkGraphicsPipelineCreateInfo-pStages-09631).
+static uint draw_id;
+static MeshInfo meshInfo;
+static MeshInstanceInfo meshInstanceInfo;
+void bind_draw(uint id)
+{
+    draw_id          = id;
+    meshInfo         = draw_mesh_info(id);
+    meshInstanceInfo = draw_mesh_instance_info(id);
+}
 
 //#include "../autogen/DebugInfo.h"
 vertex_output transform(matrix node_global_matrix, matrix node_global_matrix_prev, Camera camera, mesh_vertex_input i)
@@ -74,7 +84,20 @@ struct primitive_output
     uint meshlet : MESHLET_ID;
     uint status : MESHLET_STATUS;
     uint lod_level : MESHLET_LOD;
+#ifdef __spirv__
+    uint draw_id : DRAW_ID;
+#endif
 };
+#elif defined(__spirv__)
+// Vulkan pixel shaders have no DrawIndex: the draw id reaches them per
+// primitive (universal_material.hlsl's DRAW_ID_INPUT).
+struct primitive_output
+{
+    uint draw_id : DRAW_ID;
+};
+#endif
+#if defined(DEBUG_VIEW) || defined(__spirv__)
+#define HAS_PRIMITIVE_OUTPUT
 #endif
 
 #if defined(DEBUG_VIEW) && !defined(CLUSTER_LOD)
@@ -91,6 +114,7 @@ static const uint PAYLOAD_CLUSTERS = LOD_GROUP_CLUSTERS * LOD_NODE_GROUPS;
 // ClusterLod define is AS-only, and the MS must declare the same payload.
 struct Payload
 {
+    uint draw_id;
     uint MeshletIndices[PAYLOAD_CLUSTERS];
 #ifdef DEBUG_VIEW
     // status | lod level << 4
@@ -389,6 +413,8 @@ uint CapturedStatus(uint cluster)
 [NumThreads(32, 1, 1)]
 void AS(uint gtid : SV_GroupThreadID, uint dtid : SV_DispatchThreadID, uint gid : SV_GroupID)
 {
+    bind_draw(read_draw_id());
+    s_Payload.draw_id = draw_id;
     uint cull = MESHLET_CULLED_FRUSTUM;
     bool in_range = dtid < meshInfo.GetMeshlet_count();
 
@@ -431,6 +457,8 @@ groupshared uint s_GroupEnd[LOD_NODE_GROUPS];
 [NumThreads(32, 1, 1)]
 void AS(uint gtid : SV_GroupThreadID, uint gid : SV_GroupID)
 {
+    bind_draw(read_draw_id());
+    s_Payload.draw_id = draw_id;
     float lod_threshold = frameInfo.GetLodThreshold();
     Camera camera = frameInfo.GetCamera();
     node_data node = sceneData.GetNodes()[meshInfo.GetNode_offset()];
@@ -545,11 +573,12 @@ void VS(
     in payload Payload payload,
     out indices uint3 tris[124],
     out vertices vertex_output verts[64]
-#ifdef DEBUG_VIEW
+#ifdef HAS_PRIMITIVE_OUTPUT
     , out primitives primitive_output prims[124]
 #endif
 )
 {
+    bind_draw(payload.draw_id);
 
     uint gid = gid2.x;
 
@@ -570,6 +599,9 @@ void VS(
         prims[gtid].meshlet = meshletIndex;
         prims[gtid].status = payload.MeshletInfo[gid] & 15;
         prims[gtid].lod_level = payload.MeshletInfo[gid] >> 4;
+#endif
+#ifdef __spirv__
+        prims[gtid].draw_id = draw_id;
 #endif
 
     }

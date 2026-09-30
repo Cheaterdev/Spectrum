@@ -44,6 +44,7 @@ std::optional<SlotID> get_slot(std::string_view slot_name)
 	if(slot_name == "MeshInstanceInfo") return SlotID::MeshInstanceInfo;
 	if(slot_name == "MeshInfo") return SlotID::MeshInfo;
 	if(slot_name == "MeshletCaptureWrite") return SlotID::MeshletCaptureWrite;
+	if(slot_name == "IndirectDraw") return SlotID::IndirectDraw;
 	if(slot_name == "GatherPipelineGlobal") return SlotID::GatherPipelineGlobal;
 	if(slot_name == "GatherPipeline") return SlotID::GatherPipeline;
 	if(slot_name == "CullCaptureWrite") return SlotID::CullCaptureWrite;
@@ -241,6 +242,8 @@ uint get_table_index(SlotID id)
 	if(id == SlotID::MeshInfo) return Slots::Meshes::MeshInfo::Slot::ID;
 
 	if(id == SlotID::MeshletCaptureWrite) return Slots::Meshes::MeshletCaptureWrite::Slot::ID;
+
+	if(id == SlotID::IndirectDraw) return Slots::Meshes::IndirectDraw::Slot::ID;
 
 	if(id == SlotID::GatherPipelineGlobal) return Slots::Meshes::GatherPipelineGlobal::Slot::ID;
 
@@ -525,6 +528,7 @@ std::string get_slot_name(SlotID id)
 	if(id == SlotID::MeshInstanceInfo) return "MeshInstanceInfo";
 	if(id == SlotID::MeshInfo) return "MeshInfo";
 	if(id == SlotID::MeshletCaptureWrite) return "MeshletCaptureWrite";
+	if(id == SlotID::IndirectDraw) return "IndirectDraw";
 	if(id == SlotID::GatherPipelineGlobal) return "GatherPipelineGlobal";
 	if(id == SlotID::GatherPipeline) return "GatherPipeline";
 	if(id == SlotID::CullCaptureWrite) return "CullCaptureWrite";

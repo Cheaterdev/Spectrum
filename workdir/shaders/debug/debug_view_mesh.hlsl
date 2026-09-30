@@ -17,26 +17,24 @@ struct vertex_output
 
 // DXC doesn't mark per-primitive pixel-shader inputs PerPrimitiveEXT in SPIR-V,
 // so they mismatch the mesh shader's outputs (VUID-RuntimeSpirv-OpVariable-08746,
-// DXC issue #6862); decorate them by hand. 5283 = MeshShadingEXT capability,
-// 5271 = PerPrimitiveEXT decoration.
-#ifdef __spirv__
-#define PER_PRIMITIVE_INPUT [[vk::ext_extension("SPV_EXT_mesh_shader")]] [[vk::ext_capability(5283)]] [[vk::ext_decorate(5271)]]
-#else
-#define PER_PRIMITIVE_INPUT
-#endif
+// DXC issue #6862); PER_PRIMITIVE_INPUT (draw_data.hlsl) decorates them by hand.
+#include "../common/draw_data.hlsl"
 
 struct primitive_output
 {
     PER_PRIMITIVE_INPUT uint meshlet : MESHLET_ID;
     PER_PRIMITIVE_INPUT uint status : MESHLET_STATUS;
     PER_PRIMITIVE_INPUT uint lod_level : MESHLET_LOD;
+#ifdef __spirv__
+    // No DrawIndex in pixel shaders: the mesh shader passes the draw id down.
+    PER_PRIMITIVE_INPUT uint draw_id : DRAW_ID;
+#endif
 };
 
 #include "../common/common.hlsl"
 
 #ifdef BUILD_FUNC_PS
 #include "../autogen/FrameInfo.h"
-#include "../autogen/MeshInfo.h"
 #include "../autogen/DebugViewDraw.h"
 #include "../autogen/DebugViewFrustum.h"
 
@@ -97,7 +95,12 @@ float4 PS(vertex_output i, primitive_output prim) : SV_TARGET0
 {
     DebugViewDraw draw = GetDebugViewDraw();
 
-    uint object_id = GetMeshInfo().GetObject_id();
+#ifdef __spirv__
+    const uint draw_id = prim.draw_id;
+#else
+    const uint draw_id = pass_IndirectDraw.offset;
+#endif
+    uint object_id = draw_mesh_info(draw_id).GetObject_id();
     float3 color = id_color(object_id);
     if (draw.GetColor_mode() == DebugViewColor::Meshlet)
         color = id_color(hash(object_id) ^ prim.meshlet);

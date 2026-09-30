@@ -46,9 +46,22 @@ materials::PipelinePasses::PipelinePasses(UINT id, std::string pixel, std::strin
 {
 	// clip() only in Masked PSOs: a discard anywhere in the pixel shader turns
 	// off early depth for every draw using it, even when opacity is always 1.
+	// DRAW_ID_INPUT: behind a mesh shader (no tessellation), the pixel shader
+	// takes the draw id per primitive -- Vulkan's only way to get it there. The
+	// tessellation front ends output no such attribute.
+	auto with_draw_id = [](std::vector<HAL::shader_macro> macros) {
+		macros.emplace_back("DRAW_ID_INPUT", "1");
+		return macros;
+	};
 	auto pixel_macros = context->get_pixel_result().macros;
 	if (mode == Meshes::TransparencyMode::Masked)
 		pixel_macros.emplace_back("ALPHA_CLIP", "1");
+	auto voxel_macros = context->get_pixel_result().macros;
+	if (tess.empty())
+	{
+		pixel_macros = with_draw_id(pixel_macros);
+		voxel_macros = with_draw_id(voxel_macros);
+	}
 
 	depth_draw = std::make_shared<PSOS::Meshes::DepthDraw>(RenderSystem::get().device(),[&](SimpleGraphicsPSO& target, PSOS::Meshes::DepthDraw::Keys& )
 	{
@@ -85,7 +98,7 @@ materials::PipelinePasses::PipelinePasses(UINT id, std::string pixel, std::strin
 	voxelization = std::make_shared<PSOS::GI::Voxel::Voxelization>(RenderSystem::get().device(),[&](SimpleGraphicsPSO& target, PSOS::GI::Voxel::Voxelization::Keys& )
 	{
 		target.name += std::to_string(id);
-		target.pixel = { pixel, "PS_VOXEL", HAL::ShaderOptions::None ,context->get_pixel_result().macros, true };
+		target.pixel = { pixel, "PS_VOXEL", HAL::ShaderOptions::None, voxel_macros, true };
 
 		if (!tess.empty()) {
 			target.hull = { tess, "HS", HAL::ShaderOptions::None,context->get_tess_result().macros, true };
@@ -115,7 +128,7 @@ materials::PipelinePasses::PipelinePasses(UINT id, std::string pixel, std::strin
 			// binormal/motion data), so this can't reuse the same PS entry
 			// depth_draw/gbuffer above do. See PS_VSM_DEPTH's own comment in
 			// UniversalMaterial.hlsl.
-			target.pixel = { pixel, "PS_VSM_DEPTH", HAL::ShaderOptions::None, context->get_pixel_result().macros, true };
+			target.pixel = { pixel, "PS_VSM_DEPTH", HAL::ShaderOptions::None, with_draw_id(context->get_pixel_result().macros), true };
 			target.topology = HAL::PrimitiveTopologyType::TRIANGLE;
 		});
 	}

@@ -131,6 +131,7 @@ namespace Frame
 												[Async]VSM_ScreenSpaceShadow;
 												[Async]VSM_ShadowResolve;
 												[Async]VSM_Combine;
+												[Async]VSM_Unshadowed;
 												# Debug-only overlay, after VSM_ShadowResolve/VSM_Combine so it
 												# paints on top of whichever one actually shaded the result -- see
 												# its own PassNode comment in vsm.prism.

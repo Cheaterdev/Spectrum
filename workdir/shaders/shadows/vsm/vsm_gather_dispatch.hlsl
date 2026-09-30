@@ -1,7 +1,7 @@
 // GPU-driven replacement for VSM.cpp's old per-frame CPU
 // scene->iterate_meshes() walk (Phase 5.12): for every (mesh, active+dirty
 // level) pair, test the mesh's world AABB against that level's light-space
-// bounds and Append() a VSMDispatchCommandData entry for every overlap.
+// bounds and Append() a DrawMeshCommand entry for every overlap.
 // Modeled directly on gather_pipeline.hlsl's CS (the main camera's own
 // GPU-driven command generation) -- reuses the same GatherPipelineGlobal
 // (scene->compiledGather[MESH_TYPE::ALL], already built once per frame
@@ -75,17 +75,16 @@ void aabb_light_space_bounds(AABB aabb, float4x4 node_mat, float4x4 light_view, 
 }
 
 // Shared by CS and CS_MATERIAL: the actual mesh-vs-level overlap test and
-// VSMDispatchCommandData construction, everything except where the built
+// DrawMeshCommand construction, everything except where the built
 // entry ends up. Returns false (entry left zeroed) on no-overlap or a
 // degenerate (zero-meshlet) mesh -- callers just skip appending.
 //
-// material_cb is populated here unconditionally (not just for CS_MATERIAL's
-// alpha-cutout entries) -- see VSMDispatchCommandData's own comment in
-// vsm.prism for why the default/opaque list needs it wired too, even though
-// VSMDepthDraw's shader never reads it.
-bool vsm_try_build_entry(MeshCommandData mesh, MaterialCommandData material, VSMLevelDispatchInfo level, float4x4 light_view, out VSMDispatchCommandData entry)
+// draw_id = mesh id | level index << 24: mesh_shader_vsm.hlsl resolves the
+// level's VSMPageBatch through VSMPageTableData.levels[level index], and mesh
+// and material through SceneData (draw_data.hlsl).
+bool vsm_try_build_entry(uint mesh_id, MeshCommandData mesh, uint level_index, VSMLevelDispatchInfo level, float4x4 light_view, out DrawMeshCommand entry)
 {
-	entry = (VSMDispatchCommandData)0;
+	entry = (DrawMeshCommand)0;
 
 	node_data node = GetSceneData().GetNodes()[mesh.GetNode_offset()];
 
@@ -101,11 +100,8 @@ bool vsm_try_build_entry(MeshCommandData mesh, MaterialCommandData material, VSM
 	uint as_groups = (pair_count + 31) / 32;
 	if (as_groups == 0) return false;
 
-	entry.page_batch_cb = level.GetPage_batch_cb();
-	entry.mesh_cb = mesh.GetMesh_cb();
-	entry.meshinstance_cb = mesh.GetMeshinstance_cb();
-	entry.material_cb = material.GetMaterial_cb();
-	entry.draw_commands.counts = uint3(as_groups, 1, 1);
+	entry.draw_id = mesh_id | (level_index << 24);
+	entry.args.counts = uint3(as_groups, 1, 1);
 	return true;
 }
 
@@ -128,8 +124,8 @@ void CS(uint3 dispatchID : SV_DispatchThreadID)
 
 	VSMLevelDispatchInfo level = gatherData.GetLevels()[dispatchID.y];
 
-	VSMDispatchCommandData entry;
-	if (!vsm_try_build_entry(mesh, material, level, gatherData.GetLight_view(), entry)) return;
+	DrawMeshCommand entry;
+	if (!vsm_try_build_entry(id, mesh, dispatchID.y, level, gatherData.GetLight_view(), entry)) return;
 
 	gatherData.GetDispatch_commands().Append(entry);
 }
@@ -142,7 +138,7 @@ void CS(uint3 dispatchID : SV_DispatchThreadID)
 // batch (handled by a different batch, or genuinely opaque -- shouldn't
 // reach here, CS_MATERIAL already checked the mode) silently drops,
 // same as get_index's own behavior.
-void vsm_append_to_bucket(uint pipeline_id, in VSMDispatchCommandData entry)
+void vsm_append_to_bucket(uint pipeline_id, in DrawMeshCommand entry)
 {
 #define VSM_BUCKET_CHECK(x) if (material_ids[x] == pipeline_id) { gatherData.GetMaterial_commands(x).Append(entry); return; }
 	VSM_BUCKET_CHECK(0)
@@ -170,8 +166,8 @@ void CS_MATERIAL(uint3 dispatchID : SV_DispatchThreadID)
 
 	VSMLevelDispatchInfo level = gatherData.GetLevels()[dispatchID.y];
 
-	VSMDispatchCommandData entry;
-	if (!vsm_try_build_entry(mesh, material, level, gatherData.GetLight_view(), entry)) return;
+	DrawMeshCommand entry;
+	if (!vsm_try_build_entry(id, mesh, dispatchID.y, level, gatherData.GetLight_view(), entry)) return;
 
 	vsm_append_to_bucket(material.GetPipeline_id(), entry);
 }

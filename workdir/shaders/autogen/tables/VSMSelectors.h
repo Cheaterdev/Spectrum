@@ -13,10 +13,12 @@ namespace Shadows
 	{
 		struct VSMSelectors
 		{
+			bool supported; // bool
 			bool use_vsm_penumbra; // bool
 			bool use_vsm_contact_shadow; // bool
 			VSMDebugView vsm_debug_view; // VSMDebugView
 			ShadowSource shadow_source; // ShadowSource
+			bool GetSupported() { return supported; }
 			bool GetUse_vsm_penumbra() { return use_vsm_penumbra; }
 			bool GetUse_vsm_contact_shadow() { return use_vsm_contact_shadow; }
 			VSMDebugView GetVsm_debug_view() { return vsm_debug_view; }

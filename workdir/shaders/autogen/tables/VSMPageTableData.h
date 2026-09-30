@@ -8,6 +8,7 @@
 #include "sig_hlsl.hlsl"
 #include "enums.h"
 #include "Camera.h"
+#include "VSMLevelDispatchInfo.h"
 namespace Shadows
 {
 	namespace VSM
@@ -16,8 +17,10 @@ namespace Shadows
 		{
 			uint page_table; // Texture2DArray<uint>
 			uint page_cameras; // StructuredBuffer<Camera>
+			uint levels; // StructuredBuffer<VSMLevelDispatchInfo>
 			Texture2DArray<uint> GetPage_table() { return ResourceDescriptorHeap[page_table]; }
 			StructuredBuffer<Camera> GetPage_cameras() { return ResourceDescriptorHeap[page_cameras]; }
+			StructuredBuffer<VSMLevelDispatchInfo> GetLevels() { return ResourceDescriptorHeap[levels]; }
 		};
 	}
 }

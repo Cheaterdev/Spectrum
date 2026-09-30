@@ -103,6 +103,31 @@ float4 combine_result(float2 tc, uint2 pixel)
     return float4(shadow * (NL * info.albedo * (1 - info.metallic)), 1);
 }
 
+// VSM_Unshadowed: the same direct lighting as combine_result, without a shadow
+// term -- for devices without sparse depth textures, where VSM does not run.
+float4 unshadowed_result(float2 tc)
+{
+	float raw_z = gbuffer.GetDepth().SampleLevel(pointClampSampler, tc, 0);
+	if (raw_z == 0) return 0;
+
+	float4 packed_0 = gbuffer.GetAlbedo().SampleLevel(pointClampSampler, tc, 0);
+	float3 normal   = normalize(gbuffer.GetNormals().SampleLevel(pointClampSampler, tc, 0).xyz * 2 - 1);
+	float  NL       = saturate(dot(normal, normalize(GetFrameInfo().GetSunDir().xyz)));
+	return float4(NL * packed_0.rgb * (1 - packed_0.w), 1);
+}
+
+[numthreads(16, 16, 1)]
+void CS_UNSHADOWED(uint3 DTid : SV_DispatchThreadID)
+{
+	uint2 dims;
+	GetVSMLighting().GetResult().GetDimensions(dims.x, dims.y);
+	if (any(DTid.xy >= dims))
+		return;
+
+	float2 tc = (float2(DTid.xy) + 0.5) / float2(dims);
+	GetVSMLighting().GetResult()[DTid.xy] = unshadowed_result(tc);
+}
+
 // Compute-queue variant: one thread per output pixel, writes the result UAV.
 [numthreads(16, 16, 1)]
 void CS_RESULT(uint3 DTid : SV_DispatchThreadID)

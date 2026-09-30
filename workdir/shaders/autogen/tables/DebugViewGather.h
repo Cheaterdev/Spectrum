@@ -7,7 +7,7 @@
 #pragma once
 #include "sig_hlsl.hlsl"
 #include "enums.h"
-#include "CommandData.h"
+#include "DrawMeshCommand.h"
 namespace Dev
 {
 	struct DebugViewGather
@@ -15,10 +15,10 @@ namespace Dev
 		uint capture_frame; // uint
 		DebugViewSource source; // DebugViewSource
 		uint stamps; // StructuredBuffer<uint>
-		uint commands[4]; // AppendStructuredBuffer<CommandData>
+		uint commands[4]; // AppendStructuredBuffer<DrawMeshCommand>
 		uint GetCapture_frame() { return capture_frame; }
 		DebugViewSource GetSource() { return source; }
-		AppendStructuredBuffer<CommandData> GetCommands(int i) { return ResourceDescriptorHeap[commands[i]]; }
+		AppendStructuredBuffer<DrawMeshCommand> GetCommands(int i) { return ResourceDescriptorHeap[commands[i]]; }
 
 		StructuredBuffer<uint> GetStamps() { return ResourceDescriptorHeap[stamps]; }
 	};

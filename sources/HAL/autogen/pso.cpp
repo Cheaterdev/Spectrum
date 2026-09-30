@@ -17,15 +17,6 @@ void init_signatures(HAL::Device& device, enum_array<Layouts, HAL::RootLayout::p
 	signatures[Layouts::NoneLayout] = AutoGenSignatureDesc<::Frame::NoneLayout>().create_signature(device, Layouts::NoneLayout);
 }
 
-void init_indirect_commands(HAL::Device& device, enum_array<IndirectCommands, HAL::IndirectCommand>& commands)
-{
-	commands[IndirectCommands::DrawIndexedArguments] = AutoGenIndirectCommand<DrawIndexedArguments>(device).create_command();
-	commands[IndirectCommands::DispatchMeshArguments] = AutoGenIndirectCommand<DispatchMeshArguments>(device).create_command();
-	commands[IndirectCommands::DispatchArguments] = AutoGenIndirectCommand<DispatchArguments>(device).create_command();
-	commands[IndirectCommands::CommandData] = AutoGenIndirectCommand<Table::Meshes::CommandData>(device).create_command();	
-	commands[IndirectCommands::DispatchRaysArguments] = AutoGenIndirectCommand<DispatchRaysArguments>(device).create_command();
-	commands[IndirectCommands::VSMDispatchCommandData] = AutoGenIndirectCommand<Table::Shadows::VSM::VSMDispatchCommandData>(device).create_command();	
-}
 
 // [Template]-tagged PSOs are skipped here entirely -- they're never built
 // with their .prism default file/entry point (some caller always drives
@@ -133,6 +124,7 @@ void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 	tasks.emplace_back(PSOBase::create<PSOS::Shadows::VSM::VSMDownsampleHiZBatch>(device, pso[PSO::VSMDownsampleHiZBatch]));
 	tasks.emplace_back(PSOBase::create<PSOS::Shadows::VSM::VSMBlockerClassify>(device, pso[PSO::VSMBlockerClassify]));
 	tasks.emplace_back(PSOBase::create<PSOS::Shadows::VSM::VSMApplyCompute>(device, pso[PSO::VSMApplyCompute]));
+	tasks.emplace_back(PSOBase::create<PSOS::Shadows::VSM::VSMUnshadowed>(device, pso[PSO::VSMUnshadowed]));
 	tasks.emplace_back(PSOBase::create<PSOS::Shadows::VSM::VSMBlockerSearchCompute>(device, pso[PSO::VSMBlockerSearchCompute]));
 	tasks.emplace_back(PSOBase::create<PSOS::Shadows::VSM::VSMFullLit>(device, pso[PSO::VSMFullLit]));
 	tasks.emplace_back(PSOBase::create<PSOS::Shadows::VSM::VSMFullShadow>(device, pso[PSO::VSMFullShadow]));

@@ -171,6 +171,26 @@ themselves — say exactly which toggle(s)/GUI setting(s) to flip and to what
 value (e.g. "Shadow Src → RTX Ref"), and what to look for. Don't flip runtime
 defaults, rebuild, and run the app repeatedly to eyeball it in their place.
 
+## Status reports
+
+End every report on a piece of work with these five sections, in this order,
+each under its own heading and separated by a horizontal rule (`---`):
+
+1. **Summary** — one or two sentences: where things stand.
+2. **Done** — what changed, and how it was verified (build, tests, runs,
+   validation). Unverified work goes under Not done, not here.
+3. **Not done** — what failed, was skipped, is still broken, or turned out
+   different from what was expected.
+4. **Planned** — the next steps, in the order they would happen.
+5. **Action needed from you** — decisions to make, things to look at (with
+   exact toggles, per Visual confirmation), manual steps only the user can do.
+   A decision lists its options and marks the recommended one, with the reason
+   in a clause.
+
+Keep every section, writing "None." when one is empty — an absent section is
+ambiguous, an empty one is not. The sections are for reports on work; a short
+answer to a question needs none of them.
+
 ## Editing files
 
 Use the editor's native file-edit tool for changes, not a script (Python,

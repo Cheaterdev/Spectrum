@@ -36,12 +36,10 @@ void CS(uint3 dispatchID : SV_DispatchThreadID)
         if (gather.GetSource() == DebugViewSource::Culled && bucket == 3) return;
     }
 
-    CommandData command;
-    command.material_cb = material.material_cb;
-    command.mesh_cb = mesh.mesh_cb;
-    command.meshinstance_cb = mesh.meshinstance_cb;
+    DrawMeshCommand command;
+    command.draw_id = id;
     // DebugViewMesh always walks the LOD hierarchy (DEBUG_VIEW implies it).
-    command.draw_commands = mesh.lod_draw_commands;
+    command.args = mesh.lod_draw_commands;
 
     // Literal indices: bucket varies per thread, and a varying descriptor index
     // would need NonUniformResourceIndex (AMD reads the wrong buffer without it).

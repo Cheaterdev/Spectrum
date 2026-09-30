@@ -373,6 +373,8 @@ namespace HAL
                 VK_KHR_COMPUTE_SHADER_DERIVATIVES_EXTENSION_NAME,
                 // Optional: mesh/task shaders.
                 VK_EXT_MESH_SHADER_EXTENSION_NAME,
+                // Optional: D3D12 ConservativeRaster (VSMDepthDrawConservative).
+                VK_EXT_CONSERVATIVE_RASTERIZATION_EXTENSION_NAME,
             };
 
             uint32_t avail_count = 0;
@@ -412,8 +414,14 @@ namespace HAL
             // All Vulkan 1.2 promoted features must live in a single
             // VkPhysicalDeviceVulkan12Features — the individual VkPhysicalDevice*Features
             // structs for these cannot coexist with it in the same pNext chain.
+            // shaderDrawParameters: DrawIndex, how indirect mesh draws find their
+            // DrawMeshCommand (draw_data.hlsl).
+            VkPhysicalDeviceVulkan11Features vk11_features{
+                VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES };
+
             VkPhysicalDeviceVulkan12Features vk12_features{
                 VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES };
+            vk12_features.pNext = &vk11_features;
 
             VkPhysicalDeviceSynchronization2Features sync2_features{
                 VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SYNCHRONIZATION_2_FEATURES };
@@ -523,6 +531,7 @@ namespace HAL
             robustness2_features.robustBufferAccess2 = VK_FALSE;
             robustness2_features.robustImageAccess2  = VK_FALSE;
             null_descriptor = has_robustness2 && robustness2_features.nullDescriptor;
+            conservative_raster = has_ext(VK_EXT_CONSERVATIVE_RASTERIZATION_EXTENSION_NAME);
             if (!null_descriptor)
                 Log::get() << Log::LEVEL_WARNING << "[Vulkan] nullDescriptor unsupported: unbound descriptor "
                               "slots stay unwritten (reading them is undefined)" << Log::endl;
@@ -540,6 +549,7 @@ namespace HAL
                     { vk12_features.shaderStorageImageArrayNonUniformIndexing,      "shaderStorageImageArrayNonUniformIndexing" },
                     { vk12_features.shaderStorageBufferArrayNonUniformIndexing,     "shaderStorageBufferArrayNonUniformIndexing" },
                     { vk12_features.shaderUniformBufferArrayNonUniformIndexing,     "shaderUniformBufferArrayNonUniformIndexing" },
+                    { vk11_features.shaderDrawParameters,                           "shaderDrawParameters" },
                     // Reserved resources (virtual GPU buffers, the VSM atlas) are sparse.
                     { features2.features.sparseBinding,                             "sparseBinding" },
                     { features2.features.sparseResidencyBuffer,                     "sparseResidencyBuffer" },
@@ -579,6 +589,15 @@ namespace HAL
                 Log::get().crash_error(
                     std::string("vkCreateDevice failed, VkResult=") + std::to_string(static_cast<int>(result)));
                 return;
+            }
+
+            {
+                VkFormatProperties fp{};
+                vkGetPhysicalDeviceFormatProperties(vk_physical, VK_FORMAT_D24_UNORM_S8_UINT, &fp);
+                const bool d24s8 = fp.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT;
+                set_d24s8_supported(d24s8);
+                if (!d24s8)
+                    Log::get() << "[Vulkan] D24_UNORM_S8_UINT unsupported: using D32_SFLOAT_S8_UINT" << Log::endl;
             }
 
             fault_device = vk_device;
@@ -681,17 +700,18 @@ namespace HAL
                     if (!format_props || vkCreateImage(vk_device, &ici, nullptr, &image) != VK_SUCCESS)
                     {
                         Log::get() << Log::LEVEL_WARNING << "[Vulkan] sparse " << what << " unsupported" << Log::endl;
-                        return;
+                        return false;
                     }
                     VkMemoryRequirements ireq{};
                     vkGetImageMemoryRequirements(vk_device, image, &ireq);
                     merge(ireq, what);
                     vkDestroyImage(vk_device, image, nullptr);
+                    return true;
                 };
                 probe_image(VK_IMAGE_TYPE_2D, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_USAGE_STORAGE_BIT, "2D color image");
-                probe_image(VK_IMAGE_TYPE_2D, VK_FORMAT_D32_SFLOAT, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, "2D depth image");
+                p.tiled_depth = probe_image(VK_IMAGE_TYPE_2D, VK_FORMAT_D32_SFLOAT, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, "2D depth image");
                 if (p.tiled_3d)
-                    probe_image(VK_IMAGE_TYPE_3D, VK_FORMAT_R16G16B16A16_SFLOAT, VK_IMAGE_USAGE_STORAGE_BIT, "3D image");
+                    p.tiled_3d = probe_image(VK_IMAGE_TYPE_3D, VK_FORMAT_R16G16B16A16_SFLOAT, VK_IMAGE_USAGE_STORAGE_BIT, "3D image");
 
                 if (!sparse_memory_type_bits)
                     Log::get().crash_error("[Vulkan] no memory type accepts every sparse resource kind");
@@ -911,7 +931,8 @@ namespace HAL
                 bci.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT
                           | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT
                           | VK_BUFFER_USAGE_INDEX_BUFFER_BIT   | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT
-                          | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
+                          | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT
+                          | VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT;
 
                 VkMemoryRequirements2 req{ VK_STRUCTURE_TYPE_MEMORY_REQUIREMENTS_2 };
                 VkDeviceBufferMemoryRequirements info{ VK_STRUCTURE_TYPE_DEVICE_BUFFER_MEMORY_REQUIREMENTS };
@@ -956,7 +977,14 @@ namespace HAL
                 if (check(desc.Flags & ResFlags::RenderTarget))
                     ici.usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
                 if (check(desc.Flags & ResFlags::DepthStencil))
+                {
                     ici.usage |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+                    // Same real depth format Resource::init creates the image with.
+                    if (ici.format == VK_FORMAT_R32_SFLOAT) ici.format = VK_FORMAT_D32_SFLOAT;
+                    else if (ici.format == VK_FORMAT_R16_SFLOAT || ici.format == VK_FORMAT_R16_UNORM) ici.format = VK_FORMAT_D16_UNORM;
+                }
+                if (ici.imageType == VK_IMAGE_TYPE_2D && ici.arrayLayers % 6 == 0 && ici.extent.width == ici.extent.height)
+                    ici.flags |= VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
 
                 VkMemoryRequirements2 req{ VK_STRUCTURE_TYPE_MEMORY_REQUIREMENTS_2 };
                 VkDeviceImageMemoryRequirements info{ VK_STRUCTURE_TYPE_DEVICE_IMAGE_MEMORY_REQUIREMENTS };

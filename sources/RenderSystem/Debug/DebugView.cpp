@@ -3,6 +3,7 @@ import RenderSystem;
 
 import :Context;
 import :MeshAsset;
+import :MeshRenderer;   // exec_draw_mesh_indirect
 import :EngineAssets;
 import :BRDF;
 
@@ -38,7 +39,7 @@ debug_view::debug_view() : VariableContext(L"Debug View")
 	auto& device = RenderSystem::get().device();
 	for (int i = 0; i < bucket_count; i++)
 	{
-		commands[i] = std::make_shared<virtual_gpu_buffer<Table::Meshes::CommandData>>(device, max_debug_meshes, counterType::HELP_BUFFER,
+		commands[i] = std::make_shared<virtual_gpu_buffer<DrawMeshCommand>>(device, max_debug_meshes, counterType::HELP_BUFFER,
 			HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess);
 		commands[i]->buffer.resource->set_name("DebugView_Commands" + std::to_string(i));
 	}
@@ -156,7 +157,7 @@ debug_view::debug_view() : VariableContext(L"Debug View")
 				draw.GetMeshlet_filter()     = meshlet_filter;
 				draw.GetColor_mode()         = color_mode;
 				graphics.set(draw);
-				graphics.exec_indirect(commands[i]->buffer, mesh_count);
+				exec_draw_mesh_indirect(graphics, commands[i]->buffer, mesh_count);
 			}
 		}
 

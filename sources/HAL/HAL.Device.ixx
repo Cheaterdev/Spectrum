@@ -41,6 +41,7 @@ export namespace HAL
 		bool rtx = false;
 		bool mesh_shader = false;
 		bool tiled_3d = false;
+		bool tiled_depth = false;
 		std::unique_ptr<FrameResourceManager> frame_manager;
 
 		std::unique_ptr<HeapFactory> heap_factory;
@@ -101,11 +102,12 @@ export namespace HAL
 
 		// Optional features. Each can be forced off on capable hardware with the
 		// SPECTRUM_DISABLE_RTX / SPECTRUM_DISABLE_MESH_SHADERS /
-		// SPECTRUM_DISABLE_TILED_3D environment variables, to exercise the
-		// fallback paths a lesser GPU would take.
+		// SPECTRUM_DISABLE_TILED_3D / SPECTRUM_DISABLE_TILED_DEPTH environment
+		// variables, to exercise the fallback paths a lesser GPU would take.
 		bool is_rtx_supported();
 		bool is_mesh_shader_supported();
 		bool is_tiled_3d_supported();
+		bool is_tiled_depth_supported();   // VSM's atlas
 
 		mutable bool alive = true;
 

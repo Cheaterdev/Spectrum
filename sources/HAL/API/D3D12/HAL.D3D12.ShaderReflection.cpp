@@ -14,7 +14,8 @@ import :Slots;       // get_slot
 namespace HAL
 {
     void reflect_shader(IDxcUtils* library, const DxcBuffer& reflectionBuffer,
-                        const std::string& entry_point, CompiledShader& blob_str)
+                        const std::string& entry_point, const std::set<std::string>& /*included_names*/,
+                        CompiledShader& blob_str)
     {
         if (entry_point.size())
         {

@@ -70,7 +70,7 @@ int intersect(Frustum f, AABB aabb, float4x4 mat)
 #include "../autogen/GatherPipeline.h"
 static const GatherPipeline pipi = GetGatherPipeline();
 static const uint ids[8] = (uint[8])pipi.pip_ids;
-bool get_index(uint id, in CommandData command)
+bool get_index(uint id, in DrawMeshCommand command)
 {
 #define CHECK(x)    if (ids[x] == id) { pipi.GetCommands(x).Append(command); return true; }
     CHECK(0)
@@ -114,14 +114,13 @@ void CS(
         MaterialCommandData material = GetSceneData().GetMaterials()[mesh.material_id];
 
  
-        CommandData command;
-        command.material_cb = material.material_cb;
-        command.mesh_cb = mesh.mesh_cb;
-         command.meshinstance_cb = mesh.meshinstance_cb;
+        // The draw's shaders fetch mesh and material by this id (draw_data.hlsl).
+        DrawMeshCommand command;
+        command.draw_id = id;
 #ifdef CLUSTER_LOD
-        command.draw_commands = mesh.lod_draw_commands;
+        command.args = mesh.lod_draw_commands;
 #else
-        command.draw_commands = mesh.draw_commands;
+        command.args = mesh.draw_commands;
 #endif
        
         // Stamped only where appended: this dispatch runs once per batch of 8

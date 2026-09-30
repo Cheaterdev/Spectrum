@@ -33,7 +33,8 @@ namespace Shadows
 
 				Handlers::Texture VSM_PageHiZ = ResourceID::VSM_PageHiZ;
 
-				Handlers::StructuredBuffer<Table::Shadows::VSM::VSMDispatchCommandData> VSM_DispatchCommands = ResourceID::VSM_DispatchCommands;
+
+				Handlers::StructuredBuffer<DrawMeshCommand> VSM_DispatchCommands = ResourceID::VSM_DispatchCommands;
 
 				Handlers::StructuredBuffer<Table::Shadows::VSM::VSMLevelDispatchInfo> VSM_LevelDispatchInfo = ResourceID::VSM_LevelDispatchInfo;
 

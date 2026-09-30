@@ -20,22 +20,25 @@ export namespace HAL
             VkBuffer       heap_vk_buffer    = VK_NULL_HANDLE;
             VmaAllocator   vma_allocator_ref = VK_NULL_HANDLE;
 
-            // DEFAULT heaps get memory only once a sparse tile is bound into them.
-            // Placed DEFAULT resources are allocated on their own (see
-            // Resource::init), so eager memory here would double their footprint.
+            // DEFAULT heap memory, allocated on first use: by a placed resource
+            // bound into it (Resource::init) or a sparse tile mapped to it.
             std::mutex     sparse_mutex;
             Device*        sparse_device = nullptr;
             VkDeviceSize   sparse_size   = 0;
             VmaAllocation  sparse_alloc  = VK_NULL_HANDLE;
             VkDeviceMemory sparse_memory = VK_NULL_HANDLE;
             VkDeviceSize   sparse_offset = 0;
+            uint32_t       sparse_memory_type = ~0u;
 
         public:
             virtual ~Heap();
             uint64_t get_address() const;
 
-            // Device memory (and offset into it) backing this heap's sparse tiles.
+            // Device memory (and offset into it) backing this DEFAULT heap: sparse
+            // tiles and placed resources both bind into it, as in D3D12.
             std::pair<VkDeviceMemory, VkDeviceSize> get_sparse_memory();
+            uint32_t     get_memory_type() { get_sparse_memory(); return sparse_memory_type; }
+            VkDeviceSize get_heap_size() const { return sparse_size; }
 
             // The single VkBuffer backing a CPU-visible (UPLOAD/READBACK) heap.
             // Placed resources share it and address their slice via resource_offset.

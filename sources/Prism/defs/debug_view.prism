@@ -95,7 +95,7 @@ namespace Dev
 	[Bind = DefaultLayout::Instance1]
 	struct DebugViewGather
 	{
-		AppendStructuredBuffer<CommandData> commands[4];
+		AppendStructuredBuffer<DrawMeshCommand> commands[4];
 		StructuredBuffer<uint> stamps;
 		uint capture_frame;
 		DebugViewSource source;

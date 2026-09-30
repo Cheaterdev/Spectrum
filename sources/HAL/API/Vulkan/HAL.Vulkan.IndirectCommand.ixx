@@ -36,18 +36,29 @@ export namespace HAL
 
     class IndirectCommand
     {
-        IndirectCommand(const UsedSlots& slots, IndirectKind kind, uint stride)
-            : slots(slots), kind(kind), stride(stride) {}
+        IndirectCommand(const UsedSlots& slots, IndirectKind kind, uint stride, uint args_offset)
+            : slots(slots), kind(kind), stride(stride), args_offset(args_offset) {}
     public:
         UsedSlots    slots;
         IndirectKind kind   = IndirectKind::Unknown; // selects the vkCmd*Indirect call
         uint         stride = 0;                      // bytes between commands in the buffer
+        // Where the hardware arguments start inside a command. A slot value in
+        // front of them (DrawMeshCommand's draw_id) is D3D12's root constant;
+        // Vulkan skips it and the shader reads it back by DrawIndex.
+        uint         args_offset = 0;
 
         IndirectCommand() = default;
 
         template<class T>
-        static void process_one(UsedSlots& slots, uint& total_size, IndirectKind& kind)
+        static void process_one(UsedSlots& slots, uint& total_size, IndirectKind& kind, uint& args_offset)
         {
+            constexpr IndirectKind k = indirect_kind_of<T>();
+            if constexpr (k != IndirectKind::Unknown)
+            {
+                kind        = k;
+                args_offset = total_size;
+            }
+
             if constexpr (HasID<T>)
             {
                 slots.merge(T::ID);
@@ -55,9 +66,6 @@ export namespace HAL
             }
             else
                 total_size += sizeof(Underlying<T>);
-
-            constexpr IndirectKind k = indirect_kind_of<T>();
-            if constexpr (k != IndirectKind::Unknown) kind = k;
         }
 
         template<class... Args>
@@ -65,10 +73,11 @@ export namespace HAL
                                               RootSignature* /*layout*/ = nullptr)
         {
             UsedSlots    slots;
-            uint         total_size = 0;
+            uint         total_size  = 0;
+            uint         args_offset = 0;
             IndirectKind kind = IndirectKind::Unknown;
-            (process_one<Args>(slots, total_size, kind), ...);
-            return IndirectCommand(slots, kind, total_size);
+            (process_one<Args>(slots, total_size, kind, args_offset), ...);
+            return IndirectCommand(slots, kind, total_size, args_offset);
         }
 
         template<class... Args>

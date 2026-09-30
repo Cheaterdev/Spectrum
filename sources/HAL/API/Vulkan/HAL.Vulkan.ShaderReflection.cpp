@@ -2,26 +2,102 @@ module HAL:ShaderCompiler;
 
 import Core;
 import DXCompiler;
+import :Slots;       // get_slot
+import :Autogen;     // get_table_index
 
-// Vulkan stub of the reflect_shader() seam declared in
-// DXC/DXC.ShaderCompiler.cpp.  D3D12 uses ID3D12ShaderReflection to recover
-// per-pass constant-buffer slot usage from the DXIL reflection blob; on Vulkan
-// (SPIR-V) reflection is deferred to Phase 4 (SPIR-V-Reflect or DXC's own
-// SPIR-V reflection path).  For now we record the function name only — slot
-// usage stays empty, which is sufficient until pipelines/bindless land.
+// Vulkan implementation of the reflect_shader() seam declared in
+// DXC/DXC.ShaderCompiler.cpp. D3D12 reads slot usage from the DXIL reflection
+// blob, by the names of the "pass_X" cbuffers the shader reads. SPIR-V keeps
+// neither the blob nor those names after optimization: a slot table becomes
+// `static pass_X = { _hal_push.sN }`, and all that survives is the read of
+// push-constant member N (the slot's root index, get_table_index).
+//
+// So slot usage is the intersection of two sets:
+//   * the slots whose generated header the shader includes (autogen/<Slot>.h,
+//     recorded by the include handler) -- names, but over-inclusive;
+//   * the push-constant members the SPIR-V actually reads -- exact, but only
+//     root indices, which several slots share.
+// Empty slot usage leaves commit_tables recording no resource at all, so the
+// barrier compiler emits nothing and every hazard inside a pass goes
+// unsynchronized.
 
 namespace HAL
 {
-    void reflect_shader(IDxcUtils* /*library*/, const DxcBuffer& /*reflectionBuffer*/,
-                        const std::string& entry_point, CompiledShader& blob_str)
+    namespace
     {
-        if (entry_point.size())
+        // Push-constant member indices read anywhere in a SPIR-V module.
+        std::set<uint32_t> read_push_constant_members(const std::vector<std::byte>& blob)
         {
-            blob_str.functions.emplace_back();
-            auto& f = blob_str.functions.back();
-            f.name  = entry_point;
-            f.wname = convert(f.name);
-            // Phase 5: populate f.slots from SPIR-V reflection.
+            std::set<uint32_t> members;
+            if (blob.size() < 20 || blob.size() % 4) return members;
+
+            const uint32_t* words = reinterpret_cast<const uint32_t*>(blob.data());
+            const size_t    count = blob.size() / 4;
+            if (words[0] != 0x07230203u) return members;   // SPIR-V magic
+
+            constexpr uint32_t OpConstant            = 43;
+            constexpr uint32_t OpVariable            = 59;
+            constexpr uint32_t OpLoad                = 61;
+            constexpr uint32_t OpAccessChain         = 65;
+            constexpr uint32_t OpInBoundsAccessChain = 66;
+            constexpr uint32_t OpCompositeExtract    = 81;
+            constexpr uint32_t StorageClassPushConstant = 9;
+
+            std::set<uint32_t> push_vars, push_loads;
+            std::unordered_map<uint32_t, uint32_t> constants;
+
+            // Two passes: constants and variables are declared before the
+            // function bodies that use them, but keep it order-independent.
+            for (int pass = 0; pass < 2; pass++)
+            {
+                for (size_t i = 5; i < count;)
+                {
+                    const uint32_t op  = words[i] & 0xFFFFu;
+                    const uint32_t len = words[i] >> 16;
+                    if (len == 0 || i + len > count) break;
+                    const uint32_t* w = words + i;
+
+                    if (pass == 0)
+                    {
+                        if (op == OpConstant && len >= 4) constants[w[2]] = w[3];
+                        if (op == OpVariable && len >= 4 && w[3] == StorageClassPushConstant) push_vars.insert(w[2]);
+                    }
+                    else
+                    {
+                        if ((op == OpAccessChain || op == OpInBoundsAccessChain) && len >= 5 && push_vars.contains(w[3]))
+                        {
+                            if (auto it = constants.find(w[4]); it != constants.end())
+                                members.insert(it->second);
+                        }
+                        if (op == OpLoad && len >= 4 && push_vars.contains(w[3]))
+                            push_loads.insert(w[2]);
+                        if (op == OpCompositeExtract && len >= 5 && push_loads.contains(w[3]))
+                            members.insert(w[4]);
+                    }
+                    i += len;
+                }
+            }
+            return members;
+        }
+    }
+
+    void reflect_shader(IDxcUtils* /*library*/, const DxcBuffer& /*reflectionBuffer*/,
+                        const std::string& entry_point, const std::set<std::string>& included_names,
+                        CompiledShader& blob_str)
+    {
+        if (entry_point.empty()) return;   // DXR libraries: not used on Vulkan yet
+
+        blob_str.functions.emplace_back();
+        auto& f = blob_str.functions.back();
+        f.name  = entry_point;
+        f.wname = convert(f.name);
+
+        const auto read = read_push_constant_members(blob_str.blob);
+        for (auto& name : included_names)
+        {
+            auto slot = get_slot(name);
+            if (slot && read.contains(get_table_index(*slot)))
+                f.slots.merge(*slot);
         }
     }
 

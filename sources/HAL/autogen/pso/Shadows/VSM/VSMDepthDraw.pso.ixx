@@ -52,6 +52,8 @@ export namespace PSOS
 					mpso.amplification.flags = HAL::ShaderOptions::None;
 			
 
+					mpso.requires_tiled_depth = true;
+
 					mpso.rtv_formats = {  };	
 					mpso.blend = {  };
 

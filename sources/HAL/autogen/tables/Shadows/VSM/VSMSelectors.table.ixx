@@ -21,10 +21,12 @@ export namespace Table
 			struct VSMSelectors
 			{
 				static constexpr SlotID ID = SlotID::VSMSelectors;
+				bool supported = false;
 				bool use_vsm_penumbra = true;
 				bool use_vsm_contact_shadow = true;
 				::Shadows::VSM::VSMDebugView vsm_debug_view = ::Shadows::VSM::VSMDebugView::None;
 				::Shadows::VSM::ShadowSource shadow_source = ::Shadows::VSM::ShadowSource::VSM;
+				bool& GetSupported() { return supported; }
 				bool& GetUse_vsm_penumbra() { return use_vsm_penumbra; }
 				bool& GetUse_vsm_contact_shadow() { return use_vsm_contact_shadow; }
 				::Shadows::VSM::VSMDebugView& GetVsm_debug_view() { return vsm_debug_view; }
@@ -33,6 +35,7 @@ export namespace Table
 				template<class Compiler>
 				void compile(Compiler& compiler) const
 				{
+					compiler.compile(supported, "VSMSelectors::supported");
 					compiler.compile(use_vsm_penumbra, "VSMSelectors::use_vsm_penumbra");
 					compiler.compile(use_vsm_contact_shadow, "VSMSelectors::use_vsm_contact_shadow");
 					compiler.compile(vsm_debug_view, "VSMSelectors::vsm_debug_view");
@@ -47,6 +50,7 @@ export namespace Table
 				private:
 				SERIALIZE()
 				{
+					ar& NVP(supported);
 					ar& NVP(use_vsm_penumbra);
 					ar& NVP(use_vsm_contact_shadow);
 					ar& NVP(vsm_debug_view);

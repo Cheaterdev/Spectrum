@@ -244,6 +244,7 @@ struct SimpleComputePSO {
 	HAL::shader_header compute;
 	std::string name;
 	bool requires_raytracing = false;
+	bool requires_tiled_depth = false;   // [Requires = TiledDepth]
 
 	SimpleComputePSO(std::string name) :name(name)
 	{
@@ -271,6 +272,7 @@ struct  SimpleGraphicsPSO {
 	std::vector<HAL::RenderTarget> blend;
 	std::string name;
 	bool requires_raytracing = false;
+	bool requires_tiled_depth = false;   // [Requires = TiledDepth]
 
 	bool conservative;
 	bool depth_write;

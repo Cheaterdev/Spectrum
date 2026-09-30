@@ -308,11 +308,42 @@ namespace FrameGraph
 		return list;
 	}
 
+	namespace
+	{
+		VariableContext& sync_debug_context()
+		{
+			static auto ctx = VariableContext::create(L"Sync debug");
+			return *ctx;
+		}
+
+		// Full ALL->ALL memory barrier before every draw/dispatch. If an artifact
+		// survives this, it is not a missing/misplaced barrier (or a batching
+		// split) -- look at aliasing lifetimes or layouts instead.
+		Variable<bool> g_heaviest_barriers = { false, "Heaviest barriers (every command)", &sync_debug_context() };
+		// Bisect aid: only at pass starts. Clean with this => the hazard is
+		// between passes; clean only with the per-command one => inside a pass.
+		Variable<bool> g_heaviest_pass_barriers = { false, "Heaviest barriers (every pass)", &sync_debug_context() };
+		// Every command its own operation, no global barrier. Clean with this
+		// => batching merged two uses that needed a barrier between them.
+		Variable<bool> g_split_every_command = { false, "Split every command (no global barrier)", &sync_debug_context() };
+		// Vulkan only: computed barriers widened to ALL/ALL. Clean with this =>
+		// some barrier's stage/access translation is too narrow; not clean =>
+		// the hazard is on something no computed barrier covers.
+		Variable<bool> g_widen_barriers = { false, "Widen every barrier to ALL/ALL", &sync_debug_context() };
+	}
+
 	void FrameContext::begin(Graph* graph, Pass* pass, HAL::FrameResources::ptr& frame) {
+
+		HAL::CommandList::debug_heaviest_barriers.store(g_heaviest_barriers, std::memory_order_relaxed);
+		HAL::CommandList::debug_split_every_command.store(g_split_every_command, std::memory_order_relaxed);
+		HAL::DebugSync::widen_barriers.store(g_widen_barriers, std::memory_order_relaxed);
 
 		this->pass = pass;
 		this->frame = frame;
 		this->graph = graph;
+
+		if (g_heaviest_pass_barriers)
+			get_list()->add_heaviest_barrier();
 
 		bool need_list = !pass->used.resource_deletions_before.empty() || !pass->used.resource_creations.empty();
 
@@ -2146,6 +2177,19 @@ namespace FrameGraph
 				{
 
 					auto creation_info = RenderSystem::get().device().get_alloc_info(info->d3ddesc);
+					// TEMP: AMD bring-up -- which resource gets a zero allocation size.
+					if (creation_info.size == 0)
+					{
+						std::string desc_text = "buffer";
+						if (info->d3ddesc.is_texture())
+						{
+							auto& t = info->d3ddesc.as_texture();
+							desc_text = "texture " + std::to_string(t.Dimensions.x) + "x" + std::to_string(t.Dimensions.y) + "x" + std::to_string(t.Dimensions.z)
+								+ " mips " + std::to_string(t.MipLevels) + " array " + std::to_string(t.ArraySize)
+								+ " format " + std::to_string((int)t.Format) + " flags " + std::to_string((uint)info->d3ddesc.Flags);
+						}
+						Log::get() << Log::LEVEL_ERROR << "[TEMP] zero alloc size: " << info->name() << " " << desc_text << Log::endl;
+					}
 					HeapIndex index = { HAL::MemoryType::COMMITED , info->heap_type };
 
 					Pass* creator = nullptr;
@@ -2618,6 +2662,11 @@ namespace FrameGraph
 
 	HAL::CommandListType Pass::get_type() const
 	{
+#ifdef HAL_BACKEND_VULKAN
+		// TEMP: Vulkan 3D bring-up -- every pass on the direct queue, no async
+		// compute, to rule cross-queue sync out of the device loss.
+		return HAL::CommandListType::DIRECT;
+#endif
 		HAL::CommandListType type = HAL::CommandListType::DIRECT;
 		if (check(flags & PassFlags::Compute))
 		{

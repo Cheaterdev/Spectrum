@@ -14,6 +14,22 @@ import :Device;         // HAL::Device
 import :HeapAllocators;
 import :FrameManager;
 
+namespace
+{
+    // TEMP: Vulkan memory leak -- count live image views.
+    VkResult temp_create_view(VkDevice d, const VkImageViewCreateInfo* ci, const VkAllocationCallbacks* a, VkImageView* v)
+    {
+        VkResult r = vkCreateImageView(d, ci, a, v);
+        if (r == VK_SUCCESS) HAL::API::temp_live[HAL::API::TL_ImageViews]++;
+        return r;
+    }
+    void temp_destroy_view(VkDevice d, VkImageView v, const VkAllocationCallbacks* a)
+    {
+        if (v != VK_NULL_HANDLE) HAL::API::temp_live[HAL::API::TL_ImageViews]--;
+        vkDestroyImageView(d, v, a);
+    }
+}
+
 namespace HAL
 {
     namespace API
@@ -28,6 +44,7 @@ namespace HAL
             auto THIS = static_cast<HAL::Resource*>(this);
             THIS->m_device = static_cast<HAL::Device*>(&device);
             THIS->desc = _desc;
+            temp_live[TL_Resources]++;   // TEMP
 
             // Resolve MipLevels=0 → full mip chain.
             // D3D12 handles this natively inside CreateCommittedResource;
@@ -119,10 +136,42 @@ namespace HAL
                     mapped_data = api_heap->cpu_address + placement.offset;
                     address     = api_heap->get_address() + placement.offset;
                     vk_buffer   = api_heap->get_vk_buffer();
+                    vk_buffer_offset = placement.offset;
                     return;
                 }
-                // Case B: DEFAULT heap — fall through to VMA allocation below.
+                // Case B: DEFAULT heap — bound into the heap's memory below
+                // (bind_placed), so placed resources alias like in D3D12.
             }
+
+            // Binds a freshly created image/buffer into placement.heap at
+            // placement.offset. False when it can't be placed exactly where the
+            // allocator put it (memory type, alignment, or a requirement larger
+            // than the size get_alloc_info reserved); the caller then allocates
+            // standalone rather than overlap the next resource in the heap.
+            auto bind_placed = [&](const VkMemoryRequirements& req, auto&& bind) -> bool
+            {
+                if (!placement.heap || sparse) return false;
+                auto* heap = static_cast<API::Heap*>(placement.heap);
+                if (heap->cpu_address || THIS->heap_type != HeapType::DEFAULT) return false;
+
+                const uint32_t type = heap->get_memory_type();
+                const VkDeviceSize reserved = device.get_alloc_info(_desc).size;
+                const bool fits = type < 32 && (req.memoryTypeBits & (1u << type))
+                               && placement.offset % req.alignment == 0
+                               && req.size <= std::max<VkDeviceSize>(reserved, 1)
+                               && placement.offset + req.size <= heap->get_heap_size();
+                if (!fits)
+                {
+                    static bool warned = false;
+                    if (!warned) { warned = true; Log::get() << Log::LEVEL_WARNING << "[Vulkan] placed resource '" << _desc.is_texture()
+                        << "' doesn't fit its heap slot (size " << req.size << " vs " << reserved << "), allocating standalone" << Log::endl; }
+                    return false;
+                }
+                auto [memory, base] = heap->get_sparse_memory();
+                if (bind(memory, base + placement.offset) != VK_SUCCESS) return false;
+                placed = true;
+                return true;
+            };
 
             VmaAllocator allocator = device.get_vma_allocator();
             if (!allocator) return;
@@ -175,11 +224,26 @@ namespace HAL
                 }
                 else
                 {
-                    VmaAllocationInfo alloc_info{};
-                    vmaCreateBuffer(allocator, &bci, &vma_ci, &vk_buffer, &vma_alloc, &alloc_info);
+                    const VkDevice vk_dev = device.get_native_device();
+                    if (placement.heap && vkCreateBuffer(vk_dev, &bci, nullptr, &vk_buffer) == VK_SUCCESS)
+                    {
+                        VkMemoryRequirements req{};
+                        vkGetBufferMemoryRequirements(vk_dev, vk_buffer, &req);
+                        if (!bind_placed(req, [&](VkDeviceMemory m, VkDeviceSize o) { return vkBindBufferMemory(vk_dev, vk_buffer, m, o); }))
+                        {
+                            vkDestroyBuffer(vk_dev, vk_buffer, nullptr);
+                            vk_buffer = VK_NULL_HANDLE;
+                        }
+                    }
 
-                    if (THIS->heap_type == HeapType::UPLOAD || THIS->heap_type == HeapType::READBACK)
-                        mapped_data = alloc_info.pMappedData;
+                    if (!placed)
+                    {
+                        VmaAllocationInfo alloc_info{};
+                        vmaCreateBuffer(allocator, &bci, &vma_ci, &vk_buffer, &vma_alloc, &alloc_info);
+
+                        if (THIS->heap_type == HeapType::UPLOAD || THIS->heap_type == HeapType::READBACK)
+                            mapped_data = alloc_info.pMappedData;
+                    }
                 }
 
                 if (vk_buffer != VK_NULL_HANDLE)
@@ -236,6 +300,13 @@ namespace HAL
                 if (check(_desc.Flags & ResFlags::DepthStencil))
                     ici.usage |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
 
+                // D3D12 accepts a Cube SRV on any square 2D array of 6N layers;
+                // Vulkan needs the flag at creation.
+                cube_compatible = !sparse && ici.imageType == VK_IMAGE_TYPE_2D && ici.arrayLayers % 6 == 0
+                               && ici.extent.width == ici.extent.height;
+                if (cube_compatible)
+                    ici.flags |= VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
+
                 vma_ci.usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE;
 
                 VkResult img_res;
@@ -248,7 +319,24 @@ namespace HAL
                             ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT);
                 }
                 else
-                    img_res = vmaCreateImage(allocator, &ici, &vma_ci, &vk_image, &vma_alloc, nullptr);
+                {
+                    const VkDevice vk_dev = device.get_native_device();
+                    img_res = VK_ERROR_UNKNOWN;
+                    if (placement.heap && vkCreateImage(vk_dev, &ici, nullptr, &vk_image) == VK_SUCCESS)
+                    {
+                        VkMemoryRequirements req{};
+                        vkGetImageMemoryRequirements(vk_dev, vk_image, &req);
+                        if (bind_placed(req, [&](VkDeviceMemory m, VkDeviceSize o) { return vkBindImageMemory(vk_dev, vk_image, m, o); }))
+                            img_res = VK_SUCCESS;
+                        else
+                        {
+                            vkDestroyImage(vk_dev, vk_image, nullptr);
+                            vk_image = VK_NULL_HANDLE;
+                        }
+                    }
+                    if (!placed)
+                        img_res = vmaCreateImage(allocator, &ici, &vma_ci, &vk_image, &vma_alloc, nullptr);
+                }
                 if (img_res != VK_SUCCESS)
                     Log::get() << "[Vulkan] vmaCreateImage failed (" << static_cast<int>(img_res)
                                << ") vk_format=" << static_cast<int>(ici.format)
@@ -277,7 +365,7 @@ namespace HAL
                     ivci.subresourceRange.aspectMask     = vk_image_aspect;
                     ivci.subresourceRange.levelCount     = VK_REMAINING_MIP_LEVELS;
                     ivci.subresourceRange.layerCount     = VK_REMAINING_ARRAY_LAYERS;
-                    vkCreateImageView(device.get_native_device(), &ivci, nullptr, &vk_image_view);
+                    temp_create_view(device.get_native_device(), &ivci, nullptr, &vk_image_view);
                     vk_view_ci = ivci;
 
                     // The state manager records `initialLayout` as the layout this
@@ -453,8 +541,43 @@ namespace HAL
 
             VkImageViewCreateInfo ivci = get_uav_view_ci(mip, layer);
             VkImageView v = VK_NULL_HANDLE;
-            vkCreateImageView(vk_dev, &ivci, nullptr, &v);
+            temp_create_view(vk_dev, &ivci, nullptr, &v);
             per_mip_views[key] = v;
+            return v;
+        }
+
+        VkImageView Resource::get_vk_srv_view(VkDevice vk_dev, VkImageViewType type, uint32_t first_mip, uint32_t mip_count,
+                                              uint32_t first_layer, uint32_t layer_count) const noexcept
+        {
+            if (import_handle.image != VK_NULL_HANDLE)
+                return import_handle.image_view;
+            if (vk_image == VK_NULL_HANDLE || vk_view_ci.image == VK_NULL_HANDLE)
+                return VK_NULL_HANDLE;
+
+            const std::array<uint32_t, 5> key = { uint32_t(type), first_mip, mip_count, first_layer, layer_count };
+            std::lock_guard g(per_mip_views_mutex);
+            if (auto it = srv_views.find(key); it != srv_views.end())
+                return it->second;
+
+            if (!cube_compatible && (type == VK_IMAGE_VIEW_TYPE_CUBE || type == VK_IMAGE_VIEW_TYPE_CUBE_ARRAY))
+                type = VK_IMAGE_VIEW_TYPE_2D_ARRAY;
+            // A single-layer view of a 3D image stays 3D (a 2D view would need 2D_ARRAY_COMPATIBLE).
+            if (vk_view_ci.viewType == VK_IMAGE_VIEW_TYPE_3D)
+            {
+                type = VK_IMAGE_VIEW_TYPE_3D;
+                first_layer = 0;
+                layer_count = 1;
+            }
+
+            VkImageViewCreateInfo ivci = vk_view_ci;
+            ivci.viewType = type;
+            ivci.subresourceRange.baseMipLevel   = first_mip;
+            ivci.subresourceRange.levelCount     = mip_count;
+            ivci.subresourceRange.baseArrayLayer = first_layer;
+            ivci.subresourceRange.layerCount     = layer_count;
+            VkImageView v = VK_NULL_HANDLE;
+            temp_create_view(vk_dev, &ivci, nullptr, &v);
+            srv_views[key] = v;
             return v;
         }
 
@@ -482,7 +605,7 @@ namespace HAL
             ivci.subresourceRange.baseArrayLayer = first_layer;
             ivci.subresourceRange.layerCount     = layer_count;
             VkImageView v = VK_NULL_HANDLE;
-            vkCreateImageView(vk_dev, &ivci, nullptr, &v);
+            temp_create_view(vk_dev, &ivci, nullptr, &v);
             attachment_views[key] = v;
             return v;
         }
@@ -490,9 +613,10 @@ namespace HAL
 
     Resource::~Resource()
     {
+        if (m_device) API::temp_live[API::TL_Resources]--;   // TEMP
         alloc_handle.Free();
 
-        if (vma_alloc || sparse)
+        if (vma_alloc || sparse || placed)
         {
             auto& api_dev = static_cast<API::Device&>(*m_device);
             VkDevice vk_dev = api_dev.get_native_device();
@@ -505,21 +629,30 @@ namespace HAL
             // Destroy per-mip UAV views before destroying the image.
             for (auto& [key, view] : per_mip_views)
                 if (view != VK_NULL_HANDLE)
-                    vkDestroyImageView(vk_dev, view, nullptr);
+                    temp_destroy_view(vk_dev, view, nullptr);
             per_mip_views.clear();
             for (auto& [key, view] : attachment_views)
                 if (view != VK_NULL_HANDLE)
-                    vkDestroyImageView(vk_dev, view, nullptr);
+                    temp_destroy_view(vk_dev, view, nullptr);
             attachment_views.clear();
+            for (auto& [key, view] : srv_views)
+                if (view != VK_NULL_HANDLE)
+                    temp_destroy_view(vk_dev, view, nullptr);
+            srv_views.clear();
 
             // Destroy the owned image view before destroying the image itself.
             if (vk_image_view != VK_NULL_HANDLE && !import_handle.image)
             {
-                vkDestroyImageView(vk_dev, vk_image_view, nullptr);
+                temp_destroy_view(vk_dev, vk_image_view, nullptr);
                 vk_image_view = VK_NULL_HANDLE;
             }
 
-            if (vk_buffer != VK_NULL_HANDLE)
+            if (placed)
+            {
+                if (vk_buffer != VK_NULL_HANDLE) vkDestroyBuffer(vk_dev, vk_buffer, nullptr);
+                else if (vk_image != VK_NULL_HANDLE) vkDestroyImage(vk_dev, vk_image, nullptr);
+            }
+            else if (vk_buffer != VK_NULL_HANDLE)
             {
                 vmaDestroyBuffer(api_dev.get_vma_allocator(), vk_buffer, vma_alloc);
             }

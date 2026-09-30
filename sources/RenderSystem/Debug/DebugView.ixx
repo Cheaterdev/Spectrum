@@ -103,7 +103,7 @@ private:
 
 	// One indirect list per DebugViewGather bucket (debug_view.prism).
 	static constexpr int bucket_count = 4;
-	HAL::virtual_gpu_buffer<Table::Meshes::CommandData>::ptr commands[bucket_count];
+	HAL::virtual_gpu_buffer<DrawMeshCommand>::ptr commands[bucket_count];
 	HAL::virtual_gpu_buffer<Table::Dev::DebugLineSegment>::ptr lines;
 
 	// Captured by update_frame() for this frame's render().

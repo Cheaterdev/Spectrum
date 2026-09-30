@@ -26,12 +26,16 @@ namespace HAL
 
     // StructuredBuffers are sub-ranges (FirstElement..NumElements) of shared
     // buffers; honour them or the shader reads the wrong elements.
+    // Elements are StructureByteStride bytes, or the view format's size for raw
+    // (R32_TYPELESS) and typed views, as in D3D12.
     template<class BufferView>
-    static VkDescriptorBufferInfo buffer_range(VkBuffer buffer, const BufferView& b)
+    static VkDescriptorBufferInfo buffer_range(const API::Resource& res, const BufferView& b, Format format)
     {
-        const VkDeviceSize stride = b.StructureByteStride ? b.StructureByteStride : 1u;
-        VkDescriptorBufferInfo info{ buffer };
-        info.offset = static_cast<VkDeviceSize>(b.FirstElement) * stride;
+        VkDeviceSize stride = b.StructureByteStride;
+        if (!stride) stride = format != Format::UNKNOWN ? format.size() / 8 : 1u;   // size() is in bits
+        if (!stride) stride = 1u;
+        VkDescriptorBufferInfo info{ res.get_vk_buffer() };
+        info.offset = res.get_vk_buffer_offset() + static_cast<VkDeviceSize>(b.FirstElement) * stride;
         info.range  = b.NumElements ? static_cast<VkDeviceSize>(b.NumElements) * stride : VK_WHOLE_SIZE;
         return info;
     }
@@ -70,7 +74,53 @@ namespace HAL
         {
             // GENERAL matches to_native(SHADER_RESOURCE), so SRV and UAV slots for
             // the same image agree on its layout.
-            VkImageView view = api_res.get_vk_image_view();
+            // D3D12 MipLevels/ArraySize of -1 (or 0) mean "the rest".
+            auto count = [](uint32_t n, uint32_t remaining) { return (n == 0 || n == uint32_t(-1)) ? remaining : n; };
+            constexpr uint32_t ALL_MIPS = VK_REMAINING_MIP_LEVELS, ALL_LAYERS = VK_REMAINING_ARRAY_LAYERS;
+
+            VkImageViewType type = VK_IMAGE_VIEW_TYPE_MAX_ENUM;
+            uint32_t first_mip = 0, mips = ALL_MIPS, first_layer = 0, layers = ALL_LAYERS;
+            std::visit(overloaded{
+                [&](const Views::ShaderResource::Texture2D& t)
+                {
+                    type = VK_IMAGE_VIEW_TYPE_2D;
+                    first_mip = t.MostDetailedMip; mips = count(t.MipLevels, ALL_MIPS); layers = 1;
+                },
+                [&](const Views::ShaderResource::Texture2DArray& t)
+                {
+                    type = VK_IMAGE_VIEW_TYPE_2D_ARRAY;
+                    first_mip = t.MostDetailedMip; mips = count(t.MipLevels, ALL_MIPS);
+                    first_layer = t.FirstArraySlice; layers = count(t.ArraySize, ALL_LAYERS);
+                },
+                [&](const Views::ShaderResource::Texture3D& t)
+                {
+                    type = VK_IMAGE_VIEW_TYPE_3D;
+                    first_mip = t.MostDetailedMip; mips = count(t.MipLevels, ALL_MIPS);
+                },
+                [&](const Views::ShaderResource::Cube& t)
+                {
+                    type = VK_IMAGE_VIEW_TYPE_CUBE;
+                    first_mip = t.MostDetailedMip; mips = count(t.MipLevels, ALL_MIPS); layers = 6;
+                },
+                [&](const Views::ShaderResource::CubeArray& t)
+                {
+                    type = VK_IMAGE_VIEW_TYPE_CUBE_ARRAY;
+                    first_mip = t.MostDetailedMip; mips = count(t.MipLevels, ALL_MIPS);
+                    first_layer = t.First2DArrayFace;
+                    layers = (t.NumCubes == 0 || t.NumCubes == uint32_t(-1)) ? ALL_LAYERS : t.NumCubes * 6;
+                },
+                [&](const Views::ShaderResource::Texture1DArray& t)
+                {
+                    type = VK_IMAGE_VIEW_TYPE_1D_ARRAY;
+                    first_mip = t.MostDetailedMip; mips = count(t.MipLevels, ALL_MIPS);
+                    first_layer = t.FirstArraySlice; layers = count(t.ArraySize, ALL_LAYERS);
+                },
+                [](auto&&) {}
+            }, v.View);
+
+            VkImageView view = type == VK_IMAGE_VIEW_TYPE_MAX_ENUM
+                ? api_res.get_vk_image_view()
+                : api_res.get_vk_srv_view(heap.device.get_native_device(), type, first_mip, mips, first_layer, layers);
             ASSERT(view != VK_NULL_HANDLE && "SRV: image has no view");
             if (view == VK_NULL_HANDLE) return;
             rec.type  = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
@@ -82,7 +132,7 @@ namespace HAL
             ASSERT(b && "SRV: buffer resource with a non-buffer view");
             if (!b) return;
             rec.type   = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-            rec.buffer = buffer_range(api_res.get_vk_buffer(), *b);
+            rec.buffer = buffer_range(api_res, *b, v.Format);
         }
         else
         {
@@ -114,15 +164,24 @@ namespace HAL
         API::DescriptorRecord rec;
         if (api_res.get_vk_image() != VK_NULL_HANDLE)
         {
-            uint32_t mip_slice = 0, array_slice = 0;
+            // Array UAVs cover ArraySize slices like RWTexture2DArray; a single-layer
+            // 2D view would leave every slice but the first unreachable.
+            const VkDevice vk_dev = heap.device.get_native_device();
+            VkImageView view = VK_NULL_HANDLE;
+            auto layers = [](uint n) { return (n == 0 || n == uint(-1)) ? VK_REMAINING_ARRAY_LAYERS : n; };
             std::visit(overloaded{
-                [&](const Views::UnorderedAccess::Texture2D& t)      { mip_slice = t.MipSlice; },
-                [&](const Views::UnorderedAccess::Texture2DArray& t) { mip_slice = t.MipSlice; array_slice = t.FirstArraySlice; },
-                [&](const Views::UnorderedAccess::Texture3D& t)      { mip_slice = t.MipSlice; },
-                [](auto&&) {}
+                [&](const Views::UnorderedAccess::Texture2D& t)      { view = api_res.get_vk_uav_view(vk_dev, t.MipSlice, 0); },
+                [&](const Views::UnorderedAccess::Texture3D& t)      { view = api_res.get_vk_uav_view(vk_dev, t.MipSlice, 0); },
+                [&](const Views::UnorderedAccess::Texture2DArray& t)
+                {
+                    view = api_res.get_vk_srv_view(vk_dev, VK_IMAGE_VIEW_TYPE_2D_ARRAY, t.MipSlice, 1, t.FirstArraySlice, layers(t.ArraySize));
+                },
+                [&](const Views::UnorderedAccess::Texture1DArray& t)
+                {
+                    view = api_res.get_vk_srv_view(vk_dev, VK_IMAGE_VIEW_TYPE_1D_ARRAY, t.MipSlice, 1, t.FirstArraySlice, layers(t.ArraySize));
+                },
+                [&](auto&&) { view = api_res.get_vk_uav_view(vk_dev, 0, 0); }
             }, v.View);
-
-            VkImageView view = api_res.get_vk_uav_view(heap.device.get_native_device(), mip_slice, array_slice);
             ASSERT(view != VK_NULL_HANDLE && "UAV: storage image view creation failed");
             if (view == VK_NULL_HANDLE) return;
             rec.type  = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
@@ -133,15 +192,15 @@ namespace HAL
             rec.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
             if (auto* b = std::get_if<Views::UnorderedAccess::Buffer>(&v.View))
             {
-                rec.buffer = buffer_range(api_res.get_vk_buffer(), *b);
+                rec.buffer = buffer_range(api_res, *b, v.Format);
                 if (b->CounterResource)
                 {
                     auto& counter = static_cast<const API::Resource&>(*b->CounterResource);
-                    rec.counter = { counter.get_vk_buffer(), b->CounterOffsetInBytes, sizeof(uint32_t) };
+                    rec.counter = { counter.get_vk_buffer(), counter.get_vk_buffer_offset() + b->CounterOffsetInBytes, sizeof(uint32_t) };
                 }
             }
             else
-                rec.buffer = { api_res.get_vk_buffer(), 0, VK_WHOLE_SIZE };
+                rec.buffer = { api_res.get_vk_buffer(), api_res.get_vk_buffer_offset(), VK_WHOLE_SIZE };
         }
         else
         {
@@ -168,7 +227,7 @@ namespace HAL
         // OffsetInBytes/SizeInBytes or the shader reads the wrong sub-region.
         API::DescriptorRecord rec;
         rec.type   = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        rec.buffer = { api_res.get_vk_buffer(), v.OffsetInBytes,
+        rec.buffer = { api_res.get_vk_buffer(), api_res.get_vk_buffer_offset() + v.OffsetInBytes,
                        v.SizeInBytes > 0 ? VkDeviceSize(v.SizeInBytes) : VK_WHOLE_SIZE };
         api_heap.store(offset, rec);
     }
@@ -256,10 +315,13 @@ namespace HAL
             }
 
             records.resize(capacity);
+            temp_live[TL_DescHeaps]++;   // TEMP
+            temp_live[TL_DescSlots] += records.size();
         }
 
         DescriptorHeap::~DescriptorHeap()
         {
+            if (!records.empty()) { temp_live[TL_DescHeaps]--; temp_live[TL_DescSlots] -= records.size(); }   // TEMP
             // Destroying the pool frees its set.
             if (vk_pool != VK_NULL_HANDLE)
                 vkDestroyDescriptorPool(device.get_native_device(), vk_pool, nullptr);

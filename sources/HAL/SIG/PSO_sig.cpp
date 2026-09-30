@@ -3,12 +3,28 @@ import Core;
 import HAL;
 
 void init_signatures(HAL::Device& device, enum_array<Layouts, HAL::RootLayout::ptr>&);
-void init_indirect_commands(HAL::Device& device, enum_array<IndirectCommands, HAL::IndirectCommand>& commands);
 void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>&);
+
+static void init_indirect_commands(HAL::Device& device, enum_array<IndirectCommands, HAL::IndirectCommand>& commands)
+{
+	using HAL::IndirectCommand;
+	commands[IndirectCommands::DrawIndexedArguments]  = IndirectCommand::create_command_layout<DrawIndexedArguments>(device);
+	commands[IndirectCommands::DispatchMeshArguments] = IndirectCommand::create_command_layout<DispatchMeshArguments>(device);
+	commands[IndirectCommands::DispatchArguments]     = IndirectCommand::create_command_layout<DispatchArguments>(device);
+	commands[IndirectCommands::DispatchRaysArguments] = IndirectCommand::create_command_layout<DispatchRaysArguments>(device);
+	// draw_id lands in the IndirectDraw slot's root constant (D3D12); the
+	// signature then needs the root signature that slot belongs to.
+	commands[IndirectCommands::DrawMeshCommand] =
+		IndirectCommand::create_command_layout<Slots::Meshes::IndirectDraw, DispatchMeshArguments>(device, Layouts::DefaultLayout);
+	// Its draws' shaders fetch these tables by draw id (draw_data.hlsl) rather
+	// than from their slots, which stay unbound during the draw.
+	for (auto slot : { SlotID::MeshInfo, SlotID::MeshInstanceInfo, SlotID::MaterialInfo, SlotID::VSMPageBatch })
+		commands[IndirectCommands::DrawMeshCommand].slots.merge(slot);
+}
 
 HAL::ComputePipelineState::ptr SimpleComputePSO::create(HAL::Device& device)
 {
-	if (requires_raytracing && !device.is_rtx_supported())
+	if ((requires_raytracing && !device.is_rtx_supported()) || (requires_tiled_depth && !device.is_tiled_depth_supported()))
 		return nullptr;
 
 	HAL::ComputePipelineStateDesc desc;
@@ -20,7 +36,7 @@ HAL::ComputePipelineState::ptr SimpleComputePSO::create(HAL::Device& device)
 
 HAL::PipelineState::ptr SimpleGraphicsPSO::create(HAL::Device&device)
 {
-	if (requires_raytracing && !device.is_rtx_supported())
+	if ((requires_raytracing && !device.is_rtx_supported()) || (requires_tiled_depth && !device.is_tiled_depth_supported()))
 		return nullptr;
 	if ((!mesh.entry_point.empty() || !amplification.entry_point.empty()) && !device.is_mesh_shader_supported())
 		return nullptr;
