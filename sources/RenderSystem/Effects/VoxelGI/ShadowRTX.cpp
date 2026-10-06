@@ -16,7 +16,7 @@ using namespace HAL;
 // NRD_SIGMA_Execute/NRD_ShadowCombine via VSM_ShadowNoise whenever
 // Shadows::VSM::ShadowSource::RTXReference is selected outside DLSS-RR (see
 // [[project-nrd-integration]]). Gated the same as ReflectionRTX/IndirectRTX
-// now -- always warm on RTX+DLSSRR-capable hardware, independent of which
+// now -- always warm on RTX-capable hardware, independent of which
 // shadow source is actually selected.
 
 void PassDefault<Passes::Shadows::ShadowRTX>::render(

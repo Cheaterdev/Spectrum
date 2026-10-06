@@ -920,7 +920,7 @@ namespace Denoise
 		# consumer, same gate) while DLSS-RR is selected. All three conditions read
 		# from Table:: contexts (UpscalingDLSS.prism/raytracing.prism) rather than raw
 		# globals -- see UpscalerSelectors' own comment for why that matters here.
-		[SetupCondition = UpscalerSelectors::upscaler_type != UpscalerType::DLSSRR && RenderDeviceCapabilities::rtx_supported && RenderDeviceCapabilities::dlssrr_available]
+		[SetupCondition = UpscalerSelectors::upscaler_type != UpscalerType::DLSSRR && RenderDeviceCapabilities::rtx_supported]
 		PassNode NRD_GBufferPack
 		{
 			# Flat fields, not the (removed) GBuffer PassView -- see pssm.prism's own
@@ -976,7 +976,7 @@ namespace Denoise
 		# pure decision.
 		[Static]
 		[PreSetup]
-		[SetupCondition = UpscalerSelectors::upscaler_type != UpscalerType::DLSSRR && RenderDeviceCapabilities::rtx_supported && RenderDeviceCapabilities::dlssrr_available]
+		[SetupCondition = UpscalerSelectors::upscaler_type != UpscalerType::DLSSRR && RenderDeviceCapabilities::rtx_supported]
 		PassNode NRD_REBLUR_Execute
 		{
 			[Always = Read] Texture NRD_ViewZ;
@@ -1009,7 +1009,7 @@ namespace Denoise
 		# CommonSettings::frameIndex to increment exactly once per real frame per
 		# Instance, which two totally independent Instances make trivially true
 		# without any cross-pass coordination). Both branches still require
-		# RTX+DLSSRR-capable/non-DLSSRR (same as NRD_REBLUR_Execute) regardless of
+		# RTX-capable/non-DLSSRR (same as NRD_REBLUR_Execute) regardless of
 		# which raw signal is selected -- NRD_ViewZ/NRD_NormalRoughness/NRD_Mv below
 		# only exist when NRD_GBufferPack ran, and that pass shares this same base
 		# gate. ensure_pools() is a real side effect, moved to pre_setup()
@@ -1017,7 +1017,7 @@ namespace Denoise
 		# reasoning as NRD_REBLUR_Execute's own pre_setup().
 		[Static]
 		[PreSetup]
-		[SetupCondition = UpscalerSelectors::upscaler_type != UpscalerType::DLSSRR && RenderDeviceCapabilities::rtx_supported && RenderDeviceCapabilities::dlssrr_available && (VSMSelectors::shadow_source == ShadowSource::RTXReference || (VSMSelectors::shadow_source == ShadowSource::VSM && VSMSelectors::use_vsm_penumbra))]
+		[SetupCondition = UpscalerSelectors::upscaler_type != UpscalerType::DLSSRR && RenderDeviceCapabilities::rtx_supported && (VSMSelectors::shadow_source == ShadowSource::RTXReference || (VSMSelectors::shadow_source == ShadowSource::VSM && VSMSelectors::use_vsm_penumbra))]
 		PassNode NRD_SIGMA_Execute
 		{
 			# Same three common inputs NRD_REBLUR_Execute reads (produced by
@@ -1071,7 +1071,7 @@ namespace Denoise
 		# complementary case to RTXCombine (which handles DLSS-RR itself) -- the
 		# same condition as NRD_GBufferPack/NRD_REBLUR_Execute (above), which
 		# produce RTXIndirectDenoised; without RTX there is nothing to combine.
-		[SetupCondition = UpscalerSelectors::upscaler_type != UpscalerType::DLSSRR && RenderDeviceCapabilities::rtx_supported && RenderDeviceCapabilities::dlssrr_available]
+		[SetupCondition = UpscalerSelectors::upscaler_type != UpscalerType::DLSSRR && RenderDeviceCapabilities::rtx_supported]
 		PassNode NRD_IndirectCombine
 		{
 			# Flat fields, not the (removed) GBuffer PassView -- see pssm.prism's own
@@ -1112,7 +1112,7 @@ namespace Denoise
 		[Compute]
 		# Same gate as NRD_SIGMA_Execute (above) -- runs only when that pass actually
 		# produced VSM_ShadowDenoised this frame.
-		[SetupCondition = UpscalerSelectors::upscaler_type != UpscalerType::DLSSRR && RenderDeviceCapabilities::rtx_supported && RenderDeviceCapabilities::dlssrr_available && VSMSelectors::shadow_source == ShadowSource::RTXReference]
+		[SetupCondition = UpscalerSelectors::upscaler_type != UpscalerType::DLSSRR && RenderDeviceCapabilities::rtx_supported && VSMSelectors::shadow_source == ShadowSource::RTXReference]
 		PassNode NRD_ShadowCombine
 		{
 			# Flat fields, not the (removed) GBuffer PassView -- see pssm.prism's own

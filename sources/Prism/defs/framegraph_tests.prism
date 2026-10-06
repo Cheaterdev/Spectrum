@@ -507,6 +507,27 @@ namespace FrameGraphTests
 		FGT_CopyResultToSink;
 	}
 
+	# ---- inline ray queries ---------------------------------------------------------
+	# One ray per texel straight down -Z over [-1,1]^2; output is the committed
+	# hit distance (0 on a miss), checked against the CPU's answer.
+
+	[Bind = DefaultLayout::Instance0]
+	struct FGTRayQuery
+	{
+		uint2 size;
+		RaytracingAccelerationStructure scene;
+		RWTexture2D<float> output;
+	}
+
+	[Requires = Raytracing]
+	ComputePSO FGTRayQuery
+	{
+		root = DefaultLayout;
+
+		[EntryPoint = CS]
+		compute = "framegraph/fgt_ray_query.hlsl";
+	}
+
 	# ---- counted tile lists ---------------------------------------------------------
 	# A [Counted] list declared like VSM_LitTiles, appended by a shader with a
 	# known tile set, then copied raw (counter prefix included) into a Static

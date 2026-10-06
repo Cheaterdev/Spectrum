@@ -61,7 +61,7 @@ Scene::Scene()
 	raytrace = std::make_shared<virtual_gpu_buffer<HAL::InstanceDesc>>(RenderSystem::get().device(), 1024 * 1024);
 
 
-	if (RenderSystem::get().device().is_rtx_supported())
+	if (RenderSystem::get().device().is_ray_query_supported())
 	{
 		std::vector<InstanceDesc>  desc;
 		raytrace_scene = std::make_shared<RaytracingAccelerationStructure>(RenderSystem::get().device(), desc);

@@ -258,6 +258,7 @@ namespace HAL
         tempDevice->CheckFeatureSupport(D3D12_FEATURE_SHADER_MODEL, &supportedShaderModel, sizeof(supportedShaderModel));
 
         props.rtx                    = options5.RaytracingTier != D3D12_RAYTRACING_TIER_NOT_SUPPORTED;
+        props.ray_query              = options5.RaytracingTier >= D3D12_RAYTRACING_TIER_1_1;
         props.mesh_shader            = options7.MeshShaderTier >= D3D12_MESH_SHADER_TIER_1;
         props.full_bindless          = supportedShaderModel.HighestShaderModel >= D3D_SHADER_MODEL_6_6;
         props.direct_gpu_upload_heap = options16.GPUUploadHeapSupported;
@@ -364,6 +365,7 @@ namespace HAL
 
             auto& properties = THIS->properties;
             properties.rtx                    = options5.RaytracingTier != D3D12_RAYTRACING_TIER_NOT_SUPPORTED;
+            properties.ray_query              = options5.RaytracingTier >= D3D12_RAYTRACING_TIER_1_1;
             properties.full_bindless          = supportedShaderModel.HighestShaderModel >= D3D_SHADER_MODEL_6_6;
             properties.mesh_shader            = options7.MeshShaderTier >= D3D12_MESH_SHADER_TIER_1;
             properties.tiled_3d               = options.TiledResourcesTier >= D3D12_TILED_RESOURCES_TIER_3;

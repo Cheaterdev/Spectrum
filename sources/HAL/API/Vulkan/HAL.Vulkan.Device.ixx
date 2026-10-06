@@ -113,6 +113,10 @@ export namespace HAL
             // UNDEFINED -> initial_layout barrier here.  The next Queue::execute
             // flushes the batch in a small command buffer submitted ahead of the
             // real work, making the state manager's assumption true.
+            // Acceleration-structure objects by (buffer, offset); see get_acceleration_structure().
+            std::mutex as_mutex;
+            std::map<std::pair<VkBuffer, VkDeviceSize>, VkAccelerationStructureKHR> acceleration_structures;
+
             std::mutex pending_init_mutex;
             std::vector<VkImageMemoryBarrier2> pending_init_barriers;
 
@@ -149,13 +153,47 @@ export namespace HAL
             // ---- Bindless descriptor model accessors -------------------------
             // The types a resource-heap slot can hold. Every slot costs the size of
             // the largest of these, so keep the list minimal. Layouts and pools must
-            // declare the same list.
-            static constexpr VkDescriptorType mutable_resource_types[] = {
+            // declare the same list; acceleration structures are appended at init
+            // only when the device supports ray queries.
+            std::vector<VkDescriptorType> mutable_resource_types = {
                 VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
                 VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
                 VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
                 VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
             };
+
+            // Usage every non-sparse-probe buffer is created with: any buffer can
+            // be a slice source for any view, so they all declare the same set.
+            // Resource creation, placed heaps and the allocation-info query must
+            // agree, or the queried requirements don't match the real buffer.
+            VkBufferUsageFlags buffer_usage =
+                  VK_BUFFER_USAGE_TRANSFER_SRC_BIT  | VK_BUFFER_USAGE_TRANSFER_DST_BIT
+                | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT
+                | VK_BUFFER_USAGE_INDEX_BUFFER_BIT   | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT
+                | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT
+                | VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT;   // + acceleration-structure storage/input with ray_query
+
+            // ---- Acceleration structures (VK_KHR_acceleration_structure) ------
+            // Extension entry points: not exported by the loader, resolved at init.
+            PFN_vkGetAccelerationStructureBuildSizesKHR    fn_get_as_build_sizes   = nullptr;
+            PFN_vkCreateAccelerationStructureKHR           fn_create_as            = nullptr;
+            PFN_vkDestroyAccelerationStructureKHR          fn_destroy_as           = nullptr;
+            PFN_vkCmdBuildAccelerationStructuresKHR        fn_cmd_build_as         = nullptr;
+            PFN_vkGetAccelerationStructureDeviceAddressKHR fn_get_as_address       = nullptr;
+
+            // ---- Ray tracing pipelines (VK_KHR_ray_tracing_pipeline) ---------
+            PFN_vkCreateRayTracingPipelinesKHR       fn_create_rt_pipelines  = nullptr;
+            PFN_vkGetRayTracingShaderGroupHandlesKHR fn_get_rt_group_handles = nullptr;
+            PFN_vkCmdTraceRaysKHR                    fn_cmd_trace_rays       = nullptr;
+            uint32_t rt_max_recursion_depth = 0;
+
+            // D3D12 names an acceleration structure by the GPU address of its
+            // storage; Vulkan needs an object over that storage. One object per
+            // (buffer, offset), spanning to the buffer's end -- a build writes
+            // only the bytes it needs, and the BLAS address an instance stores
+            // must be the object's address (checked equal to the storage's).
+            VkAccelerationStructureKHR get_acceleration_structure(VkBuffer buffer, VkDeviceSize offset, VkDeviceSize buffer_size);
+            void forget_acceleration_structures(VkBuffer buffer);   // the buffer is being destroyed
 
             VkDescriptorSetLayout get_resource_set_layout()    const noexcept { return resource_set_layout; }
             VkDescriptorSetLayout get_sampler_set_layout()     const noexcept { return sampler_set_layout; }

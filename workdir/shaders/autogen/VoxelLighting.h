@@ -20,7 +20,13 @@ struct CB { uint offset; };
 
 #ifdef __spirv__
 struct _CB_VoxelLighting { uint offset; };
+#ifdef HAL_SHADER_RECORD_VoxelLighting
+// A ray tracing hit shader's local root constant: on Vulkan it is the shader
+// record's data, right after the group handle in the hit table entry.
+[[vk::shader_record_ext]] ConstantBuffer<_CB_VoxelLighting> pass_VoxelLighting;
+#else
 static _CB_VoxelLighting pass_VoxelLighting = { _hal_push.s5 };
+#endif
 #else
 ConstantBuffer<CB> pass_VoxelLighting: register(b5, space5);
 #endif

@@ -121,10 +121,12 @@ namespace HAL
 			return off;
 		};
 		rtx = !Debug::RunForPix && get_properties().rtx && !forced_off("SPECTRUM_DISABLE_RTX", "Raytracing");
+		// Everything RTX needs from acceleration structures, so RTX implies it.
+		ray_query = rtx || (!Debug::RunForPix && get_properties().ray_query && !forced_off("SPECTRUM_DISABLE_RAY_QUERY", "Ray queries"));
 		mesh_shader = get_properties().mesh_shader && !forced_off("SPECTRUM_DISABLE_MESH_SHADERS", "Mesh shaders");
 		tiled_3d = get_properties().tiled_3d && !forced_off("SPECTRUM_DISABLE_TILED_3D", "Tiled 3D textures");
 		tiled_depth = get_properties().tiled_depth && !forced_off("SPECTRUM_DISABLE_TILED_DEPTH", "Tiled depth textures");
-		Log::get() << "Raytracing: " << (rtx ? "on" : "off") << ", mesh shaders: " << (mesh_shader ? "on" : "off")
+		Log::get() << "Raytracing: " << (rtx ? "on" : "off") << ", ray queries: " << (ray_query ? "on" : "off") << ", mesh shaders: " << (mesh_shader ? "on" : "off")
 			<< ", tiled 3D textures: " << (tiled_3d ? "on" : "off")
 			<< ", tiled depth textures: " << (tiled_depth ? "on" : "off") << Log::endl;
 
@@ -214,6 +216,7 @@ namespace HAL
 
 	const HAL::DeviceProperties& Device::get_properties() const { return properties; }
 	bool Device::is_rtx_supported() { return rtx; }
+	bool Device::is_ray_query_supported() { return ray_query; }
 	bool Device::is_mesh_shader_supported() { return mesh_shader; }
 	bool Device::is_tiled_3d_supported() { return tiled_3d; }
 	bool Device::is_tiled_depth_supported() { return tiled_depth; }

@@ -20,7 +20,13 @@ struct CB { uint offset; };
 
 #ifdef __spirv__
 struct _CB_WorkGR_ClassifyPixels_NodeEmulation { uint offset; };
+#ifdef HAL_SHADER_RECORD_WorkGR_ClassifyPixels_NodeEmulation
+// A ray tracing hit shader's local root constant: on Vulkan it is the shader
+// record's data, right after the group handle in the hit table entry.
+[[vk::shader_record_ext]] ConstantBuffer<_CB_WorkGR_ClassifyPixels_NodeEmulation> pass_WorkGR_ClassifyPixels_NodeEmulation;
+#else
 static _CB_WorkGR_ClassifyPixels_NodeEmulation pass_WorkGR_ClassifyPixels_NodeEmulation = { _hal_push.s12 };
+#endif
 #else
 ConstantBuffer<CB> pass_WorkGR_ClassifyPixels_NodeEmulation: register(b12, space12);
 #endif

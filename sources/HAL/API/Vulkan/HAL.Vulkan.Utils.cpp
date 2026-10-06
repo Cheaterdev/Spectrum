@@ -286,6 +286,11 @@ uint32_t to_native_resource_state(TextureLayout layout)
 //  BarrierSync → VkPipelineStageFlags2 (synchronization2)
 // ============================================================================
 
+// RAY_TRACING_SHADER is only a valid stage on a device with ray tracing
+// pipelines enabled; set once at device init.
+static bool ray_tracing_pipeline_stage = false;
+void set_ray_tracing_pipeline_stage(bool available) { ray_tracing_pipeline_stage = available; }
+
 VkPipelineStageFlags2 to_native_stage(BarrierSync sync)
 {
     if (sync == BarrierSync::NONE) return VK_PIPELINE_STAGE_2_NONE;
@@ -298,14 +303,22 @@ VkPipelineStageFlags2 to_native_stage(BarrierSync sync)
     if (check(sync & BarrierSync::PIXEL_SHADING))    result |= VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT;
     if (check(sync & BarrierSync::DEPTH_STENCIL))    result |= VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT;
     if (check(sync & BarrierSync::RENDER_TARGET))    result |= VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
-    if (check(sync & BarrierSync::COMPUTE_SHADING))  result |= VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT;
-    if (check(sync & BarrierSync::RAYTRACING))       result |= VK_PIPELINE_STAGE_2_RAY_TRACING_SHADER_BIT_KHR;
+    // DispatchRays shaders sync as compute shading in D3D12; in Vulkan they
+    // are their own stage, so a pass's UAV barriers would miss the trace.
+    const VkPipelineStageFlags2 rt_shader = ray_tracing_pipeline_stage ? VK_PIPELINE_STAGE_2_RAY_TRACING_SHADER_BIT_KHR : 0;
+    if (check(sync & BarrierSync::COMPUTE_SHADING))  result |= VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT | rt_shader;
+    // D3D12's RAYTRACING sync also covers acceleration-structure reads by
+    // RayQuery in compute/graphics shaders and their builds; the ray tracing
+    // shader stage itself exists only with ray tracing pipelines.
+    if (check(sync & BarrierSync::RAYTRACING))       result |= VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT | VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT
+                                                               | VK_PIPELINE_STAGE_2_ACCELERATION_STRUCTURE_BUILD_BIT_KHR
+                                                               | rt_shader;
     if (check(sync & BarrierSync::COPY))             result |= VK_PIPELINE_STAGE_2_ALL_TRANSFER_BIT;
     if (check(sync & BarrierSync::RESOLVE))          result |= VK_PIPELINE_STAGE_2_RESOLVE_BIT;
     if (check(sync & BarrierSync::EXECUTE_INDIRECT)) result |= VK_PIPELINE_STAGE_2_DRAW_INDIRECT_BIT;
     // UAV clears are vkCmdClearColorImage / vkCmdFillBuffer: transfer-class work.
     if (check(sync & BarrierSync::CLEAR_UNORDERED_ACCESS_VIEW)) result |= VK_PIPELINE_STAGE_2_CLEAR_BIT | VK_PIPELINE_STAGE_2_COPY_BIT;
-    if (check(sync & BarrierSync::ALL_SHADING))      result |= VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT | VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT;
+    if (check(sync & BarrierSync::ALL_SHADING))      result |= VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT | VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT | rt_shader;
     if (check(sync & BarrierSync::BUILD_RAYTRACING_ACCELERATION_STRUCTURE)) result |= VK_PIPELINE_STAGE_2_ACCELERATION_STRUCTURE_BUILD_BIT_KHR;
     return result;
 }
@@ -433,4 +446,72 @@ VkSamplerCreateInfo to_native_sampler_ci(const SamplerDesc& desc)
         ci.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
     ci.unnormalizedCoordinates = VK_FALSE;
     return ci;
+}
+
+// ---- Acceleration-structure build inputs ---------------------------------------
+
+static VkBuildAccelerationStructureFlagsKHR as_build_flags(RaytracingBuildFlags flags)
+{
+    VkBuildAccelerationStructureFlagsKHR result = 0;
+    if (check(flags & RaytracingBuildFlags::ALLOW_UPDATE))      result |= VK_BUILD_ACCELERATION_STRUCTURE_ALLOW_UPDATE_BIT_KHR;
+    if (check(flags & RaytracingBuildFlags::ALLOW_COMPACTION))  result |= VK_BUILD_ACCELERATION_STRUCTURE_ALLOW_COMPACTION_BIT_KHR;
+    if (check(flags & RaytracingBuildFlags::PREFER_FAST_TRACE)) result |= VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR;
+    if (check(flags & RaytracingBuildFlags::PREFER_FAST_BUILD)) result |= VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_BUILD_BIT_KHR;
+    if (check(flags & RaytracingBuildFlags::MINIMIZE_MEMORY))   result |= VK_BUILD_ACCELERATION_STRUCTURE_LOW_MEMORY_BIT_KHR;
+    // PERFORM_UPDATE is a build mode in Vulkan, not a flag: see AccelerationStructureInputs::info().
+    return result;
+}
+
+AccelerationStructureInputs to_native(const RaytracingBuildDescBottomInputs& inputs)
+{
+    AccelerationStructureInputs result;
+    result.type  = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR;
+    result.flags = as_build_flags(inputs.Flags);
+
+    for (auto& g : inputs.geometry)
+    {
+        ASSERT(g.Type == GeometryType::TRIANGLES && "procedural (AABB) geometry has no Vulkan path yet");
+
+        VkAccelerationStructureGeometryKHR geom{ VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR };
+        geom.geometryType = VK_GEOMETRY_TYPE_TRIANGLES_KHR;
+        // Same bit values as D3D12_RAYTRACING_GEOMETRY_FLAGS.
+        geom.flags        = static_cast<VkGeometryFlagsKHR>(g.Flags);
+
+        auto& tri = geom.geometry.triangles;
+        tri.sType                    = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR;
+        tri.vertexFormat             = to_native(g.VertexFormat);
+        tri.vertexData.deviceAddress = to_native(g.VertexBuffer);
+        tri.vertexStride             = g.VertexStrideInBytes;
+        tri.maxVertex                = g.VertexCount ? g.VertexCount - 1 : 0;
+        tri.indexType                = !g.IndexBuffer ? VK_INDEX_TYPE_NONE_KHR
+                                     : g.IndexFormat == Format::R16_UINT ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32;
+        tri.indexData.deviceAddress  = to_native(g.IndexBuffer);
+        tri.transformData.deviceAddress = to_native(g.Transform3x4);
+
+        result.geometries.push_back(geom);
+        result.primitive_counts.push_back((g.IndexBuffer ? g.IndexCount : g.VertexCount) / 3);
+    }
+    return result;
+}
+
+AccelerationStructureInputs to_native(const RaytracingBuildDescTopInputs& inputs)
+{
+    AccelerationStructureInputs result;
+    result.type  = VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR;
+    result.flags = as_build_flags(inputs.Flags);
+
+    // HAL::InstanceDesc is D3D12_RAYTRACING_INSTANCE_DESC, which has the same
+    // 64-byte layout and flag bits as VkAccelerationStructureInstanceKHR.
+    static_assert(sizeof(HAL::InstanceDesc) == sizeof(VkAccelerationStructureInstanceKHR));
+
+    VkAccelerationStructureGeometryKHR geom{ VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR };
+    geom.geometryType = VK_GEOMETRY_TYPE_INSTANCES_KHR;
+    auto& inst = geom.geometry.instances;
+    inst.sType              = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_INSTANCES_DATA_KHR;
+    inst.arrayOfPointers    = VK_FALSE;
+    inst.data.deviceAddress = to_native(inputs.instances);
+
+    result.geometries.push_back(geom);
+    result.primitive_counts.push_back(inputs.NumDescs);
+    return result;
 }

@@ -24,7 +24,9 @@ static void init_indirect_commands(HAL::Device& device, enum_array<IndirectComma
 
 HAL::ComputePipelineState::ptr SimpleComputePSO::create(HAL::Device& device)
 {
-	if ((requires_raytracing && !device.is_rtx_supported()) || (requires_tiled_depth && !device.is_tiled_depth_supported()))
+	// [Requires = Raytracing] on a compute/graphics PSO means inline RayQuery:
+	// ray tracing pipelines are state objects, not PSOs.
+	if ((requires_raytracing && !device.is_ray_query_supported()) || (requires_tiled_depth && !device.is_tiled_depth_supported()))
 		return nullptr;
 
 	HAL::ComputePipelineStateDesc desc;
@@ -36,7 +38,7 @@ HAL::ComputePipelineState::ptr SimpleComputePSO::create(HAL::Device& device)
 
 HAL::PipelineState::ptr SimpleGraphicsPSO::create(HAL::Device&device)
 {
-	if ((requires_raytracing && !device.is_rtx_supported()) || (requires_tiled_depth && !device.is_tiled_depth_supported()))
+	if ((requires_raytracing && !device.is_ray_query_supported()) || (requires_tiled_depth && !device.is_tiled_depth_supported()))
 		return nullptr;
 	if ((!mesh.entry_point.empty() || !amplification.entry_point.empty()) && !device.is_mesh_shader_supported())
 		return nullptr;

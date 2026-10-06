@@ -29,8 +29,7 @@ void PassDefault<Passes::Denoise::NRD::NRD_REBLUR_Execute>::pre_setup(FrameGraph
 	// condition repeated (this function's whole reason to exist is that the
 	// condition and the side effect had to be split apart).
 	if (graph.get_context<Table::Post::Upscale::UpscalerSelectors>().upscaler_type == Post::Upscale::UpscalerType::DLSSRR ||
-	    !graph.get_context<Table::Raytrace::RenderDeviceCapabilities>().rtx_supported ||
-	    !graph.get_context<Table::Raytrace::RenderDeviceCapabilities>().dlssrr_available)
+	    !graph.get_context<Table::Raytrace::RenderDeviceCapabilities>().rtx_supported)
 		return;
 
 	// Pool textures are sized off the real render resolution, not the

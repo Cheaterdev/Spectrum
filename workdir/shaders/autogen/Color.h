@@ -20,7 +20,13 @@ struct CB { uint offset; };
 
 #ifdef __spirv__
 struct _CB_Color { uint offset; };
+#ifdef HAL_SHADER_RECORD_Color
+// A ray tracing hit shader's local root constant: on Vulkan it is the shader
+// record's data, right after the group handle in the hit table entry.
+[[vk::shader_record_ext]] ConstantBuffer<_CB_Color> pass_Color;
+#else
 static _CB_Color pass_Color = { _hal_push.s8 };
+#endif
 #else
 ConstantBuffer<CB> pass_Color: register(b8, space8);
 #endif

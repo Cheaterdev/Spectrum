@@ -20,7 +20,13 @@ struct CB { uint offset; };
 
 #ifdef __spirv__
 struct _CB_IndirectDraw { uint offset; };
+#ifdef HAL_SHADER_RECORD_IndirectDraw
+// A ray tracing hit shader's local root constant: on Vulkan it is the shader
+// record's data, right after the group handle in the hit table entry.
+[[vk::shader_record_ext]] ConstantBuffer<_CB_IndirectDraw> pass_IndirectDraw;
+#else
 static _CB_IndirectDraw pass_IndirectDraw = { _hal_push.s15 };
+#endif
 #else
 ConstantBuffer<CB> pass_IndirectDraw: register(b15, space15);
 #endif

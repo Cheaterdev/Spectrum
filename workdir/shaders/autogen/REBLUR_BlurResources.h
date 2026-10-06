@@ -20,7 +20,13 @@ struct CB { uint offset; };
 
 #ifdef __spirv__
 struct _CB_REBLUR_BlurResources { uint offset; };
+#ifdef HAL_SHADER_RECORD_REBLUR_BlurResources
+// A ray tracing hit shader's local root constant: on Vulkan it is the shader
+// record's data, right after the group handle in the hit table entry.
+[[vk::shader_record_ext]] ConstantBuffer<_CB_REBLUR_BlurResources> pass_REBLUR_BlurResources;
+#else
 static _CB_REBLUR_BlurResources pass_REBLUR_BlurResources = { _hal_push.s6 };
+#endif
 #else
 ConstantBuffer<CB> pass_REBLUR_BlurResources: register(b6, space6);
 #endif

@@ -39,7 +39,8 @@ export namespace HAL
 	struct DeviceProperties
 	{
 		std::string name;
-		bool rtx                    = false;
+		bool rtx                    = false;   // ray tracing pipelines
+		bool ray_query              = false;   // acceleration structures + inline RayQuery
 		bool mesh_shader            = false;
 		bool tiled_3d               = false;   // Tiled Resources Tier 3
 		bool tiled_depth            = false;   // tiled depth textures (VSM atlas)

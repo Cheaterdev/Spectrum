@@ -14,7 +14,7 @@ using namespace FrameGraph;
 
 void PassDefault<Passes::Frame::PreScene>::pre_setup(FrameGraph::Graph& graph)
 {
-    if (RenderSystem::get().device().is_rtx_supported())
+    if (RenderSystem::get().device().is_ray_query_supported())
     {
         auto& scene = *graph.get_context<SceneInfo>().scene;
         scene.raytrace_scene->new_frame();
@@ -29,12 +29,13 @@ void PassDefault<Passes::Frame::PreScene>::render(
 
     SceneFrameManager::get().prepare(command_list, scene);
 
-    if (RenderSystem::get().device().is_rtx_supported())
-    {
+    // The TLAS serves inline ray queries too; the RTX singleton's shader tables
+    // only ray tracing pipelines.
+    if (RenderSystem::get().device().is_ray_query_supported())
         scene.raytrace_scene->update(command_list,
             (UINT)scene.raytrace->max_size(),
             scene.raytrace->buffer.get_resource_address(),
             false);
+    if (RenderSystem::get().device().is_rtx_supported())
         RTX::get().prepare(command_list);
-    }
 }

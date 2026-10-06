@@ -28,11 +28,7 @@ namespace HAL
             // texture staging) all share this single heap buffer, so it must
             // declare every usage those slices can take on — matching the
             // committed-buffer path in HAL.Vulkan.Resource.cpp.
-            bci.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT
-                      | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT
-                      | VK_BUFFER_USAGE_INDEX_BUFFER_BIT   | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT
-                      | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT
-                      | VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT;
+            bci.usage = api_dev.buffer_usage;
 
             VmaAllocationCreateInfo vma_ci{};
             vma_ci.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT

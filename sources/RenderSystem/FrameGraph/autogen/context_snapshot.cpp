@@ -90,8 +90,6 @@ void capture_context_snapshot(Graph& graph, ContextSnapshot& out)
 		encode_context_field(graph.get_context<Table::Raytrace::RenderDeviceCapabilities>().rtx_supported);
 	out.values[(unsigned int)ContextFieldID::RenderDeviceCapabilities_dlss_available] =
 		encode_context_field(graph.get_context<Table::Raytrace::RenderDeviceCapabilities>().dlss_available);
-	out.values[(unsigned int)ContextFieldID::RenderDeviceCapabilities_dlssrr_available] =
-		encode_context_field(graph.get_context<Table::Raytrace::RenderDeviceCapabilities>().dlssrr_available);
 	out.values[(unsigned int)ContextFieldID::SkyState_prev_sun_dir] =
 		encode_context_field(graph.get_context<Table::Environment::SkyState>().prev_sun_dir);
 	out.values[(unsigned int)ContextFieldID::SkyState_sky_changed] =

@@ -500,6 +500,12 @@ void materials::universal_material::generate_material()
 	else if (transparency_mode == Meshes::TransparencyMode::Translucent)
 		context->hit_shader.macros.emplace_back("TRANSLUCENT", "1");
 
+	// The hit shaders read MaterialInfo through the hit group's local data,
+	// which Vulkan delivers as the shader record (see Prism's slot template).
+	// Vulkan-only so D3D12's library cache keys stay as they were.
+	if (HAL::get_backend_name() == "vulkan")
+		context->hit_shader.macros.emplace_back("HAL_SHADER_RECORD_MaterialInfo", "1");
+
 
 	auto ps_str = context->get_pixel_result().uniforms + include_file->get_data() + context->get_pixel_result().text;
 	auto tess_orig_shader = context->get_tess_result().text;

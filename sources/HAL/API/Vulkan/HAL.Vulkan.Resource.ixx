@@ -70,8 +70,8 @@ export namespace HAL
             // range. Keyed by mip | first_layer << 8 | layer_count << 32.
             mutable std::unordered_map<uint64_t, VkImageView> attachment_views;
 
-            // Cached sampled-image (SRV) views: view type + mip range + layer range.
-            mutable std::map<std::array<uint32_t, 5>, VkImageView> srv_views;
+            // Cached sampled-image (SRV) views: view type + mip range + layer range + format.
+            mutable std::map<std::array<uint32_t, 6>, VkImageView> srv_views;
             bool cube_compatible = false;
 
             // Format/aspect stored at image creation for per-mip view creation.
@@ -153,8 +153,9 @@ export namespace HAL
             // View for an SRV (SAMPLED_IMAGE) descriptor: the view's own type, mips
             // and layers -- the full image view would read mip 0 for a per-mip SRV.
             // Counts may be VK_REMAINING_MIP_LEVELS / VK_REMAINING_ARRAY_LAYERS.
+            // format: the view's own (e.g. the _SRGB sibling); UNDEFINED = the image's.
             VkImageView get_vk_srv_view(VkDevice vk_dev, VkImageViewType type, uint32_t first_mip, uint32_t mip_count,
-                                        uint32_t first_layer, uint32_t layer_count) const noexcept;
+                                        uint32_t first_layer, uint32_t layer_count, VkFormat format = VK_FORMAT_UNDEFINED) const noexcept;
 
             // Single-mip create-info for UAV (STORAGE_IMAGE) descriptors.
             // A 3D storage image must keep a 3D view (a 2D view of a 3D image is

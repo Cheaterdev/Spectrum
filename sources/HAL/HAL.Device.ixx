@@ -39,6 +39,7 @@ export namespace HAL
 		IdGenerator<Thread::Lockable> id_generator;
 		friend class CommandList;
 		bool rtx = false;
+		bool ray_query = false;
 		bool mesh_shader = false;
 		bool tiled_3d = false;
 		bool tiled_depth = false;
@@ -121,7 +122,8 @@ export namespace HAL
 		// SPECTRUM_DISABLE_RTX / SPECTRUM_DISABLE_MESH_SHADERS /
 		// SPECTRUM_DISABLE_TILED_3D / SPECTRUM_DISABLE_TILED_DEPTH environment
 		// variables, to exercise the fallback paths a lesser GPU would take.
-		bool is_rtx_supported();
+		bool is_rtx_supported();             // ray tracing pipelines (DispatchRays)
+		bool is_ray_query_supported();       // acceleration structures + inline RayQuery; true whenever RTX is
 		bool is_mesh_shader_supported();
 		bool is_tiled_3d_supported();
 		bool is_tiled_depth_supported();   // VSM's atlas

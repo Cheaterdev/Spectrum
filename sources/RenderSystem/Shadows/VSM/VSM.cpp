@@ -1520,7 +1520,8 @@ VSM::VSM() : VariableContext(L"VSM")
 			compute.set(io);
 		}
 
-		bool rtx_capable = RenderSystem::get().device().is_rtx_supported();
+		// The verify ray is an inline RayQuery against the scene TLAS.
+		bool rtx_capable = RenderSystem::get().device().is_ray_query_supported();
 		bool rtx_verify  = rtx_capable && use_vsm_rtx_verify;
 
 		{

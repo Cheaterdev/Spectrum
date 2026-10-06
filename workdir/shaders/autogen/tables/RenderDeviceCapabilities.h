@@ -13,10 +13,8 @@ namespace Raytrace
 	{
 		bool rtx_supported; // bool
 		bool dlss_available; // bool
-		bool dlssrr_available; // bool
 		bool GetRtx_supported() { return rtx_supported; }
 		bool GetDlss_available() { return dlss_available; }
-		bool GetDlssrr_available() { return dlssrr_available; }
 	};
 }
 using Raytrace::RenderDeviceCapabilities;

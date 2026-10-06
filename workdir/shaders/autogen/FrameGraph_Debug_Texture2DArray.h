@@ -20,7 +20,13 @@ struct CB { uint offset; };
 
 #ifdef __spirv__
 struct _CB_FrameGraph_Debug_Texture2DArray { uint offset; };
+#ifdef HAL_SHADER_RECORD_FrameGraph_Debug_Texture2DArray
+// A ray tracing hit shader's local root constant: on Vulkan it is the shader
+// record's data, right after the group handle in the hit table entry.
+[[vk::shader_record_ext]] ConstantBuffer<_CB_FrameGraph_Debug_Texture2DArray> pass_FrameGraph_Debug_Texture2DArray;
+#else
 static _CB_FrameGraph_Debug_Texture2DArray pass_FrameGraph_Debug_Texture2DArray = { _hal_push.s5 };
+#endif
 #else
 ConstantBuffer<CB> pass_FrameGraph_Debug_Texture2DArray: register(b5, space5);
 #endif

@@ -1,6 +1,7 @@
 module;
 #define VK_USE_PLATFORM_WIN32_KHR
 #include <vulkan/vulkan.h>
+#include "HAL.Vulkan.SpirvEntryPoints.h"
 module HAL:PipelineState;
 
 import vulkan;
@@ -437,12 +438,165 @@ namespace HAL
     void StateObject::on_change()
     {
         tracked_info.reset(new API::TrackedPipeline());
+        tracked_info->is_ray_tracing = true;
+        group_indices.clear();
+        group_handles.clear();
+
+        // What every raytrace dispatch touches through its shaders, for the
+        // barrier tracker -- same merge as the D3D12 state object.
+        slots.clear();
+        for (auto& l : desc.libraries)
+            if (l.library) slots.merge(l.library->slots_usage);
+        for (auto& c : desc.collections)
+            slots.merge(c->slots);
+
+        // A collection only describes; the pipeline is built where it is linked.
+        if (desc.type == StateObjectType::Collection || !desc.global_root)
+        {
+            event_change();
+            return;
+        }
+
+        auto& dev = static_cast<API::Device&>(desc.global_root->get_device());
+        const VkDevice vk_dev = dev.get_native_device();
+        if (!dev.fn_create_rt_pipelines || vk_dev == VK_NULL_HANDLE)
+        {
+            event_change();
+            return;
+        }
+
+        std::vector<const StateObjectDesc*> parts{ &desc };
+        for (auto& c : desc.collections)
+            parts.push_back(&c->desc);
+
+        std::vector<VkPipelineShaderStageCreateInfo>     stages;
+        std::vector<VkRayTracingShaderGroupCreateInfoKHR> groups;
+        std::map<const void*, VkShaderModule>            modules;   // by library blob
+        std::map<std::wstring, uint32_t>                 stage_of_export;
+        std::list<std::string>                           entry_names;   // stable storage for pName
+        std::vector<std::wstring>                        group_names;
+        UINT recursion = 1;
+
+        auto add_group = [&](std::wstring name, VkRayTracingShaderGroupTypeKHR type, uint32_t general, uint32_t closest, uint32_t any) {
+            VkRayTracingShaderGroupCreateInfoKHR g{ VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR };
+            g.type               = type;
+            g.generalShader      = general;
+            g.closestHitShader   = closest;
+            g.anyHitShader       = any;
+            g.intersectionShader = VK_SHADER_UNUSED_KHR;
+            groups.push_back(g);
+            group_names.push_back(std::move(name));
+        };
+
+        for (const StateObjectDesc* part : parts)
+        {
+            recursion = std::max(recursion, part->MaxTraceRecursionDepth);
+
+            for (auto& l : part->libraries)
+            {
+                if (!l.library) continue;
+                const auto& blob = l.library->get_blob();
+                const auto  eps  = Spirv::entry_points(blob.data(), blob.size());
+                if (eps.empty()) continue;   // not compiled (yet): its exports stay unresolved
+
+                VkShaderModule& shader_module = modules[blob.data()];
+                if (shader_module == VK_NULL_HANDLE)
+                    shader_module = make_shader_module(vk_dev, blob);
+                if (shader_module == VK_NULL_HANDLE) continue;
+
+                // exports: exported name -> library function it renames (empty: same).
+                // A library with no explicit exports exports every entry point.
+                std::map<std::wstring, std::wstring> exports = l.exports;
+                if (exports.empty())
+                    for (auto& ep : eps)
+                        exports[convert(ep.name)] = L"";
+
+                for (auto& [exported, was] : exports)
+                {
+                    const std::string fn = convert(was.empty() ? exported : was);
+                    auto ep = std::find_if(eps.begin(), eps.end(), [&](const Spirv::EntryPoint& e) { return e.name == fn; });
+                    if (ep == eps.end()) continue;
+
+                    VkShaderStageFlagBits stage;
+                    switch (ep->execution_model)
+                    {
+                    case Spirv::RayGeneration: stage = VK_SHADER_STAGE_RAYGEN_BIT_KHR;      break;
+                    case Spirv::Miss:          stage = VK_SHADER_STAGE_MISS_BIT_KHR;        break;
+                    case Spirv::ClosestHit:    stage = VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR; break;
+                    case Spirv::AnyHit:        stage = VK_SHADER_STAGE_ANY_HIT_BIT_KHR;     break;
+                    default: continue;   // intersection/callable: nothing uses them yet
+                    }
+
+                    VkPipelineShaderStageCreateInfo si{ VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO };
+                    si.stage  = stage;
+                    si.module = shader_module;
+                    si.pName  = entry_names.emplace_back(fn).c_str();
+                    const uint32_t index = static_cast<uint32_t>(stages.size());
+                    stages.push_back(si);
+                    stage_of_export[exported] = index;
+
+                    // Raygen and miss shaders are their own (general) groups.
+                    if (stage == VK_SHADER_STAGE_RAYGEN_BIT_KHR || stage == VK_SHADER_STAGE_MISS_BIT_KHR)
+                        add_group(exported, VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR, index, VK_SHADER_UNUSED_KHR, VK_SHADER_UNUSED_KHR);
+                }
+            }
+        }
+
+        for (const StateObjectDesc* part : parts)
+            for (auto& hg : part->hit_groups)
+            {
+                auto stage_index = [&](const std::wstring& name) {
+                    auto it = name.empty() ? stage_of_export.end() : stage_of_export.find(name);
+                    return it == stage_of_export.end() ? VK_SHADER_UNUSED_KHR : it->second;
+                };
+                const uint32_t closest = stage_index(hg.closest_hit_shader);
+                const uint32_t any     = stage_index(hg.any_hit_shader);
+                if (closest == VK_SHADER_UNUSED_KHR && any == VK_SHADER_UNUSED_KHR)
+                    continue;   // its library isn't compiled yet
+                add_group(hg.name, VK_RAY_TRACING_SHADER_GROUP_TYPE_TRIANGLES_HIT_GROUP_KHR, VK_SHADER_UNUSED_KHR, closest, any);
+            }
+
+        VkPipeline pipeline = VK_NULL_HANDLE;
+        if (!groups.empty())
+        {
+            VkRayTracingPipelineCreateInfoKHR ci{ VK_STRUCTURE_TYPE_RAY_TRACING_PIPELINE_CREATE_INFO_KHR };
+            ci.stageCount                   = static_cast<uint32_t>(stages.size());
+            ci.pStages                      = stages.data();
+            ci.groupCount                   = static_cast<uint32_t>(groups.size());
+            ci.pGroups                      = groups.data();
+            ci.maxPipelineRayRecursionDepth = std::min<uint32_t>(recursion, std::max<uint32_t>(1, dev.rt_max_recursion_depth));
+            ci.layout                       = dev.get_pipeline_layout();
+            dev.fn_create_rt_pipelines(vk_dev, VK_NULL_HANDLE, VK_NULL_HANDLE, 1, &ci, nullptr, &pipeline);
+            ASSERT(pipeline != VK_NULL_HANDLE && "vkCreateRayTracingPipelinesKHR failed");
+        }
+
+        for (auto& [blob, shader_module] : modules)
+            vkDestroyShaderModule(vk_dev, shader_module, nullptr);
+
+        if (pipeline != VK_NULL_HANDLE)
+        {
+            tracked_info->vk_pipeline = pipeline;
+            tracked_info->vk_device   = vk_dev;
+
+            const size_t handle_size = sizeof(HAL::shader_identifier);
+            group_handles.resize(groups.size() * handle_size);
+            dev.fn_get_rt_group_handles(vk_dev, pipeline, 0, static_cast<uint32_t>(groups.size()),
+                                        group_handles.size(), group_handles.data());
+            for (uint32_t i = 0; i < group_names.size(); ++i)
+                group_indices[group_names[i]] = i;
+        }
+
         event_change();
     }
 
-    HAL::shader_identifier StateObject::get_shader_id(std::wstring_view)
+    HAL::shader_identifier StateObject::get_shader_id(std::wstring_view name)
     {
-        return {};
+        // An all-zero handle is a null shader group: a ray reaching it does nothing.
+        HAL::shader_identifier id{};
+        auto it = group_indices.find(std::wstring(name));
+        if (it != group_indices.end())
+            std::memcpy(id.data(), group_handles.data() + size_t(it->second) * id.size(), id.size());
+        return id;
     }
 
     namespace API

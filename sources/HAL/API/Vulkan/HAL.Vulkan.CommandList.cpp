@@ -136,8 +136,9 @@ namespace HAL::API
         // descriptor that may now name a freed resource.
         // Same for the bound pipelines: a fresh command buffer has none, and
         // reapply_draw_state() would otherwise re-bind the last recording's.
-        current_graphics_pipeline = VK_NULL_HANDLE;
-        current_compute_pipeline  = VK_NULL_HANDLE;
+        current_graphics_pipeline    = VK_NULL_HANDLE;
+        current_compute_pipeline     = VK_NULL_HANDLE;
+        current_ray_tracing_pipeline = VK_NULL_HANDLE;
 
         // COPY lists run no shaders, and their transfer-only pool rejects push constants.
         push_constants.fill(0);
@@ -771,11 +772,13 @@ namespace HAL::API
         case CommandListType::DIRECT:
             bind(VK_PIPELINE_BIND_POINT_GRAPHICS);
             bind(VK_PIPELINE_BIND_POINT_COMPUTE);
+            if (dev.fn_cmd_trace_rays) bind(VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR);
             break;
         case CommandListType::COMPUTE:
         case CommandListType::COMPUTE2:
         case CommandListType::COMPUTE3:
             bind(VK_PIPELINE_BIND_POINT_COMPUTE);
+            if (dev.fn_cmd_trace_rays) bind(VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR);
             break;
         default:
             break;
@@ -791,7 +794,16 @@ namespace HAL::API
         // the draws/dispatches meant for this one are skipped, not run with it.
         if (pipeline->vk_pipeline == VK_NULL_HANDLE)
         {
-            (pipeline->is_compute ? current_compute_pipeline : current_graphics_pipeline) = VK_NULL_HANDLE;
+            (pipeline->is_ray_tracing ? current_ray_tracing_pipeline
+             : pipeline->is_compute   ? current_compute_pipeline : current_graphics_pipeline) = VK_NULL_HANDLE;
+            return;
+        }
+
+        if (pipeline->is_ray_tracing)
+        {
+            current_ray_tracing_pipeline = pipeline->vk_pipeline;
+            vkCmdBindPipeline(vk_cmd, VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR, pipeline->vk_pipeline);
+            flush_heaps();
             return;
         }
 
@@ -1044,6 +1056,113 @@ namespace HAL::API
                 dst_api.get_vk_image(), VK_IMAGE_LAYOUT_GENERAL,
                 mips, regions.data());
         }
+    }
+
+    // ---- Acceleration structures ------------------------------------------
+
+    // The acceleration-structure object over `address`'s storage; see
+    // API::Device::get_acceleration_structure.
+    static VkAccelerationStructureKHR acceleration_structure_at(Device& dev, const HAL::ResourceAddress& address)
+    {
+        if (!address) return VK_NULL_HANDLE;
+        auto& res = static_cast<API::Resource&>(*address.resource);
+        const VkDeviceSize base = res.get_vk_buffer_offset();
+        return dev.get_acceleration_structure(res.get_vk_buffer(), base + address.resource_offset,
+                                              base + address.resource->get_desc().as_buffer().SizeInBytes);
+    }
+
+    static void build_acceleration_structure(VkCommandBuffer cmd, Device& dev, const AccelerationStructureInputs& inputs,
+                                             const HAL::RaytracingBuildDescStructure& desc, bool update)
+    {
+        if (!dev.fn_cmd_build_as) return;
+
+        auto info = inputs.info(update);
+        info.dstAccelerationStructure = acceleration_structure_at(dev, desc.DestAccelerationStructureData);
+        info.srcAccelerationStructure = update ? acceleration_structure_at(dev, desc.SourceAccelerationStructureData) : VK_NULL_HANDLE;
+        info.scratchData.deviceAddress = to_native(desc.ScratchAccelerationStructureData);
+        if (info.dstAccelerationStructure == VK_NULL_HANDLE) return;
+
+        // Instances name a BLAS by the GPU address of its storage, as D3D12 does,
+        // but Vulkan reads them as acceleration-structure device addresses. The two
+        // agree on current drivers; a disagreement would make every instance miss.
+        if (inputs.type == VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR)
+        {
+            VkAccelerationStructureDeviceAddressInfoKHR ai{ VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_DEVICE_ADDRESS_INFO_KHR };
+            ai.accelerationStructure = info.dstAccelerationStructure;
+            ASSERT(dev.fn_get_as_address(dev.get_native_device(), &ai) == to_native(desc.DestAccelerationStructureData)
+                && "acceleration-structure address differs from its storage address: instances would reference the wrong BLAS");
+        }
+
+        std::vector<VkAccelerationStructureBuildRangeInfoKHR> ranges;
+        for (uint32_t count : inputs.primitive_counts)
+            ranges.push_back({ count, 0, 0, 0 });
+        const VkAccelerationStructureBuildRangeInfoKHR* range_ptr = ranges.data();
+
+        // The HAL's barriers around a build are written for D3D12 (inputs as
+        // compute shader reads, the destination in the RT-structure state); Vulkan
+        // needs the build stage itself on both sides, so bracket it here.
+        auto memory_barrier = [&](VkPipelineStageFlags2 src_stage, VkAccessFlags2 src_access,
+                                  VkPipelineStageFlags2 dst_stage, VkAccessFlags2 dst_access) {
+            VkMemoryBarrier2 mb{ VK_STRUCTURE_TYPE_MEMORY_BARRIER_2 };
+            mb.srcStageMask  = src_stage;  mb.srcAccessMask = src_access;
+            mb.dstStageMask  = dst_stage;  mb.dstAccessMask = dst_access;
+            VkDependencyInfo dep{ VK_STRUCTURE_TYPE_DEPENDENCY_INFO };
+            dep.memoryBarrierCount = 1;
+            dep.pMemoryBarriers    = &mb;
+            vkCmdPipelineBarrier2(cmd, &dep);
+        };
+        memory_barrier(VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT, VK_ACCESS_2_MEMORY_WRITE_BIT,
+                       VK_PIPELINE_STAGE_2_ACCELERATION_STRUCTURE_BUILD_BIT_KHR,
+                       VK_ACCESS_2_ACCELERATION_STRUCTURE_READ_BIT_KHR | VK_ACCESS_2_ACCELERATION_STRUCTURE_WRITE_BIT_KHR
+                       | VK_ACCESS_2_SHADER_READ_BIT);
+        dev.fn_cmd_build_as(cmd, 1, &info, &range_ptr);
+        memory_barrier(VK_PIPELINE_STAGE_2_ACCELERATION_STRUCTURE_BUILD_BIT_KHR, VK_ACCESS_2_ACCELERATION_STRUCTURE_WRITE_BIT_KHR,
+                       VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT,
+                       VK_ACCESS_2_ACCELERATION_STRUCTURE_READ_BIT_KHR | VK_ACCESS_2_ACCELERATION_STRUCTURE_WRITE_BIT_KHR);
+    }
+
+    void CommandList::build_ras(const HAL::RaytracingBuildDescStructure& build_desc,
+                                const HAL::RaytracingBuildDescBottomInputs& bottom)
+    {
+        if (vk_cmd == VK_NULL_HANDLE) return;
+        end_rendering_if_active();
+        build_acceleration_structure(vk_cmd, static_cast<API::Device&>(*m_device), to_native(bottom), build_desc,
+                                     check(bottom.Flags & RaytracingBuildFlags::PERFORM_UPDATE));
+    }
+
+    void CommandList::build_ras(const HAL::RaytracingBuildDescStructure& build_desc,
+                                const HAL::RaytracingBuildDescTopInputs& top)
+    {
+        if (vk_cmd == VK_NULL_HANDLE) return;
+        end_rendering_if_active();
+        build_acceleration_structure(vk_cmd, static_cast<API::Device&>(*m_device), to_native(top), build_desc,
+                                     check(top.Flags & RaytracingBuildFlags::PERFORM_UPDATE));
+    }
+
+    // D3D12 DispatchRays: the shader tables are the HAL's own buffers of
+    // (32-byte group handle + local data) records, laid out the same way here.
+    void CommandList::dispatch_rays(uint hit_size, uint miss_size, uint raygen_size,
+                                    ivec3 size, HAL::ResourceAddress hit_buffer, UINT hit_count,
+                                    HAL::ResourceAddress miss_buffer, UINT miss_count,
+                                    HAL::ResourceAddress raygen_buffer)
+    {
+        auto& dev = static_cast<API::Device&>(*m_device);
+        if (vk_cmd == VK_NULL_HANDLE || !dev.fn_cmd_trace_rays || current_ray_tracing_pipeline == VK_NULL_HANDLE)
+            return;
+
+        end_rendering_if_active();
+        // A command-buffer split may have dropped the binding.
+        vkCmdBindPipeline(vk_cmd, VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR, current_ray_tracing_pipeline);
+        flush_heaps();
+        push_full_constants();   // ray tracing shaders read their slots from push data too
+
+        const VkStridedDeviceAddressRegionKHR raygen{ to_native(raygen_buffer), raygen_size, raygen_size };
+        const VkStridedDeviceAddressRegionKHR miss  { to_native(miss_buffer), miss_size, VkDeviceSize(miss_size) * miss_count };
+        const VkStridedDeviceAddressRegionKHR hit   { to_native(hit_buffer), hit_size, VkDeviceSize(hit_size) * hit_count };
+        const VkStridedDeviceAddressRegionKHR callable{};
+
+        dev.fn_cmd_trace_rays(vk_cmd, &raygen, &miss, &hit, &callable,
+                              static_cast<uint32_t>(size.x), static_cast<uint32_t>(size.y), static_cast<uint32_t>(size.z));
     }
 
     void CommandList::copy_buffer(HAL::Resource* dest, uint64 dest_offset,

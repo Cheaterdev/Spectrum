@@ -60,6 +60,7 @@ export namespace HAL
             // recorder may split set_pipeline and the draw across command buffers.
             VkPipeline       current_graphics_pipeline = VK_NULL_HANDLE;
             VkPipeline       current_compute_pipeline  = VK_NULL_HANDLE;
+            VkPipeline       current_ray_tracing_pipeline = VK_NULL_HANDLE;
             // Mesh pipelines have no primitive-topology dynamic state, so the
             // per-draw topology re-apply must be skipped for them.
             bool             current_is_mesh = false;
@@ -150,7 +151,7 @@ export namespace HAL
             void dispatch_rays(uint hit_size, uint miss_size, uint raygen_size,
                                ivec3 size, HAL::ResourceAddress hit_buffer, UINT hit_count,
                                HAL::ResourceAddress miss_buffer, UINT miss_count,
-                               HAL::ResourceAddress raygen_buffer) {}
+                               HAL::ResourceAddress raygen_buffer);
 
             void set_name(std::wstring_view name);
             void discard(const HAL::Resource* resource);
@@ -182,11 +183,10 @@ export namespace HAL
             void start_event(std::wstring_view str);
             void end_event();
 
-            // Raytracing acceleration structure — no-op in Vulkan Phase 0
             void build_ras(const HAL::RaytracingBuildDescStructure& build_desc,
-                           const HAL::RaytracingBuildDescBottomInputs& bottom) {}
+                           const HAL::RaytracingBuildDescBottomInputs& bottom);
             void build_ras(const HAL::RaytracingBuildDescStructure& build_desc,
-                           const HAL::RaytracingBuildDescTopInputs& top) {}
+                           const HAL::RaytracingBuildDescTopInputs& top);
 
             void copy_texture(const Resource::ptr& dest, int dest_subres,
                               const Resource::ptr& source, int source_subres);

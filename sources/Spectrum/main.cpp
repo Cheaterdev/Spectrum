@@ -442,9 +442,7 @@ public:
 		{
 			auto& device_caps = graph.get_context<Table::Raytrace::RenderDeviceCapabilities>();
 			device_caps.rtx_supported    = RenderSystem::get().device().is_rtx_supported();
-			device_caps.dlss_available   = nvidia::DLSS::get().available();
-			device_caps.dlssrr_available = nvidia::DLSSRR::get().available();
-		}
+			device_caps.dlss_available   = nvidia::DLSS::get().available();		}
 
 		if (downsampled)
 		{

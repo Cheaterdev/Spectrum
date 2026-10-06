@@ -52,7 +52,6 @@ enum class ContextFieldID : unsigned int
 	IndirectGISelectors_reflection_source,
 	RenderDeviceCapabilities_rtx_supported,
 	RenderDeviceCapabilities_dlss_available,
-	RenderDeviceCapabilities_dlssrr_available,
 	SkyState_prev_sun_dir,
 	SkyState_sky_changed,
 	TonemapSelectors_enabled,
@@ -108,7 +107,6 @@ namespace ContextField
 	constexpr ContextFieldMask IndirectGISelectors_reflection_source = context_field_bit(ContextFieldID::IndirectGISelectors_reflection_source);
 	constexpr ContextFieldMask RenderDeviceCapabilities_rtx_supported = context_field_bit(ContextFieldID::RenderDeviceCapabilities_rtx_supported);
 	constexpr ContextFieldMask RenderDeviceCapabilities_dlss_available = context_field_bit(ContextFieldID::RenderDeviceCapabilities_dlss_available);
-	constexpr ContextFieldMask RenderDeviceCapabilities_dlssrr_available = context_field_bit(ContextFieldID::RenderDeviceCapabilities_dlssrr_available);
 	constexpr ContextFieldMask SkyState_prev_sun_dir = context_field_bit(ContextFieldID::SkyState_prev_sun_dir);
 	constexpr ContextFieldMask SkyState_sky_changed = context_field_bit(ContextFieldID::SkyState_sky_changed);
 	constexpr ContextFieldMask TonemapSelectors_enabled = context_field_bit(ContextFieldID::TonemapSelectors_enabled);
@@ -420,20 +418,17 @@ static inline const PassContextDeps pass_context_deps[] = {
 		true },
 	{ PassID::NRD_GBufferPack,
 		  ContextField::RenderDeviceCapabilities_rtx_supported
-		| ContextField::RenderDeviceCapabilities_dlssrr_available
 		| ContextField::UpscalerSelectors_upscaler_type,
 		  ContextField::IndirectGISelectors_indirect_source
 		| ContextField::IndirectGISelectors_reflection_source,
 		true },
 	{ PassID::NRD_REBLUR_Execute,
 		  ContextField::RenderDeviceCapabilities_rtx_supported
-		| ContextField::RenderDeviceCapabilities_dlssrr_available
 		| ContextField::UpscalerSelectors_upscaler_type,
 		  ContextField::None,
 		true },
 	{ PassID::NRD_SIGMA_Execute,
 		  ContextField::RenderDeviceCapabilities_rtx_supported
-		| ContextField::RenderDeviceCapabilities_dlssrr_available
 		| ContextField::UpscalerSelectors_upscaler_type
 		| ContextField::VSMSelectors_use_vsm_penumbra
 		| ContextField::VSMSelectors_shadow_source,
@@ -441,13 +436,11 @@ static inline const PassContextDeps pass_context_deps[] = {
 		true },
 	{ PassID::NRD_IndirectCombine,
 		  ContextField::RenderDeviceCapabilities_rtx_supported
-		| ContextField::RenderDeviceCapabilities_dlssrr_available
 		| ContextField::UpscalerSelectors_upscaler_type,
 		  ContextField::None,
 		true },
 	{ PassID::NRD_ShadowCombine,
 		  ContextField::RenderDeviceCapabilities_rtx_supported
-		| ContextField::RenderDeviceCapabilities_dlssrr_available
 		| ContextField::UpscalerSelectors_upscaler_type
 		| ContextField::VSMSelectors_shadow_source,
 		  ContextField::None,
@@ -557,33 +550,27 @@ static inline const PassContextDeps pass_context_deps[] = {
 		  ContextField::None,
 		true },
 	{ PassID::ReflectionRTXHalf,
-		  ContextField::RenderDeviceCapabilities_rtx_supported
-		| ContextField::RenderDeviceCapabilities_dlssrr_available,
+		  ContextField::RenderDeviceCapabilities_rtx_supported,
 		  ContextField::None,
 		true },
 	{ PassID::ReflectionRTX,
-		  ContextField::RenderDeviceCapabilities_rtx_supported
-		| ContextField::RenderDeviceCapabilities_dlssrr_available,
+		  ContextField::RenderDeviceCapabilities_rtx_supported,
 		  ContextField::None,
 		true },
 	{ PassID::ShadowRTX,
-		  ContextField::RenderDeviceCapabilities_rtx_supported
-		| ContextField::RenderDeviceCapabilities_dlssrr_available,
+		  ContextField::RenderDeviceCapabilities_rtx_supported,
 		  ContextField::None,
 		true },
 	{ PassID::IndirectRTXHalf,
-		  ContextField::RenderDeviceCapabilities_rtx_supported
-		| ContextField::RenderDeviceCapabilities_dlssrr_available,
+		  ContextField::RenderDeviceCapabilities_rtx_supported,
 		  ContextField::None,
 		true },
 	{ PassID::IndirectRTX,
-		  ContextField::RenderDeviceCapabilities_rtx_supported
-		| ContextField::RenderDeviceCapabilities_dlssrr_available,
+		  ContextField::RenderDeviceCapabilities_rtx_supported,
 		  ContextField::None,
 		true },
 	{ PassID::ReflCombine,
 		  ContextField::RenderDeviceCapabilities_rtx_supported
-		| ContextField::RenderDeviceCapabilities_dlssrr_available
 		| ContextField::UpscalerSelectors_upscaler_type
 		| ContextField::VoxelGISelectors_reflection_enabled,
 		  ContextField::None,
@@ -610,7 +597,6 @@ static inline const PassContextDeps pass_context_deps[] = {
 	{ PassID::VoxelScreen,
 		  ContextField::IndirectGISelectors_indirect_source
 		| ContextField::RenderDeviceCapabilities_rtx_supported
-		| ContextField::RenderDeviceCapabilities_dlssrr_available
 		| ContextField::UpscalerSelectors_upscaler_type
 		| ContextField::VoxelGISelectors_supported,
 		  ContextField::None,
@@ -618,7 +604,6 @@ static inline const PassContextDeps pass_context_deps[] = {
 	{ PassID::ScreenReflection,
 		  ContextField::IndirectGISelectors_reflection_source
 		| ContextField::RenderDeviceCapabilities_rtx_supported
-		| ContextField::RenderDeviceCapabilities_dlssrr_available
 		| ContextField::UpscalerSelectors_upscaler_type
 		| ContextField::VoxelGISelectors_supported,
 		  ContextField::None,

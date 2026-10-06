@@ -25,6 +25,22 @@ TEARDOWN_CATEGORY(Core.RTX, []() {
 	GraphicsSystem::reset();
 });
 
+// Acceleration structures + inline RayQuery: available without ray tracing
+// pipelines (Vulkan, for now), so a category of its own.
+SETUP_CATEGORY(Core.RayQuery, []() {
+	if (!GraphicsSystem::create())
+	{
+		Test::TestRegistry::Instance().SkipCategory("Core.RayQuery", "no suitable GPU device found");
+		return;
+	}
+	if (!RenderSystem::get().device().is_ray_query_supported())
+		Test::TestRegistry::Instance().SkipCategory("Core.RayQuery", "ray queries not supported on this device");
+});
+
+TEARDOWN_CATEGORY(Core.RayQuery, []() {
+	GraphicsSystem::reset();
+});
+
 export namespace Test
 {
 	// Shoots a primary ray per pixel from the camera against the mitsuba-sphere
@@ -168,5 +184,124 @@ export namespace Test
 		// moved one shading sample); 0.1% keeps real regressions visible.
 		ASSERT_TEXTURE_EX(color_output.get(), "rtx_material_tester",
 			.max_mismatch_fraction = 0.001, .float_encoding = Test::FloatEncoding::Encoded);
+	}
+
+	// One triangle BLAS, two instances of it at different x offsets and depths,
+	// traced with an inline RayQuery straight down -Z (fgt_ray_query.hlsl). Each
+	// texel's hit distance is checked against the CPU: 1 - depth inside an
+	// instance's triangle, 0 outside. Exercises the BLAS/TLAS builds, instance
+	// transforms, the instance -> BLAS reference and the TLAS descriptor.
+	TEST(Core.RayQuery, RayQuery_InstancedTriangles)
+	{
+		auto& device = RenderSystem::get().device();
+		constexpr uint size = 128;
+
+		const float3 verts[3] = { { -0.3f, -0.4f, 0.0f }, { 0.3f, -0.4f, 0.0f }, { 0.0f, 0.4f, 0.0f } };   // CCW in xy
+		const uint   indices[3] = { 0, 1, 2 };
+		struct Placement { float x, z; };
+		const Placement placements[2] = { { -0.45f, 0.0f }, { 0.45f, -0.5f } };
+
+		auto vb = HAL::StructuredBufferView<float3>(device, 3);
+		auto ib = HAL::StructuredBufferView<uint>(device, 3);
+
+		auto& queue = device.get_queue(HAL::CommandListType::DIRECT);
+		auto blas_list = queue->get_free_list();
+		blas_list->begin(L"RayQuery BLAS");
+		blas_list->get_copy().update(vb, 0, std::span<float3>(const_cast<float3*>(verts), 3));
+		blas_list->get_copy().update(ib, 0, std::span<uint>(const_cast<uint*>(indices), 3));
+
+		HAL::GeometryDesc geom = {};
+		geom.Type                = HAL::GeometryType::TRIANGLES;
+		geom.Flags               = HAL::GeometryFlags::OPAQUE;
+		geom.IndexBuffer         = ib.get_resource_address();
+		geom.IndexCount          = 3;
+		geom.IndexFormat         = HAL::Format::R32_UINT;
+		geom.VertexBuffer        = vb.get_resource_address();
+		geom.VertexCount         = 3;
+		geom.VertexFormat        = HAL::Format::R32G32B32_FLOAT;
+		geom.VertexStrideInBytes = sizeof(float3);
+		HAL::RaytracingAccelerationStructure blas(device, { geom }, blas_list);
+		blas_list->execute_and_wait();
+
+		std::vector<HAL::InstanceDesc> instances;
+		for (uint i = 0; i < 2; ++i)
+		{
+			HAL::InstanceDesc inst = {};
+			for (int r = 0; r < 3; ++r)
+				for (int c = 0; c < 4; ++c)
+					inst.transform.rows[r][c] = r == c ? 1.0f : 0.0f;
+			inst.transform.rows[0][3] = placements[i].x;
+			inst.transform.rows[2][3] = placements[i].z;
+			inst.instance_id = i;
+			inst.mask = 0xFF;
+			inst.acceleration_structure = blas.get_gpu_address().get_ptr();
+			instances.push_back(inst);
+		}
+		HAL::RaytracingAccelerationStructure tlas(device, instances);   // builds and waits
+
+		auto output = std::make_shared<HAL::TextureResource>(device,
+			HAL::ResourceDesc::Tex2D(HAL::Format::R32_FLOAT, { size, size }, 1, 1, HAL::ResFlags::UnorderedAccess),
+			HAL::HeapType::DEFAULT);
+
+		auto list = queue->get_free_list();
+		list->begin(L"RayQuery trace");
+		HAL::Texture2DView output_view(output, *list);
+		auto& compute = list->get_compute();
+		compute.set_signature(Layouts::DefaultLayout);
+		{
+			Slots::FrameGraphTests::FGTRayQuery rq;
+			rq.GetSize()   = uint2(size, size);
+			rq.GetScene()  = tlas.get_handle();
+			rq.GetOutput() = output_view.rwTexture2D;
+			compute.set(rq);
+		}
+		compute.set_pipeline<PSOS::FrameGraphTests::FGTRayQuery>();
+		compute.dispatch(ivec2(size, size), ivec2(8, 8));
+		list->execute_and_wait();
+
+		auto data = Test::readback_texture(output.get());
+		auto& mip = data->array[0]->mips[0];
+
+		// Signed distance to the triangle's edges (positive inside); texels within
+		// two texels of an edge are rasterization-rule territory and go unchecked.
+		auto inside_distance = [&](float x, float y) {
+			float d = std::numeric_limits<float>::max();
+			for (int e = 0; e < 3; ++e)
+			{
+				const float3& a = verts[e];
+				const float3& b = verts[(e + 1) % 3];
+				const float ex = b.x - a.x, ey = b.y - a.y;
+				d = std::min(d, (ex * (y - a.y) - ey * (x - a.x)) / std::sqrt(ex * ex + ey * ey));
+			}
+			return d;
+		};
+		const float margin = 2.0f * 2.0f / size;
+
+		size_t checked_hits = 0, checked_misses = 0;
+		for (uint py = 0; py < size; ++py)
+			for (uint px = 0; px < size; ++px)
+			{
+				const float x = (px + 0.5f) / size * 2 - 1;
+				const float y = -((py + 0.5f) / size * 2 - 1);
+
+				float expected = 0;
+				bool  ambiguous = false;
+				for (auto& pl : placements)
+				{
+					const float d = inside_distance(x - pl.x, y);
+					if (std::abs(d) < margin) ambiguous = true;
+					else if (d > 0) expected = 1.0f - pl.z;
+				}
+				if (ambiguous) continue;
+
+				const float got = reinterpret_cast<const float*>(mip->data.data() + (size_t)py * mip->width_stride)[px];
+				if (std::abs(got - expected) > 1e-4f)
+					throw Test::TestFailure("texel (" + std::to_string(px) + "," + std::to_string(py) + ") hit distance "
+						+ std::to_string(got) + ", expected " + std::to_string(expected));
+				(expected > 0 ? checked_hits : checked_misses)++;
+			}
+
+		ASSERT_TRUE(checked_hits > 1000);
+		ASSERT_TRUE(checked_misses > 1000);
 	}
 }

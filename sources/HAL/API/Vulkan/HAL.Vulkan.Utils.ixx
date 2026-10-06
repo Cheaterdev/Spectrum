@@ -216,6 +216,7 @@ export
     // D3D12's to_native_resource_state (HAL.Utils.ixx).
     uint32_t             to_native_resource_state(TextureLayout layout);
     VkPipelineStageFlags2 to_native_stage(BarrierSync sync);
+    void                  set_ray_tracing_pipeline_stage(bool available);   // device init
     VkAccessFlags2       to_native_access(BarrierAccess access);
 
     VkFilter             to_native_filter(Filter f);
@@ -234,10 +235,29 @@ export
     VkQueueFlagBits      to_native_queue(CommandListType type);
 
     // Raytracing stubs — declared but not used in Vulkan for Phase 0.
-    struct RaytracingDescNative {};
-    RaytracingDescNative to_native(const RaytracingBuildDescBottomInputs& inputs);
-    VkAccelerationStructureBuildGeometryInfoKHR
-                         to_native(const RaytracingBuildDescTopInputs& inputs);
+    // A BLAS/TLAS build's inputs in Vulkan form: the geometries the build info
+    // points at, and each one's primitive count (triangles, or instances for a
+    // TLAS). info() points into `geometries`, so build it after any copy/move.
+    struct AccelerationStructureInputs
+    {
+        VkAccelerationStructureTypeKHR                  type  = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR;
+        VkBuildAccelerationStructureFlagsKHR            flags = 0;
+        std::vector<VkAccelerationStructureGeometryKHR> geometries;
+        std::vector<uint32_t>                           primitive_counts;
+
+        VkAccelerationStructureBuildGeometryInfoKHR info(bool update) const
+        {
+            VkAccelerationStructureBuildGeometryInfoKHR i{ VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR };
+            i.type          = type;
+            i.flags         = flags;
+            i.mode          = update ? VK_BUILD_ACCELERATION_STRUCTURE_MODE_UPDATE_KHR : VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR;
+            i.geometryCount = static_cast<uint32_t>(geometries.size());
+            i.pGeometries   = geometries.data();
+            return i;
+        }
+    };
+    AccelerationStructureInputs to_native(const RaytracingBuildDescBottomInputs& inputs);
+    AccelerationStructureInputs to_native(const RaytracingBuildDescTopInputs& inputs);
 
     // ResourceAddress → raw GPU virtual address.
     // Mirrors the global ::to_native(ResourceAddress) in the D3D12 Utils.

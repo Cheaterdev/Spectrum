@@ -486,7 +486,7 @@ FrameGraph::SetupResult PassDefault<Passes::Frame::ResultCreation>::setup(
 FrameGraph::SetupResult PassDefault<Passes::Denoise::NRD::NRD_GBufferPack>::setup(
 	Passes::Denoise::NRD::NRD_GBufferPack::Context& data, FrameGraph::TaskBuilder& builder)
 {
-	if (!(builder.graph->get_context<Table::Post::Upscale::UpscalerSelectors>().upscaler_type != ::Post::Upscale::UpscalerType::DLSSRR && builder.graph->get_context<Table::Raytrace::RenderDeviceCapabilities>().rtx_supported && builder.graph->get_context<Table::Raytrace::RenderDeviceCapabilities>().dlssrr_available))
+	if (!(builder.graph->get_context<Table::Post::Upscale::UpscalerSelectors>().upscaler_type != ::Post::Upscale::UpscalerType::DLSSRR && builder.graph->get_context<Table::Raytrace::RenderDeviceCapabilities>().rtx_supported))
 		return FrameGraph::SetupResult::Disabled;
 	return FrameGraph::SetupResult::NeedsRender;
 }
@@ -495,7 +495,7 @@ FrameGraph::SetupResult PassDefault<Passes::Denoise::NRD::NRD_GBufferPack>::setu
 FrameGraph::SetupResult PassDefault<Passes::Denoise::NRD::NRD_REBLUR_Execute>::setup(
 	Passes::Denoise::NRD::NRD_REBLUR_Execute::Context& data, FrameGraph::TaskBuilder& builder)
 {
-	if (!(builder.graph->get_context<Table::Post::Upscale::UpscalerSelectors>().upscaler_type != ::Post::Upscale::UpscalerType::DLSSRR && builder.graph->get_context<Table::Raytrace::RenderDeviceCapabilities>().rtx_supported && builder.graph->get_context<Table::Raytrace::RenderDeviceCapabilities>().dlssrr_available))
+	if (!(builder.graph->get_context<Table::Post::Upscale::UpscalerSelectors>().upscaler_type != ::Post::Upscale::UpscalerType::DLSSRR && builder.graph->get_context<Table::Raytrace::RenderDeviceCapabilities>().rtx_supported))
 		return FrameGraph::SetupResult::Disabled;
 	return FrameGraph::SetupResult::NeedsRender;
 }
@@ -504,7 +504,7 @@ FrameGraph::SetupResult PassDefault<Passes::Denoise::NRD::NRD_REBLUR_Execute>::s
 FrameGraph::SetupResult PassDefault<Passes::Denoise::NRD::NRD_SIGMA_Execute>::setup(
 	Passes::Denoise::NRD::NRD_SIGMA_Execute::Context& data, FrameGraph::TaskBuilder& builder)
 {
-	if (!(builder.graph->get_context<Table::Post::Upscale::UpscalerSelectors>().upscaler_type != ::Post::Upscale::UpscalerType::DLSSRR && builder.graph->get_context<Table::Raytrace::RenderDeviceCapabilities>().rtx_supported && builder.graph->get_context<Table::Raytrace::RenderDeviceCapabilities>().dlssrr_available && (builder.graph->get_context<Table::Shadows::VSM::VSMSelectors>().shadow_source == ::Shadows::VSM::ShadowSource::RTXReference || (builder.graph->get_context<Table::Shadows::VSM::VSMSelectors>().shadow_source == ::Shadows::VSM::ShadowSource::VSM && builder.graph->get_context<Table::Shadows::VSM::VSMSelectors>().use_vsm_penumbra))))
+	if (!(builder.graph->get_context<Table::Post::Upscale::UpscalerSelectors>().upscaler_type != ::Post::Upscale::UpscalerType::DLSSRR && builder.graph->get_context<Table::Raytrace::RenderDeviceCapabilities>().rtx_supported && (builder.graph->get_context<Table::Shadows::VSM::VSMSelectors>().shadow_source == ::Shadows::VSM::ShadowSource::RTXReference || (builder.graph->get_context<Table::Shadows::VSM::VSMSelectors>().shadow_source == ::Shadows::VSM::ShadowSource::VSM && builder.graph->get_context<Table::Shadows::VSM::VSMSelectors>().use_vsm_penumbra))))
 		return FrameGraph::SetupResult::Disabled;
 	return FrameGraph::SetupResult::NeedsRender;
 }
@@ -513,7 +513,7 @@ FrameGraph::SetupResult PassDefault<Passes::Denoise::NRD::NRD_SIGMA_Execute>::se
 FrameGraph::SetupResult PassDefault<Passes::Denoise::NRD::NRD_IndirectCombine>::setup(
 	Passes::Denoise::NRD::NRD_IndirectCombine::Context& data, FrameGraph::TaskBuilder& builder)
 {
-	if (!(builder.graph->get_context<Table::Post::Upscale::UpscalerSelectors>().upscaler_type != ::Post::Upscale::UpscalerType::DLSSRR && builder.graph->get_context<Table::Raytrace::RenderDeviceCapabilities>().rtx_supported && builder.graph->get_context<Table::Raytrace::RenderDeviceCapabilities>().dlssrr_available))
+	if (!(builder.graph->get_context<Table::Post::Upscale::UpscalerSelectors>().upscaler_type != ::Post::Upscale::UpscalerType::DLSSRR && builder.graph->get_context<Table::Raytrace::RenderDeviceCapabilities>().rtx_supported))
 		return FrameGraph::SetupResult::Disabled;
 	return FrameGraph::SetupResult::NeedsRender;
 }
@@ -522,7 +522,7 @@ FrameGraph::SetupResult PassDefault<Passes::Denoise::NRD::NRD_IndirectCombine>::
 FrameGraph::SetupResult PassDefault<Passes::Denoise::NRD::NRD_ShadowCombine>::setup(
 	Passes::Denoise::NRD::NRD_ShadowCombine::Context& data, FrameGraph::TaskBuilder& builder)
 {
-	if (!(builder.graph->get_context<Table::Post::Upscale::UpscalerSelectors>().upscaler_type != ::Post::Upscale::UpscalerType::DLSSRR && builder.graph->get_context<Table::Raytrace::RenderDeviceCapabilities>().rtx_supported && builder.graph->get_context<Table::Raytrace::RenderDeviceCapabilities>().dlssrr_available && builder.graph->get_context<Table::Shadows::VSM::VSMSelectors>().shadow_source == ::Shadows::VSM::ShadowSource::RTXReference))
+	if (!(builder.graph->get_context<Table::Post::Upscale::UpscalerSelectors>().upscaler_type != ::Post::Upscale::UpscalerType::DLSSRR && builder.graph->get_context<Table::Raytrace::RenderDeviceCapabilities>().rtx_supported && builder.graph->get_context<Table::Shadows::VSM::VSMSelectors>().shadow_source == ::Shadows::VSM::ShadowSource::RTXReference))
 		return FrameGraph::SetupResult::Disabled;
 	return FrameGraph::SetupResult::NeedsRender;
 }
@@ -724,7 +724,7 @@ FrameGraph::SetupResult PassSetupDefault<Passes::GI::Voxel::Dev::VoxelDebug>::se
 FrameGraph::SetupResult PassDefault<Passes::Reflections::ReflectionRTXHalf>::setup(
 	Passes::Reflections::ReflectionRTXHalf::Context& data, FrameGraph::TaskBuilder& builder)
 {
-	if (!(builder.graph->get_context<Table::Raytrace::RenderDeviceCapabilities>().rtx_supported && builder.graph->get_context<Table::Raytrace::RenderDeviceCapabilities>().dlssrr_available))
+	if (!(builder.graph->get_context<Table::Raytrace::RenderDeviceCapabilities>().rtx_supported))
 		return FrameGraph::SetupResult::Disabled;
 	return FrameGraph::SetupResult::NeedsRender;
 }
@@ -733,7 +733,7 @@ FrameGraph::SetupResult PassDefault<Passes::Reflections::ReflectionRTXHalf>::set
 FrameGraph::SetupResult PassDefault<Passes::Reflections::ReflectionRTX>::setup(
 	Passes::Reflections::ReflectionRTX::Context& data, FrameGraph::TaskBuilder& builder)
 {
-	if (!(builder.graph->get_context<Table::Raytrace::RenderDeviceCapabilities>().rtx_supported && builder.graph->get_context<Table::Raytrace::RenderDeviceCapabilities>().dlssrr_available))
+	if (!(builder.graph->get_context<Table::Raytrace::RenderDeviceCapabilities>().rtx_supported))
 		return FrameGraph::SetupResult::Disabled;
 	return FrameGraph::SetupResult::NeedsRender;
 }
@@ -742,7 +742,7 @@ FrameGraph::SetupResult PassDefault<Passes::Reflections::ReflectionRTX>::setup(
 FrameGraph::SetupResult PassDefault<Passes::Shadows::ShadowRTX>::setup(
 	Passes::Shadows::ShadowRTX::Context& data, FrameGraph::TaskBuilder& builder)
 {
-	if (!(builder.graph->get_context<Table::Raytrace::RenderDeviceCapabilities>().rtx_supported && builder.graph->get_context<Table::Raytrace::RenderDeviceCapabilities>().dlssrr_available))
+	if (!(builder.graph->get_context<Table::Raytrace::RenderDeviceCapabilities>().rtx_supported))
 		return FrameGraph::SetupResult::Disabled;
 	return FrameGraph::SetupResult::NeedsRender;
 }
@@ -751,7 +751,7 @@ FrameGraph::SetupResult PassDefault<Passes::Shadows::ShadowRTX>::setup(
 FrameGraph::SetupResult PassDefault<Passes::GI::IndirectRTXHalf>::setup(
 	Passes::GI::IndirectRTXHalf::Context& data, FrameGraph::TaskBuilder& builder)
 {
-	if (!(builder.graph->get_context<Table::Raytrace::RenderDeviceCapabilities>().rtx_supported && builder.graph->get_context<Table::Raytrace::RenderDeviceCapabilities>().dlssrr_available))
+	if (!(builder.graph->get_context<Table::Raytrace::RenderDeviceCapabilities>().rtx_supported))
 		return FrameGraph::SetupResult::Disabled;
 	return FrameGraph::SetupResult::NeedsRender;
 }
@@ -760,7 +760,7 @@ FrameGraph::SetupResult PassDefault<Passes::GI::IndirectRTXHalf>::setup(
 FrameGraph::SetupResult PassDefault<Passes::GI::IndirectRTX>::setup(
 	Passes::GI::IndirectRTX::Context& data, FrameGraph::TaskBuilder& builder)
 {
-	if (!(builder.graph->get_context<Table::Raytrace::RenderDeviceCapabilities>().rtx_supported && builder.graph->get_context<Table::Raytrace::RenderDeviceCapabilities>().dlssrr_available))
+	if (!(builder.graph->get_context<Table::Raytrace::RenderDeviceCapabilities>().rtx_supported))
 		return FrameGraph::SetupResult::Disabled;
 	return FrameGraph::SetupResult::NeedsRender;
 }
@@ -769,7 +769,7 @@ FrameGraph::SetupResult PassDefault<Passes::GI::IndirectRTX>::setup(
 FrameGraph::SetupResult PassSetupDefault<Passes::Reflections::ReflCombine>::setup(
 	Passes::Reflections::ReflCombine::Context& data, FrameGraph::TaskBuilder& builder)
 {
-	if (!(builder.graph->get_context<Table::GI::Voxel::VoxelGISelectors>().reflection_enabled && builder.graph->get_context<Table::Post::Upscale::UpscalerSelectors>().upscaler_type != ::Post::Upscale::UpscalerType::DLSSRR && builder.graph->get_context<Table::Raytrace::RenderDeviceCapabilities>().rtx_supported && builder.graph->get_context<Table::Raytrace::RenderDeviceCapabilities>().dlssrr_available))
+	if (!(builder.graph->get_context<Table::GI::Voxel::VoxelGISelectors>().reflection_enabled && builder.graph->get_context<Table::Post::Upscale::UpscalerSelectors>().upscaler_type != ::Post::Upscale::UpscalerType::DLSSRR && builder.graph->get_context<Table::Raytrace::RenderDeviceCapabilities>().rtx_supported))
 		return FrameGraph::SetupResult::Disabled;
 	return FrameGraph::SetupResult::NeedsRender;
 }
@@ -814,7 +814,7 @@ FrameGraph::SetupResult PassSetupDefault<Passes::GI::Voxel::Mipmapping>::setup(
 FrameGraph::SetupResult PassSetupDefault<Passes::GI::Voxel::VoxelScreen>::setup(
 	Passes::GI::Voxel::VoxelScreen::Context& data, FrameGraph::TaskBuilder& builder)
 {
-	if (!(builder.graph->get_context<Table::GI::Voxel::VoxelGISelectors>().supported && builder.graph->get_context<Table::Denoise::NRD::IndirectGISelectors>().indirect_source == ::GI::IndirectSource::MyVCT && builder.graph->get_context<Table::Post::Upscale::UpscalerSelectors>().upscaler_type != ::Post::Upscale::UpscalerType::DLSSRR && builder.graph->get_context<Table::Raytrace::RenderDeviceCapabilities>().rtx_supported && builder.graph->get_context<Table::Raytrace::RenderDeviceCapabilities>().dlssrr_available))
+	if (!(builder.graph->get_context<Table::GI::Voxel::VoxelGISelectors>().supported && builder.graph->get_context<Table::Denoise::NRD::IndirectGISelectors>().indirect_source == ::GI::IndirectSource::MyVCT && builder.graph->get_context<Table::Post::Upscale::UpscalerSelectors>().upscaler_type != ::Post::Upscale::UpscalerType::DLSSRR && builder.graph->get_context<Table::Raytrace::RenderDeviceCapabilities>().rtx_supported))
 		return FrameGraph::SetupResult::Disabled;
 	return FrameGraph::SetupResult::NeedsRender;
 }
@@ -823,7 +823,7 @@ FrameGraph::SetupResult PassSetupDefault<Passes::GI::Voxel::VoxelScreen>::setup(
 FrameGraph::SetupResult PassSetupDefault<Passes::Reflections::ScreenReflection>::setup(
 	Passes::Reflections::ScreenReflection::Context& data, FrameGraph::TaskBuilder& builder)
 {
-	if (!(builder.graph->get_context<Table::GI::Voxel::VoxelGISelectors>().supported && builder.graph->get_context<Table::Denoise::NRD::IndirectGISelectors>().reflection_source == ::Reflections::ReflectionSource::MyReflection && builder.graph->get_context<Table::Post::Upscale::UpscalerSelectors>().upscaler_type != ::Post::Upscale::UpscalerType::DLSSRR && builder.graph->get_context<Table::Raytrace::RenderDeviceCapabilities>().rtx_supported && builder.graph->get_context<Table::Raytrace::RenderDeviceCapabilities>().dlssrr_available))
+	if (!(builder.graph->get_context<Table::GI::Voxel::VoxelGISelectors>().supported && builder.graph->get_context<Table::Denoise::NRD::IndirectGISelectors>().reflection_source == ::Reflections::ReflectionSource::MyReflection && builder.graph->get_context<Table::Post::Upscale::UpscalerSelectors>().upscaler_type != ::Post::Upscale::UpscalerType::DLSSRR && builder.graph->get_context<Table::Raytrace::RenderDeviceCapabilities>().rtx_supported))
 		return FrameGraph::SetupResult::Disabled;
 	return FrameGraph::SetupResult::NeedsRender;
 }

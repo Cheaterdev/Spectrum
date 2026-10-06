@@ -32,7 +32,6 @@ void PassDefault<Passes::Denoise::NRD::NRD_SIGMA_Execute>::pre_setup(FrameGraph:
 
 	if (graph.get_context<Table::Post::Upscale::UpscalerSelectors>().upscaler_type == Post::Upscale::UpscalerType::DLSSRR ||
 	    !graph.get_context<Table::Raytrace::RenderDeviceCapabilities>().rtx_supported ||
-	    !graph.get_context<Table::Raytrace::RenderDeviceCapabilities>().dlssrr_available ||
 	    !wants_sigma)
 		return;
 

@@ -16,10 +16,10 @@ namespace
 }
 
 // setup() is fully generated (UpscalingDLSSRR.prism's own [SetupCondition]).
-// is_rtx_supported(): RTXReflectionNoise only exists when ReflectionRTX
-// (voxel.prism) ran this frame, which shares this exact same prerequisite
-// (RTX support + DLSSRR::available()) -- keeping both gates identical is
-// what guarantees the resource is there whenever this pass needs it.
+// RTXReflectionNoise only exists when ReflectionRTX (voxel.prism) ran this
+// frame, gated on RTX support alone -- a superset of this pass's gate
+// (upscaler_type == DLSSRR implies RTX support), which is what guarantees the
+// resource is there whenever this pass needs it.
 
 void PassDefault<Passes::Post::Upscale::UpscalingDLSSRR>::render(
 	Passes::Post::Upscale::UpscalingDLSSRR::Context& data, FrameContext& context)

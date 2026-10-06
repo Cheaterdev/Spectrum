@@ -118,13 +118,27 @@ namespace HAL
                 [](auto&&) {}
             }, v.View);
 
+            const HAL::Format res_format = v.Resource->get_desc().as_texture().Format;
+            const VkFormat view_format = v.Format != res_format && v.Format == res_format.to_srgb()
+                ? to_native(v.Format) : VK_FORMAT_UNDEFINED;
             VkImageView view = type == VK_IMAGE_VIEW_TYPE_MAX_ENUM
                 ? api_res.get_vk_image_view()
-                : api_res.get_vk_srv_view(heap.device.get_native_device(), type, first_mip, mips, first_layer, layers);
+                : api_res.get_vk_srv_view(heap.device.get_native_device(), type, first_mip, mips, first_layer, layers, view_format);
             ASSERT(view != VK_NULL_HANDLE && "SRV: image has no view");
             if (view == VK_NULL_HANDLE) return;
             rec.type  = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
             rec.image = { VK_NULL_HANDLE, view, VK_IMAGE_LAYOUT_GENERAL };
+        }
+        else if (auto* rt = std::get_if<Views::ShaderResource::Raytracing>(&v.View))
+        {
+            // A TLAS: the acceleration-structure object over the buffer range,
+            // created here if no build has created it yet.
+            const VkDeviceSize base = api_res.get_vk_buffer_offset();
+            rec.type = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
+            rec.acceleration_structure = heap.device.get_acceleration_structure(api_res.get_vk_buffer(),
+                base + rt->OffsetInBytes, base + v.Resource->get_desc().as_buffer().SizeInBytes);
+            ASSERT(rec.acceleration_structure != VK_NULL_HANDLE && "SRV: TLAS view without acceleration-structure support");
+            if (rec.acceleration_structure == VK_NULL_HANDLE) return;
         }
         else if (api_res.get_vk_buffer() != VK_NULL_HANDLE)
         {
@@ -282,8 +296,8 @@ namespace HAL
                         { VK_DESCRIPTOR_TYPE_SAMPLER,        Device::get_inline_sampler_count() },
                     };
                     lists.resize(sizes.size());
-                    lists[0].descriptorTypeCount = static_cast<uint32_t>(std::size(Device::mutable_resource_types));
-                    lists[0].pDescriptorTypes    = Device::mutable_resource_types;
+                    lists[0].descriptorTypeCount = static_cast<uint32_t>(dev.mutable_resource_types.size());
+                    lists[0].pDescriptorTypes    = dev.mutable_resource_types.data();
                 }
 
                 VkMutableDescriptorTypeCreateInfoEXT mutable_ci{ VK_STRUCTURE_TYPE_MUTABLE_DESCRIPTOR_TYPE_CREATE_INFO_EXT };
@@ -343,8 +357,15 @@ namespace HAL
             w.dstArrayElement = slot;
             w.descriptorCount = 1;
             w.descriptorType  = record.type;
+            VkWriteDescriptorSetAccelerationStructureKHR as_write{ VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET_ACCELERATION_STRUCTURE_KHR };
             if (record.type == VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE || record.type == VK_DESCRIPTOR_TYPE_STORAGE_IMAGE)
                 w.pImageInfo  = &record.image;
+            else if (record.type == VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR)
+            {
+                as_write.accelerationStructureCount = 1;
+                as_write.pAccelerationStructures    = &record.acceleration_structure;
+                w.pNext = &as_write;
+            }
             else
                 w.pBufferInfo = &record.buffer;
 

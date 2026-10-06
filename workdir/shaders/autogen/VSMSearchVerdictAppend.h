@@ -20,7 +20,13 @@ struct CB { uint offset; };
 
 #ifdef __spirv__
 struct _CB_VSMSearchVerdictAppend { uint offset; };
+#ifdef HAL_SHADER_RECORD_VSMSearchVerdictAppend
+// A ray tracing hit shader's local root constant: on Vulkan it is the shader
+// record's data, right after the group handle in the hit table entry.
+[[vk::shader_record_ext]] ConstantBuffer<_CB_VSMSearchVerdictAppend> pass_VSMSearchVerdictAppend;
+#else
 static _CB_VSMSearchVerdictAppend pass_VSMSearchVerdictAppend = { _hal_push.s9 };
+#endif
 #else
 ConstantBuffer<CB> pass_VSMSearchVerdictAppend: register(b9, space9);
 #endif

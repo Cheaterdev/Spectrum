@@ -514,7 +514,7 @@ namespace Reflections
 	# GBuffer_HalfDepth/HalfNormals.
 	[Static]
 	[Compute]
-	[SetupCondition = RenderDeviceCapabilities::rtx_supported && RenderDeviceCapabilities::dlssrr_available]
+	[SetupCondition = RenderDeviceCapabilities::rtx_supported]
 	PassNode ReflectionRTXHalf
 	{
 		[Always = Read] Texture GBuffer_HalfDepth;
@@ -557,7 +557,7 @@ namespace Reflections
 	# ReflectionRTXUpscale's own comment for why both matter here specifically.
 	[Static]
 	[Compute]
-	[SetupCondition = RenderDeviceCapabilities::rtx_supported && RenderDeviceCapabilities::dlssrr_available]
+	[SetupCondition = RenderDeviceCapabilities::rtx_supported]
 	PassNode ReflectionRTX
 	{
 		# Flat fields, not the (removed) GBuffer PassView -- see pssm.prism's own
@@ -600,11 +600,13 @@ namespace Shadows
 	# DLSS-RR (see [[project-nrd-integration]]). RTXShadow itself (Bend/FFX
 	# hybrid denoiser) is unaffected -- this is a separate signal, not a
 	# replacement. Gate matches ReflectionRTX/IndirectRTX (not DLSS-RR-only
-	# anymore): always warm whenever RTX+DLSSRR-capable, since DLSS-RR's
-	# RTXCombine needs RTXShadowNoise unconditionally regardless of shadow_source.
+	# anymore): always warm whenever RTX-capable, since DLSS-RR's RTXCombine
+	# needs RTXShadowNoise unconditionally regardless of shadow_source. Not
+	# gated on DLSS-RR availability: the NRD path consumes these too, on
+	# devices without ray reconstruction (Vulkan, AMD).
 	[Static]
 	[Compute]
-	[SetupCondition = RenderDeviceCapabilities::rtx_supported && RenderDeviceCapabilities::dlssrr_available]
+	[SetupCondition = RenderDeviceCapabilities::rtx_supported]
 	PassNode ShadowRTX
 	{
 		# Flat fields, not the (removed) GBuffer PassView -- see pssm.prism's own
@@ -629,7 +631,7 @@ namespace GI
 	# (this file) for how IndirectRTX consumes RTXIndirectNoiseHalf.
 	[Static]
 	[Compute]
-	[SetupCondition = RenderDeviceCapabilities::rtx_supported && RenderDeviceCapabilities::dlssrr_available]
+	[SetupCondition = RenderDeviceCapabilities::rtx_supported]
 	PassNode IndirectRTXHalf
 	{
 		[Always = Read] Texture GBuffer_HalfDepth;
@@ -672,7 +674,7 @@ namespace GI
 	# pay for a fresh ray.
 	[Static]
 	[Compute]
-	[SetupCondition = RenderDeviceCapabilities::rtx_supported && RenderDeviceCapabilities::dlssrr_available]
+	[SetupCondition = RenderDeviceCapabilities::rtx_supported]
 	PassNode IndirectRTX
 	{
 		# Flat fields, not the (removed) GBuffer PassView -- see pssm.prism's own
@@ -713,7 +715,7 @@ namespace Reflections
 	# cannot hold an unavailable type (see g_upscaler_type's invariant,
 	# UpscalingDLSS.ixx). The RTX terms are NRD_REBLUR_Execute's, which is the
 	# only producer of RTXReflectionDenoised.
-	[SetupCondition = VoxelGISelectors::reflection_enabled && UpscalerSelectors::upscaler_type != UpscalerType::DLSSRR && RenderDeviceCapabilities::rtx_supported && RenderDeviceCapabilities::dlssrr_available]
+	[SetupCondition = VoxelGISelectors::reflection_enabled && UpscalerSelectors::upscaler_type != UpscalerType::DLSSRR && RenderDeviceCapabilities::rtx_supported]
 	PassNode ReflCombine
 	{
 		# Flat fields, not the (removed) GBuffer PassView -- see pssm.prism's own
@@ -815,7 +817,7 @@ namespace GI
 		# migration stays behaviour-preserving. It looks like a copy-paste of the RTX
 		# gate (it makes the VCT path require DLSS-RR to be available-but-unselected,
 		# so it never runs on a non-NVIDIA GPU); revisit separately.
-		[SetupCondition = VoxelGISelectors::supported && IndirectGISelectors::indirect_source == IndirectSource::MyVCT && UpscalerSelectors::upscaler_type != UpscalerType::DLSSRR && RenderDeviceCapabilities::rtx_supported && RenderDeviceCapabilities::dlssrr_available]
+		[SetupCondition = VoxelGISelectors::supported && IndirectGISelectors::indirect_source == IndirectSource::MyVCT && UpscalerSelectors::upscaler_type != UpscalerType::DLSSRR && RenderDeviceCapabilities::rtx_supported]
 		PassNode VoxelScreen
 		{
 			# Flat fields, not the (removed) GBuffer PassView -- see pssm.prism's own
@@ -844,7 +846,7 @@ namespace Reflections
 	# [[project-nrd-integration]]). Not [Static], same reasoning as VoxelScreen.
 	[Compute]
 	# Same verbatim-mirror caveat as VoxelScreen above.
-	[SetupCondition = VoxelGISelectors::supported && IndirectGISelectors::reflection_source == ReflectionSource::MyReflection && UpscalerSelectors::upscaler_type != UpscalerType::DLSSRR && RenderDeviceCapabilities::rtx_supported && RenderDeviceCapabilities::dlssrr_available]
+	[SetupCondition = VoxelGISelectors::supported && IndirectGISelectors::reflection_source == ReflectionSource::MyReflection && UpscalerSelectors::upscaler_type != UpscalerType::DLSSRR && RenderDeviceCapabilities::rtx_supported]
 	PassNode ScreenReflection
 	{
 		# Flat fields, not the (removed) GBuffer PassView -- see pssm.prism's own

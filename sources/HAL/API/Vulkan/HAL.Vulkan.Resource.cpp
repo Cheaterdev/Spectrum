@@ -167,11 +167,7 @@ namespace HAL
 
                 VkBufferCreateInfo bci{ VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
                 bci.size  = buf.SizeInBytes;
-                bci.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT
-                          | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT
-                          | VK_BUFFER_USAGE_INDEX_BUFFER_BIT   | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT
-                          | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT
-                          | VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT;
+                bci.usage = device.buffer_usage;
 
                 if (THIS->heap_type == HeapType::UPLOAD || THIS->heap_type == HeapType::READBACK)
                 {
@@ -280,6 +276,11 @@ namespace HAL
                                && ici.extent.width == ici.extent.height;
                 if (cube_compatible)
                     ici.flags |= VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
+
+                // D3D12 reinterprets a UNORM/TYPELESS texture through an _SRGB SRV
+                // (Texture::texture_2d_srgb); Vulkan needs the flag to view it so.
+                if (tex.Format.to_srgb() != tex.Format)
+                    ici.flags |= VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT;
 
                 vma_ci.usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE;
 
@@ -509,14 +510,16 @@ namespace HAL
         }
 
         VkImageView Resource::get_vk_srv_view(VkDevice vk_dev, VkImageViewType type, uint32_t first_mip, uint32_t mip_count,
-                                              uint32_t first_layer, uint32_t layer_count) const noexcept
+                                              uint32_t first_layer, uint32_t layer_count, VkFormat format) const noexcept
         {
             if (import_handle.image != VK_NULL_HANDLE)
                 return import_handle.image_view;
             if (vk_image == VK_NULL_HANDLE || vk_view_ci.image == VK_NULL_HANDLE)
                 return VK_NULL_HANDLE;
+            if (format == VK_FORMAT_UNDEFINED)
+                format = vk_view_ci.format;
 
-            const std::array<uint32_t, 5> key = { uint32_t(type), first_mip, mip_count, first_layer, layer_count };
+            const std::array<uint32_t, 6> key = { uint32_t(type), first_mip, mip_count, first_layer, layer_count, uint32_t(format) };
             std::lock_guard g(per_mip_views_mutex);
             if (auto it = srv_views.find(key); it != srv_views.end())
                 return it->second;
@@ -537,6 +540,16 @@ namespace HAL
             ivci.subresourceRange.levelCount     = mip_count;
             ivci.subresourceRange.baseArrayLayer = first_layer;
             ivci.subresourceRange.layerCount     = layer_count;
+            // A reinterpreting view (sRGB) inherits the image's usage by default,
+            // which may include STORAGE the view format can't support.
+            VkImageViewUsageCreateInfo usage{ VK_STRUCTURE_TYPE_IMAGE_VIEW_USAGE_CREATE_INFO };
+            usage.usage = VK_IMAGE_USAGE_SAMPLED_BIT;
+            if (format != vk_view_ci.format)
+            {
+                ivci.format = format;
+                usage.pNext = ivci.pNext;
+                ivci.pNext  = &usage;
+            }
             VkImageView v = VK_NULL_HANDLE;
             vkCreateImageView(vk_dev, &ivci, nullptr, &v);
             srv_views[key] = v;
@@ -607,6 +620,10 @@ namespace HAL
                 vkDestroyImageView(vk_dev, vk_image_view, nullptr);
                 vk_image_view = VK_NULL_HANDLE;
             }
+
+            // Acceleration-structure objects over this buffer must go first.
+            if (vk_buffer != VK_NULL_HANDLE)
+                api_dev.forget_acceleration_structures(vk_buffer);
 
             if (placed)
             {

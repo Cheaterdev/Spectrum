@@ -20,7 +20,13 @@ struct CB { uint offset; };
 
 #ifdef __spirv__
 struct _CB_SIGMA_CopyResources { uint offset; };
+#ifdef HAL_SHADER_RECORD_SIGMA_CopyResources
+// A ray tracing hit shader's local root constant: on Vulkan it is the shader
+// record's data, right after the group handle in the hit table entry.
+[[vk::shader_record_ext]] ConstantBuffer<_CB_SIGMA_CopyResources> pass_SIGMA_CopyResources;
+#else
 static _CB_SIGMA_CopyResources pass_SIGMA_CopyResources = { _hal_push.s6 };
+#endif
 #else
 ConstantBuffer<CB> pass_SIGMA_CopyResources: register(b6, space6);
 #endif

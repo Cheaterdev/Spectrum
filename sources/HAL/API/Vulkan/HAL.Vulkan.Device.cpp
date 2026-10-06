@@ -323,6 +323,12 @@ namespace HAL
                 VK_KHR_MAINTENANCE_8_EXTENSION_NAME,
                 // Optional: faulting addresses/vendor info after VK_ERROR_DEVICE_LOST.
                 VK_EXT_DEVICE_FAULT_EXTENSION_NAME,
+                // Optional: acceleration structures + inline ray queries (ray_query).
+                VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME,
+                VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME,   // required by acceleration_structure
+                VK_KHR_RAY_QUERY_EXTENSION_NAME,
+                // Optional: ray tracing pipelines (rtx).
+                VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME,
                 // nullDescriptor: D3D12-style null views for unbound slots.
                 VK_EXT_ROBUSTNESS_2_EXTENSION_NAME,
                 // Required by DXC SPIRV for 'discard' in pixel shaders.
@@ -461,6 +467,25 @@ namespace HAL
                 feature_head = &maint8_features;
             }
 
+            VkPhysicalDeviceAccelerationStructureFeaturesKHR as_features{
+                VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR };
+            VkPhysicalDeviceRayQueryFeaturesKHR ray_query_features{
+                VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_QUERY_FEATURES_KHR };
+            const bool has_ray_query_exts = has_ext(VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME)
+                && has_ext(VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME) && has_ext(VK_KHR_RAY_QUERY_EXTENSION_NAME);
+            if (has_ray_query_exts) {
+                as_features.pNext = feature_head;
+                ray_query_features.pNext = &as_features;
+                feature_head = &ray_query_features;
+            }
+            VkPhysicalDeviceRayTracingPipelineFeaturesKHR rt_features{
+                VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR };
+            const bool has_rt_pipeline_ext = has_ray_query_exts && has_ext(VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME);
+            if (has_rt_pipeline_ext) {
+                rt_features.pNext = feature_head;
+                feature_head = &rt_features;
+            }
+
             VkPhysicalDeviceFeatures2 features2{
                 VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2 };
             features2.pNext = feature_head;
@@ -475,6 +500,29 @@ namespace HAL
             // access would add bounds checks to every access.
             robustness2_features.robustBufferAccess2 = VK_FALSE;
             robustness2_features.robustImageAccess2  = VK_FALSE;
+
+            // Only device-side builds are used: capture/replay and host or
+            // indirect builds stay off.
+            as_features.accelerationStructureCaptureReplay    = VK_FALSE;
+            as_features.accelerationStructureIndirectBuild    = VK_FALSE;
+            as_features.accelerationStructureHostCommands     = VK_FALSE;
+            const bool ray_query_ok = has_ray_query_exts
+                && as_features.accelerationStructure && ray_query_features.rayQuery
+                && as_features.descriptorBindingAccelerationStructureUpdateAfterBind   // the bindless heap is update-after-bind
+                && vk12_features.bufferDeviceAddress;
+            if (has_ray_query_exts && !ray_query_ok)
+            {
+                // Present but unusable: don't enable half of it.
+                as_features.accelerationStructure = VK_FALSE;
+                ray_query_features.rayQuery       = VK_FALSE;
+            }
+            // Pipelines build on the acceleration structures; capture/replay of
+            // group handles stays off.
+            rt_features.rayTracingPipelineShaderGroupHandleCaptureReplay      = VK_FALSE;
+            rt_features.rayTracingPipelineShaderGroupHandleCaptureReplayMixed = VK_FALSE;
+            const bool rt_pipeline_features_ok = ray_query_ok && has_rt_pipeline_ext && rt_features.rayTracingPipeline;
+            if (has_rt_pipeline_ext && !rt_pipeline_features_ok)
+                rt_features.rayTracingPipeline = VK_FALSE;
             null_descriptor = has_robustness2 && robustness2_features.nullDescriptor;
             conservative_raster = has_ext(VK_EXT_CONSERVATIVE_RASTERIZATION_EXTENSION_NAME);
             if (!null_descriptor)
@@ -539,16 +587,61 @@ namespace HAL
                     vkGetDeviceProcAddr(vk_device, "vkGetDeviceFaultInfoEXT"));
             Log::get() << "[Vulkan] device fault reporting: " << (fn_get_fault_info ? "on" : "unavailable") << Log::endl;
 
+            if (ray_query_ok)
+            {
+                auto load = [&](auto& fn, const char* name) {
+                    fn = reinterpret_cast<std::remove_reference_t<decltype(fn)>>(vkGetDeviceProcAddr(vk_device, name));
+                };
+                load(fn_get_as_build_sizes, "vkGetAccelerationStructureBuildSizesKHR");
+                load(fn_create_as,          "vkCreateAccelerationStructureKHR");
+                load(fn_destroy_as,         "vkDestroyAccelerationStructureKHR");
+                load(fn_cmd_build_as,       "vkCmdBuildAccelerationStructuresKHR");
+                load(fn_get_as_address,     "vkGetAccelerationStructureDeviceAddressKHR");
+                mutable_resource_types.push_back(VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR);
+                buffer_usage |= VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR
+                              | VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR;
+            }
+            if (rt_pipeline_features_ok)
+            {
+                auto load = [&](auto& fn, const char* name) {
+                    fn = reinterpret_cast<std::remove_reference_t<decltype(fn)>>(vkGetDeviceProcAddr(vk_device, name));
+                };
+                load(fn_create_rt_pipelines,  "vkCreateRayTracingPipelinesKHR");
+                load(fn_get_rt_group_handles, "vkGetRayTracingShaderGroupHandlesKHR");
+                load(fn_cmd_trace_rays,       "vkCmdTraceRaysKHR");
+                // Shader tables are read straight off buffers.
+                buffer_usage |= VK_BUFFER_USAGE_SHADER_BINDING_TABLE_BIT_KHR;
+            }
+
             // ---- DeviceProperties -------------------------------------------
             VkPhysicalDeviceVulkan12Properties vk12_props{
                 VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_PROPERTIES };
+            VkPhysicalDeviceRayTracingPipelinePropertiesKHR rt_props{
+                VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_PROPERTIES_KHR };
             VkPhysicalDeviceProperties2 props2{ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2 };
             props2.pNext = &vk12_props;
+            if (has_rt_pipeline_ext)
+                vk12_props.pNext = &rt_props;
             vkGetPhysicalDeviceProperties2(vk_physical, &props2);
 
             auto& p = THIS->properties;
             p.name = props2.properties.deviceName;
-            p.rtx           = false;  // Phase: VK_KHR_ray_tracing_pipeline check
+            p.ray_query     = ray_query_ok && fn_get_as_build_sizes && fn_create_as && fn_destroy_as
+                           && fn_cmd_build_as && fn_get_as_address;
+
+            // The shader tables are laid out for D3D12 (RTX.ixx): 32-byte
+            // identifiers, records 32/64 bytes apart, table starts 64-aligned.
+            // A device whose group handles or alignments differ can't use them.
+            rt_max_recursion_depth = rt_props.maxRayRecursionDepth;
+            const bool rt_layout_ok = rt_props.shaderGroupHandleSize == sizeof(HAL::shader_identifier)
+                && rt_props.shaderGroupBaseAlignment <= 64 && rt_props.shaderGroupHandleAlignment <= 32;
+            p.rtx = p.ray_query && rt_pipeline_features_ok && rt_layout_ok
+                 && fn_create_rt_pipelines && fn_get_rt_group_handles && fn_cmd_trace_rays;
+            if (rt_pipeline_features_ok && !rt_layout_ok)
+                Log::get() << Log::LEVEL_WARNING << "[Vulkan] ray tracing pipelines off: group handle size "
+                           << rt_props.shaderGroupHandleSize << ", base alignment " << rt_props.shaderGroupBaseAlignment
+                           << ", handle alignment " << rt_props.shaderGroupHandleAlignment << Log::endl;
+            set_ray_tracing_pipeline_stage(p.rtx);
             p.mesh_shader   = has_mesh_shader && (mesh_features.meshShader == VK_TRUE);
 
             // D3D12 tiled-resource semantics the engine relies on: unmapped tiles
@@ -717,8 +810,8 @@ namespace HAL
 
                 bindings[0] = { 0, VK_DESCRIPTOR_TYPE_MUTABLE_EXT, resource_heap_capacity, VK_SHADER_STAGE_ALL, nullptr };
                 flags[0]    = bindless_flags;
-                mutable_lists[0].descriptorTypeCount = static_cast<uint32_t>(std::size(mutable_resource_types));
-                mutable_lists[0].pDescriptorTypes    = mutable_resource_types;
+                mutable_lists[0].descriptorTypeCount = static_cast<uint32_t>(mutable_resource_types.size());
+                mutable_lists[0].pDescriptorTypes    = mutable_resource_types.data();
 
                 bindings[1] = { 2, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, resource_heap_capacity, VK_SHADER_STAGE_ALL, nullptr };
                 flags[1]    = bindless_flags;
@@ -776,6 +869,9 @@ namespace HAL
 
         Device::~Device()
         {
+            if (fn_destroy_as)
+                for (auto& [key, as] : acceleration_structures)
+                    fn_destroy_as(vk_device, as, nullptr);
             if (pipeline_layout)     vkDestroyPipelineLayout(vk_device, pipeline_layout, nullptr);
             if (resource_set_layout) vkDestroyDescriptorSetLayout(vk_device, resource_set_layout, nullptr);
             if (sampler_set_layout)  vkDestroyDescriptorSetLayout(vk_device, sampler_set_layout, nullptr);
@@ -851,11 +947,7 @@ namespace HAL
             {
                 VkBufferCreateInfo bci{ VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
                 bci.size  = desc.as_buffer().SizeInBytes;
-                bci.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT
-                          | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT
-                          | VK_BUFFER_USAGE_INDEX_BUFFER_BIT   | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT
-                          | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT
-                          | VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT;
+                bci.usage = buffer_usage;
 
                 VkMemoryRequirements2 req{ VK_STRUCTURE_TYPE_MEMORY_REQUIREMENTS_2 };
                 VkDeviceBufferMemoryRequirements info{ VK_STRUCTURE_TYPE_DEVICE_BUFFER_MEMORY_REQUIREMENTS };
@@ -929,7 +1021,55 @@ namespace HAL
             return result;
         }
 
-        RaytracingPrebuildInfo Device::calculateBuffers(const RaytracingBuildDescBottomInputs&) { return {}; }
-        RaytracingPrebuildInfo Device::calculateBuffers(const RaytracingBuildDescTopInputs&)    { return {}; }
+        static RaytracingPrebuildInfo build_sizes(const AccelerationStructureInputs& in,
+                                                  PFN_vkGetAccelerationStructureBuildSizesKHR fn, VkDevice vk_device)
+        {
+            if (!fn) return {};
+            const auto info = in.info(false);
+            VkAccelerationStructureBuildSizesInfoKHR sizes{ VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR };
+            fn(vk_device, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, &info, in.primitive_counts.data(), &sizes);
+            return { sizes.accelerationStructureSize, sizes.buildScratchSize, sizes.updateScratchSize };
+        }
+
+        RaytracingPrebuildInfo Device::calculateBuffers(const RaytracingBuildDescBottomInputs& inputs)
+        {
+            return build_sizes(to_native(inputs), fn_get_as_build_sizes, vk_device);
+        }
+
+        RaytracingPrebuildInfo Device::calculateBuffers(const RaytracingBuildDescTopInputs& inputs)
+        {
+            return build_sizes(to_native(inputs), fn_get_as_build_sizes, vk_device);
+        }
+
+        VkAccelerationStructureKHR Device::get_acceleration_structure(VkBuffer buffer, VkDeviceSize offset, VkDeviceSize buffer_size)
+        {
+            if (!fn_create_as || buffer == VK_NULL_HANDLE || offset >= buffer_size) return VK_NULL_HANDLE;
+
+            std::lock_guard g(as_mutex);
+            auto& as = acceleration_structures[{ buffer, offset }];
+            if (as != VK_NULL_HANDLE) return as;
+
+            // GENERIC: one object serves as BLAS or TLAS, whichever build targets it.
+            VkAccelerationStructureCreateInfoKHR ci{ VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR };
+            ci.buffer = buffer;
+            ci.offset = offset;
+            ci.size   = buffer_size - offset;
+            ci.type   = VK_ACCELERATION_STRUCTURE_TYPE_GENERIC_KHR;
+            fn_create_as(vk_device, &ci, nullptr, &as);
+            ASSERT(as != VK_NULL_HANDLE && "vkCreateAccelerationStructureKHR failed");
+            return as;
+        }
+
+        void Device::forget_acceleration_structures(VkBuffer buffer)
+        {
+            if (!fn_destroy_as) return;
+            std::lock_guard g(as_mutex);
+            for (auto it = acceleration_structures.lower_bound({ buffer, 0 });
+                 it != acceleration_structures.end() && it->first.first == buffer;)
+            {
+                fn_destroy_as(vk_device, it->second, nullptr);
+                it = acceleration_structures.erase(it);
+            }
+        }
     }
 }

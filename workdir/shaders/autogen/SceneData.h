@@ -20,7 +20,13 @@ struct CB { uint offset; };
 
 #ifdef __spirv__
 struct _CB_SceneData { uint offset; };
+#ifdef HAL_SHADER_RECORD_SceneData
+// A ray tracing hit shader's local root constant: on Vulkan it is the shader
+// record's data, right after the group handle in the hit table entry.
+[[vk::shader_record_ext]] ConstantBuffer<_CB_SceneData> pass_SceneData;
+#else
 static _CB_SceneData pass_SceneData = { _hal_push.s1 };
+#endif
 #else
 ConstantBuffer<CB> pass_SceneData: register(b1, space1);
 #endif

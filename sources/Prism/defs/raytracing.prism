@@ -13,7 +13,6 @@ namespace Raytrace
 	{
 		bool rtx_supported = false;
 		bool dlss_available = false;
-		bool dlssrr_available = false;
 	}
 
 	# GPU-driven indirect ray dispatch (D3D12_INDIRECT_ARGUMENT_TYPE_DISPATCH_RAYS,

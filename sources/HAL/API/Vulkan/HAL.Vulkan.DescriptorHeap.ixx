@@ -38,8 +38,9 @@ export namespace HAL
             VkDescriptorType type = VK_DESCRIPTOR_TYPE_MAX_ENUM;  // MAX_ENUM: empty slot
             union
             {
-                VkDescriptorImageInfo  image;
-                VkDescriptorBufferInfo buffer;
+                VkDescriptorImageInfo      image;
+                VkDescriptorBufferInfo     buffer;
+                VkAccelerationStructureKHR acceleration_structure;   // type ACCELERATION_STRUCTURE_KHR
             };
             // Append/Consume counter -- DXC reads slot i's counter from element i
             // of set 0, binding 2.  buffer == VK_NULL_HANDLE when there is none.

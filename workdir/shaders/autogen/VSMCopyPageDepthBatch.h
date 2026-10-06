@@ -20,7 +20,13 @@ struct CB { uint offset; };
 
 #ifdef __spirv__
 struct _CB_VSMCopyPageDepthBatch { uint offset; };
+#ifdef HAL_SHADER_RECORD_VSMCopyPageDepthBatch
+// A ray tracing hit shader's local root constant: on Vulkan it is the shader
+// record's data, right after the group handle in the hit table entry.
+[[vk::shader_record_ext]] ConstantBuffer<_CB_VSMCopyPageDepthBatch> pass_VSMCopyPageDepthBatch;
+#else
 static _CB_VSMCopyPageDepthBatch pass_VSMCopyPageDepthBatch = { _hal_push.s4 };
+#endif
 #else
 ConstantBuffer<CB> pass_VSMCopyPageDepthBatch: register(b4, space4);
 #endif

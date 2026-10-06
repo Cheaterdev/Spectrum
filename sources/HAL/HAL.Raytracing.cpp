@@ -46,19 +46,18 @@ HAL::RaytracingAccelerationStructure::RaytracingAccelerationStructure(Device& de
 
 	auto topLevelPrebuildInfo = device.calculateBuffers(inputs);
 
-
-	currentResource = std::make_shared<virtual_gpu_buffer<std::byte>>(device, 1024 * 1024 * 256, counterType::NONE, HAL::ResFlags::Raytracing | HAL::ResFlags::ShaderResource);
-	prevResource = std::make_shared<virtual_gpu_buffer<std::byte>>(device, 1024 * 1024 * 256, counterType::NONE, HAL::ResFlags::Raytracing | HAL::ResFlags::ShaderResource);
-
+	handle_table = device.get_static_gpu_data().alloc_descriptor(2, DescriptorHeapIndex{ HAL::DescriptorHeapType::CBV_SRV_UAV, HAL::DescriptorHeapFlags::ShaderVisible });
+	raytracing_handles[0] = HLSL::RaytracingAccelerationStructure(handle_table[0]);
+	raytracing_handles[1] = HLSL::RaytracingAccelerationStructure(handle_table[1]);
+	ensure_tlas_storage(device, 0, topLevelPrebuildInfo.ResultDataMaxSizeInBytes);
+	ensure_tlas_storage(device, 1, topLevelPrebuildInfo.ResultDataMaxSizeInBytes);
 
 	scratchInfo = std::make_shared<virtual_gpu_buffer<std::byte>>(device, 1024 * 1024 * 16, counterType::NONE, HAL::ResFlags::UnorderedAccess | HAL::ResFlags::ShaderResource);
 	scratchInfo->reserve(*list, topLevelPrebuildInfo.ScratchDataSizeInBytes);
-	currentResource->reserve(*list, topLevelPrebuildInfo.ResultDataMaxSizeInBytes);
-
 
 	RaytracingBuildDescStructure topLevelBuildDesc;
 	{
-		topLevelBuildDesc.DestAccelerationStructureData = currentResource->buffer.get_resource_address();
+		topLevelBuildDesc.DestAccelerationStructureData = tlas_storage[0].get_resource_address();
 		topLevelBuildDesc.ScratchAccelerationStructureData = scratchInfo->buffer.get_resource_address();
 	}
 
@@ -66,19 +65,24 @@ HAL::RaytracingAccelerationStructure::RaytracingAccelerationStructure(Device& de
 
 	list->execute_and_wait();
 
-	handle_table = device.get_static_gpu_data().alloc_descriptor(2, DescriptorHeapIndex{ HAL::DescriptorHeapType::CBV_SRV_UAV, HAL::DescriptorHeapFlags::ShaderVisible });
-
-	raytracing_handles[0] = HLSL::RaytracingAccelerationStructure(handle_table[0]);
-	raytracing_handles[0].create(currentResource->buffer.resource);
-	raytracing_handles[1] = HLSL::RaytracingAccelerationStructure(handle_table[1]);
-	raytracing_handles[1].create(prevResource->buffer.resource);
 	current = 0;
 
-
 	scratch_buffer = scratchInfo->buffer;
-	cur_buffer = &currentResource->buffer;
-	prev_buffer = prevResource->buffer;
+	cur_buffer = &tlas_storage[current];
+}
 
+void HAL::RaytracingAccelerationStructure::ensure_tlas_storage(Device& device, int index, uint64 size)
+{
+	auto& storage = tlas_storage[index];
+	const uint64 capacity = storage.resource ? storage.get_desc().as_buffer().SizeInBytes : 0;
+	if (capacity >= size && capacity) return;
+
+	// Grown buffers double, so a growing scene reallocates only a few times.
+	const uint64 new_size = std::max<uint64>({ size, capacity * 2, 64 * 1024 });
+	storage = StructuredBufferView<std::byte>(device, new_size, counterType::NONE,
+		HAL::ResFlags::Raytracing | HAL::ResFlags::ShaderResource, HeapType::DEFAULT);
+	storage.resource->set_name("TLAS");
+	raytracing_handles[index].create(storage.resource);
 }
 
 void HAL::RaytracingAccelerationStructure::update(CommandList::ptr list, UINT size, ResourceAddress address,
@@ -93,35 +97,31 @@ void HAL::RaytracingAccelerationStructure::update(CommandList::ptr list, UINT si
 		buildFlags |= RaytracingBuildFlags::PERFORM_UPDATE;
 
 
-	std::swap(prevResource, currentResource);
+	const int prev = current ^ 1;
 
 	HAL::RaytracingBuildDescTopInputs inputs;
 	inputs.Flags = RaytracingBuildFlags::ALLOW_UPDATE;
 	inputs.NumDescs = size;
 	inputs.instances = address;
 
-	auto topLevelPrebuildInfo = currentResource->buffer.resource->get_device().calculateBuffers(inputs);
+	auto& device = tlas_storage[prev].resource->get_device();
+	auto topLevelPrebuildInfo = device.calculateBuffers(inputs);
 
 	UINT64 max = topLevelPrebuildInfo.ScratchDataSizeInBytes;
 
 	if (!need_rebuild) max = topLevelPrebuildInfo.UpdateScratchDataSizeInBytes;
 
-
-
 	scratchInfo->reserve(*list, max);
-
-
-	currentResource->reserve(*list, topLevelPrebuildInfo.ResultDataMaxSizeInBytes);
-
-	//auto instanceDescs = list->place_raw(instances);
+	ensure_tlas_storage(device, current, topLevelPrebuildInfo.ResultDataMaxSizeInBytes);
+	cur_buffer = &tlas_storage[current];
 
 	HAL::RaytracingBuildDescStructure topLevelBuildDesc;
 	{
-		topLevelBuildDesc.DestAccelerationStructureData = currentResource->buffer.get_resource_address();
+		topLevelBuildDesc.DestAccelerationStructureData = tlas_storage[current].get_resource_address();
 		topLevelBuildDesc.ScratchAccelerationStructureData = scratchInfo->buffer.get_resource_address();
 
 		if (!need_rebuild)
-			topLevelBuildDesc.SourceAccelerationStructureData = prevResource->buffer.get_resource_address();
+			topLevelBuildDesc.SourceAccelerationStructureData = tlas_storage[prev].get_resource_address();
 		else
 			topLevelBuildDesc.SourceAccelerationStructureData = ResourceAddress();
 

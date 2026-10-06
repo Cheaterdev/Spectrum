@@ -14,6 +14,7 @@ export namespace HAL
             VkPipeline           vk_pipeline  = VK_NULL_HANDLE;
             VkDevice             vk_device    = VK_NULL_HANDLE; // for destructor cleanup
             bool                 is_compute   = false;
+            bool                 is_ray_tracing = false;
             bool                 is_mesh      = false;   // task/mesh pipeline (no vertex input / topology)
             VkPrimitiveTopology  vk_topology  = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 
@@ -29,10 +30,15 @@ export namespace HAL
             std::string get_cache();
         };
 
-        // StateObject: D3D12 raytracing state object.
-        // Not supported on Vulkan for Phase 0; stub kept for interface compat.
+        // A D3D12 ray tracing state object. A Collection is only a description;
+        // the Raytracing object flattens its own and its collections' libraries
+        // and hit groups into one VkRayTracingPipeline and keeps every group's
+        // handle, which get_shader_id() looks up by export name.
         class StateObject
         {
+        protected:
+            std::map<std::wstring, uint32_t> group_indices;
+            std::vector<std::byte>           group_handles;   // shader_identifier-sized, per group
         };
     }
 }

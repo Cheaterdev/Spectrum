@@ -1,3 +1,5 @@
+module;
+#include "HAL.Vulkan.SpirvEntryPoints.h"
 module HAL:ShaderCompiler;
 
 import Core;
@@ -85,19 +87,33 @@ namespace HAL
                         const std::string& entry_point, const std::set<std::string>& included_names,
                         CompiledShader& blob_str)
     {
-        if (entry_point.empty()) return;   // DXR libraries: not used on Vulkan yet
-
-        blob_str.functions.emplace_back();
-        auto& f = blob_str.functions.back();
-        f.name  = entry_point;
-        f.wname = convert(f.name);
+        // A DXR library has no -E entry point but one SPIR-V entry point per
+        // raygen/miss/hit shader. Push-constant reads aren't attributed to a
+        // function here, so each one gets the whole module's slots.
+        std::vector<std::string> names;
+        if (!entry_point.empty())
+            names.push_back(entry_point);
+        else
+            for (auto& ep : Spirv::entry_points(blob_str.blob.data(), blob_str.blob.size()))
+                names.push_back(ep.name);
+        if (names.empty()) return;
 
         const auto read = read_push_constant_members(blob_str.blob);
+        UsedSlots module_slots;
         for (auto& name : included_names)
         {
             auto slot = get_slot(name);
             if (slot && read.contains(get_table_index(*slot)))
-                f.slots.merge(*slot);
+                module_slots.merge(*slot);
+        }
+
+        for (auto& name : names)
+        {
+            blob_str.functions.emplace_back();
+            auto& f = blob_str.functions.back();
+            f.name  = name;
+            f.wname = convert(f.name);
+            f.slots = module_slots;
         }
     }
 

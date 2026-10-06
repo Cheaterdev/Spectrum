@@ -83,7 +83,7 @@ void MeshAsset::init_gpu()
 {
 	FenceWaiter last;
 	int i = 0;
-	if (RenderSystem::get().device().is_rtx_supported())
+	if (RenderSystem::get().device().is_ray_query_supported())
 		for (auto& mesh : meshes)
 		{
 			auto list = (RenderSystem::get().device().get_queue(CommandListType::DIRECT)->get_free_list());
@@ -193,8 +193,21 @@ MeshAsset::MeshAsset(std::wstring file_name, AssetLoadingContext::ptr c)
 	auto block = [&]<class T>(size_t count) {
 		return allocator.Allocate<T>(count, device.structured_buffer_alignment(sizeof(T)));
 	};
+	// Each mesh part's indices start a structured view too, so on the GPU they are
+	// padded apart to a legal view offset (Vulkan: minStorageBufferOffsetAlignment).
+	const size_t index_align = device.structured_buffer_alignment(sizeof(UINT32)) / sizeof(UINT32);
+	std::vector<UINT32> gpu_indices;
+	std::vector<size_t> gpu_index_offsets;
+	for (auto& mesh : data->meshes)
+	{
+		gpu_indices.resize(Math::roundUp(gpu_indices.size(), index_align));
+		gpu_index_offsets.push_back(gpu_indices.size());
+		auto first = data->index_buffer.begin() + mesh.index_offset;
+		gpu_indices.insert(gpu_indices.end(), first, first + mesh.index_count);
+	}
+
 	auto vertex_handle = block.operator()<Table::Meshes::mesh_vertex_input>(data->vertex_buffer.size());
-	auto index_handle = block.operator()<uint>(data->index_buffer.size());
+	auto index_handle = block.operator()<uint>(gpu_indices.size());
 	auto unique_index_handle = block.operator()<uint>(unique_ids_buffer.size());
 	auto primitive_index_handle = block.operator()<uint>(priimitive_ids_buffer.size());
 	auto meshlet_handle = block.operator()<Table::Meshes::Meshlet>(meshlets.size());
@@ -264,7 +277,7 @@ MeshAsset::MeshAsset(std::wstring file_name, AssetLoadingContext::ptr c)
 
 	auto list = (RenderSystem::get().device().get_upload_list());
 	list->get_copy().update<Table::Meshes::mesh_vertex_input>(vertex_buffer_view, 0, data->vertex_buffer);
-	list->get_copy().update<UINT32>(index_buffer_view, 0, data->index_buffer);
+	list->get_copy().update<UINT32>(index_buffer_view, 0, gpu_indices);
 	list->get_copy().update<Table::Meshes::Meshlet>(this->meshlets, 0, meshlets);
 	list->get_copy().update<Table::Meshes::MeshletCullData>(meshlet_cull_datas, 0, meshlet_cull);
 	list->get_copy().update<Table::Meshes::MeshletGroup>(meshlet_groups, 0, meshlet_group_rows);
@@ -301,7 +314,7 @@ MeshAsset::MeshAsset(std::wstring file_name, AssetLoadingContext::ptr c)
 			compiled.index_buffer_view = buffer->create_view<HAL::StructuredBufferView<UINT32>>(
 				RenderSystem::get().device().get_static_gpu_data(),
 				StructuredBufferViewDesc{
-					index_buffer_view.desc.offset  + mesh.index_offset * sizeof(UINT32),
+					index_buffer_view.desc.offset  + gpu_index_offsets[meshes.size() - 1] * sizeof(UINT32),
 					mesh.index_count * sizeof(UINT32),
 					counterType::NONE
 				});
@@ -559,7 +572,7 @@ void MeshAssetInstance::on_remove()
 
 void MeshAssetInstance::update_rtx_instance()
 {
-	if (!RenderSystem::get().device().is_rtx_supported()) return;
+	if (!RenderSystem::get().device().is_ray_query_supported()) return;
 
 	if (!ras_handle) scene->raytrace->allocate(ras_handle, rendering_count);
 
@@ -582,7 +595,8 @@ void MeshAssetInstance::update_rtx_instance()
 			instanceDesc.mask = (uint)(mode == Meshes::TransparencyMode::Translucent ? Meshes::RTInstanceMask::Translucent : Meshes::RTInstanceMask::Opaque);
 			instanceDesc.acceleration_structure = info.ras->get_gpu_address().get_ptr();
 			instanceDesc.instance_id = info.node_id;
-			instanceDesc.hit_group_index = RTX::get().rtx.get_index(material);
+			// Hit groups exist only with ray tracing pipelines; inline RayQuery ignores the index.
+			instanceDesc.hit_group_index = RenderSystem::get().device().is_rtx_supported() ? RTX::get().rtx.get_index(material) : 0;
 
 			// Phase 5.19: the BLAS geometry itself is always built OPAQUE
 			// (see init_gpu() above -- one BLAS per raw mesh part, shared
@@ -664,7 +678,7 @@ bool MeshAssetInstance::update_transforms()
 
 bool MeshAssetInstance::init_ras(HAL::CommandList::ptr list)
 {
-	if (!RenderSystem::get().device().is_rtx_supported()) return false;
+	if (!RenderSystem::get().device().is_ray_query_supported()) return false;
 
 
 
