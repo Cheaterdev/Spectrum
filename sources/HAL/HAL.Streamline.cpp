@@ -87,6 +87,16 @@ namespace nvidia
 			return;
 		}
 
+		// The test runner tears GraphicsSystem down and re-creates it per test
+		// category, and Streamline does not survive slShutdown + slInit in one
+		// process: sl_dlss_d access-violates during the repeated init (~1 in 33
+		// full runs). No test uses DLSS, so tests skip Streamline entirely.
+		if (Application::test_mode)
+		{
+			Log::get() << "[Streamline] skipped in test mode - DLSS disabled" << Log::endl;
+			return;
+		}
+
 		const std::wstring plugin_dir = exe_relative(kPluginSubDir);
 		if (plugin_dir.empty()) return;
 

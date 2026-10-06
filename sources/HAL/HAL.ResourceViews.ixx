@@ -452,8 +452,7 @@ export
 
 				if (desc.counted == counterType::SELF)
 				{
-					uint local_offset = 0;
-					local_offset = Math::roundUp(4, sizeof(Underlying<T>));
+					const uint local_offset = static_cast<uint>(resource->get_device().counter_prefix(sizeof(Underlying<T>)));
 					if (size == 0) size = get_desc().as_buffer().SizeInBytes;
 					size -= local_offset;
 					offset += local_offset;
@@ -540,7 +539,7 @@ export
 			                     HAL::HeapType heap_type = HAL::HeapType::DEFAULT) :
 				StructuredBufferViewBase(std::make_shared<HAL::Buffer>(device,
 					HAL::ResourceDesc::Buffer(
-						count * sizeof(T) + (counted == counterType::SELF) * Math::roundUp(4, sizeof(Underlying<T>)),
+						count * sizeof(T) + (counted == counterType::SELF) * device.counter_prefix(sizeof(Underlying<T>)),
 						flags), heap_type))
 
 			{

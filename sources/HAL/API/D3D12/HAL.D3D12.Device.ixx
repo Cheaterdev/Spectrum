@@ -33,6 +33,8 @@ export namespace HAL {
             D3D::Device get_native_device();
 
             HRESULT get_device_removed_reason() const;
+            // The device is gone (removed, hung, reset, faulted).
+            bool    is_lost() const { return get_device_removed_reason() < 0; }   // FAILED(): a macro, not visible here
 
             // Fence waits on every queue already cover all D3D12 GPU work.
             void wait_device_idle() {}

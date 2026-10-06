@@ -1,8 +1,6 @@
 module;
 #define VK_USE_PLATFORM_WIN32_KHR
 #include <vulkan/vulkan.h>
-#include <vma/vk_mem_alloc.h>
-#include <windows.h>   // TEMP: Vulkan memory leak (HeapSummary)
 module HAL:SwapChain;
 
 import Core;
@@ -570,40 +568,6 @@ namespace HAL
         // Index of the image we are about to present (still identifies this frame's
         // image; the acquire below updates current_image to the NEXT frame's image).
         const uint32_t presented_image = current_image;
-
-        // TEMP: Vulkan memory leak -- VMA totals every 200 frames.
-        {
-            static uint64_t temp_frames = 0;
-            DebugSync::temp_frame.store(temp_frames, std::memory_order_relaxed);
-            if (temp_frames++ % 200 == 0 && api_dev.get_vma_allocator())
-            {
-                VmaTotalStatistics st{};
-                vmaCalculateStatistics(api_dev.get_vma_allocator(), &st);
-                std::ofstream("vma_stats.temp", std::ios::app) << "frame " << temp_frames
-                    << " blocks " << st.total.statistics.blockCount
-                    << " block_mb " << (st.total.statistics.blockBytes >> 20)
-                    << " allocs " << st.total.statistics.allocationCount
-                    << " alloc_mb " << (st.total.statistics.allocationBytes >> 20)
-                    << " | desc_heaps " << API::temp_live[API::TL_DescHeaps]
-                    << " desc_slots " << API::temp_live[API::TL_DescSlots]
-                    << " views " << API::temp_live[API::TL_ImageViews]
-                    << " resources " << API::temp_live[API::TL_Resources]
-                    << " cmd_pools " << API::temp_live[API::TL_CmdPools]
-                    << " cmd_bufs " << API::temp_live[API::TL_Pipelines]
-                    << " | heaps_committed_mb " << [] {
-                           HANDLE heaps[256];
-                           DWORD n = GetProcessHeaps(256, heaps);
-                           SIZE_T total = 0;
-                           for (DWORD i = 0; i < n && i < 256; i++)
-                           {
-                               HEAP_SUMMARY hs{ sizeof(HEAP_SUMMARY) };
-                               if (HeapSummary(heaps[i], 0, &hs)) total += hs.cbCommitted;
-                           }
-                           return total >> 20;
-                       }()
-                    << "\n";
-            }
-        }
 
         // ===================================================================
         //  CRITICAL ORDERING.

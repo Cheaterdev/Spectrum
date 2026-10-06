@@ -92,21 +92,6 @@ namespace HAL
 
         if (opaque.empty() && image.empty()) return;
 
-        // TEMP: Vulkan 3D bring-up slowdown -- sparse bind volume over time.
-        {
-            static std::mutex m;
-            static uint64_t calls = 0, binds = 0;
-            static auto start = std::chrono::steady_clock::now();
-            std::lock_guard g(m);
-            ++calls;
-            binds += opaque.size() + image.size();
-            if (calls % 200 == 0)
-                std::ofstream("sparse_binds.temp", std::ios::app)
-                    << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start).count()
-                    << " ms: calls " << calls << " binds " << binds
-                    << " last=" << infos.resource->get_name() << " (" << opaque.size() + image.size() << ")\n";
-        }
-
         VkSparseBufferMemoryBindInfo      buffer_bind{ res->get_vk_buffer(), uint32_t(opaque.size()), opaque.data() };
         VkSparseImageOpaqueMemoryBindInfo opaque_bind{ res->get_vk_image(), uint32_t(opaque.size()), opaque.data() };
         VkSparseImageMemoryBindInfo       image_bind { res->get_vk_image(), uint32_t(image.size()),  image.data() };
@@ -191,16 +176,6 @@ namespace HAL
                 auto mip      = mip_desc.get_mip(texture.subresource);
                 auto box      = ivec3(mip_desc.get_size(mip));
 
-                // TEMP: Vulkan crash investigation -- remove once the crash is found.
-                {
-                    auto want = device.get_texture_layout(srequest.resource->get_desc(), texture.subresource, box);
-                    std::ofstream("ds_queue.temp", std::ios::app) << srequest.file.string()
-                        << " off=" << srequest.file_offset << " size=" << srequest.size
-                        << " uncompressed=" << srequest.uncompressed_size << " compressed=" << srequest.compressed
-                        << " sub=" << texture.subresource << " save_row=" << save_layout.row_stride
-                        << " layout_row=" << want.row_stride << " layout_size=" << want.size << "\n" << std::flush;
-                }
-
                 list->get_copy().update_texture(
                     srequest.resource.get(),
                     ivec3(0, 0, 0),
@@ -242,10 +217,6 @@ namespace HAL
             ASSERT(api_dev.queue_supports_sparse(bind_type) && "the DIRECT queue family cannot bind sparse memory");
             vkGetDeviceQueue(vk_device, api_dev.get_queue_family(bind_type), api_dev.get_queue_index(bind_type), &sparse_queue);
             sparse_queue_mutex = &api_dev.get_queue_mutex(bind_type);
-            API::temp_register_checkpoint_queue(vk_queue, std::string(magic_enum::enum_name(type)));   // TEMP
-            // TEMP: Vulkan 3D bring-up hang -- which queues bind sparse elsewhere.
-            Log::get() << "[Vulkan] queue " << magic_enum::enum_name(type) << " family " << family_idx
-                << " binds sparse on " << (sparse_queue == vk_queue ? "itself" : "DIRECT") << Log::endl;
 
             VkSemaphoreTypeCreateInfo sem_type{ VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO };
             sem_type.semaphoreType = VK_SEMAPHORE_TYPE_TIMELINE;
@@ -291,9 +262,6 @@ namespace HAL
         void Queue::bind_sparse(VkBindSparseInfo& info)
         {
             if (vk_queue == VK_NULL_HANDLE) return;
-            // TEMP: Vulkan 3D bring-up hang experiment.
-            static const bool skip = std::getenv("SPECTRUM_TEMP_NO_BIND") != nullptr;
-            if (skip) return;
 
             std::unique_lock own(*vk_queue_mutex, std::defer_lock);
             std::unique_lock bind(*sparse_queue_mutex, std::defer_lock);
@@ -461,11 +429,6 @@ namespace HAL
         {
             if (!waiter || vk_queue == VK_NULL_HANDLE) return;
             if (waiter.fence->timeline_semaphore == VK_NULL_HANDLE) return;
-
-            // TEMP: Vulkan teardown hang investigation -- remove once found.
-            std::ofstream("gpu_wait.temp", std::ios::app) << "queue " << (void*)static_cast<HAL::Queue*>(this)
-                << " waits fence " << (void*)waiter.fence << " value " << waiter.value
-                << " completed " << static_cast<const HAL::Fence*>(waiter.fence)->get_completed_value() << "\n" << std::flush;
 
             VkSemaphoreSubmitInfo sem{ VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO };
             sem.semaphore = waiter.fence->timeline_semaphore;

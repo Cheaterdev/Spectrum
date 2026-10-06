@@ -17,6 +17,8 @@ export namespace HAL {
 
             ComPtr<ID3D12PipelineState> get_native();
             ComPtr<ID3D12StateObject>   get_native_state();
+
+            bool is_built() const { return m_pipelineState || m_StateObject; }
         };
 
         class PipelineStateBase

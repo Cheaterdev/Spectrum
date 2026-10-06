@@ -4,9 +4,12 @@ namespace Utility
 	struct BlueNoise
 	{
 		uint frame_index;
-		Buffer<uint> sobol_buffer;
-		Buffer<uint> ranking_tile_buffer;
-		Buffer<uint> scrambling_tile_buffer;
+		# Structured, not typed Buffer<uint>: on Vulkan a typed read through the
+		# storage-buffer descriptor the heap holds is undefined -- WRITE_INVALID
+		# device loss on NVIDIA within a few frames.
+		StructuredBuffer<uint> sobol_buffer;
+		StructuredBuffer<uint> ranking_tile_buffer;
+		StructuredBuffer<uint> scrambling_tile_buffer;
 
 		RWTexture2D<float2> blue_noise_texture;
 	}

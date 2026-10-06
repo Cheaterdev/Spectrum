@@ -552,6 +552,27 @@ namespace HAL
 		}
 	}
 
+	// Every draw records the bound targets, for the same reason commit_tables
+	// records bound tables on every command rather than only when dirty:
+	// set_rtv records them only in the operation it opens, and set_pipeline
+	// starts a new one. A draw in that new operation then had no usage for its
+	// own render target, so for a texture the FrameGraph doesn't own the
+	// barrier pass took set_rtv's clear as the last use and rested the target
+	// right after it -- the draw ran with it in its resting layout (#1334,
+	// SHADER_RESOURCE / COPY_DEST where RENDER_TARGET / DEPTH_WRITE is needed).
+	void GraphicsContext::record_target_usage()
+	{
+		PROFILE(L"target_usage");
+
+		const Handles::RTV& table_rtv = compiled_rt.table_rtv;
+		const Handles::DSV& table_dsv = compiled_rt.table_dsv;
+
+		for (uint i = 0; i < table_rtv.get_count(); i++)
+			get_base().add_resource_usage(table_rtv[i].get_resource_info());
+		if (table_dsv)
+			get_base().add_resource_usage(table_dsv.get_resource_info());
+	}
+
 	void GraphicsContext::set_rtv(const CompiledRT& rt, RTOptions options, float depth, uint stencil, vec4 clear_color)
 	{
 		compiled_rt = rt;

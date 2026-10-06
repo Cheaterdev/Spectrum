@@ -128,6 +128,21 @@ namespace HAL::API
 
         // Descriptor set bindings don't carry over into a new command buffer.
         heaps_dirty = resource_set != VK_NULL_HANDLE;
+
+        // This list object is pooled: without the reset, a root slot this recording
+        // never sets would keep a descriptor index from whichever pass used the
+        // object last, and push_full_constants() re-sends that stale index after
+        // every command-buffer split -- a shader then reads or writes through a
+        // descriptor that may now name a freed resource.
+        // Same for the bound pipelines: a fresh command buffer has none, and
+        // reapply_draw_state() would otherwise re-bind the last recording's.
+        current_graphics_pipeline = VK_NULL_HANDLE;
+        current_compute_pipeline  = VK_NULL_HANDLE;
+
+        // COPY lists run no shaders, and their transfer-only pool rejects push constants.
+        push_constants.fill(0);
+        if (type != CommandListType::COPY)
+            push_full_constants();
     }
 
     void CommandList::end()
@@ -227,19 +242,6 @@ namespace HAL::API
 
         std::vector<VkImageMemoryBarrier2> image_barriers;
         std::vector<VkBufferMemoryBarrier2> buffer_barriers;
-
-        if (temp_dumping())   // TEMP: what the engine handed us, before any filtering
-        {
-            temp_dump(std::format("TRANSITIONS n={}", barriers.get_barriers().size()));
-            for (auto& b : barriers.get_barriers())
-                temp_dump(std::format("  in: {} type={} img={:x} range(all={} mip {}+{} slice {}+{}) sync {:x}->{:x} access {:x}->{:x} layout {:x}->{:x} flags {:x}",
-                    b.resource ? std::string(b.resource->name) : std::string("null"),
-                    b.resource ? int(b.resource->get_type()) : -1,
-                    b.resource ? uint64_t(static_cast<const API::Resource*>(b.resource)->get_vk_image()) : 0,
-                    b.range.is_all(), b.range.first_mip, b.range.num_mips, b.range.first_slice, b.range.num_slices,
-                    uint(b.before.operation), uint(b.after.operation), uint(b.before.access), uint(b.after.access),
-                    uint(b.before.layout), uint(b.after.layout), uint(b.flags)));
-        }
 
         for (auto& b : barriers.get_barriers())
         {
@@ -355,14 +357,6 @@ namespace HAL::API
         alias_flush.srcAccessMask = VK_ACCESS_2_MEMORY_WRITE_BIT;
         alias_flush.dstStageMask  = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
         alias_flush.dstAccessMask = VK_ACCESS_2_MEMORY_READ_BIT | VK_ACCESS_2_MEMORY_WRITE_BIT;
-
-        for (auto& ib : image_barriers)
-            temp_dump(std::format("  BARRIER img={:x} mip {}+{} layer {}+{} stage {:x}->{:x} access {:x}->{:x} layout {}->{}",
-                uint64_t(ib.image), ib.subresourceRange.baseMipLevel, ib.subresourceRange.levelCount,
-                ib.subresourceRange.baseArrayLayer, ib.subresourceRange.layerCount,
-                uint64_t(ib.srcStageMask), uint64_t(ib.dstStageMask), uint64_t(ib.srcAccessMask), uint64_t(ib.dstAccessMask),
-                int(ib.oldLayout), int(ib.newLayout)));
-        if (any_discard) temp_dump("  GLOBAL alias flush");
 
         VkDependencyInfo dep{ VK_STRUCTURE_TYPE_DEPENDENCY_INFO };
         if (any_discard)
@@ -793,7 +787,13 @@ namespace HAL::API
     void CommandList::set_pipeline(std::shared_ptr<TrackedPipeline> pipeline)
     {
         if (!pipeline || vk_cmd == VK_NULL_HANDLE) return;
-        if (pipeline->vk_pipeline == VK_NULL_HANDLE) return;
+        // Not built yet (a shader still compiling): forget the previous pipeline so
+        // the draws/dispatches meant for this one are skipped, not run with it.
+        if (pipeline->vk_pipeline == VK_NULL_HANDLE)
+        {
+            (pipeline->is_compute ? current_compute_pipeline : current_graphics_pipeline) = VK_NULL_HANDLE;
+            return;
+        }
 
         VkPipelineBindPoint bind_point = pipeline->is_compute
             ? VK_PIPELINE_BIND_POINT_COMPUTE
@@ -838,8 +838,7 @@ namespace HAL::API
     void CommandList::draw(UINT vertex_count, UINT vertex_offset,
                             UINT instance_count, UINT instance_offset)
     {
-        if (vk_cmd == VK_NULL_HANDLE) return;
-        temp_mark("draw");
+        if (vk_cmd == VK_NULL_HANDLE || current_graphics_pipeline == VK_NULL_HANDLE) return;
         ensure_rendering_active();
         if (!in_render_pass) return; // no RTV set — skip rather than crash validation
         reapply_draw_state();
@@ -850,8 +849,7 @@ namespace HAL::API
     void CommandList::draw_indexed(UINT index_count, UINT index_offset, UINT vertex_offset,
                                     UINT instance_count, UINT instance_offset)
     {
-        if (vk_cmd == VK_NULL_HANDLE) return;
-        temp_mark("draw_indexed");
+        if (vk_cmd == VK_NULL_HANDLE || current_graphics_pipeline == VK_NULL_HANDLE) return;
         ensure_rendering_active();
         if (!in_render_pass) return;
         reapply_draw_state();
@@ -864,14 +862,12 @@ namespace HAL::API
 
     void CommandList::dispatch(ivec3 v)
     {
-        if (vk_cmd == VK_NULL_HANDLE) return;
-        temp_mark("dispatch");
+        if (vk_cmd == VK_NULL_HANDLE || current_compute_pipeline == VK_NULL_HANDLE) return;
         // Compute doesn't use a render pass — end any active one first.
         end_rendering_if_active();
         // Same reason as reapply_draw_state: the pipeline may have been bound in
         // an earlier command buffer of a split recording.
-        if (current_compute_pipeline != VK_NULL_HANDLE)
-            vkCmdBindPipeline(vk_cmd, VK_PIPELINE_BIND_POINT_COMPUTE, current_compute_pipeline);
+        vkCmdBindPipeline(vk_cmd, VK_PIPELINE_BIND_POINT_COMPUTE, current_compute_pipeline);
         flush_heaps();
         push_full_constants();  // compute shaders read bindless indices from push data
         vkCmdDispatch(vk_cmd, static_cast<uint32_t>(v.x),
@@ -881,8 +877,7 @@ namespace HAL::API
 
     void CommandList::dispatch_mesh(ivec3 v)
     {
-        if (vk_cmd == VK_NULL_HANDLE) return;
-        temp_mark("dispatch_mesh");
+        if (vk_cmd == VK_NULL_HANDLE || current_graphics_pipeline == VK_NULL_HANDLE) return;
         // Mesh dispatch is a rasterization command — needs an active render pass and
         // the same pipeline/viewport/scissor/heaps as a draw (but no topology).
         ensure_rendering_active();
@@ -1014,7 +1009,6 @@ namespace HAL::API
     void CommandList::copy_resource(HAL::Resource* dest, HAL::Resource* source)
     {
         if (!dest || !source || vk_cmd == VK_NULL_HANDLE) return;
-        temp_mark("copy_resource");
         auto& dst_api = static_cast<API::Resource&>(*dest);
         auto& src_api = static_cast<API::Resource&>(*source);
 
@@ -1056,7 +1050,6 @@ namespace HAL::API
                                    HAL::Resource* source, uint64 src_offset, uint64 size)
     {
         if (!dest || !source || vk_cmd == VK_NULL_HANDLE) return;
-        temp_mark("copy_buffer");
         auto& dst_api = static_cast<API::Resource&>(*dest);
         auto& src_api = static_cast<API::Resource&>(*source);
         if (dst_api.get_vk_buffer() == VK_NULL_HANDLE ||
@@ -1138,7 +1131,6 @@ namespace HAL::API
                                     const Resource::ptr& source, int src_sub)
     {
         if (!dest || !source || vk_cmd == VK_NULL_HANDLE) return;
-        temp_mark("copy_texture");
         auto& dst = static_cast<API::Resource&>(*dest);
         auto& src = static_cast<API::Resource&>(*source);
         if (dst.get_vk_image() == VK_NULL_HANDLE || src.get_vk_image() == VK_NULL_HANDLE) return;
@@ -1166,7 +1158,6 @@ namespace HAL::API
                                     const Resource::ptr& source, ivec3 src_pos, ivec3 size)
     {
         if (!dest || !source || vk_cmd == VK_NULL_HANDLE) return;
-        temp_mark("copy_texture_region");
         auto& dst = static_cast<API::Resource&>(*dest);
         auto& src = static_cast<API::Resource&>(*source);
         if (dst.get_vk_image() == VK_NULL_HANDLE || src.get_vk_image() == VK_NULL_HANDLE) return;
@@ -1220,7 +1211,6 @@ namespace HAL::API
         if (vk_cmd == VK_NULL_HANDLE) return;
         // Narrow wstring → UTF-8 for Vulkan
         std::string label(name.begin(), name.end());
-        API::temp_checkpoint(vk_cmd, "begin " + label);   // TEMP
         auto* dev = static_cast<API::Device*>(m_device);
         if (!dev) return;
         auto fn = reinterpret_cast<PFN_vkCmdBeginDebugUtilsLabelEXT>(
@@ -1239,7 +1229,6 @@ namespace HAL::API
         auto fn = reinterpret_cast<PFN_vkCmdEndDebugUtilsLabelEXT>(
             vkGetDeviceProcAddr(dev->get_native_device(), "vkCmdEndDebugUtilsLabelEXT"));
         if (fn) fn(vk_cmd);
-        API::temp_checkpoint(vk_cmd, "end");   // TEMP
     }
 
     // ---- Indirect -----------------------------------------------------------
@@ -1253,7 +1242,6 @@ namespace HAL::API
                                         Resource* counter_buffer, UINT64 counter_offset)
     {
         if (vk_cmd == VK_NULL_HANDLE || !command_buffer) return;
-        temp_mark("execute_indirect");
         auto& args_res = static_cast<API::Resource&>(*command_buffer);
         VkBuffer args = args_res.get_vk_buffer();
         if (args == VK_NULL_HANDLE) return;
@@ -1272,6 +1260,7 @@ namespace HAL::API
         {
         case IndirectKind::DrawIndexed:
         {
+            if (current_graphics_pipeline == VK_NULL_HANDLE) return;
             ensure_rendering_active();
             if (!in_render_pass) return;
             reapply_draw_state();
@@ -1287,6 +1276,7 @@ namespace HAL::API
         }
         case IndirectKind::DispatchMesh:
         {
+            if (current_graphics_pipeline == VK_NULL_HANDLE) return;
             ensure_rendering_active();
             if (!in_render_pass) return;
             reapply_draw_state();
@@ -1311,9 +1301,9 @@ namespace HAL::API
         }
         case IndirectKind::Dispatch:
         {
+            if (current_compute_pipeline == VK_NULL_HANDLE) return;
             end_rendering_if_active();
-            if (current_compute_pipeline != VK_NULL_HANDLE)
-                vkCmdBindPipeline(vk_cmd, VK_PIPELINE_BIND_POINT_COMPUTE, current_compute_pipeline);
+            vkCmdBindPipeline(vk_cmd, VK_PIPELINE_BIND_POINT_COMPUTE, current_compute_pipeline);
             flush_heaps();
             push_full_constants();  // compute shaders read bindless indices from push data
             // Vulkan has no indirect-count dispatch; issue up to max_commands
@@ -1328,33 +1318,9 @@ namespace HAL::API
     }
 
     // ---- Misc ---------------------------------------------------------------
-    void CommandList::temp_mark(const char* op)
-    {
-        API::temp_checkpoint(vk_cmd, std::format("{} {} #{}", temp_name, op, temp_op++));
-        temp_dump(std::format("  CMD {}", op));
-    }
-
-    // TEMP: bloom sync investigation -- writes this list's barriers and
-    // commands to barrier_dump.temp for the DebugSync frame range.
-    bool CommandList::temp_dumping() const
-    {
-        const uint64_t f = DebugSync::temp_frame.load(std::memory_order_relaxed);
-        return f >= DebugSync::temp_dump_first && f <= DebugSync::temp_dump_last
-            && temp_name.find("Bloom") != std::string::npos;
-    }
-
-    void CommandList::temp_dump(const std::string& line)
-    {
-        if (!temp_dumping()) return;
-        static std::mutex m;
-        std::lock_guard g(m);
-        std::ofstream("barrier_dump.temp", std::ios::app) << "f" << DebugSync::temp_frame.load() << " [" << temp_name << "] " << line << "\n";
-    }
-
     void CommandList::set_name(std::wstring_view name)
     {
-        temp_name.assign(name.begin(), name.end());   // TEMP
-        temp_op = 0;
+        debug_name.assign(name.begin(), name.end());
         if (vk_cmd == VK_NULL_HANDLE) return;
         auto* dev = static_cast<API::Device*>(m_device);
         if (!dev) return;
@@ -1373,13 +1339,9 @@ namespace HAL::API
         static bool warned = false;
         if (!warned) { warned = true; Log::get() << Log::LEVEL_WARNING << "[Vulkan] CommandList::discard not implemented" << Log::endl; }
     }
-    // TEMP: Vulkan device-lost experiment -- SPECTRUM_TEMP_NO_TIMESTAMPS skips
-    // every timestamp write and resolve.
-    static const bool temp_no_timestamps = std::getenv("SPECTRUM_TEMP_NO_TIMESTAMPS") != nullptr;
-
     void CommandList::insert_time(const QueryHandle& handle, uint index)
     {
-        if (vk_cmd == VK_NULL_HANDLE || temp_no_timestamps) return;
+        if (vk_cmd == VK_NULL_HANDLE) return;
         auto* heap = handle.get_heap().get();
         if (!heap) return;
         auto& api_heap = static_cast<API::QueryHeap&>(*heap);
@@ -1397,7 +1359,7 @@ namespace HAL::API
     void CommandList::resolve_times(const QueryHeap* heap, uint32_t count,
                                      ResourceAddress dest)
     {
-        if (!heap || vk_cmd == VK_NULL_HANDLE || !dest.resource || temp_no_timestamps) return;
+        if (!heap || vk_cmd == VK_NULL_HANDLE || !dest.resource) return;
 
         auto& api_heap = static_cast<const API::QueryHeap&>(*heap);
         if (api_heap.get_native() == VK_NULL_HANDLE) return;

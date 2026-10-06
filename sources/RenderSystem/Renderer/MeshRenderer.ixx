@@ -119,6 +119,7 @@ class mesh_renderer : public renderer, public Events::prop_handler, VariableCont
         unsigned int rendered_instanced;
         unsigned int instances_count;
 
+        Variable<bool> draw_meshes = { true, "Draw meshes", this };
         Variable<bool> use_gpu_occlusion = { true,"GPU culling", this };
         // Additive on top of use_gpu_occlusion's instance-level box test --
         // per-meshlet Hi-Z check in the AS, for objects partly occluded

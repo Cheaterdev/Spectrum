@@ -21,36 +21,9 @@ namespace
     PFN_vkGetDeviceFaultInfoEXT fn_get_fault_info = nullptr;
     std::atomic_bool            fault_reported    = false;
 
-    // TEMP: device-lost investigation -- diagnostic checkpoints.
-    PFN_vkCmdSetCheckpointNV        fn_set_checkpoint      = nullptr;
-    PFN_vkGetQueueCheckpointDataNV  fn_get_checkpoint_data = nullptr;
-    std::mutex                      checkpoint_mutex;
-    std::unordered_set<std::string> checkpoint_labels;   // stable storage: markers are raw pointers
-    std::vector<std::pair<VkQueue, std::string>> checkpoint_queues;
-
-    void log_checkpoints()
-    {
-        if (!fn_get_checkpoint_data) return;
-        std::lock_guard g(checkpoint_mutex);
-        Log::get() << Log::LEVEL_ERROR << "[Vulkan] checkpoint labels recorded: " << checkpoint_labels.size() << Log::endl;
-        for (auto& [queue, name] : checkpoint_queues)
-        {
-            uint32_t count = 0;
-            fn_get_checkpoint_data(queue, &count, nullptr);
-            Log::get() << Log::LEVEL_ERROR << "[Vulkan] checkpoint " << name << ": " << count << " entries" << Log::endl;
-            std::vector<VkCheckpointDataNV> data(count, { VK_STRUCTURE_TYPE_CHECKPOINT_DATA_NV });
-            fn_get_checkpoint_data(queue, &count, data.data());
-            for (auto& d : data)
-                Log::get() << Log::LEVEL_ERROR << "[Vulkan] checkpoint " << name << " "
-                           << std::string(magic_enum::enum_name(d.stage)) << ": "
-                           << (d.pCheckpointMarker ? static_cast<const char*>(d.pCheckpointMarker) : "<none>") << Log::endl;
-        }
-    }
-
     void log_device_fault(const char* where)
     {
         Log::get() << Log::LEVEL_ERROR << "[Vulkan] VK_ERROR_DEVICE_LOST detected at " << where << Log::endl;
-        log_checkpoints();
         if (!fn_get_fault_info || fault_device == VK_NULL_HANDLE)
         {
             Log::get() << Log::LEVEL_ERROR << "[Vulkan] no VK_EXT_device_fault report available" << Log::endl;
@@ -106,21 +79,10 @@ namespace HAL::API
         return true;
     }
 
-    void temp_checkpoint(VkCommandBuffer cmd, std::string_view label)
+    // Becomes true at the first VK_ERROR_DEVICE_LOST any submit or wait saw.
+    bool Device::is_lost() const
     {
-        if (!fn_set_checkpoint) return;
-        const char* marker;
-        {
-            std::lock_guard g(checkpoint_mutex);
-            marker = checkpoint_labels.emplace(label).first->c_str();
-        }
-        fn_set_checkpoint(cmd, marker);
-    }
-
-    void temp_register_checkpoint_queue(VkQueue queue, std::string name)
-    {
-        std::lock_guard g(checkpoint_mutex);
-        checkpoint_queues.emplace_back(queue, std::move(name));
+        return fault_reported.load();
     }
 }
 
@@ -363,10 +325,6 @@ namespace HAL
                 VK_EXT_DEVICE_FAULT_EXTENSION_NAME,
                 // nullDescriptor: D3D12-style null views for unbound slots.
                 VK_EXT_ROBUSTNESS_2_EXTENSION_NAME,
-                // TEMP: device-lost investigation -- GPU address bind/unbind reports.
-                VK_EXT_DEVICE_ADDRESS_BINDING_REPORT_EXTENSION_NAME,
-                VK_NV_DEVICE_DIAGNOSTIC_CHECKPOINTS_EXTENSION_NAME,   // TEMP
-                VK_NV_DEVICE_DIAGNOSTICS_CONFIG_EXTENSION_NAME,       // TEMP
                 // Required by DXC SPIRV for 'discard' in pixel shaders.
                 VK_EXT_SHADER_DEMOTE_TO_HELPER_INVOCATION_EXTENSION_NAME,
                 // Optional: ddx/ddy in compute shaders.
@@ -498,19 +456,6 @@ namespace HAL
                 feature_head = &robustness2_features;
             }
 
-            // TEMP: device-lost investigation.
-            VkPhysicalDeviceDiagnosticsConfigFeaturesNV diag_features{
-                VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DIAGNOSTICS_CONFIG_FEATURES_NV };
-            if (has_ext(VK_NV_DEVICE_DIAGNOSTICS_CONFIG_EXTENSION_NAME)) {
-                diag_features.pNext = feature_head;
-                feature_head = &diag_features;
-            }
-            VkPhysicalDeviceAddressBindingReportFeaturesEXT binding_report_features{
-                VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ADDRESS_BINDING_REPORT_FEATURES_EXT };
-            if (has_ext(VK_EXT_DEVICE_ADDRESS_BINDING_REPORT_EXTENSION_NAME)) {
-                binding_report_features.pNext = feature_head;
-                feature_head = &binding_report_features;
-            }
             if (has_maintenance8) {
                 maint8_features.pNext = feature_head;
                 feature_head = &maint8_features;
@@ -571,18 +516,6 @@ namespace HAL
             device_ci.ppEnabledExtensionNames = device_extensions.data();
             device_ci.pNext                   = &features2;
 
-            // TEMP: device-lost investigation -- makes the driver keep checkpoint
-            // and resource-tracking data for after a loss.
-            VkDeviceDiagnosticsConfigCreateInfoNV diag_config{ VK_STRUCTURE_TYPE_DEVICE_DIAGNOSTICS_CONFIG_CREATE_INFO_NV };
-            diag_config.flags = VK_DEVICE_DIAGNOSTICS_CONFIG_ENABLE_AUTOMATIC_CHECKPOINTS_BIT_NV
-                              | VK_DEVICE_DIAGNOSTICS_CONFIG_ENABLE_RESOURCE_TRACKING_BIT_NV
-                              | VK_DEVICE_DIAGNOSTICS_CONFIG_ENABLE_SHADER_DEBUG_INFO_BIT_NV;
-            if (has_ext(VK_NV_DEVICE_DIAGNOSTICS_CONFIG_EXTENSION_NAME) && diag_features.diagnosticsConfig)
-            {
-                diag_config.pNext = features2.pNext;
-                features2.pNext   = &diag_config;
-            }
-
             VkResult result = vkCreateDevice(vk_physical, &device_ci, nullptr, &vk_device);
             if (result != VK_SUCCESS)
             {
@@ -605,16 +538,6 @@ namespace HAL
                 fn_get_fault_info = reinterpret_cast<PFN_vkGetDeviceFaultInfoEXT>(
                     vkGetDeviceProcAddr(vk_device, "vkGetDeviceFaultInfoEXT"));
             Log::get() << "[Vulkan] device fault reporting: " << (fn_get_fault_info ? "on" : "unavailable") << Log::endl;
-
-            // TEMP: device-lost investigation.
-            if (has_ext(VK_NV_DEVICE_DIAGNOSTIC_CHECKPOINTS_EXTENSION_NAME))
-            {
-                fn_set_checkpoint = reinterpret_cast<PFN_vkCmdSetCheckpointNV>(
-                    vkGetDeviceProcAddr(vk_device, "vkCmdSetCheckpointNV"));
-                fn_get_checkpoint_data = reinterpret_cast<PFN_vkGetQueueCheckpointDataNV>(
-                    vkGetDeviceProcAddr(vk_device, "vkGetQueueCheckpointDataNV"));
-            }
-            Log::get() << "[Vulkan] diagnostic checkpoints: " << (fn_set_checkpoint ? "on" : "unavailable") << Log::endl;
 
             // ---- DeviceProperties -------------------------------------------
             VkPhysicalDeviceVulkan12Properties vk12_props{

@@ -165,11 +165,16 @@ namespace HAL
 
         std::vector<VkPipelineShaderStageCreateInfo> stages;
         std::vector<VkShaderModule> modules_to_destroy;
+        // A declared stage whose shader is still compiling (material shaders are
+        // async) must hold the whole pipeline back: dropping just that stage builds
+        // a valid pipeline without it -- a missing pixel shader then draws depth
+        // and no color, black until the shader lands and on_change() runs again.
+        bool all_stages_ready = true;
         auto add_stage = [&](VkShaderStageFlagBits stage, auto& shader_ptr)
         {
             if (!shader_ptr) return;
             const auto& blob = shader_ptr->get_blob();
-            if (blob.empty()) return;
+            if (blob.empty()) { all_stages_ready = false; return; }
             // Use the entry point name from compilation (-E flag), e.g. "VS", "PS".
             const auto& ep = shader_ptr->blob.entry_point;
             const char* entry = ep.empty() ? "main" : ep.c_str();
@@ -190,7 +195,12 @@ namespace HAL
         add_stage(VK_SHADER_STAGE_TASK_BIT_EXT, desc.amplification);
         add_stage(VK_SHADER_STAGE_MESH_BIT_EXT, desc.mesh);
 
-        if (stages.empty()) return; // no compiled shaders yet
+        if (stages.empty() || !all_stages_ready)
+        {
+            for (VkShaderModule m : modules_to_destroy)
+                vkDestroyShaderModule(vk_dev, m, nullptr);
+            return; // vk_pipeline stays null; draws with it are skipped until the shaders land
+        }
 
         // A mesh pipeline has no vertex-pulling input assembly and must NOT declare
         // the primitive-topology dynamic state (VUID-...-07065).
@@ -381,6 +391,7 @@ namespace HAL
     void ComputePipelineState::on_change()
     {
         tracked_info.reset(new API::TrackedPipeline());
+        tracked_info->is_compute = true;   // also while not built: binding it then clears the compute slot
         name = desc.name;
 
         slots.clear();
@@ -419,7 +430,6 @@ namespace HAL
         vkCreateComputePipelines(vk_dev, VK_NULL_HANDLE, 1, &cp_ci, nullptr, &pipeline);
         tracked_info->vk_pipeline = pipeline;
         tracked_info->vk_device   = vk_dev;
-        tracked_info->is_compute  = true;
 
         vkDestroyShaderModule(vk_dev, cs_module, nullptr);
     }

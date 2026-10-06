@@ -23,6 +23,9 @@ namespace Shadows
 			{
 
 
+				Handlers::StructuredBuffer<uint> scene = ResourceID::scene;
+
+
 				Handlers::Texture GBuffer_Albedo = ResourceID::GBuffer_Albedo;
 
 
@@ -89,6 +92,7 @@ namespace Shadows
 				// else conditional.
 				static void need_always(Context& data, FrameGraph::TaskBuilder& builder)
 				{
+					builder.need(data.scene, FrameGraph::ResourceFlags::Read);
 					builder.need(data.GBuffer_Albedo, FrameGraph::ResourceFlags::Read);
 					builder.need(data.GBuffer_Normals, FrameGraph::ResourceFlags::Read);
 					builder.need(data.GBuffer_Specular, FrameGraph::ResourceFlags::Read);
@@ -132,6 +136,7 @@ namespace Shadows
 				// the field fixes it.
 				struct Cache
 				{
+					FrameGraph::ChainIndex scene = FrameGraph::ChainIndex::Unresolved;
 					FrameGraph::ChainIndex GBuffer_Albedo = FrameGraph::ChainIndex::Unresolved;
 					FrameGraph::ChainIndex GBuffer_Normals = FrameGraph::ChainIndex::Unresolved;
 					FrameGraph::ChainIndex GBuffer_Specular = FrameGraph::ChainIndex::Unresolved;
@@ -153,6 +158,7 @@ namespace Shadows
 
 				static void save_to_cache([[maybe_unused]] const Context& data, [[maybe_unused]] Cache& cache)
 				{
+					cache.scene = FrameGraph::TaskBuilder::cache_slot(data.scene, ResourceID::scene);
 					cache.GBuffer_Albedo = FrameGraph::TaskBuilder::cache_slot(data.GBuffer_Albedo, ResourceID::GBuffer_Albedo);
 					cache.GBuffer_Normals = FrameGraph::TaskBuilder::cache_slot(data.GBuffer_Normals, ResourceID::GBuffer_Normals);
 					cache.GBuffer_Specular = FrameGraph::TaskBuilder::cache_slot(data.GBuffer_Specular, ResourceID::GBuffer_Specular);
@@ -181,6 +187,7 @@ namespace Shadows
 				// previous link's desc, which LoadGraph does once every pass has loaded.
 				static void load_from_cache([[maybe_unused]] Context& data, [[maybe_unused]] const Cache& cache, [[maybe_unused]] const FrameGraph::TaskBuilder& builder)
 				{
+					builder.load(data.scene, ResourceID::scene, cache.scene);
 					builder.load(data.GBuffer_Albedo, ResourceID::GBuffer_Albedo, cache.GBuffer_Albedo);
 					builder.load(data.GBuffer_Normals, ResourceID::GBuffer_Normals, cache.GBuffer_Normals);
 					builder.load(data.GBuffer_Specular, ResourceID::GBuffer_Specular, cache.GBuffer_Specular);
@@ -204,6 +211,7 @@ namespace Shadows
 				// whether the pass writes it (own [Write], or the view usage's
 				// [Write] / [Write = {leaves...}] for resources inside a view group).
 				static inline const FrameGraph::ResourceAccess resource_accesses[] = {
+					{ ResourceID::scene, false },
 					{ ResourceID::GBuffer_Albedo, false },
 					{ ResourceID::GBuffer_Normals, false },
 					{ ResourceID::GBuffer_Specular, false },

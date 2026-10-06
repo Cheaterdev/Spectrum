@@ -72,6 +72,20 @@ namespace
 	// texel), not the source's: the source is render resolution, whose ratio
 	// to the output depends on the upscaler, and this keeps the filter the
 	// same at any ratio (exactly the 2x case at DLSS Performance).
+	// ExposureState is Static and written by Tonemap after bloom, so on the frame
+	// it is created bloom would threshold against whatever the allocation held
+	// (heap memory is reused). Zero is what the downsample shader treats as "no
+	// exposure yet" (falls back to 1).
+	template<class TContext>
+	void reset_exposure_if_new(TContext& data, FrameContext& context)
+	{
+		if (!data.ExposureState.is_new())
+			return;
+
+		float4 zero[1] = {};
+		context.get_list()->get_copy().update<float4>(*data.ExposureState, 0, std::span(zero));
+	}
+
 	void bloom_level0(HAL::ComputeContext& compute, const HAL::Texture2DView& scene,
 		HAL::Texture2DView& target, const auto& exposure, bool unjitter)
 	{
@@ -178,6 +192,7 @@ void PassDefault<Passes::Post::BloomBuild>::render(Passes::Post::BloomBuild::Con
 	HAL::Texture2DView& taa     = *data.BloomTAA;
 	HAL::Texture2DView& history = *data.BloomTAAHistory;
 
+	reset_exposure_if_new(data, context);
 	bloom_level0(compute, *data.ResultTexture, current, data.ExposureState->structuredBuffer, true);
 
 	const uint64_t frame = context.graph->builder.current_frame->get_frame();
@@ -230,6 +245,7 @@ void PassDefault<Passes::Post::BloomBuildPost>::render(Passes::Post::BloomBuildP
 	compute.set_signature(Layouts::DefaultLayout);
 	context.graph->set_slot(SlotID::FrameInfo, compute);
 
+	reset_exposure_if_new(data, context);
 	bloom_level0(compute, *data.ResultTexture, *data.BloomTAA, data.ExposureState->structuredBuffer, false);
 	bloom_process(data, context);
 }

@@ -391,7 +391,11 @@ export{
 				{
 					setup_debug(&context);
 					context.commit_tables(operation, slots, check_scope);
-					if constexpr (graphics) context.validate();
+					if constexpr (graphics)
+					{
+						context.record_target_usage();
+						context.validate();
+					}
 				}
 			}
 			template<bool compute, bool graphics, class T>
@@ -722,6 +726,7 @@ export{
 			void on_set_signature(const RootSignature::ptr&) override;
 
 			void validate();
+			void record_target_usage();
 			void execute_indirect(IndirectCommand& command_types, UINT max_commands, HAL::Resource* command_buffer, UINT64 command_offset = 0, HAL::Resource* counter_buffer = nullptr, UINT64 counter_offset = 0);
 
 		public:

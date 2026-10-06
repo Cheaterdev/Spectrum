@@ -10,8 +10,8 @@ import HAL;
 using namespace HAL;
 void mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, Scene::ptr scene)
 {
+	if (!draw_meshes) return;
 
-	// return;
 	auto& graphics = mesh_render_context->list->get_graphics();
 	auto& compute = mesh_render_context->list->get_compute();
 	auto& copy = mesh_render_context->list->get_copy();
@@ -439,7 +439,7 @@ mesh_renderer::mesh_renderer() :VariableContext(L"mesh_renderer")
 	}
 	{
 		Slots::Meshes::GatherPipelineGlobal gather;
-		gather.GetCommands() = meshes_ids->buffer.resource->create_view<HAL::FormattedBufferView<UINT, HAL::Format::R32_UINT>>(RenderSystem::get().device().get_static_gpu_data()).buffer;
+		gather.GetCommands() = meshes_ids->buffer.structuredBuffer;
 
 		gather.GetMeshes_count() = meshes_ids->buffer.counter_view;
 
@@ -449,7 +449,7 @@ mesh_renderer::mesh_renderer() :VariableContext(L"mesh_renderer")
 
 	{
 		Slots::Meshes::GatherPipelineGlobal gather;
-		gather.GetCommands() = meshes_invisible_ids->buffer.resource->create_view<HAL::FormattedBufferView<UINT, HAL::Format::R32_UINT>>(RenderSystem::get().device().get_static_gpu_data()).buffer;
+		gather.GetCommands() = meshes_invisible_ids->buffer.structuredBuffer;
 		gather.GetMeshes_count() = meshes_invisible_ids->buffer.counter_view;
 		gather_invisible = gather.compile(RenderSystem::get().device().get_static_gpu_data());
 		//	gather_invisible = meshes_invisible_ids->buffer->help_buffer->get_resource_address();

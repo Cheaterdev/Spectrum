@@ -30,7 +30,21 @@ void MaterialAsset::update_preview(HAL::Texture::ptr preview)
     // get() would construct an AssetRenderer on a backend where GraphicsSystem
     // deliberately doesn't create one (Vulkan: no material pipelines yet).
     if (!AssetRenderer::is_good()) return;
-    AssetRenderer::get().draw(get_ptr<MaterialAsset>(), preview);
+    auto self = get_ptr<MaterialAsset>();
+    AssetRenderer::get().draw(self, preview);
+
+    // The first draw creates the material's pipeline; its shaders then compile
+    // in the background, and until they land its draws are skipped -- the
+    // preview would stay without the material. Wait (this is the preview
+    // thread) and draw again once it can render.
+    if (!is_ready_to_draw())
+    {
+        const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(30);
+        while (!is_ready_to_draw() && std::chrono::steady_clock::now() < deadline)
+            std::this_thread::sleep_for(std::chrono::milliseconds(50));
+        if (is_ready_to_draw())
+            AssetRenderer::get().draw(self, preview);
+    }
     mark_changed();
 }
 

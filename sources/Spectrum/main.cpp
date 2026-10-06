@@ -2541,17 +2541,6 @@ class RenderApplication : public Application
 	std::atomic<bool> need_reload_resource;
 	std::atomic<bool> need_print_screen;
 
-	// TEMP: indirect-command rework perf check. SPECTRUM_GPU_TIMES=1 averages
-	// every PROFILE_GPU scope's GPU time from frame 300 on (past startup and
-	// shader compiles) and writes the table to gpu_times.temp at exit.
-	struct TempGpuTimes : Events::prop_handler
-	{
-		std::mutex m;
-		std::map<std::wstring, std::pair<double, uint64>> acc;   // total ms, samples
-		std::atomic<uint64> frame = 0;
-	};
-	std::unique_ptr<TempGpuTimes> temp_gpu_times;
-
 protected:
 	RenderApplication()
 	{
@@ -2559,40 +2548,12 @@ protected:
 		FileSystem::get().register_provider(std::make_shared<native_file_provider>());
 		GraphicsSystem::create();
 
-		if (const char* v = std::getenv("SPECTRUM_GPU_TIMES"); v && *v && *v != '0')
-		{
-			temp_gpu_times = std::make_unique<TempGpuTimes>();
-			auto* t = temp_gpu_times.get();
-			Profiler::get().enabled = true;   // GPU timers exist only while the profiler is on
-			Profiler::get().on_frame.register_handler(t, [t](std::uint64_t) { ++t->frame; });
-			Profiler::get().on_gpu_timer.register_handler(t, [t](std::pair<TimedBlock*, GPUTimerInterface*> p)
-			{
-				if (t->frame < 300) return;
-				auto& timer = *static_cast<HAL::GPUTimer*>(p.second);
-				const double freq = double(RenderSystem::get().device().get_queue(timer.queue_type)->get_frequency());
-				if (freq <= 0 || timer.get_end() < timer.get_start()) return;
-				const double ms = double(timer.get_end() - timer.get_start()) / freq * 1000.0;
-				std::lock_guard g(t->m);
-				auto& [total, n] = t->acc[std::wstring(p.first->get_name())];
-				total += ms;
-				++n;
-			});
-		}
-
 		main_window = std::make_shared<GraphRender>();
 		main_window->start();
 	}
 
 	~RenderApplication() override
 	{
-		if (temp_gpu_times)
-		{
-			std::lock_guard g(temp_gpu_times->m);
-			std::ofstream out("gpu_times.temp");
-			out << "frames " << temp_gpu_times->frame << "\n";
-			for (auto& [name, v] : temp_gpu_times->acc)
-				out << std::string(name.begin(), name.end()) << "\t" << v.first / v.second << " ms\t" << v.second << "\n";
-		}
 		shutdown();
 		main_window->stop();
 		// The window owns the swapchain; its images and semaphores must be idle
@@ -2662,28 +2623,12 @@ struct test
 
 #include <shellscalingapi.h>
 
-// TEMP: Vulkan descriptor-model crash investigation -- remove once found.
-void temp_dump_all_stacks_after(int seconds);   // TEMP: HangStacks.cpp
-
-static LONG WINAPI temp_crash_handler(EXCEPTION_POINTERS* ep)
-{
-	auto code = ep->ExceptionRecord->ExceptionCode;
-	if (code == EXCEPTION_ACCESS_VIOLATION || code == EXCEPTION_STACK_OVERFLOW || code == EXCEPTION_BREAKPOINT)
-		std::ofstream("crash_stack.temp", std::ios::app) << std::hex << "code 0x" << code << std::dec << "\n"
-			<< std::stacktrace::current() << "\n----\n" << std::flush;
-	return EXCEPTION_CONTINUE_SEARCH;
-}
-
 int APIENTRY WinMain(_In_ HINSTANCE hinst,
 	_In_opt_ HINSTANCE,
 	_In_ LPTSTR,
 	_In_ int)
 {
 //	setlocale(LC_ALL, "");
-	AddVectoredExceptionHandler(1, temp_crash_handler);
-	// TEMP: SPECTRUM_STACKS_AT=<seconds> dumps all thread stacks to hang_stacks.temp.
-	if (const char* s = std::getenv("SPECTRUM_STACKS_AT"))
-		temp_dump_all_stacks_after(std::atoi(s));
 	CoInitialize(NULL);
 	SetProcessDpiAwareness(PROCESS_PER_MONITOR_DPI_AWARE);
 

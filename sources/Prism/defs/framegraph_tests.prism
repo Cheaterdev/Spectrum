@@ -1,0 +1,561 @@
+# FrameGraph test passes and pipelines (sources/Test/Tests/Test.RenderSystem.FrameGraph.ixx).
+# Never added to a real frame: every pass here is non-static, so a pipeline
+# only adds it once a test assigns its render_func. The mechanics passes only
+# clear and copy, so the tests exercise scheduling, culling, lifetimes,
+# aliasing, cross-queue sync and barriers without any shader.
+
+namespace FrameGraphTests
+{
+	# Set by the tests on their graph before setup().
+	struct FGTestState
+	{
+		int2 size;
+		bool write_static = true;
+	}
+
+	# ---- producers -----------------------------------------------------------
+
+	[Compute]
+	[RunAlways]
+	PassNode FGT_ProduceUAV
+	{
+		[Always = UnorderedAccess] [Size = FGTestState::size] [Format = R8G8B8A8_UNORM] Texture FGT_A;
+	}
+
+	[RunAlways]
+	PassNode FGT_ProduceRTV
+	{
+		[Always = RenderTarget] [Size = FGTestState::size] [Format = R8G8B8A8_UNORM] Texture FGT_A;
+	}
+
+	# ---- consumers: copy into the test's passed sink ---------------------------
+
+	[RunAlways]
+	PassNode FGT_CopyAToSink
+	{
+		[Always = Read] Texture FGT_A;
+		[Always = CopyDest] Texture FGT_Sink;
+	}
+
+	[Compute]
+	[RunAlways]
+	PassNode FGT_ComputeCopyAToB
+	{
+		[Always = Read] Texture FGT_A;
+		[Always = CopyDest] [Size = FGTestState::size] [Format = R8G8B8A8_UNORM] Texture FGT_B;
+	}
+
+	[RunAlways]
+	PassNode FGT_CopyBToSink
+	{
+		[Always = Read] Texture FGT_B;
+		[Always = CopyDest] Texture FGT_Sink;
+	}
+
+	# ---- culling / setup results ---------------------------------------------
+
+	# Nothing reads its output: must be culled.
+	[RunAlways]
+	PassNode FGT_Unused
+	{
+		[Always = UnorderedAccess] [Size = FGTestState::size] [Format = R8G8B8A8_UNORM] Texture FGT_UnusedOut;
+	}
+
+	# Nothing reads its output either, but [Required] keeps it.
+	[Required]
+	[RunAlways]
+	PassNode FGT_RequiredUnused
+	{
+		[Always = UnorderedAccess] [Size = FGTestState::size] [Format = R8G8B8A8_UNORM] Texture FGT_RequiredOut;
+	}
+
+	[SetupCondition = false]
+	PassNode FGT_Disabled
+	{
+		[Always = Read] Texture FGT_A;
+		[Always = CopyDest] Texture FGT_Sink;
+	}
+
+	[RenderCondition = false]
+	PassNode FGT_IgnoreRender
+	{
+		[Always = Read] Texture FGT_A;
+		[Always = CopyDest] Texture FGT_Sink;
+	}
+
+	# ---- recreate --------------------------------------------------------------
+
+	[RunAlways]
+	PassNode FGT_Recreate
+	{
+		[Always = Read] [Recreate = FGT_ANew] [RecreateFlags = UnorderedAccess] Texture FGT_A;
+	}
+
+	# ---- static / history ------------------------------------------------------
+
+	[RenderCondition = FGTestState::write_static]
+	PassNode FGT_WriteStatic
+	{
+		[Always = UnorderedAccess | Static] [Size = FGTestState::size] [Format = R8G8B8A8_UNORM] Texture FGT_Static;
+	}
+
+	[RunAlways]
+	PassNode FGT_CopyStaticToSink
+	{
+		[Always = Read] Texture FGT_Static;
+		[Always = CopyDest] Texture FGT_Sink;
+	}
+
+	# [Required]: nothing reads this frame's FGT_Hist, only next frame's prev.
+	[Required]
+	[RunAlways]
+	PassNode FGT_WriteHist
+	{
+		[Always = UnorderedAccess] [Size = FGTestState::size] [Format = R8G8B8A8_UNORM] Texture FGT_Hist;
+		[PrevFor = FGT_Hist] Texture FGT_HistPrev;
+	}
+
+	[RunAlways]
+	PassNode FGT_CopyHistPrevToSink
+	{
+		[Always = Read] Texture FGT_HistPrev;
+		[Always = CopyDest] Texture FGT_Sink;
+	}
+
+	# ---- transient aliasing: disjoint lifetimes, each copied out right away ----
+
+	[RunAlways]
+	PassNode FGT_ProduceAlias0
+	{
+		[Always = UnorderedAccess] [Size = FGTestState::size] [Format = R8G8B8A8_UNORM] Texture FGT_Alias0;
+	}
+
+	[RunAlways]
+	PassNode FGT_CopyAlias0
+	{
+		[Always = Read] Texture FGT_Alias0;
+		[Always = CopyDest] Texture FGT_Sink;
+	}
+
+	[Compute]
+	[RunAlways]
+	PassNode FGT_ProduceAlias1
+	{
+		[Always = UnorderedAccess] [Size = FGTestState::size] [Format = R8G8B8A8_UNORM] Texture FGT_Alias1;
+	}
+
+	[RunAlways]
+	PassNode FGT_CopyAlias1
+	{
+		[Always = Read] Texture FGT_Alias1;
+		[Always = CopyDest] Texture FGT_Sink;
+	}
+
+	[RunAlways]
+	PassNode FGT_ProduceAlias2
+	{
+		[Always = UnorderedAccess] [Size = FGTestState::size] [Format = R8G8B8A8_UNORM] Texture FGT_Alias2;
+	}
+
+	[RunAlways]
+	PassNode FGT_CopyAlias2
+	{
+		[Always = Read] Texture FGT_Alias2;
+		[Always = CopyDest] Texture FGT_Sink;
+	}
+
+	# ---- subresources: two writers touch disjoint mips/slices/faces ------------
+	# Each producer writes only some subresources through per-subresource views,
+	# the second on the async queue, so per-subresource state tracking and the
+	# cross-queue hand-off of a partially-written resource are both exercised.
+
+	[RunAlways]
+	PassNode FGT_WriteMip0
+	{
+		[Always = UnorderedAccess] [Size = FGTestState::size] [MipCount = 4] [Format = R8G8B8A8_UNORM] Texture FGT_Mips;
+	}
+
+	[Compute]
+	[RunAlways]
+	PassNode FGT_WriteUpperMips
+	{
+		[Always = UnorderedAccess] Texture FGT_Mips;
+	}
+
+	[RunAlways]
+	PassNode FGT_CopyMipsToSink
+	{
+		[Always = Read] Texture FGT_Mips;
+		[Always = CopyDest] Texture FGT_Sink;
+	}
+
+	[Compute]
+	[RunAlways]
+	PassNode FGT_WriteSlicesUAV
+	{
+		[Always = UnorderedAccess] [Size = FGTestState::size] [ArrayCount = 3] [Format = R8G8B8A8_UNORM] Texture FGT_Array;
+	}
+
+	[RunAlways]
+	PassNode FGT_WriteSliceRTV
+	{
+		[Always = RenderTarget] Texture FGT_Array;
+	}
+
+	[RunAlways]
+	PassNode FGT_CopyArrayToSink
+	{
+		[Always = Read] Texture FGT_Array;
+		[Always = CopyDest] Texture FGT_Sink;
+	}
+
+	[RunAlways]
+	PassNode FGT_WriteCubeFaces
+	{
+		[Always = UnorderedAccess] [Size = 32] [Format = R8G8B8A8_UNORM] TextureCube FGT_Cube;
+	}
+
+	[RunAlways]
+	PassNode FGT_CopyCubeToSink
+	{
+		[Always = Read] TextureCube FGT_Cube;
+		[Always = CopyDest] Texture FGT_Sink;
+	}
+
+	# ---- buffers -------------------------------------------------------------------
+	# No UAV clear for structured buffers on D3D12, so data moves by upload + copy.
+	# FGT_BufB is Static so the test can read it back after the frame.
+
+	[RunAlways]
+	PassNode FGT_UploadBuffer
+	{
+		[Always = CopyDest] [Size = 256] StructuredBuffer<uint> FGT_BufA;
+	}
+
+	[Compute]
+	[Required]
+	[RunAlways]
+	PassNode FGT_CopyBuffer
+	{
+		[Always = Read] StructuredBuffer<uint> FGT_BufA;
+		[Always = CopyDest | Static] [Size = 256] StructuredBuffer<uint> FGT_BufB;
+	}
+
+	# ---- real effect: MipMapGenerator (compute shader) ---------------------------
+	# A known pattern is uploaded into mip 0, the engine's mip generator builds
+	# the rest of the chain, and every mip is copied out for the test to check.
+
+	[RunAlways]
+	PassNode FGT_UploadMipPattern
+	{
+		[Always = CopyDest] [Size = FGTestState::size] [MipCount = 0] [Format = R8G8B8A8_UNORM] Texture FGT_MipChain;
+	}
+
+	[Compute]
+	[RunAlways]
+	PassNode FGT_GenerateMips
+	{
+		[Always = UnorderedAccess] Texture FGT_MipChain;
+	}
+
+	[RunAlways]
+	PassNode FGT_CopyMipChainToSink
+	{
+		[Always = Read] Texture FGT_MipChain;
+		[Always = CopyDest] Texture FGT_Sink;
+	}
+
+	[RunAlways]
+	PassNode FGT_UploadCubeMipPattern
+	{
+		[Always = CopyDest] [Size = 32] [MipCount = 0] [Format = R8G8B8A8_UNORM] TextureCube FGT_CubeMipChain;
+	}
+
+	[Compute]
+	[RunAlways]
+	PassNode FGT_GenerateCubeMips
+	{
+		[Always = UnorderedAccess] TextureCube FGT_CubeMipChain;
+	}
+
+	[RunAlways]
+	PassNode FGT_CopyCubeMipChainToSink
+	{
+		[Always = Read] TextureCube FGT_CubeMipChain;
+		[Always = CopyDest] Texture FGT_Sink;
+	}
+
+	# ---- real effect: the sky bake (CubeSky -> CubeMapDownsample ->
+	# CubeMapEnviromentProcessor), copied out for HDR golden images ---------------
+
+	[RunAlways]
+	PassNode FGT_CopySkyToSink
+	{
+		[Always = Read] TextureCube sky_cubemap_filtered;
+		[Always = Read] TextureCube sky_cubemap_filtered_diffuse;
+		[Always = CopyDest] Texture FGT_Sink;
+	}
+
+	# ---- real effect: Tonemap (histogram auto-exposure + AgX) on a synthetic HDR
+	# image uploaded as ResultTexture -----------------------------------------------
+
+	[RunAlways]
+	PassNode FGT_UploadHDR
+	{
+		[Always = CopyDest] [Size = FGTestState::size] [Format = R16G16B16A16_FLOAT] Texture ResultTexture;
+	}
+
+	[RunAlways]
+	PassNode FGT_CopyResultToSink
+	{
+		[Always = Read] Texture ResultTexture;
+		[Always = CopyDest] Texture FGT_Sink;
+	}
+
+	# ---- real effect: Bloom (BloomBuild -> BloomProcess -> BloomComposite) -------
+	# Depth cleared to far and zero motion: the temporal step has a valid input
+	# but nothing to reproject.
+
+	[RunAlways]
+	PassNode FGT_ProduceBloomInputs
+	{
+		[Always = DepthStencil] [Size = FGTestState::size] [Format = R32_TYPELESS] Texture GBuffer_Depth;
+		[Always = RenderTarget] [Size = FGTestState::size] [Format = R16G16_FLOAT] Texture GBuffer_Speed;
+	}
+
+	# ---- VSM (device-loss repro on NVIDIA Vulkan) ---------------------------------
+	# A synthetic GBuffer in the real formats (scene.prism's Scene pass), uploaded
+	# by the test; ResultTexture created here because no ResultCreation runs.
+
+	[RunAlways]
+	PassNode FGT_ProduceGBuffer
+	{
+		[Always = CopyDest] [Size = FGTestState::size] [Format = R8G8B8A8_UNORM] Texture GBuffer_Albedo;
+		[Always = CopyDest] [Size = FGTestState::size] [Format = R8G8B8A8_UNORM] Texture GBuffer_Normals;
+		[Always = CopyDest] [Size = FGTestState::size] [Format = R8G8B8A8_UNORM] Texture GBuffer_Specular;
+		[Always = CopyDest] [Size = FGTestState::size] [Format = R16G16_FLOAT] Texture GBuffer_Speed;
+		[Always = CopyDest] [Size = FGTestState::size] [Format = R32_TYPELESS] Texture GBuffer_DepthMips;
+		[Always = UnorderedAccess] [Size = FGTestState::size] [Format = R16G16B16A16_FLOAT] Texture ResultTexture;
+	}
+
+	# ---- pipelines, one per scenario --------------------------------------------
+
+	Pipeline FGT_GraphicsPipeline
+	{
+		FGT_ProduceRTV;
+		FGT_CopyAToSink;
+	}
+
+	Pipeline FGT_Async1Pipeline
+	{
+		[Async] FGT_ProduceUAV;
+		FGT_CopyAToSink;
+	}
+
+	Pipeline FGT_Async2Pipeline
+	{
+		[Async2] FGT_ProduceUAV;
+		FGT_CopyAToSink;
+	}
+
+	Pipeline FGT_Async3Pipeline
+	{
+		[Async3] FGT_ProduceUAV;
+		FGT_CopyAToSink;
+	}
+
+	Pipeline FGT_RoundTripPipeline
+	{
+		FGT_ProduceRTV;
+		[Async] FGT_ComputeCopyAToB;
+		FGT_CopyBToSink;
+	}
+
+	Pipeline FGT_CullingPipeline
+	{
+		FGT_Unused;
+		FGT_RequiredUnused;
+		FGT_ProduceUAV;
+		FGT_CopyAToSink;
+	}
+
+	Pipeline FGT_SetupResultPipeline
+	{
+		FGT_ProduceUAV;
+		FGT_Disabled;
+		FGT_IgnoreRender;
+		FGT_CopyAToSink;
+	}
+
+	Pipeline FGT_RecreatePipeline
+	{
+		FGT_ProduceUAV;
+		FGT_Recreate;
+		FGT_CopyAToSink;
+	}
+
+	Pipeline FGT_StaticPipeline
+	{
+		FGT_WriteStatic;
+		FGT_CopyStaticToSink;
+	}
+
+	Pipeline FGT_HistoryPipeline
+	{
+		FGT_WriteHist;
+		FGT_CopyHistPrevToSink;
+	}
+
+	Pipeline FGT_MipsPipeline
+	{
+		FGT_WriteMip0;
+		[Async] FGT_WriteUpperMips;
+		FGT_CopyMipsToSink;
+	}
+
+	Pipeline FGT_ArrayPipeline
+	{
+		[Async] FGT_WriteSlicesUAV;
+		FGT_WriteSliceRTV;
+		FGT_CopyArrayToSink;
+	}
+
+	Pipeline FGT_CubePipeline
+	{
+		FGT_WriteCubeFaces;
+		FGT_CopyCubeToSink;
+	}
+
+	Pipeline FGT_BufferPipeline
+	{
+		FGT_UploadBuffer;
+		[Async] FGT_CopyBuffer;
+	}
+
+	Pipeline FGT_MipGenPipeline
+	{
+		FGT_UploadMipPattern;
+		[Async] FGT_GenerateMips;
+		FGT_CopyMipChainToSink;
+	}
+
+	Pipeline FGT_CubeMipGenPipeline
+	{
+		FGT_UploadCubeMipPattern;
+		[Async] FGT_GenerateCubeMips;
+		FGT_CopyCubeMipChainToSink;
+	}
+
+	Pipeline FGT_SkyPipeline
+	{
+		CubeSky;
+		CubeMapDownsample;
+		CubeMapEnviromentProcessor;
+		FGT_CopySkyToSink;
+	}
+
+	Pipeline FGT_TonemapPipeline
+	{
+		FGT_UploadHDR;
+		Tonemap;
+		FGT_CopyResultToSink;
+	}
+
+	Pipeline FGT_BloomPipeline
+	{
+		FGT_UploadHDR;
+		FGT_ProduceBloomInputs;
+		BloomBuild;
+		BloomProcess;
+		BloomComposite;
+		FGT_CopyResultToSink;
+	}
+
+	# [Async] as in MainPipeline (test.prism).
+	Pipeline FGT_VSMUnshadowedPipeline
+	{
+		FGT_ProduceGBuffer;
+		[Async] VSM_Unshadowed;
+		FGT_CopyResultToSink;
+	}
+
+	# VSM_DepthAnalysis is [Required]: nothing needs to consume its result.
+	Pipeline FGT_VSMDepthAnalysisPipeline
+	{
+		FGT_ProduceGBuffer;
+		[Async] VSM_DepthAnalysis;
+	}
+
+	# Every VSM pass in MainPipeline's order and queues (test.prism), over a
+	# synthetic GBuffer that matches a real scene the atlas pages are drawn from.
+	# The setup conditions pick ShadowResolve or Combine as in the app. PreScene
+	# uploads the scene and builds the TLAS the RTX blocker verify traces.
+	Pipeline FGT_VSMFullChainPipeline
+	{
+		PreScene;
+		FGT_ProduceGBuffer;
+		[Async] BlueNoise;
+		VSM_GatherDispatch;
+		VSM_RenderPages;
+		[Async] VSM_DepthAnalysis;
+		[Async] VSM_HiZRebuild;
+		[Async] VSM_BlockerClassify;
+		[Async] VSM_BlockerSearch;
+		[Async] VSM_ScreenSpaceShadow;
+		[Async] VSM_ShadowResolve;
+		[Async] VSM_Combine;
+		FGT_CopyResultToSink;
+	}
+
+	# ---- counted tile lists ---------------------------------------------------------
+	# A [Counted] list declared like VSM_LitTiles, appended by a shader with a
+	# known tile set, then copied raw (counter prefix included) into a Static
+	# buffer so the test can check where the counter and the elements land.
+
+	[Bind = DefaultLayout::Instance0]
+	struct FGTAppendTiles
+	{
+		uint2 grid;
+		AppendStructuredBuffer<uint2> tiles;
+	}
+
+	ComputePSO FGTAppendTiles
+	{
+		root = DefaultLayout;
+
+		[EntryPoint = CS]
+		compute = "framegraph/fgt_append_tiles.hlsl";
+	}
+
+	[Compute]
+	[RunAlways]
+	PassNode FGT_AppendTiles
+	{
+		[Always = UnorderedAccess] [Size = 4096] [Counted] StructuredBuffer<uint2> FGT_TileList;
+	}
+
+	[Compute]
+	[Required]
+	[RunAlways]
+	PassNode FGT_CopyTileList
+	{
+		[Always = Read] StructuredBuffer<uint2> FGT_TileList;
+		[Always = CopyDest | Static] [Size = 8192] StructuredBuffer<uint2> FGT_TileListCopy;
+	}
+
+	Pipeline FGT_TileListPipeline
+	{
+		[Async] FGT_AppendTiles;
+		[Async] FGT_CopyTileList;
+	}
+
+	Pipeline FGT_AliasingPipeline
+	{
+		FGT_ProduceAlias0;
+		FGT_CopyAlias0;
+		[Async] FGT_ProduceAlias1;
+		FGT_CopyAlias1;
+		FGT_ProduceAlias2;
+		FGT_CopyAlias2;
+	}
+}

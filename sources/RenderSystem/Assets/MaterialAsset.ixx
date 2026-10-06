@@ -38,6 +38,9 @@ export namespace materials
 		// Non-null only for a Masked PipelinePasses (see its constructor).
 		virtual PSOS::Shadows::VSM::VSMDepthDrawMaterial::ptr get_vsm_depth_draw() const { return nullptr; }
 
+		// False while one of its shaders is still compiling: draws with it are skipped.
+		virtual bool is_built() const { return true; }
+
         uint get_id();
 	private:
 
@@ -61,6 +64,10 @@ export namespace materials
             virtual ~material() = default;
             virtual void compile();
             virtual void update();
+
+            // Whether a draw with this material would render now, not be skipped
+            // because its pipeline is still compiling.
+            virtual bool is_ready_to_draw() const { return true; }
 
             size_t get_pipeline_id();
             SERIALIZE()

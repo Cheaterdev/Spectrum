@@ -14,22 +14,6 @@ import :Device;         // HAL::Device
 import :HeapAllocators;
 import :FrameManager;
 
-namespace
-{
-    // TEMP: Vulkan memory leak -- count live image views.
-    VkResult temp_create_view(VkDevice d, const VkImageViewCreateInfo* ci, const VkAllocationCallbacks* a, VkImageView* v)
-    {
-        VkResult r = vkCreateImageView(d, ci, a, v);
-        if (r == VK_SUCCESS) HAL::API::temp_live[HAL::API::TL_ImageViews]++;
-        return r;
-    }
-    void temp_destroy_view(VkDevice d, VkImageView v, const VkAllocationCallbacks* a)
-    {
-        if (v != VK_NULL_HANDLE) HAL::API::temp_live[HAL::API::TL_ImageViews]--;
-        vkDestroyImageView(d, v, a);
-    }
-}
-
 namespace HAL
 {
     namespace API
@@ -44,7 +28,6 @@ namespace HAL
             auto THIS = static_cast<HAL::Resource*>(this);
             THIS->m_device = static_cast<HAL::Device*>(&device);
             THIS->desc = _desc;
-            temp_live[TL_Resources]++;   // TEMP
 
             // Resolve MipLevels=0 → full mip chain.
             // D3D12 handles this natively inside CreateCommittedResource;
@@ -212,15 +195,6 @@ namespace HAL
                     VkMemoryRequirements req{};
                     vkGetBufferMemoryRequirements(device.get_native_device(), vk_buffer, &req);
                     sparse_layout.size = req.size;
-
-                    // TEMP: device-lost READ_INVALID -- sparse buffer VA ranges.
-                    {
-                        VkBufferDeviceAddressInfo dai{ VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO };
-                        dai.buffer = vk_buffer;
-                        const uint64_t va = vkGetBufferDeviceAddress(device.get_native_device(), &dai);
-                        std::ofstream("sparse_va.temp", std::ios::app) << std::hex << "sparse buffer 0x" << va << " - 0x" << va + req.size
-                            << std::dec << " size " << req.size << "\n" << std::stacktrace::current() << "\n----\n";
-                    }
                 }
                 else
                 {
@@ -365,7 +339,7 @@ namespace HAL
                     ivci.subresourceRange.aspectMask     = vk_image_aspect;
                     ivci.subresourceRange.levelCount     = VK_REMAINING_MIP_LEVELS;
                     ivci.subresourceRange.layerCount     = VK_REMAINING_ARRAY_LAYERS;
-                    temp_create_view(device.get_native_device(), &ivci, nullptr, &vk_image_view);
+                    vkCreateImageView(device.get_native_device(), &ivci, nullptr, &vk_image_view);
                     vk_view_ci = ivci;
 
                     // The state manager records `initialLayout` as the layout this
@@ -479,18 +453,6 @@ namespace HAL
     {
         if (!this->name.empty() && name.empty()) return;
         this->name = name;
-        // TEMP: device-lost investigation -- handle -> name for gpu_va.temp's
-        // vabind/vaunbnd lines (placed upload slices share their heap's VkBuffer,
-        // so the address is logged too).
-        {
-            static std::mutex m;
-            std::lock_guard g(m);
-            std::ofstream out("gpu_va.temp", std::ios::app);
-            if (vk_buffer != VK_NULL_HANDLE)
-                out << std::format("name    buffer 0x{:x} addr 0x{:x} {}\n", (uint64_t)vk_buffer, get_address(), name);
-            else if (vk_image != VK_NULL_HANDLE)
-                out << std::format("name    image  0x{:x} {}\n", (uint64_t)vk_image, name);
-        }
         if (!m_device) return;
         auto& api_dev = static_cast<API::Device&>(*m_device);
         VkDevice vk_dev = api_dev.get_native_device();
@@ -541,7 +503,7 @@ namespace HAL
 
             VkImageViewCreateInfo ivci = get_uav_view_ci(mip, layer);
             VkImageView v = VK_NULL_HANDLE;
-            temp_create_view(vk_dev, &ivci, nullptr, &v);
+            vkCreateImageView(vk_dev, &ivci, nullptr, &v);
             per_mip_views[key] = v;
             return v;
         }
@@ -576,7 +538,7 @@ namespace HAL
             ivci.subresourceRange.baseArrayLayer = first_layer;
             ivci.subresourceRange.layerCount     = layer_count;
             VkImageView v = VK_NULL_HANDLE;
-            temp_create_view(vk_dev, &ivci, nullptr, &v);
+            vkCreateImageView(vk_dev, &ivci, nullptr, &v);
             srv_views[key] = v;
             return v;
         }
@@ -605,7 +567,7 @@ namespace HAL
             ivci.subresourceRange.baseArrayLayer = first_layer;
             ivci.subresourceRange.layerCount     = layer_count;
             VkImageView v = VK_NULL_HANDLE;
-            temp_create_view(vk_dev, &ivci, nullptr, &v);
+            vkCreateImageView(vk_dev, &ivci, nullptr, &v);
             attachment_views[key] = v;
             return v;
         }
@@ -613,7 +575,6 @@ namespace HAL
 
     Resource::~Resource()
     {
-        if (m_device) API::temp_live[API::TL_Resources]--;   // TEMP
         alloc_handle.Free();
 
         if (vma_alloc || sparse || placed)
@@ -629,21 +590,21 @@ namespace HAL
             // Destroy per-mip UAV views before destroying the image.
             for (auto& [key, view] : per_mip_views)
                 if (view != VK_NULL_HANDLE)
-                    temp_destroy_view(vk_dev, view, nullptr);
+                    vkDestroyImageView(vk_dev, view, nullptr);
             per_mip_views.clear();
             for (auto& [key, view] : attachment_views)
                 if (view != VK_NULL_HANDLE)
-                    temp_destroy_view(vk_dev, view, nullptr);
+                    vkDestroyImageView(vk_dev, view, nullptr);
             attachment_views.clear();
             for (auto& [key, view] : srv_views)
                 if (view != VK_NULL_HANDLE)
-                    temp_destroy_view(vk_dev, view, nullptr);
+                    vkDestroyImageView(vk_dev, view, nullptr);
             srv_views.clear();
 
             // Destroy the owned image view before destroying the image itself.
             if (vk_image_view != VK_NULL_HANDLE && !import_handle.image)
             {
-                temp_destroy_view(vk_dev, vk_image_view, nullptr);
+                vkDestroyImageView(vk_dev, vk_image_view, nullptr);
                 vk_image_view = VK_NULL_HANDLE;
             }
 

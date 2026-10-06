@@ -36,6 +36,7 @@ std::optional<SlotID> get_slot(std::string_view slot_name)
 	if(slot_name == "DenoiserShadow_FilterLast") return SlotID::DenoiserShadow_FilterLast;
 	if(slot_name == "GlyphRender") return SlotID::GlyphRender;
 	if(slot_name == "FrameInfo") return SlotID::FrameInfo;
+	if(slot_name == "FGTAppendTiles") return SlotID::FGTAppendTiles;
 	if(slot_name == "FSR") return SlotID::FSR;
 	if(slot_name == "LensFlareGhosts") return SlotID::LensFlareGhosts;
 	if(slot_name == "LensFlareStreak") return SlotID::LensFlareStreak;
@@ -226,6 +227,8 @@ uint get_table_index(SlotID id)
 	if(id == SlotID::GlyphRender) return Slots::UI::Text::GlyphRender::Slot::ID;
 
 	if(id == SlotID::FrameInfo) return Slots::Frame::FrameInfo::Slot::ID;
+
+	if(id == SlotID::FGTAppendTiles) return Slots::FrameGraphTests::FGTAppendTiles::Slot::ID;
 
 	if(id == SlotID::FSR) return Slots::Post::Upscale::FSR::Slot::ID;
 
@@ -520,6 +523,7 @@ std::string get_slot_name(SlotID id)
 	if(id == SlotID::DenoiserShadow_FilterLast) return "DenoiserShadow_FilterLast";
 	if(id == SlotID::GlyphRender) return "GlyphRender";
 	if(id == SlotID::FrameInfo) return "FrameInfo";
+	if(id == SlotID::FGTAppendTiles) return "FGTAppendTiles";
 	if(id == SlotID::FSR) return "FSR";
 	if(id == SlotID::LensFlareGhosts) return "LensFlareGhosts";
 	if(id == SlotID::LensFlareStreak) return "LensFlareStreak";

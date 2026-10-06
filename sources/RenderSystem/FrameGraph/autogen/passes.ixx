@@ -29,6 +29,49 @@ export import "../defines.h";
 #include "pass/GI/DDGI/Dev/DDGIDebug.h"
 #include "pass/GI/DDGI/Dev/DDGIIndirectDebug.h"
 #include "pass/Dev/DebugView.h"
+#include "pass/FrameGraphTests/FGT_ProduceUAV.h"
+#include "pass/FrameGraphTests/FGT_ProduceRTV.h"
+#include "pass/FrameGraphTests/FGT_CopyAToSink.h"
+#include "pass/FrameGraphTests/FGT_ComputeCopyAToB.h"
+#include "pass/FrameGraphTests/FGT_CopyBToSink.h"
+#include "pass/FrameGraphTests/FGT_Unused.h"
+#include "pass/FrameGraphTests/FGT_RequiredUnused.h"
+#include "pass/FrameGraphTests/FGT_Disabled.h"
+#include "pass/FrameGraphTests/FGT_IgnoreRender.h"
+#include "pass/FrameGraphTests/FGT_Recreate.h"
+#include "pass/FrameGraphTests/FGT_WriteStatic.h"
+#include "pass/FrameGraphTests/FGT_CopyStaticToSink.h"
+#include "pass/FrameGraphTests/FGT_WriteHist.h"
+#include "pass/FrameGraphTests/FGT_CopyHistPrevToSink.h"
+#include "pass/FrameGraphTests/FGT_ProduceAlias0.h"
+#include "pass/FrameGraphTests/FGT_CopyAlias0.h"
+#include "pass/FrameGraphTests/FGT_ProduceAlias1.h"
+#include "pass/FrameGraphTests/FGT_CopyAlias1.h"
+#include "pass/FrameGraphTests/FGT_ProduceAlias2.h"
+#include "pass/FrameGraphTests/FGT_CopyAlias2.h"
+#include "pass/FrameGraphTests/FGT_WriteMip0.h"
+#include "pass/FrameGraphTests/FGT_WriteUpperMips.h"
+#include "pass/FrameGraphTests/FGT_CopyMipsToSink.h"
+#include "pass/FrameGraphTests/FGT_WriteSlicesUAV.h"
+#include "pass/FrameGraphTests/FGT_WriteSliceRTV.h"
+#include "pass/FrameGraphTests/FGT_CopyArrayToSink.h"
+#include "pass/FrameGraphTests/FGT_WriteCubeFaces.h"
+#include "pass/FrameGraphTests/FGT_CopyCubeToSink.h"
+#include "pass/FrameGraphTests/FGT_UploadBuffer.h"
+#include "pass/FrameGraphTests/FGT_CopyBuffer.h"
+#include "pass/FrameGraphTests/FGT_UploadMipPattern.h"
+#include "pass/FrameGraphTests/FGT_GenerateMips.h"
+#include "pass/FrameGraphTests/FGT_CopyMipChainToSink.h"
+#include "pass/FrameGraphTests/FGT_UploadCubeMipPattern.h"
+#include "pass/FrameGraphTests/FGT_GenerateCubeMips.h"
+#include "pass/FrameGraphTests/FGT_CopyCubeMipChainToSink.h"
+#include "pass/FrameGraphTests/FGT_CopySkyToSink.h"
+#include "pass/FrameGraphTests/FGT_UploadHDR.h"
+#include "pass/FrameGraphTests/FGT_CopyResultToSink.h"
+#include "pass/FrameGraphTests/FGT_ProduceBloomInputs.h"
+#include "pass/FrameGraphTests/FGT_ProduceGBuffer.h"
+#include "pass/FrameGraphTests/FGT_AppendTiles.h"
+#include "pass/FrameGraphTests/FGT_CopyTileList.h"
 #include "pass/Post/Upscale/FSR.h"
 #include "pass/Frame/ResultCreation.h"
 #include "pass/Denoise/NRD/NRD_GBufferPack.h"
@@ -85,6 +128,30 @@ export import "../defines.h";
 #include "pass/Shadows/VSM/Dev/VSM_DebugClassifyOverlay.h"
 #include "pass/Shadows/VSM/VSM_DepthAnalysis.h"
 #include "pass/Editor/AssetPipeline.pipeline.h"
+#include "pass/FrameGraphTests/FGT_GraphicsPipeline.pipeline.h"
+#include "pass/FrameGraphTests/FGT_Async1Pipeline.pipeline.h"
+#include "pass/FrameGraphTests/FGT_Async2Pipeline.pipeline.h"
+#include "pass/FrameGraphTests/FGT_Async3Pipeline.pipeline.h"
+#include "pass/FrameGraphTests/FGT_RoundTripPipeline.pipeline.h"
+#include "pass/FrameGraphTests/FGT_CullingPipeline.pipeline.h"
+#include "pass/FrameGraphTests/FGT_SetupResultPipeline.pipeline.h"
+#include "pass/FrameGraphTests/FGT_RecreatePipeline.pipeline.h"
+#include "pass/FrameGraphTests/FGT_StaticPipeline.pipeline.h"
+#include "pass/FrameGraphTests/FGT_HistoryPipeline.pipeline.h"
+#include "pass/FrameGraphTests/FGT_MipsPipeline.pipeline.h"
+#include "pass/FrameGraphTests/FGT_ArrayPipeline.pipeline.h"
+#include "pass/FrameGraphTests/FGT_CubePipeline.pipeline.h"
+#include "pass/FrameGraphTests/FGT_BufferPipeline.pipeline.h"
+#include "pass/FrameGraphTests/FGT_MipGenPipeline.pipeline.h"
+#include "pass/FrameGraphTests/FGT_CubeMipGenPipeline.pipeline.h"
+#include "pass/FrameGraphTests/FGT_SkyPipeline.pipeline.h"
+#include "pass/FrameGraphTests/FGT_TonemapPipeline.pipeline.h"
+#include "pass/FrameGraphTests/FGT_BloomPipeline.pipeline.h"
+#include "pass/FrameGraphTests/FGT_VSMUnshadowedPipeline.pipeline.h"
+#include "pass/FrameGraphTests/FGT_VSMDepthAnalysisPipeline.pipeline.h"
+#include "pass/FrameGraphTests/FGT_VSMFullChainPipeline.pipeline.h"
+#include "pass/FrameGraphTests/FGT_TileListPipeline.pipeline.h"
+#include "pass/FrameGraphTests/FGT_AliasingPipeline.pipeline.h"
 #include "pass/Frame/MainPipeline.pipeline.h"
 #include "pass/UI/UIPipeline.pipeline.h"
 
@@ -176,6 +243,178 @@ export namespace Passes
 	namespace Dev
 	{
 		using ::Passes::Dev::DebugView;
+	}
+	namespace FrameGraphTests
+	{
+		using ::Passes::FrameGraphTests::FGT_ProduceUAV;
+	}
+	namespace FrameGraphTests
+	{
+		using ::Passes::FrameGraphTests::FGT_ProduceRTV;
+	}
+	namespace FrameGraphTests
+	{
+		using ::Passes::FrameGraphTests::FGT_CopyAToSink;
+	}
+	namespace FrameGraphTests
+	{
+		using ::Passes::FrameGraphTests::FGT_ComputeCopyAToB;
+	}
+	namespace FrameGraphTests
+	{
+		using ::Passes::FrameGraphTests::FGT_CopyBToSink;
+	}
+	namespace FrameGraphTests
+	{
+		using ::Passes::FrameGraphTests::FGT_Unused;
+	}
+	namespace FrameGraphTests
+	{
+		using ::Passes::FrameGraphTests::FGT_RequiredUnused;
+	}
+	namespace FrameGraphTests
+	{
+		using ::Passes::FrameGraphTests::FGT_Disabled;
+	}
+	namespace FrameGraphTests
+	{
+		using ::Passes::FrameGraphTests::FGT_IgnoreRender;
+	}
+	namespace FrameGraphTests
+	{
+		using ::Passes::FrameGraphTests::FGT_Recreate;
+	}
+	namespace FrameGraphTests
+	{
+		using ::Passes::FrameGraphTests::FGT_WriteStatic;
+	}
+	namespace FrameGraphTests
+	{
+		using ::Passes::FrameGraphTests::FGT_CopyStaticToSink;
+	}
+	namespace FrameGraphTests
+	{
+		using ::Passes::FrameGraphTests::FGT_WriteHist;
+	}
+	namespace FrameGraphTests
+	{
+		using ::Passes::FrameGraphTests::FGT_CopyHistPrevToSink;
+	}
+	namespace FrameGraphTests
+	{
+		using ::Passes::FrameGraphTests::FGT_ProduceAlias0;
+	}
+	namespace FrameGraphTests
+	{
+		using ::Passes::FrameGraphTests::FGT_CopyAlias0;
+	}
+	namespace FrameGraphTests
+	{
+		using ::Passes::FrameGraphTests::FGT_ProduceAlias1;
+	}
+	namespace FrameGraphTests
+	{
+		using ::Passes::FrameGraphTests::FGT_CopyAlias1;
+	}
+	namespace FrameGraphTests
+	{
+		using ::Passes::FrameGraphTests::FGT_ProduceAlias2;
+	}
+	namespace FrameGraphTests
+	{
+		using ::Passes::FrameGraphTests::FGT_CopyAlias2;
+	}
+	namespace FrameGraphTests
+	{
+		using ::Passes::FrameGraphTests::FGT_WriteMip0;
+	}
+	namespace FrameGraphTests
+	{
+		using ::Passes::FrameGraphTests::FGT_WriteUpperMips;
+	}
+	namespace FrameGraphTests
+	{
+		using ::Passes::FrameGraphTests::FGT_CopyMipsToSink;
+	}
+	namespace FrameGraphTests
+	{
+		using ::Passes::FrameGraphTests::FGT_WriteSlicesUAV;
+	}
+	namespace FrameGraphTests
+	{
+		using ::Passes::FrameGraphTests::FGT_WriteSliceRTV;
+	}
+	namespace FrameGraphTests
+	{
+		using ::Passes::FrameGraphTests::FGT_CopyArrayToSink;
+	}
+	namespace FrameGraphTests
+	{
+		using ::Passes::FrameGraphTests::FGT_WriteCubeFaces;
+	}
+	namespace FrameGraphTests
+	{
+		using ::Passes::FrameGraphTests::FGT_CopyCubeToSink;
+	}
+	namespace FrameGraphTests
+	{
+		using ::Passes::FrameGraphTests::FGT_UploadBuffer;
+	}
+	namespace FrameGraphTests
+	{
+		using ::Passes::FrameGraphTests::FGT_CopyBuffer;
+	}
+	namespace FrameGraphTests
+	{
+		using ::Passes::FrameGraphTests::FGT_UploadMipPattern;
+	}
+	namespace FrameGraphTests
+	{
+		using ::Passes::FrameGraphTests::FGT_GenerateMips;
+	}
+	namespace FrameGraphTests
+	{
+		using ::Passes::FrameGraphTests::FGT_CopyMipChainToSink;
+	}
+	namespace FrameGraphTests
+	{
+		using ::Passes::FrameGraphTests::FGT_UploadCubeMipPattern;
+	}
+	namespace FrameGraphTests
+	{
+		using ::Passes::FrameGraphTests::FGT_GenerateCubeMips;
+	}
+	namespace FrameGraphTests
+	{
+		using ::Passes::FrameGraphTests::FGT_CopyCubeMipChainToSink;
+	}
+	namespace FrameGraphTests
+	{
+		using ::Passes::FrameGraphTests::FGT_CopySkyToSink;
+	}
+	namespace FrameGraphTests
+	{
+		using ::Passes::FrameGraphTests::FGT_UploadHDR;
+	}
+	namespace FrameGraphTests
+	{
+		using ::Passes::FrameGraphTests::FGT_CopyResultToSink;
+	}
+	namespace FrameGraphTests
+	{
+		using ::Passes::FrameGraphTests::FGT_ProduceBloomInputs;
+	}
+	namespace FrameGraphTests
+	{
+		using ::Passes::FrameGraphTests::FGT_ProduceGBuffer;
+	}
+	namespace FrameGraphTests
+	{
+		using ::Passes::FrameGraphTests::FGT_AppendTiles;
+	}
+	namespace FrameGraphTests
+	{
+		using ::Passes::FrameGraphTests::FGT_CopyTileList;
 	}
 	namespace Post
 	{
@@ -503,6 +742,102 @@ export namespace Pipelines
 	namespace Editor
 	{
 		using ::Pipelines::Editor::AssetPipeline;
+	}
+	namespace FrameGraphTests
+	{
+		using ::Pipelines::FrameGraphTests::FGT_GraphicsPipeline;
+	}
+	namespace FrameGraphTests
+	{
+		using ::Pipelines::FrameGraphTests::FGT_Async1Pipeline;
+	}
+	namespace FrameGraphTests
+	{
+		using ::Pipelines::FrameGraphTests::FGT_Async2Pipeline;
+	}
+	namespace FrameGraphTests
+	{
+		using ::Pipelines::FrameGraphTests::FGT_Async3Pipeline;
+	}
+	namespace FrameGraphTests
+	{
+		using ::Pipelines::FrameGraphTests::FGT_RoundTripPipeline;
+	}
+	namespace FrameGraphTests
+	{
+		using ::Pipelines::FrameGraphTests::FGT_CullingPipeline;
+	}
+	namespace FrameGraphTests
+	{
+		using ::Pipelines::FrameGraphTests::FGT_SetupResultPipeline;
+	}
+	namespace FrameGraphTests
+	{
+		using ::Pipelines::FrameGraphTests::FGT_RecreatePipeline;
+	}
+	namespace FrameGraphTests
+	{
+		using ::Pipelines::FrameGraphTests::FGT_StaticPipeline;
+	}
+	namespace FrameGraphTests
+	{
+		using ::Pipelines::FrameGraphTests::FGT_HistoryPipeline;
+	}
+	namespace FrameGraphTests
+	{
+		using ::Pipelines::FrameGraphTests::FGT_MipsPipeline;
+	}
+	namespace FrameGraphTests
+	{
+		using ::Pipelines::FrameGraphTests::FGT_ArrayPipeline;
+	}
+	namespace FrameGraphTests
+	{
+		using ::Pipelines::FrameGraphTests::FGT_CubePipeline;
+	}
+	namespace FrameGraphTests
+	{
+		using ::Pipelines::FrameGraphTests::FGT_BufferPipeline;
+	}
+	namespace FrameGraphTests
+	{
+		using ::Pipelines::FrameGraphTests::FGT_MipGenPipeline;
+	}
+	namespace FrameGraphTests
+	{
+		using ::Pipelines::FrameGraphTests::FGT_CubeMipGenPipeline;
+	}
+	namespace FrameGraphTests
+	{
+		using ::Pipelines::FrameGraphTests::FGT_SkyPipeline;
+	}
+	namespace FrameGraphTests
+	{
+		using ::Pipelines::FrameGraphTests::FGT_TonemapPipeline;
+	}
+	namespace FrameGraphTests
+	{
+		using ::Pipelines::FrameGraphTests::FGT_BloomPipeline;
+	}
+	namespace FrameGraphTests
+	{
+		using ::Pipelines::FrameGraphTests::FGT_VSMUnshadowedPipeline;
+	}
+	namespace FrameGraphTests
+	{
+		using ::Pipelines::FrameGraphTests::FGT_VSMDepthAnalysisPipeline;
+	}
+	namespace FrameGraphTests
+	{
+		using ::Pipelines::FrameGraphTests::FGT_VSMFullChainPipeline;
+	}
+	namespace FrameGraphTests
+	{
+		using ::Pipelines::FrameGraphTests::FGT_TileListPipeline;
+	}
+	namespace FrameGraphTests
+	{
+		using ::Pipelines::FrameGraphTests::FGT_AliasingPipeline;
 	}
 	namespace Frame
 	{

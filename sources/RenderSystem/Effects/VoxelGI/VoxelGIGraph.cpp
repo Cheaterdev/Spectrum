@@ -1,13 +1,4 @@
-﻿module;
-
-// TEMP (voxel_vsm_diag.temp diagnostic) -- global module fragment needed for
-// <fstream>/<cfloat>, same pattern as HAL.Streamline.cpp's own std::ofstream
-// usage. Remove alongside the diagnostic block once the shadow-coverage
-// investigation is done.
-#include <fstream>
-#include <cfloat>
-
-module Graphics:VoxelGI;
+﻿module Graphics:VoxelGI;
 import RenderSystem;
 
 
@@ -481,47 +472,6 @@ VoxelGI::VoxelGI(Scene::ptr& scene, VSM& vsm) :scene(scene), vsm(vsm), VariableC
 			vsm_lookup.GetPage_cameras() = data.VSM_PageCameras->structuredBuffer;
 
 			compute.set(ligthing);
-
-			// TEMP diagnostic (voxel_vsm_diag.temp) -- checking whether VSM's
-			// active window actually covers the (fixed, whole-scene-bounds)
-			// voxel GI volume, since "no shadows" after switching Lighting
-			// from PSSM_Global to VSM would be exactly what a coverage gap
-			// looks like. Logged once.
-			{
-				static bool logged_once = false;
-				if (!logged_once)
-				{
-					logged_once = true;
-					float3 corners[8];
-					for (int i = 0; i < 8; i++)
-						corners[i] = this->min + this->size * float3((i & 1) ? 1.f : 0.f, (i & 2) ? 1.f : 0.f, (i & 4) ? 1.f : 0.f);
-
-					float2 ls_min = float2( FLT_MAX,  FLT_MAX);
-					float2 ls_max = float2(-FLT_MAX, -FLT_MAX);
-					for (int i = 0; i < 8; i++)
-					{
-						float2 ls = (float4(corners[i], 1) * vsm_lookup.GetLight_view()).xy;
-						ls_min = float2(std::min(ls_min.x, ls.x), std::min(ls_min.y, ls.y));
-						ls_max = float2(std::max(ls_max.x, ls.x), std::max(ls_max.y, ls.y));
-					}
-
-					std::ofstream f("voxel_vsm_diag.temp", std::ios::app);
-					f << "voxel bounds: min=(" << this->min.x << "," << this->min.y << "," << this->min.z
-					  << ") size=(" << this->size.x << "," << this->size.y << "," << this->size.z << ")\n";
-					f << "voxel bounds in light-space XY: min=(" << ls_min.x << "," << ls_min.y
-					  << ") max=(" << ls_max.x << "," << ls_max.y << ")\n";
-					f << "active_min=" << vsm_lookup.GetActive_min() << " active_max=" << vsm_lookup.GetActive_max() << "\n";
-					for (int level = vsm_lookup.GetActive_min(); level <= vsm_lookup.GetActive_max(); level++)
-					{
-						float4 info = vsm_lookup.GetLevel_info()[level];
-						float extent = info.z * vsm_lookup.GetPages_per_level();
-						f << "  level " << level << ": origin=(" << info.x << "," << info.y
-						  << ") extent=" << extent << " covers=["
-						  << info.x << "," << (info.x + extent) << "]x[" << info.y << "," << (info.y + extent) << "]\n";
-					}
-					f.close();
-				}
-			}
 		}
 
 		context.graph->set_slot(SlotID::VoxelInfo, compute);

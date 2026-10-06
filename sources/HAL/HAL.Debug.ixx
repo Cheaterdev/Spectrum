@@ -28,6 +28,34 @@ export namespace HAL
 		constexpr bool DebugViews = false;
 #endif
 
+		// Graphics-API validation errors (D3D12 debug-layer ERROR/CORRUPTION)
+		// reported so far in this process. The test runner compares the count
+		// before and after each test, so a GPU test that triggers one fails.
+		class ValidationLog
+		{
+			static inline std::atomic<uint64> count = 0;
+			static inline std::mutex          last_mutex;
+			static inline std::string         last;
+
+		public:
+			static void report(std::string_view message)
+			{
+				{
+					std::lock_guard lock(last_mutex);
+					last = message;
+				}
+				++count;
+			}
+
+			static uint64 error_count() { return count.load(); }
+
+			static std::string last_error()
+			{
+				std::lock_guard lock(last_mutex);
+				return last;
+			}
+		};
+
 		// -----------------------------------------------------------------------
 		//  Runtime barrier breakpoints.
 		//  Set from the debug UI; checked at both recording time and compile time.

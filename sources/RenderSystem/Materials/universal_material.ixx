@@ -94,6 +94,16 @@ export namespace materials
 		// nullptr unless Masked -- callers (VSM.cpp) must check the mode
 		// first, or just null-check this directly.
 		PSOS::Shadows::VSM::VSMDepthDrawMaterial::ptr get_vsm_depth_draw() const override { return vsm_depth_draw; }
+
+		// The raster passes a preview or main view draws: every depth and GBuffer variant.
+		bool is_built() const override
+		{
+			for (auto& [key, pso] : gbuffer->psos)
+				if (!pso || !pso->is_built()) return false;
+			for (auto& [key, pso] : depth_draw->psos)
+				if (!pso || !pso->is_built()) return false;
+			return true;
+		}
 	private:
 
 		SERIALIZE()
@@ -198,6 +208,8 @@ export namespace materials
 	//		HAL::library_shader::ptr raytracing_lib;
 		universal_material(MaterialGraph::ptr graph);
 		Slots::Meshes::MaterialInfo::Compiled compiled_material_info;
+
+		bool is_ready_to_draw() const override { return pipeline && pipeline->is_built(); }
 
 		::TypedHandle<Table::Meshes::MaterialCommandData::Compiled> info_handle;
 

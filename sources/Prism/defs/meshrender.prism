@@ -275,8 +275,11 @@ namespace Meshes
 		StructuredBuffer<uint> meshes_count;
 		# [Auto]: mesh_renderer's gather_boxes_commands binds only meshes_count --
 		# its sole reader (occluder_cs_dispatch_init.hlsl) never reads commands.
+		# Structured, not a typed Buffer<uint>: the Vulkan heap has no texel-buffer
+		# descriptors, so a typed read goes through a storage-buffer descriptor --
+		# undefined, and a device loss on NVIDIA (BlueNoise.prism hit it).
 		[Auto = Texture_Null]
-		Buffer<uint> commands;
+		StructuredBuffer<uint> commands;
 
 	}
 

@@ -860,6 +860,10 @@ namespace Shadows
 		[SetupCondition = VSMSelectors::supported]
 		PassNode VSM_GatherDispatch
 		{
+			# Read-only dependency on PreScene: the gather reads the scene buffers
+			# it uploads. Undeclared, PreScene is culled in a graph where nothing
+			# else needs `scene`, and the gather appends nothing.
+			[Always = Read] StructuredBuffer<uint> scene;
 			[Always = CopyDest | Static] [Size = 26] StructuredBuffer<VSMLevelDispatchInfo> VSM_LevelDispatchInfo;
 			# AppendStructuredBuffer here (not just in VSMGatherDispatchData below) is
 			# not supported by FrameGraph's PassNode codegen -- FrameGraph::Handlers
@@ -884,6 +888,8 @@ namespace Shadows
 		[SetupCondition = VSMSelectors::supported]
 		PassNode VSM_RenderPages
 		{
+			# Draws from the scene buffers PreScene uploads.
+			[Always = Read] StructuredBuffer<uint> scene;
 			[Always = DepthStencil] Texture VSM_Atlas;
 			# One texel per (level, page) slot -- a VSM_PagesPerLevelSide square per
 			# level, ArrayCount=MaxLevels slices.
@@ -1143,6 +1149,9 @@ namespace Shadows
 		[SetupCondition = VSMSelectors::supported && VSMSelectors::use_vsm_penumbra && VSMSelectors::shadow_source == ShadowSource::VSM]
 		PassNode VSM_ShadowResolve
 		{
+			# The RTX blocker verify traces the TLAS PreScene builds, from async
+			# compute: without this edge nothing orders the build before the trace.
+			[Always = Read] StructuredBuffer<uint> scene;
 			# Flat fields, not the (removed) GBuffer PassView -- see pssm.prism's own
 			# comment.
 			[Always = Read] Texture GBuffer_Albedo;

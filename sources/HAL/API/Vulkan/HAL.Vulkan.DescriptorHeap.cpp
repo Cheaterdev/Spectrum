@@ -136,13 +136,6 @@ namespace HAL
         }
         else
         {
-            // TEMP: Vulkan 3D bring-up -- who places an SRV on an empty resource.
-            {
-                auto& d = v.Resource->get_desc();
-                std::ofstream("srv_empty.temp", std::ios::app)
-                    << "name=" << v.Resource->get_name() << " buffer=" << d.is_buffer() << " texture=" << d.is_texture() << "\n"
-                    << std::stacktrace::current() << "\n----\n";
-            }
             ASSERT(!"SRV: resource has neither a VkImage nor a VkBuffer (failed creation?)");
             return;
         }
@@ -315,13 +308,12 @@ namespace HAL
             }
 
             records.resize(capacity);
-            temp_live[TL_DescHeaps]++;   // TEMP
-            temp_live[TL_DescSlots] += records.size();
+            if (vk_set != VK_NULL_HANDLE)
+                counter_bound.resize(capacity);
         }
 
         DescriptorHeap::~DescriptorHeap()
         {
-            if (!records.empty()) { temp_live[TL_DescHeaps]--; temp_live[TL_DescSlots] -= records.size(); }   // TEMP
             // Destroying the pool frees its set.
             if (vk_pool != VK_NULL_HANDLE)
                 vkDestroyDescriptorPool(device.get_native_device(), vk_pool, nullptr);
@@ -333,6 +325,13 @@ namespace HAL
             if (slot >= records.size()) return;
             records[slot] = record;
             if (vk_set == VK_NULL_HANDLE) return;
+
+            // Binding 2 is a separate array from binding 0: a slot reused for a
+            // counter-less view keeps the previous view's counter descriptor,
+            // which can name a freed buffer, unless it is nulled here.
+            const bool has_counter   = record.counter.buffer != VK_NULL_HANDLE;
+            const bool clear_counter = !has_counter && counter_bound[slot] && device.supports_null_descriptor();
+            const VkDescriptorBufferInfo null_counter{ VK_NULL_HANDLE, 0, VK_WHOLE_SIZE };
 
             VkWriteDescriptorSet writes[2]{};
             uint32_t count = 0;
@@ -349,7 +348,7 @@ namespace HAL
             else
                 w.pBufferInfo = &record.buffer;
 
-            if (record.counter.buffer != VK_NULL_HANDLE)
+            if (has_counter || clear_counter)
             {
                 auto& c = writes[count++];
                 c.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -358,11 +357,13 @@ namespace HAL
                 c.dstArrayElement = slot;
                 c.descriptorCount = 1;
                 c.descriptorType  = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-                c.pBufferInfo     = &record.counter;
+                c.pBufferInfo     = has_counter ? &record.counter : &null_counter;
             }
 
             std::lock_guard g(write_mutex);
             vkUpdateDescriptorSets(device.get_native_device(), count, writes, 0, nullptr);
+            if (has_counter || clear_counter)
+                counter_bound[slot] = has_counter;
         }
 
         HAL::Descriptor DescriptorHeap::operator[](uint i)

@@ -34,7 +34,7 @@ export namespace Test
 	TEST(Core.RTX, MaterialTester)
 	{
 		auto& device = RenderSystem::get().device();
-		constexpr uint W = 256, H = 256;
+		constexpr uint W = kReferenceWidth, H = kReferenceHeight;
 
 		// Scene: material_tester sphere with the custom material.
 		auto mesh_inst = std::make_shared<MeshAssetInstance>(EngineAssets::material_tester.get_asset());
@@ -50,7 +50,7 @@ export namespace Test
 		camera cam;
 		cam.position = vec3(30, 10, 30).normalize() * 10.0f;
 		cam.target   = vec3(0, 0, 0);
-		cam.set_projection_params(Math::pi / 4, 1.0f, 0.5f, 200.0f);
+		cam.set_projection_params(Math::pi / 4, kReferenceAspect, 0.5f, 200.0f);
 		cam.update();
 
 		// FrameGraph setup.

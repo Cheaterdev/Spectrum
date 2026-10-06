@@ -81,6 +81,20 @@ export namespace Test
 			skipped_categories[category] = reason;
 		}
 
+		// A test that raises the probe's error count fails, whatever its own
+		// asserts said. Installed by the runner's main (the framework itself only
+		// knows Core); `last` describes the most recent error. `settle` runs
+		// before the count is read after a test: errors raised by work the test
+		// queued but that hasn't been submitted yet must land in that test, not
+		// in whichever test runs next.
+		void SetErrorProbe(std::function<uint64_t()> count, std::function<std::string()> last,
+		                   std::function<void()> settle)
+		{
+			error_count  = std::move(count);
+			last_error   = std::move(last);
+			error_settle = std::move(settle);
+		}
+
 		std::vector<TestResult> RunAll(std::string_view filter = {})
 		{
 			std::sort(tests.begin(), tests.end(), [](const Test& a, const Test& b) {
@@ -91,13 +105,16 @@ export namespace Test
 			std::vector<TestResult> results;
 			std::set<std::string> ranSetups;
 
+			// A leading '-' inverts the filter: run everything except the matches.
+			const bool exclude = filter.starts_with('-');
+			const std::string_view pattern = exclude ? filter.substr(1) : filter;
 			auto matches = [&](const Test& t) -> bool {
-				if (filter.empty()) return true;
+				if (pattern.empty()) return true;
 				std::string full = t.category.empty() ? t.name : t.category + "::" + t.name;
-				std::string lf(filter), lful(full);
+				std::string lf(pattern), lful(full);
 				std::transform(lf.begin(),   lf.end(),   lf.begin(),   [](unsigned char c){ return std::tolower(c); });
 				std::transform(lful.begin(), lful.end(), lful.begin(), [](unsigned char c){ return std::tolower(c); });
-				return lful.contains(lf);
+				return lful.contains(lf) != exclude;
 			};
 
 			auto matchCount = std::count_if(tests.begin(), tests.end(), matches);
@@ -163,23 +180,43 @@ export namespace Test
 
 				Log::get() << Log::LEVEL_INFO << ">> Starting: " << fullName << Log::endl;
 
+				const uint64_t errors_before = error_count ? error_count() : 0;
+
 				try
 				{
 					test.func();
 					result.passed = true;
-					Log::get() << Log::LEVEL_INFO << "[PASS] " << fullName << Log::endl;
 				}
 				catch (const TestSkipped& e)
 				{
 					result.skipped = true;
 					result.passed = true;
 					result.errorMessage = e.what();
-					Log::get() << Log::LEVEL_INFO << "[SKIP] " << fullName << " (" << result.errorMessage << ")" << Log::endl;
 				}
 				catch (const TestFailure& e)
 				{
 					result.passed = false;
 					result.errorMessage = e.what();
+				}
+
+				if (error_count && !result.skipped)
+				{
+					if (error_settle)
+						error_settle();
+					if (const uint64_t errors = error_count() - errors_before)
+					{
+						std::string msg = std::to_string(errors) + " validation error(s) during the test, last: " + last_error();
+						result.errorMessage = result.passed ? msg : result.errorMessage + " | " + msg;
+						result.passed = false;
+					}
+				}
+
+				if (result.skipped)
+					Log::get() << Log::LEVEL_INFO << "[SKIP] " << fullName << " (" << result.errorMessage << ")" << Log::endl;
+				else if (result.passed)
+					Log::get() << Log::LEVEL_INFO << "[PASS] " << fullName << Log::endl;
+				else
+				{
 					Log::get() << Log::LEVEL_ERROR << "[FAIL] " << fullName << Log::endl;
 					Log::get() << Log::LEVEL_ERROR << "       " << result.errorMessage << Log::endl;
 				}
@@ -259,6 +296,9 @@ export namespace Test
 		std::map<std::string, SetupFunc> setups;
 		std::map<std::string, TeardownFunc> teardowns;
 		std::map<std::string, std::string> skipped_categories;
+		std::function<uint64_t()>          error_count;
+		std::function<std::string()>       last_error;
+		std::function<void()>              error_settle;
 	};
 
 

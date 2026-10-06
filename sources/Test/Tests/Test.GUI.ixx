@@ -412,7 +412,7 @@ export namespace Test
 		ASSERT_TEXTURE(tex.get(), "gui_element_label");
 	}
 
-	// Renders a realistic multi-widget UI into an 800x600 texture.
+	// Renders a realistic multi-widget UI into a reference-size texture.
 	// Exercises: colored_rect background, label, button row, check_box_text
 	// panel, status_bar.  Uses create_graph to pre-render label glyphs via
 	// the production path, then iterates UIContext.draw_infos exactly as
@@ -421,7 +421,7 @@ export namespace Test
 	{
 		THREAD_SCOPE(GUI);
 
-		constexpr uint W = 800, H = 600;
+		constexpr uint W = kReferenceWidth, H = kReferenceHeight;
 		auto& device = RenderSystem::get().device();
 
 		auto tex = std::make_shared<HAL::TextureResource>(device,

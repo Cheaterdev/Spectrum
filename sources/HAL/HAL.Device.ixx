@@ -89,7 +89,24 @@ export namespace HAL
 		// minStorageBufferOffsetAlignment (1 on D3D12).
 		uint64 structured_buffer_alignment(uint64 stride) const
 		{
-			return std::lcm(stride, std::max<uint64>(1, properties.min_storage_buffer_offset_alignment));
+			return structured_buffer_alignment(stride, properties.min_storage_buffer_offset_alignment);
+		}
+		static uint64 structured_buffer_alignment(uint64 stride, uint64 min_offset_alignment)
+		{
+			return std::lcm(stride, std::max<uint64>(1, min_offset_alignment));
+		}
+
+		// Bytes a counterType::SELF buffer reserves in front of its elements: room
+		// for the uint counter, a whole number of elements, and a legal structured
+		// view offset on this adapter. Buffer creation, the FrameGraph's view desc
+		// and StructuredBufferView::init must all agree on it.
+		uint64 counter_prefix(uint64 stride) const
+		{
+			return counter_prefix(stride, properties.min_storage_buffer_offset_alignment);
+		}
+		static uint64 counter_prefix(uint64 stride, uint64 min_offset_alignment)
+		{
+			return Math::roundUp(4, structured_buffer_alignment(stride, min_offset_alignment));
 		}
 		ContextGenerator context_generator;
 		std::shared_ptr<CommandList> get_upload_list();

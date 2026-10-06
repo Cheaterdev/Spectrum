@@ -552,5 +552,40 @@ export namespace Test
 
 		ASSERT_TEXTURE(tex.get(), "clear_uav");
 	}
+
+	// Vulkan keeps Append/Consume counters in their own binding, written apart
+	// from the view: reusing a slot for a counter-less or null UAV must clear it,
+	// or the slot keeps a counter descriptor that may name a freed buffer.
+	TEST(Core.HAL, Descriptor_CounterSlotReuse)
+	{
+		if (HAL::get_backend_name() != "vulkan")
+			throw TestSkipped("D3D12 UAV descriptors embed their counter");
+
+		auto& device = RenderSystem::get().device();
+		auto data    = std::make_shared<HAL::Buffer>(device, HAL::ResourceDesc::Buffer(1024, HAL::ResFlags::UnorderedAccess), HAL::HeapType::DEFAULT);
+		auto counter = std::make_shared<HAL::Buffer>(device, HAL::ResourceDesc::Buffer(256, HAL::ResFlags::UnorderedAccess), HAL::HeapType::DEFAULT);
+		auto heap    = std::make_shared<HAL::DescriptorHeap>(device, 4, HAL::DescriptorHeapType::CBV_SRV_UAV, HAL::DescriptorHeapFlags::ShaderVisible);
+
+		auto uav = [&](std::shared_ptr<HAL::Resource> counter_res) {
+			return HAL::Views::UnorderedAccess{ data, HAL::Format::UNKNOWN,
+				HAL::Views::UnorderedAccess::Buffer{ 0, 256, 4, false, 0, std::move(counter_res) } };
+		};
+		auto bound = [](auto& h, uint slot) {
+			if constexpr (requires { h.has_counter_descriptor(slot); })
+				return h.has_counter_descriptor(slot);
+			else
+				return false;
+		};
+
+		(*heap)[0].place(uav(counter));
+		ASSERT_TRUE(bound(*heap, 0));
+		(*heap)[0].place(uav(nullptr));
+		ASSERT_FALSE(bound(*heap, 0));
+
+		(*heap)[1].place(uav(counter));
+		ASSERT_TRUE(bound(*heap, 1));
+		(*heap)[1].place(HAL::Views::UnorderedAccess{ nullptr, HAL::Format::UNKNOWN, HAL::Views::UnorderedAccess::Buffer{} });
+		ASSERT_FALSE(bound(*heap, 1));
+	}
 }
 

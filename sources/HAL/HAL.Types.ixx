@@ -14,11 +14,6 @@ export namespace HAL
 		// Vulkan: every computed barrier widened to ALL_COMMANDS / MEMORY r+w on
 		// both sides (layouts kept). Driven by the "Sync debug" Properties toggle.
 		inline std::atomic<bool> widen_barriers{ false };
-
-		// TEMP: bloom sync investigation -- frame counter (Vulkan present) and the
-		// frame range whose barriers/commands are written to barrier_dump.temp.
-		inline std::atomic<uint64_t> temp_frame{ 0 };
-		inline uint64_t temp_dump_first = 1500, temp_dump_last = 1501;
 	}
 
 	struct GlobalAllocationPolicy

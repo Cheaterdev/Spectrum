@@ -41,12 +41,10 @@ export namespace HAL
             // occur.  Only the canonical begin()/end() pair manages the lock.
             std::mutex* _pool_mutex = nullptr;
 
-            // TEMP: device-lost investigation -- a diagnostic checkpoint per GPU op.
-            std::string temp_name;
-            uint32_t    temp_op = 0;
-            void temp_mark(const char* op);
-            bool temp_dumping() const;
-            void temp_dump(const std::string& line);
+        public:
+            // Pass/list name from set_name(), for submission diagnostics.
+            std::string debug_name;
+        private:
 
             // Dynamic rendering state — populated by set_rtv(), consumed by draw calls.
             static constexpr uint32_t MAX_COLOR_ATTACHMENTS = 8;   // D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT

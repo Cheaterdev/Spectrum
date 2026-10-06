@@ -534,6 +534,10 @@ public:
 	float3 get_position();
 	void set_position(float3 p);
 
+	// Last VSM_DepthAnalysis result read back: the smallest world-space texel
+	// size in the depth-analysis region (FLT_MAX until a frame measured one).
+	float measured_texel_size() const { return std::bit_cast<float>(measured_texel_size_bits.load(std::memory_order_relaxed)); }
+
 	// Call once, after the Scene exists (VSM is a class member wired at
 	// construction time, before main.cpp creates the scene -- mirrors
 	// stenciler->scene = scene; being assigned post-construction too).
@@ -573,19 +577,21 @@ public:
 
 	// Every VSM pass states its enable condition in vsm.prism and gets a
 	// generated setup (PassSetupDefault<T>), so only render funcs are wired.
+	// Wires whichever VSM passes `pipeline` contains: MainPipeline has them all,
+	// the FrameGraph tests' pipelines (framegraph_tests.prism) only a subset.
 	template<typename TPipeline>
 	explicit VSM(TPipeline& pipeline) : VSM()
 	{
-		pipeline.vSM_GatherDispatch.render_func = m_gatherdispatch_render;
-		pipeline.vSM_RenderPages.render_func = m_renderpages_render;
-		pipeline.vSM_HiZRebuild.render_func = m_hizrebuild_render;
-		pipeline.vSM_BlockerClassify.render_func = m_blockerclassify_render;
-		pipeline.vSM_BlockerSearch.render_func = m_blockersearch_render;
-		pipeline.vSM_ScreenSpaceShadow.render_func = m_screenspaceshadow_render;
-		pipeline.vSM_ShadowResolve.render_func = m_shadowresolve_render;
-		pipeline.vSM_Combine.render_func = m_combine_render;
-		pipeline.vSM_Unshadowed.render_func = m_unshadowed_render;
-		pipeline.vSM_DebugClassifyOverlay.render_func = m_debugoverlay_render;
-		pipeline.vSM_DepthAnalysis.render_func = m_depth_analysis_render;
+		if constexpr (requires { pipeline.vSM_GatherDispatch; })       pipeline.vSM_GatherDispatch.render_func       = m_gatherdispatch_render;
+		if constexpr (requires { pipeline.vSM_RenderPages; })          pipeline.vSM_RenderPages.render_func          = m_renderpages_render;
+		if constexpr (requires { pipeline.vSM_HiZRebuild; })           pipeline.vSM_HiZRebuild.render_func           = m_hizrebuild_render;
+		if constexpr (requires { pipeline.vSM_BlockerClassify; })      pipeline.vSM_BlockerClassify.render_func      = m_blockerclassify_render;
+		if constexpr (requires { pipeline.vSM_BlockerSearch; })        pipeline.vSM_BlockerSearch.render_func        = m_blockersearch_render;
+		if constexpr (requires { pipeline.vSM_ScreenSpaceShadow; })    pipeline.vSM_ScreenSpaceShadow.render_func    = m_screenspaceshadow_render;
+		if constexpr (requires { pipeline.vSM_ShadowResolve; })        pipeline.vSM_ShadowResolve.render_func        = m_shadowresolve_render;
+		if constexpr (requires { pipeline.vSM_Combine; })              pipeline.vSM_Combine.render_func              = m_combine_render;
+		if constexpr (requires { pipeline.vSM_Unshadowed; })           pipeline.vSM_Unshadowed.render_func           = m_unshadowed_render;
+		if constexpr (requires { pipeline.vSM_DebugClassifyOverlay; }) pipeline.vSM_DebugClassifyOverlay.render_func = m_debugoverlay_render;
+		if constexpr (requires { pipeline.vSM_DepthAnalysis; })        pipeline.vSM_DepthAnalysis.render_func        = m_depth_analysis_render;
 	}
 };

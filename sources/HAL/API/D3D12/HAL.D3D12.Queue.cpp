@@ -235,24 +235,6 @@ namespace HAL
 
         std::lock_guard<std::mutex> g(queue_mutex);
 
-        if (const auto* texture = std::get_if<StorageRequest::Texture>(&srequest.operation))
-        {
-            const auto desc = srequest.resource->get_desc().as_texture();
-            const auto size = desc.get_size(texture->subresource);
-            // TEMP (texture_upload.temp) -- remove after the BC3 upload investigation.
-            static std::string trace;
-            trace += "file=" + srequest.file.generic_string()
-                  + " subresource=" + std::to_string(texture->subresource)
-                  + " mip=" + std::to_string(desc.get_mip(texture->subresource))
-                  + " array=" + std::to_string(desc.get_array(texture->subresource))
-                  + " resource=" + std::to_string(desc.Dimensions.x) + "x" + std::to_string(desc.Dimensions.y) + "x" + std::to_string(desc.Dimensions.z)
-                  + " mips=" + std::to_string(desc.MipLevels) + " arrays=" + std::to_string(desc.ArraySize)
-                  + " destination=" + std::to_string(size.x) + "x" + std::to_string(size.y) + "x" + std::to_string(size.z)
-                  + " compressed_bytes=" + std::to_string(srequest.size)
-                  + " unpacked_bytes=" + std::to_string(srequest.uncompressed_size) + "\n";
-            FileSystem::get().save_data("texture_upload.temp", trace);
-        }
-
         native->EnqueueRequest(&request);
 
         auto waiter = signal();

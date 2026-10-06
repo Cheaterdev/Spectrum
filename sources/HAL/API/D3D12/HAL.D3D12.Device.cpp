@@ -416,6 +416,9 @@ namespace HAL
                             if (!tag) return;   // INFO/MESSAGE would drown the log
 
                             Log::get() << tag << " #" << int(id) << ": " << description << Log::endl;
+
+                            if (severity == D3D12_MESSAGE_SEVERITY_CORRUPTION || severity == D3D12_MESSAGE_SEVERITY_ERROR)
+                                Debug::ValidationLog::report(std::string(tag) + " #" + std::to_string(int(id)) + ": " + description);
                         },
                         D3D12_MESSAGE_CALLBACK_FLAG_NONE, nullptr, &cookie);
 

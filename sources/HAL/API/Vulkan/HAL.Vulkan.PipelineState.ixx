@@ -17,6 +17,8 @@ export namespace HAL
             bool                 is_mesh      = false;   // task/mesh pipeline (no vertex input / topology)
             VkPrimitiveTopology  vk_topology  = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 
+            bool is_built() const { return vk_pipeline != VK_NULL_HANDLE; }
+
             virtual ~TrackedPipeline();
         };
 

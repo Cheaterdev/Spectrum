@@ -9,6 +9,14 @@ export namespace Test
 {
 	HAL::texture_data::ptr readback_texture(HAL::TextureResource* tex, uint sub_resource = 0);
 
+	// Render size for golden-image tests of scenes (meshes, lighting, post):
+	// at small sizes a missing triangle or a one-pixel seam falls between
+	// pixels. Tests whose size is fixed by the engine (sky cubemaps) or by the
+	// test's own pixel geometry (nine-patch clipping) keep theirs.
+	constexpr uint kReferenceWidth  = 1920;
+	constexpr uint kReferenceHeight = 1080;
+	constexpr float kReferenceAspect = float(kReferenceWidth) / float(kReferenceHeight);
+
 	// UI PSOs are built for the scRGB swapchain; check_texture_reference
 	// re-encodes this format to sRGB8 before comparing against the goldens.
 	inline const HAL::Format UI_RT_FORMAT = HAL::Format::R16G16B16A16_FLOAT;
@@ -18,12 +26,13 @@ export namespace Test
 	// targets were UNORM; it is linearized for the scRGB target.
 	void set_ui_target(HAL::CommandList::ptr& list, HAL::Texture2DView& view, vec4 srgb_clear);
 
-	// How an R16G16B16A16_FLOAT target is turned into the 8-bit values the
-	// goldens hold. Other formats are compared as stored.
+	// How a float target (R16G16B16A16_FLOAT, R11G11B10_FLOAT) is turned into
+	// the 8-bit values the goldens hold. Other formats are compared as stored.
 	enum class FloatEncoding
 	{
-		Linear,   // scRGB (UI targets): sRGB-encode
-		Encoded,  // shader already gamma-encoded (e.g. ColorRTX's pow(1/2.2)): clamp only
+		Linear,     // scRGB (UI targets): sRGB-encode
+		Encoded,    // shader already gamma-encoded (e.g. ColorRTX's pow(1/2.2)): clamp only
+		Tonemapped, // HDR (sky, lighting): x exposure, Reinhard per channel, then sRGB-encode
 	};
 
 	struct TextureCompare
@@ -41,10 +50,22 @@ export namespace Test
 
 		FloatEncoding float_encoding = FloatEncoding::Linear;
 		uint          sub_resource   = 0;
+
+		// FloatEncoding::Tonemapped only.
+		float exposure = 1.0f;
 	};
 
 	void check_texture_reference(
 		HAL::TextureResource*        tex,
+		const std::string&           name,
+		const TextureCompare&        compare       = {},
+		const std::filesystem::path& reference_dir = "test_references",
+		const std::filesystem::path& results_dir   = "test_results");
+
+	// Same comparison for data already read back (compare.sub_resource unused),
+	// e.g. several subresources fetched in one readback list.
+	void check_texture_data_reference(
+		HAL::texture_data::ptr       actual,
 		const std::string&           name,
 		const TextureCompare&        compare       = {},
 		const std::filesystem::path& reference_dir = "test_references",

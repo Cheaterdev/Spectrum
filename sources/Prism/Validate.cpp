@@ -836,7 +836,18 @@ void validate(Parsed& parsed)
 		check_options(table, "struct", table.name);
 		check_payload(table);
 		for (const auto& v : table.values)
+		{
 			check_options(v, "struct field", table.name + "." + v.name);
+
+			// Typed buffers compile to SPIR-V texel buffers, but the Vulkan bindless
+			// heap holds only storage-buffer descriptors for buffers: the read is
+			// undefined (NVIDIA: VK_ERROR_DEVICE_LOST, WRITE_INVALID).
+			if (v.class_no_template == "Buffer" || v.class_no_template == "RWBuffer")
+				diagnostics().error(name_loc_of(v), std::format("{}.{}: typed {}<{}> is not supported on Vulkan; "
+					"use {}StructuredBuffer<{}> and bind the view's structured buffer",
+					table.name, v.name, v.class_no_template, v.template_arg,
+					v.class_no_template == "RWBuffer" ? "RW" : "", v.template_arg));
+		}
 		check_hlsl_text(table.inserted, table.hlsl_loc, table.name);
 		for (const auto& f : table.functions)
 		{

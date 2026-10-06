@@ -74,6 +74,9 @@ export namespace HAL
             VkDescriptorSet  vk_set  = VK_NULL_HANDLE;
             uint             capacity = 0;
             std::vector<DescriptorRecord> records;
+            // Whether set binding 2 (the counter) holds a live descriptor per slot;
+            // shader-visible heaps only.
+            std::vector<bool> counter_bound;
 
             // vkUpdateDescriptorSets requires external synchronization of dstSet.
             std::mutex write_mutex;
@@ -104,6 +107,11 @@ export namespace HAL
             const DescriptorRecord* get_record(uint slot) const noexcept
             {
                 return slot < records.size() ? &records[slot] : nullptr;
+            }
+            // Whether the shader-visible counter binding of `slot` names a buffer.
+            bool has_counter_descriptor(uint slot) const
+            {
+                return slot < counter_bound.size() && counter_bound[slot];
             }
         };
     }

@@ -95,10 +95,12 @@ export
 			void reserve(CommandList& list, size_t offset)
 			{
 				std::lock_guard<std::mutex> g(m);
-				if constexpr (use_virtual)	buffer.resource->get_tiled_manager().map_buffer_part(updates, 0, offset * sizeof(T));
-
-				updates.resource = buffer.resource.get();
-				list.update_tilings(std::move(updates));
+				if constexpr (use_virtual)
+				{
+					buffer.resource->get_tiled_manager().map_buffer_part(updates, 0, offset * sizeof(T));
+					updates.resource = buffer.resource.get();
+					list.update_tilings(std::move(updates));
+				}
 			}
 
 
@@ -131,8 +133,11 @@ export
 			{
 				std::lock_guard<std::mutex> g(m);
 
-				updates.resource = buffer.resource.get();
-				list->update_tilings(std::move(updates));
+				if constexpr (use_virtual)
+				{
+					updates.resource = buffer.resource.get();
+					list->update_tilings(std::move(updates));
+				}
 				for (auto& elems : update_list)
 				{
 

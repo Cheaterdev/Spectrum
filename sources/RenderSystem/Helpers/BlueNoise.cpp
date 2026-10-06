@@ -76,12 +76,11 @@ BlueNoise::BlueNoise()
 		auto& compute = context.get_list()->get_compute();
 		compute.set_pipeline<PSOS::Utility::BlueNoise>();
 
-		static uint index = 0;
 		Slots::Utility::BlueNoise blue_data;
-		blue_data.GetFrame_index()            = index++;
-		blue_data.GetSobol_buffer()           = HLSL::Buffer<uint>(sobol_buffer_view.structuredBuffer);
-		blue_data.GetRanking_tile_buffer()    = HLSL::Buffer<uint>(ranking_buffer_view.structuredBuffer);
-		blue_data.GetScrambling_tile_buffer() = HLSL::Buffer<uint>(scrambling_buffer_view.structuredBuffer);
+		blue_data.GetFrame_index()            = frame_index++;
+		blue_data.GetSobol_buffer()           = HLSL::StructuredBuffer<uint>(sobol_buffer_view.structuredBuffer);
+		blue_data.GetRanking_tile_buffer()    = HLSL::StructuredBuffer<uint>(ranking_buffer_view.structuredBuffer);
+		blue_data.GetScrambling_tile_buffer() = HLSL::StructuredBuffer<uint>(scrambling_buffer_view.structuredBuffer);
 		blue_data.GetBlue_noise_texture()     = data.BlueNoise->rwTexture2D;
 		compute.set(blue_data);
 

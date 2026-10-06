@@ -164,6 +164,309 @@ FrameGraph::SetupResult PassSetupDefault<Passes::Dev::DebugView>::setup(
 }
 
 
+FrameGraph::SetupResult PassSetupDefault<Passes::FrameGraphTests::FGT_ProduceUAV>::setup(
+	Passes::FrameGraphTests::FGT_ProduceUAV::Context& data, FrameGraph::TaskBuilder& builder)
+{
+	return FrameGraph::SetupResult::NeedsRender;
+}
+
+
+FrameGraph::SetupResult PassSetupDefault<Passes::FrameGraphTests::FGT_ProduceRTV>::setup(
+	Passes::FrameGraphTests::FGT_ProduceRTV::Context& data, FrameGraph::TaskBuilder& builder)
+{
+	return FrameGraph::SetupResult::NeedsRender;
+}
+
+
+FrameGraph::SetupResult PassSetupDefault<Passes::FrameGraphTests::FGT_CopyAToSink>::setup(
+	Passes::FrameGraphTests::FGT_CopyAToSink::Context& data, FrameGraph::TaskBuilder& builder)
+{
+	return FrameGraph::SetupResult::NeedsRender;
+}
+
+
+FrameGraph::SetupResult PassSetupDefault<Passes::FrameGraphTests::FGT_ComputeCopyAToB>::setup(
+	Passes::FrameGraphTests::FGT_ComputeCopyAToB::Context& data, FrameGraph::TaskBuilder& builder)
+{
+	return FrameGraph::SetupResult::NeedsRender;
+}
+
+
+FrameGraph::SetupResult PassSetupDefault<Passes::FrameGraphTests::FGT_CopyBToSink>::setup(
+	Passes::FrameGraphTests::FGT_CopyBToSink::Context& data, FrameGraph::TaskBuilder& builder)
+{
+	return FrameGraph::SetupResult::NeedsRender;
+}
+
+
+FrameGraph::SetupResult PassSetupDefault<Passes::FrameGraphTests::FGT_Unused>::setup(
+	Passes::FrameGraphTests::FGT_Unused::Context& data, FrameGraph::TaskBuilder& builder)
+{
+	return FrameGraph::SetupResult::NeedsRender;
+}
+
+
+FrameGraph::SetupResult PassSetupDefault<Passes::FrameGraphTests::FGT_RequiredUnused>::setup(
+	Passes::FrameGraphTests::FGT_RequiredUnused::Context& data, FrameGraph::TaskBuilder& builder)
+{
+	return FrameGraph::SetupResult::NeedsRender;
+}
+
+
+FrameGraph::SetupResult PassSetupDefault<Passes::FrameGraphTests::FGT_Disabled>::setup(
+	Passes::FrameGraphTests::FGT_Disabled::Context& data, FrameGraph::TaskBuilder& builder)
+{
+	if (!(false))
+		return FrameGraph::SetupResult::Disabled;
+	return FrameGraph::SetupResult::NeedsRender;
+}
+
+
+FrameGraph::SetupResult PassSetupDefault<Passes::FrameGraphTests::FGT_IgnoreRender>::setup(
+	Passes::FrameGraphTests::FGT_IgnoreRender::Context& data, FrameGraph::TaskBuilder& builder)
+{
+	return (false) ? FrameGraph::SetupResult::NeedsRender : FrameGraph::SetupResult::IgnoreRender;
+}
+
+
+FrameGraph::SetupResult PassSetupDefault<Passes::FrameGraphTests::FGT_Recreate>::setup(
+	Passes::FrameGraphTests::FGT_Recreate::Context& data, FrameGraph::TaskBuilder& builder)
+{
+	return FrameGraph::SetupResult::NeedsRender;
+}
+
+
+FrameGraph::SetupResult PassSetupDefault<Passes::FrameGraphTests::FGT_WriteStatic>::setup(
+	Passes::FrameGraphTests::FGT_WriteStatic::Context& data, FrameGraph::TaskBuilder& builder)
+{
+	return (builder.graph->get_context<Table::FrameGraphTests::FGTestState>().write_static) ? FrameGraph::SetupResult::NeedsRender : FrameGraph::SetupResult::IgnoreRender;
+}
+
+
+FrameGraph::SetupResult PassSetupDefault<Passes::FrameGraphTests::FGT_CopyStaticToSink>::setup(
+	Passes::FrameGraphTests::FGT_CopyStaticToSink::Context& data, FrameGraph::TaskBuilder& builder)
+{
+	return FrameGraph::SetupResult::NeedsRender;
+}
+
+
+FrameGraph::SetupResult PassSetupDefault<Passes::FrameGraphTests::FGT_WriteHist>::setup(
+	Passes::FrameGraphTests::FGT_WriteHist::Context& data, FrameGraph::TaskBuilder& builder)
+{
+	return FrameGraph::SetupResult::NeedsRender;
+}
+
+
+FrameGraph::SetupResult PassSetupDefault<Passes::FrameGraphTests::FGT_CopyHistPrevToSink>::setup(
+	Passes::FrameGraphTests::FGT_CopyHistPrevToSink::Context& data, FrameGraph::TaskBuilder& builder)
+{
+	return FrameGraph::SetupResult::NeedsRender;
+}
+
+
+FrameGraph::SetupResult PassSetupDefault<Passes::FrameGraphTests::FGT_ProduceAlias0>::setup(
+	Passes::FrameGraphTests::FGT_ProduceAlias0::Context& data, FrameGraph::TaskBuilder& builder)
+{
+	return FrameGraph::SetupResult::NeedsRender;
+}
+
+
+FrameGraph::SetupResult PassSetupDefault<Passes::FrameGraphTests::FGT_CopyAlias0>::setup(
+	Passes::FrameGraphTests::FGT_CopyAlias0::Context& data, FrameGraph::TaskBuilder& builder)
+{
+	return FrameGraph::SetupResult::NeedsRender;
+}
+
+
+FrameGraph::SetupResult PassSetupDefault<Passes::FrameGraphTests::FGT_ProduceAlias1>::setup(
+	Passes::FrameGraphTests::FGT_ProduceAlias1::Context& data, FrameGraph::TaskBuilder& builder)
+{
+	return FrameGraph::SetupResult::NeedsRender;
+}
+
+
+FrameGraph::SetupResult PassSetupDefault<Passes::FrameGraphTests::FGT_CopyAlias1>::setup(
+	Passes::FrameGraphTests::FGT_CopyAlias1::Context& data, FrameGraph::TaskBuilder& builder)
+{
+	return FrameGraph::SetupResult::NeedsRender;
+}
+
+
+FrameGraph::SetupResult PassSetupDefault<Passes::FrameGraphTests::FGT_ProduceAlias2>::setup(
+	Passes::FrameGraphTests::FGT_ProduceAlias2::Context& data, FrameGraph::TaskBuilder& builder)
+{
+	return FrameGraph::SetupResult::NeedsRender;
+}
+
+
+FrameGraph::SetupResult PassSetupDefault<Passes::FrameGraphTests::FGT_CopyAlias2>::setup(
+	Passes::FrameGraphTests::FGT_CopyAlias2::Context& data, FrameGraph::TaskBuilder& builder)
+{
+	return FrameGraph::SetupResult::NeedsRender;
+}
+
+
+FrameGraph::SetupResult PassSetupDefault<Passes::FrameGraphTests::FGT_WriteMip0>::setup(
+	Passes::FrameGraphTests::FGT_WriteMip0::Context& data, FrameGraph::TaskBuilder& builder)
+{
+	return FrameGraph::SetupResult::NeedsRender;
+}
+
+
+FrameGraph::SetupResult PassSetupDefault<Passes::FrameGraphTests::FGT_WriteUpperMips>::setup(
+	Passes::FrameGraphTests::FGT_WriteUpperMips::Context& data, FrameGraph::TaskBuilder& builder)
+{
+	return FrameGraph::SetupResult::NeedsRender;
+}
+
+
+FrameGraph::SetupResult PassSetupDefault<Passes::FrameGraphTests::FGT_CopyMipsToSink>::setup(
+	Passes::FrameGraphTests::FGT_CopyMipsToSink::Context& data, FrameGraph::TaskBuilder& builder)
+{
+	return FrameGraph::SetupResult::NeedsRender;
+}
+
+
+FrameGraph::SetupResult PassSetupDefault<Passes::FrameGraphTests::FGT_WriteSlicesUAV>::setup(
+	Passes::FrameGraphTests::FGT_WriteSlicesUAV::Context& data, FrameGraph::TaskBuilder& builder)
+{
+	return FrameGraph::SetupResult::NeedsRender;
+}
+
+
+FrameGraph::SetupResult PassSetupDefault<Passes::FrameGraphTests::FGT_WriteSliceRTV>::setup(
+	Passes::FrameGraphTests::FGT_WriteSliceRTV::Context& data, FrameGraph::TaskBuilder& builder)
+{
+	return FrameGraph::SetupResult::NeedsRender;
+}
+
+
+FrameGraph::SetupResult PassSetupDefault<Passes::FrameGraphTests::FGT_CopyArrayToSink>::setup(
+	Passes::FrameGraphTests::FGT_CopyArrayToSink::Context& data, FrameGraph::TaskBuilder& builder)
+{
+	return FrameGraph::SetupResult::NeedsRender;
+}
+
+
+FrameGraph::SetupResult PassSetupDefault<Passes::FrameGraphTests::FGT_WriteCubeFaces>::setup(
+	Passes::FrameGraphTests::FGT_WriteCubeFaces::Context& data, FrameGraph::TaskBuilder& builder)
+{
+	return FrameGraph::SetupResult::NeedsRender;
+}
+
+
+FrameGraph::SetupResult PassSetupDefault<Passes::FrameGraphTests::FGT_CopyCubeToSink>::setup(
+	Passes::FrameGraphTests::FGT_CopyCubeToSink::Context& data, FrameGraph::TaskBuilder& builder)
+{
+	return FrameGraph::SetupResult::NeedsRender;
+}
+
+
+FrameGraph::SetupResult PassSetupDefault<Passes::FrameGraphTests::FGT_UploadBuffer>::setup(
+	Passes::FrameGraphTests::FGT_UploadBuffer::Context& data, FrameGraph::TaskBuilder& builder)
+{
+	return FrameGraph::SetupResult::NeedsRender;
+}
+
+
+FrameGraph::SetupResult PassSetupDefault<Passes::FrameGraphTests::FGT_CopyBuffer>::setup(
+	Passes::FrameGraphTests::FGT_CopyBuffer::Context& data, FrameGraph::TaskBuilder& builder)
+{
+	return FrameGraph::SetupResult::NeedsRender;
+}
+
+
+FrameGraph::SetupResult PassSetupDefault<Passes::FrameGraphTests::FGT_UploadMipPattern>::setup(
+	Passes::FrameGraphTests::FGT_UploadMipPattern::Context& data, FrameGraph::TaskBuilder& builder)
+{
+	return FrameGraph::SetupResult::NeedsRender;
+}
+
+
+FrameGraph::SetupResult PassSetupDefault<Passes::FrameGraphTests::FGT_GenerateMips>::setup(
+	Passes::FrameGraphTests::FGT_GenerateMips::Context& data, FrameGraph::TaskBuilder& builder)
+{
+	return FrameGraph::SetupResult::NeedsRender;
+}
+
+
+FrameGraph::SetupResult PassSetupDefault<Passes::FrameGraphTests::FGT_CopyMipChainToSink>::setup(
+	Passes::FrameGraphTests::FGT_CopyMipChainToSink::Context& data, FrameGraph::TaskBuilder& builder)
+{
+	return FrameGraph::SetupResult::NeedsRender;
+}
+
+
+FrameGraph::SetupResult PassSetupDefault<Passes::FrameGraphTests::FGT_UploadCubeMipPattern>::setup(
+	Passes::FrameGraphTests::FGT_UploadCubeMipPattern::Context& data, FrameGraph::TaskBuilder& builder)
+{
+	return FrameGraph::SetupResult::NeedsRender;
+}
+
+
+FrameGraph::SetupResult PassSetupDefault<Passes::FrameGraphTests::FGT_GenerateCubeMips>::setup(
+	Passes::FrameGraphTests::FGT_GenerateCubeMips::Context& data, FrameGraph::TaskBuilder& builder)
+{
+	return FrameGraph::SetupResult::NeedsRender;
+}
+
+
+FrameGraph::SetupResult PassSetupDefault<Passes::FrameGraphTests::FGT_CopyCubeMipChainToSink>::setup(
+	Passes::FrameGraphTests::FGT_CopyCubeMipChainToSink::Context& data, FrameGraph::TaskBuilder& builder)
+{
+	return FrameGraph::SetupResult::NeedsRender;
+}
+
+
+FrameGraph::SetupResult PassSetupDefault<Passes::FrameGraphTests::FGT_CopySkyToSink>::setup(
+	Passes::FrameGraphTests::FGT_CopySkyToSink::Context& data, FrameGraph::TaskBuilder& builder)
+{
+	return FrameGraph::SetupResult::NeedsRender;
+}
+
+
+FrameGraph::SetupResult PassSetupDefault<Passes::FrameGraphTests::FGT_UploadHDR>::setup(
+	Passes::FrameGraphTests::FGT_UploadHDR::Context& data, FrameGraph::TaskBuilder& builder)
+{
+	return FrameGraph::SetupResult::NeedsRender;
+}
+
+
+FrameGraph::SetupResult PassSetupDefault<Passes::FrameGraphTests::FGT_CopyResultToSink>::setup(
+	Passes::FrameGraphTests::FGT_CopyResultToSink::Context& data, FrameGraph::TaskBuilder& builder)
+{
+	return FrameGraph::SetupResult::NeedsRender;
+}
+
+
+FrameGraph::SetupResult PassSetupDefault<Passes::FrameGraphTests::FGT_ProduceBloomInputs>::setup(
+	Passes::FrameGraphTests::FGT_ProduceBloomInputs::Context& data, FrameGraph::TaskBuilder& builder)
+{
+	return FrameGraph::SetupResult::NeedsRender;
+}
+
+
+FrameGraph::SetupResult PassSetupDefault<Passes::FrameGraphTests::FGT_ProduceGBuffer>::setup(
+	Passes::FrameGraphTests::FGT_ProduceGBuffer::Context& data, FrameGraph::TaskBuilder& builder)
+{
+	return FrameGraph::SetupResult::NeedsRender;
+}
+
+
+FrameGraph::SetupResult PassSetupDefault<Passes::FrameGraphTests::FGT_AppendTiles>::setup(
+	Passes::FrameGraphTests::FGT_AppendTiles::Context& data, FrameGraph::TaskBuilder& builder)
+{
+	return FrameGraph::SetupResult::NeedsRender;
+}
+
+
+FrameGraph::SetupResult PassSetupDefault<Passes::FrameGraphTests::FGT_CopyTileList>::setup(
+	Passes::FrameGraphTests::FGT_CopyTileList::Context& data, FrameGraph::TaskBuilder& builder)
+{
+	return FrameGraph::SetupResult::NeedsRender;
+}
+
+
 FrameGraph::SetupResult PassDefault<Passes::Post::Upscale::FSR>::setup(
 	Passes::Post::Upscale::FSR::Context& data, FrameGraph::TaskBuilder& builder)
 {

@@ -36,16 +36,6 @@ export namespace HAL
         // present, acquire and semaphore wait/query.
         bool check_device_lost(VkResult result, const char* where);
 
-        // TEMP: device-lost investigation (VK_NV_device_diagnostic_checkpoints).
-        // Checkpoints are recorded at every GPU profiling scope; after a device
-        // loss each registered queue's last checkpoints are logged.
-        void temp_checkpoint(VkCommandBuffer cmd, std::string_view label);
-        void temp_register_checkpoint_queue(VkQueue queue, std::string name);
-
-        // TEMP: Vulkan memory leak -- live object counts, dumped to vma_stats.temp.
-        enum TempLive { TL_DescHeaps, TL_DescSlots, TL_ImageViews, TL_Resources, TL_Pipelines, TL_CmdPools, TL_COUNT };
-        inline std::atomic<int64_t> temp_live[TL_COUNT];
-
         class Device
         {
             std::map<ResourceDesc, ResourceAllocationInfo> alloc_info;
@@ -134,6 +124,8 @@ export namespace HAL
             uint     get_descriptor_size(DescriptorHeapType type) const;
             VkDevice get_native_device() const;   // returns vk_device
             VkResult get_device_removed_reason() const;
+            // The device is gone (VK_ERROR_DEVICE_LOST seen by any submit/wait).
+            bool     is_lost() const;
 
             // Fence waits on the HAL queues miss work submitted outside them
             // (swapchain present transitions, presentation itself).

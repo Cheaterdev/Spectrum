@@ -22,11 +22,33 @@ namespace Shadows
 			struct Context
 			{
 
+
+				Handlers::StructuredBuffer<uint> scene = ResourceID::scene;
+
 				Handlers::StructuredBuffer<Table::Shadows::VSM::VSMLevelDispatchInfo> VSM_LevelDispatchInfo = ResourceID::VSM_LevelDispatchInfo;
 
 
 				Handlers::StructuredBuffer<DrawMeshCommand> VSM_DispatchCommands = ResourceID::VSM_DispatchCommands;
 
+
+				// Resources this pass always needs whenever it runs, generated from
+				// each field's own [Always=X] annotation (further gated by [Optional=X]
+				// when present -- a raw bool expression, e.g. builder.exists(...) or a
+				// context-read flag, deciding whether this specific field is actually
+				// needed this frame), or, for a View-typed field (e.g. `GBuffer
+				// gbuffer;`), every leaf the View itself marks [Always=X] that this
+				// pass's own [Write=...] on that field doesn't already cover. A field
+				// that ALSO carries [Size]/[Format] (so create_always() below creates
+				// it under its own [Optional] condition) gets the negated condition
+				// here instead -- "need what some other instance/frame already
+				// created" is the complement of "create it this time." Called by
+				// TypedPass::setup() after setup_func returns true - not a
+				// substitute for setup_func's own need()/create() calls for anything
+				// else conditional.
+				static void need_always(Context& data, FrameGraph::TaskBuilder& builder)
+				{
+					builder.need(data.scene, FrameGraph::ResourceFlags::Read);
+				}
 
 				// Resources this pass always creates with a fixed desc, generated from
 				// each field's own [Size]/[Format] annotation (plus [Always] for the
@@ -53,12 +75,14 @@ namespace Shadows
 				// the field fixes it.
 				struct Cache
 				{
+					FrameGraph::ChainIndex scene = FrameGraph::ChainIndex::Unresolved;
 					FrameGraph::ChainIndex VSM_LevelDispatchInfo = FrameGraph::ChainIndex::Unresolved;
 					FrameGraph::ChainIndex VSM_DispatchCommands = FrameGraph::ChainIndex::Unresolved;
 				};
 
 				static void save_to_cache([[maybe_unused]] const Context& data, [[maybe_unused]] Cache& cache)
 				{
+					cache.scene = FrameGraph::TaskBuilder::cache_slot(data.scene, ResourceID::scene);
 					cache.VSM_LevelDispatchInfo = FrameGraph::TaskBuilder::cache_slot(data.VSM_LevelDispatchInfo, ResourceID::VSM_LevelDispatchInfo);
 					cache.VSM_DispatchCommands = FrameGraph::TaskBuilder::cache_slot(data.VSM_DispatchCommands, ResourceID::VSM_DispatchCommands);
 				}
@@ -72,6 +96,7 @@ namespace Shadows
 				// previous link's desc, which LoadGraph does once every pass has loaded.
 				static void load_from_cache([[maybe_unused]] Context& data, [[maybe_unused]] const Cache& cache, [[maybe_unused]] const FrameGraph::TaskBuilder& builder)
 				{
+					builder.load(data.scene, ResourceID::scene, cache.scene);
 					builder.create_versioned(data.VSM_LevelDispatchInfo, cache.VSM_LevelDispatchInfo, { 26 });
 					builder.create_versioned(data.VSM_DispatchCommands, cache.VSM_DispatchCommands, { Constants::Shadows::VSM::MaxDispatchEntries, true });
 				}
@@ -80,6 +105,7 @@ namespace Shadows
 				// whether the pass writes it (own [Write], or the view usage's
 				// [Write] / [Write = {leaves...}] for resources inside a view group).
 				static inline const FrameGraph::ResourceAccess resource_accesses[] = {
+					{ ResourceID::scene, false },
 					{ ResourceID::VSM_LevelDispatchInfo, true },
 					{ ResourceID::VSM_DispatchCommands, true },
 				};

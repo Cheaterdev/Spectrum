@@ -82,6 +82,13 @@ export namespace HAL
 		std::string name;
 		RootSignature::ptr root_signature;
 		virtual	void on_change() = 0;
+
+		// False while a shader it needs is still compiling: draws with it are skipped.
+		bool is_built() const
+		{
+			auto t = tracked_info;
+			return t && t->is_built();
+		}
 	};
 
 	class PipelineState : public PipelineStateBase, public TypedObject<PipelineState>

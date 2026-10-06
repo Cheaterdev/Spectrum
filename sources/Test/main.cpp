@@ -1,17 +1,3 @@
-// TEMP: Vulkan crash investigation -- remove once the crash is found.
-#include <stacktrace>
-#include <fstream>
-struct _EXCEPTION_POINTERS;
-extern "C" __declspec(dllimport) void* __stdcall AddVectoredExceptionHandler(unsigned long, long(__stdcall*)(_EXCEPTION_POINTERS*));
-static long __stdcall temp_crash_handler(_EXCEPTION_POINTERS* ep)
-{
-	auto code = **reinterpret_cast<unsigned long**>(ep);
-	if (code == 0xC0000005 || code == 0xC00000FD)
-		std::ofstream("crash_stack.temp", std::ios::app) << std::hex << "code 0x" << code << std::dec << "\n"
-			<< std::stacktrace::current() << "\n----\n" << std::flush;
-	return 0; // EXCEPTION_CONTINUE_SEARCH
-}
-
 import Test.Framework;
 import Test.Math;
 import Test.Core;
@@ -23,7 +9,10 @@ import Test.FileSystem;
 import Test.Profiling;
 import Test.HAL;
 import Test.HAL.SubresRangeMap;
+import Test.RenderSystem.FrameGraph;
 import Core;
+import HAL;
+import RenderSystem;
 
 void SetupLogging()
 {
@@ -39,8 +28,6 @@ int main(int argc, char** argv)
 	Application::test_mode = true;
 	SetupLogging();
 
-	// TEMP: Vulkan crash investigation -- remove once the crash is found.
-	AddVectoredExceptionHandler(1, temp_crash_handler);
 
 	std::string filter;
 	for (int i = 1; i < argc; ++i)
@@ -53,6 +40,12 @@ int main(int argc, char** argv)
 		else if (arg[0] != '-')
 			filter = arg;
 	}
+
+	// A graphics-API validation error during a test fails that test.
+	Test::TestRegistry::Instance().SetErrorProbe(
+		[] { return (uint64_t)HAL::Debug::ValidationLog::error_count(); },
+		[] { return HAL::Debug::ValidationLog::last_error(); },
+		[] { if (RenderSystem::is_good()) RenderSystem::get().device().wait_idle(); });
 
 	auto results = Test::TestRegistry::Instance().RunAll(filter);
 	Test::TestRegistry::Instance().PrintResults(results);

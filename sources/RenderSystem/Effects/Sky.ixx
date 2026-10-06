@@ -36,6 +36,9 @@ public:
 	explicit SkyRender(TPipeline& pipeline) : SkyRender()
 	{
 		pipeline.cubeSky.render_func = m_cubesky_render;
-		pipeline.sky.render_func     = m_sky_render;
+		// Optional: a pipeline that only bakes the cubemaps (the FrameGraph
+		// tests' FGT_SkyPipeline) has no full-screen Sky pass.
+		if constexpr (requires { pipeline.sky; })
+			pipeline.sky.render_func = m_sky_render;
 	}
 };

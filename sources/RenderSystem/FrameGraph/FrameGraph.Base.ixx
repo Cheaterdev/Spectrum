@@ -458,6 +458,9 @@ public:
 		// uninitialised value is indeterminate rather than merely wrong. Anything
 		// that filters on heap_type would then drop resources at random.
 		HAL::HeapType heap_type = HAL::HeapType::DEFAULT;
+		// The device's min storage-buffer offset alignment (DeviceProperties), set
+		// before handler->init(); buffer descs size their counter prefix from it.
+		uint64 min_storage_buffer_offset_alignment = 1;
 		// setup
 		SyncState used_begin;
 		SyncState used_end;
@@ -618,6 +621,8 @@ public:
 
 			virtual void init(ResourceAllocInfo& info) override
 			{
+				if constexpr (requires { desc.min_storage_buffer_offset_alignment; })
+					desc.min_storage_buffer_offset_alignment = info.min_storage_buffer_offset_alignment;
 				info.d3ddesc = desc.create_resource_desc(info.flags);
 
 				// "The FrameGraph owns this resource's transitions" is now
@@ -678,6 +683,14 @@ public:
 			using View = HAL::StructuredBufferView<T>;
 			uint64 count;
 			bool counted;
+			// Set by UniversalHandler::init from the device; see counter_prefix().
+			uint64 min_storage_buffer_offset_alignment = 1;
+
+			uint64 counter_prefix() const
+			{
+				return HAL::Device::counter_prefix(sizeof(Underlying<T>), min_storage_buffer_offset_alignment);
+			}
+
 			HAL::ResourceDesc create_resource_desc(ResourceFlags resflags)
 			{
 				HAL::ResFlags flags = HAL::ResFlags::ShaderResource;
@@ -690,10 +703,7 @@ public:
 				uint64 size = count * sizeof(Underlying<T>);
 
 				if (counted)
-				{
-					uint local_offset = Math::roundUp(4, sizeof(Underlying<T>));
-					size += local_offset;
-				}
+					size += counter_prefix();
 
 				return HAL::ResourceDesc::Buffer(size, flags);
 			}
@@ -717,7 +727,7 @@ public:
 				// deterministic).
 				uint64 size = count * sizeof(Underlying<T>);
 				if (counted)
-					size += Math::roundUp(4, sizeof(Underlying<T>));
+					size += counter_prefix();
 				return { offset, size, counted?counterType::SELF:counterType::NONE };
 			}
 		};
@@ -940,9 +950,10 @@ public:
 		void build_resource_states();
 
 		// Persistent pass cache, indexed by PassID (+ index for [Multiple] passes),
-		// so library passes are reused frame to frame instead of reallocated. Only
-		// covers add_library_pass — the raw add_pass<T>(name, ...) path has no PassID
-		// (type_id == PassID::Count) and always allocates fresh.
+		// so library passes are reused frame to frame instead of reallocated. Every
+		// pass comes from a .prism PassNode: resource states record passes as
+		// PassRef{PassID, index}, so a pass without a PassID could never be found
+		// by the enable walk and would be culled every frame.
 		std::array<std::vector<std::shared_ptr<Pass>>, (size_t)PassID::Count> pass_cache;
 
 		std::set<ResourceAllocInfo*> passed_resources;
@@ -1490,7 +1501,7 @@ public:
 		virtual void load_cache(std::span<const ChainIndex> in, const TaskBuilder& builder) {}
 
 		// Static [Write]/read declaration from the pass's SIG (empty for passes
-		// whose Context has no resource_accesses, e.g. custom add_pass<T>).
+		// whose Context has no resource_accesses, e.g. the injected ExternalPass).
 		virtual std::span<const ResourceAccess> declared_accesses() const { return {}; }
 
 		HAL::CommandListType get_type() const;
@@ -2080,71 +2091,17 @@ public:
 		Pipelines::PipelineBase* current_pipeline = nullptr;
 	public:
 
-
-
-		template<class T>
-		void add_pass(LiteralWStr name, typename TypedPass<T>::setup_func_type s, typename TypedPass<T>::render_func_type r, PassFlags flags = PassFlags::General)
-		{
-			internal_pass<TypedPass<T>>(name, s, r, flags);
-		}
-
-
-		// TEMP: Vulkan 3D bring-up bisection. SPECTRUM_TEMP_PASSES=A,B,C registers
-		// only pipeline passes whose name starts with one of the listed names.
-		static bool temp_pass_allowed(std::wstring_view name)
-		{
-			static const std::vector<std::wstring> allowed = [] {
-				std::vector<std::wstring> list;
-				const char* v = std::getenv("SPECTRUM_TEMP_PASSES");
-				if (!v || !*v) return list;
-				std::string s(v);
-				for (size_t start = 0; start <= s.size();)
-				{
-					size_t end = s.find(',', start);
-					if (end == std::string::npos) end = s.size();
-					if (end > start) list.emplace_back(s.begin() + start, s.begin() + end);
-					start = end + 1;
-				}
-				return list;
-			}();
-			if (allowed.empty()) return true;
-			for (auto& a : allowed)
-				if (name.starts_with(a)) return true;
-			return false;
-		}
-
 		template<class T>
 		void add_library_pass(typename T::setup_func_type s, typename T::render_func_type r, PassFlags flags = PassFlags::General)
 		{
-			if (!temp_pass_allowed(T::Name.ptr)) return;
 			internal_pass<TypedPass<T::Context>>(T::Name, s, r, flags, 0, T::ID);
 		}
 
 		template<class T>
 		void add_library_pass(uint32_t index, typename T::setup_func_type s, typename T::render_func_type r, PassFlags flags = PassFlags::General)
 		{
-			if (!temp_pass_allowed(T::Names[index].ptr)) return;
 			internal_pass<TypedPass<T::Context>>(T::Names[index], s, r, flags, index, T::ID);
 		}
-
-
-
-		/*template<class T>
-		void add_pass(LiteralWStr name, typename TypedPass<T>::setup_func_type_void s, typename TypedPass<T>::render_func_type r, PassFlags flags = PassFlags::General)
-		{
-			typename TypedPass<T>::setup_func_type f = [s](auto& t, auto& b) {s(t, b); return true; };
-
-			internal_pass<TypedPass<T>>(name, f, r, flags);
-		}
-
-
-		template<class T>
-		void add_pass2(LiteralWStr name, typename TypedPass<T>::setup_func_type_void s, typename TypedPass<T>::render_func_type r, PassFlags flags = PassFlags::General)
-		{
-			typename TypedPass<T>::setup_func_type f = [s](auto& t, auto& b) {s(t, b); return true; };
-
-			internal_pass<TypedPass<T>>(name, f, r, flags);
-		}*/
 
 
 		void add_slot_generator(std::function<void(Graph&)> f)
@@ -2229,9 +2186,8 @@ public:
 			return false;
 		};
 
-		// No prior result, or a pass with no PassID at all (a hand-written
-		// add_pass<T>, which has no generated dependency data and therefore no
-		// way to know what it reads).
+		// No prior result, or a pass with no PassID at all (no generated
+		// dependency data, so no way to know what it reads).
 		if (!graph)
 			return false;
 

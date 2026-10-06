@@ -23,6 +23,9 @@ namespace Shadows
 			{
 
 
+				Handlers::StructuredBuffer<uint> scene = ResourceID::scene;
+
+
 				Handlers::Texture VSM_Atlas = ResourceID::VSM_Atlas;
 
 
@@ -55,6 +58,7 @@ namespace Shadows
 				// else conditional.
 				static void need_always(Context& data, FrameGraph::TaskBuilder& builder)
 				{
+					builder.need(data.scene, FrameGraph::ResourceFlags::Read);
 					builder.need(data.VSM_Atlas, FrameGraph::ResourceFlags::DepthStencil);
 					builder.need(data.VSM_DispatchCommands, FrameGraph::ResourceFlags::Read);
 					builder.need(data.VSM_LevelDispatchInfo, FrameGraph::ResourceFlags::Read);
@@ -86,6 +90,7 @@ namespace Shadows
 				// the field fixes it.
 				struct Cache
 				{
+					FrameGraph::ChainIndex scene = FrameGraph::ChainIndex::Unresolved;
 					FrameGraph::ChainIndex VSM_Atlas = FrameGraph::ChainIndex::Unresolved;
 					FrameGraph::ChainIndex VSM_PageTable = FrameGraph::ChainIndex::Unresolved;
 					FrameGraph::ChainIndex VSM_PageCameras = FrameGraph::ChainIndex::Unresolved;
@@ -96,6 +101,7 @@ namespace Shadows
 
 				static void save_to_cache([[maybe_unused]] const Context& data, [[maybe_unused]] Cache& cache)
 				{
+					cache.scene = FrameGraph::TaskBuilder::cache_slot(data.scene, ResourceID::scene);
 					cache.VSM_Atlas = FrameGraph::TaskBuilder::cache_slot(data.VSM_Atlas, ResourceID::VSM_Atlas);
 					cache.VSM_PageTable = FrameGraph::TaskBuilder::cache_slot(data.VSM_PageTable, ResourceID::VSM_PageTable);
 					cache.VSM_PageCameras = FrameGraph::TaskBuilder::cache_slot(data.VSM_PageCameras, ResourceID::VSM_PageCameras);
@@ -113,6 +119,7 @@ namespace Shadows
 				// previous link's desc, which LoadGraph does once every pass has loaded.
 				static void load_from_cache([[maybe_unused]] Context& data, [[maybe_unused]] const Cache& cache, [[maybe_unused]] const FrameGraph::TaskBuilder& builder)
 				{
+					builder.load(data.scene, ResourceID::scene, cache.scene);
 					builder.load(data.VSM_Atlas, ResourceID::VSM_Atlas, cache.VSM_Atlas);
 					builder.create_versioned(data.VSM_PageTable, cache.VSM_PageTable, { ivec3(Constants::Shadows::VSM::VSM_PagesPerLevelSide, Constants::Shadows::VSM::VSM_PagesPerLevelSide, 0), HAL::Format::R32_UINT, Constants::Shadows::VSM::MaxLevels, 1 });
 					builder.create_versioned(data.VSM_PageCameras, cache.VSM_PageCameras, { 416 });
@@ -125,6 +132,7 @@ namespace Shadows
 				// whether the pass writes it (own [Write], or the view usage's
 				// [Write] / [Write = {leaves...}] for resources inside a view group).
 				static inline const FrameGraph::ResourceAccess resource_accesses[] = {
+					{ ResourceID::scene, false },
 					{ ResourceID::VSM_Atlas, true },
 					{ ResourceID::VSM_PageTable, true },
 					{ ResourceID::VSM_PageCameras, true },

@@ -315,6 +315,8 @@ namespace Frame
 		// a span into that resource's own <id>_pass_refs[].
 		static inline const FrameGraph::PassRef scene_c0_pass_refs[] = {
 			{ PassID::PreScene, 0 },
+			{ PassID::VSM_GatherDispatch, 0 },
+			{ PassID::VSM_RenderPages, 0 },
 			{ PassID::Scene, 0 },
 			{ PassID::DDGIProbeTrace, 0 },
 			{ PassID::DDGIProbeTrace, 1 },
@@ -322,13 +324,14 @@ namespace Frame
 			{ PassID::DDGIProbeTrace, 3 },
 			{ PassID::DDGIProbeTrace, 4 },
 			{ PassID::DDGIIndirectDebug, 0 },
+			{ PassID::VSM_ShadowResolve, 0 },
 			{ PassID::TranslucentRTX, 0 },
 			{ PassID::RTXColorPass, 0 },
 			{ PassID::DebugView, 0 },
 		};
 		static inline const FrameGraph::PrecompiledState scene_c0_states[] = {
 			{ true, { scene_c0_pass_refs + 0, 1 } },
-			{ false, { scene_c0_pass_refs + 1, 10 } },
+			{ false, { scene_c0_pass_refs + 1, 13 } },
 		};
 		static inline const FrameGraph::PassRef BlueNoise_c0_pass_refs[] = {
 			{ PassID::BlueNoise, 0 },
@@ -1748,7 +1751,11 @@ namespace Frame
 		static constexpr uint32_t resource_info_count = std::size(resource_infos);
 		// Precomputed pass instances with queue type and prev-pass dependency edges
 		// (static resolve_dependencies). Each pass owns its <pass>_<idx>_prev[] refs.
+		static inline const FrameGraph::PassRef VSM_GatherDispatch_0_prev[] = {
+			{ PassID::PreScene, 0 },
+		};
 		static inline const FrameGraph::PassRef VSM_RenderPages_0_prev[] = {
+			{ PassID::PreScene, 0 },
 			{ PassID::VSM_GatherDispatch, 0 },
 		};
 		static inline const FrameGraph::PassRef Scene_0_prev[] = {
@@ -2312,6 +2319,7 @@ namespace Frame
 		};
 		static inline const FrameGraph::PassRef VSM_ShadowResolve_0_prev[] = {
 			{ PassID::BlueNoise, 0 },
+			{ PassID::PreScene, 0 },
 			{ PassID::ResultCreation, 0 },
 			{ PassID::Scene, 0 },
 			{ PassID::VSM_BlockerClassify, 0 },
@@ -2633,7 +2641,7 @@ namespace Frame
 			{ PassID::PreScene, 0, false, {} },
 			{ PassID::BlueNoise, 0, true, {} },
 			{ PassID::Voxelize, 0, false, {} },
-			{ PassID::VSM_GatherDispatch, 0, false, {} },
+			{ PassID::VSM_GatherDispatch, 0, false, VSM_GatherDispatch_0_prev },
 			{ PassID::VSM_RenderPages, 0, false, VSM_RenderPages_0_prev },
 			{ PassID::Scene, 0, false, Scene_0_prev },
 			{ PassID::CubeSky, 0, true, {} },

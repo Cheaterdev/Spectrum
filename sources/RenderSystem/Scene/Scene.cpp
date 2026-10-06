@@ -185,7 +185,7 @@ sceneData.GetRaytraceInstanceInfo() = universal_rtx_manager::get().buffer;
 			if (data.size()) {
 				PROFILE(L"gather_commands_view");
 				auto info = frame.place_raw(data);
-				auto srv = info.resource->create_view<HAL::FormattedBufferView<UINT, HAL::Format::R32_UINT>>(frame, FormattedBufferViewDesc{ (UINT)info.resource_offset, (UINT)info.size }).buffer;
+				auto srv = info.resource->create_view<HAL::StructuredBufferView<UINT>>(frame, StructuredBufferViewDesc{ (UINT)info.resource_offset, (UINT)info.size, counterType::NONE }).structuredBuffer;
 				gather_global.GetCommands() = srv;
 			}
 

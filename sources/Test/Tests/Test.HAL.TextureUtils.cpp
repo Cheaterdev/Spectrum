@@ -42,12 +42,38 @@ namespace
 		return unorm8(c <= 0.0031308f ? c * 12.92f : 1.055f * std::pow(c, 1.0f / 2.4f) - 0.055f);
 	}
 
+	// Unsigned small float of R11G11B10_FLOAT: 5-bit exponent (bias 15), no sign.
+	float small_float_to_float(uint32_t bits, uint32_t mantissa_bits)
+	{
+		const uint32_t mant = bits & ((1u << mantissa_bits) - 1);
+		const uint32_t exp  = bits >> mantissa_bits;
+		const float    frac = float(mant) / float(1u << mantissa_bits);
+		if (exp == 0)
+			return std::ldexp(frac, -14);
+		if (exp == 31)
+			return mant ? std::numeric_limits<float>::quiet_NaN() : std::numeric_limits<float>::infinity();
+		return std::ldexp(1.0f + frac, int(exp) - 15);
+	}
+
 	// UI PSOs target the scRGB swapchain (R16G16B16A16_FLOAT, linear). With
 	// ui_scale = 1 the shader writes srgb_to_linear(color), so re-encoding to
-	// sRGB here reproduces the 8-bit values the golden references hold.
-	HAL::texture_data::ptr fp16_to_rgba8(const HAL::texture_data& src, Test::FloatEncoding encoding)
+	// sRGB here reproduces the 8-bit values the golden references hold. HDR
+	// output (Tonemapped) goes through a fixed exposure + Reinhard first, so the
+	// golden stays a viewable 8-bit PNG.
+	HAL::texture_data::ptr float_to_rgba8(const HAL::texture_data& src, const Test::TextureCompare& compare)
 	{
-		auto encode = encoding == Test::FloatEncoding::Linear ? linear_to_srgb8 : unorm8;
+		auto encode = [&](float c) -> uint8_t
+		{
+			switch (compare.float_encoding)
+			{
+			case Test::FloatEncoding::Encoded:    return unorm8(c);
+			case Test::FloatEncoding::Tonemapped: { c = std::max(c, 0.0f) * compare.exposure; return linear_to_srgb8(c / (1.0f + c)); }
+			case Test::FloatEncoding::Linear:
+			default:                              return linear_to_srgb8(c);
+			}
+		};
+
+		const bool r11g11b10 = src.format == HAL::Format::R11G11B10_FLOAT;
 
 		auto& in  = src.array[0]->mips[0];
 		auto  out = std::make_shared<HAL::texture_data>(1, 1, in->width, in->height, 1, HAL::Format::R8G8B8A8_UNORM);
@@ -55,13 +81,29 @@ namespace
 
 		for (uint y = 0; y < in->height; ++y)
 		{
-			auto src_row = reinterpret_cast<const uint16_t*>(in->data.data() + (size_t)y * in->width_stride);
+			auto src_row = in->data.data() + (size_t)y * in->width_stride;
 			auto dst_row = dst->data.data() + (size_t)y * dst->width_stride;
 			for (uint x = 0; x < in->width; ++x)
 			{
+				float rgba[4];
+				if (r11g11b10)
+				{
+					const uint32_t packed = reinterpret_cast<const uint32_t*>(src_row)[x];
+					rgba[0] = small_float_to_float(packed & 0x7FF, 6);
+					rgba[1] = small_float_to_float((packed >> 11) & 0x7FF, 6);
+					rgba[2] = small_float_to_float(packed >> 22, 5);
+					rgba[3] = 1.0f;
+				}
+				else
+				{
+					auto px = reinterpret_cast<const uint16_t*>(src_row) + x * 4;
+					for (uint c = 0; c < 4; ++c)
+						rgba[c] = half_to_float(px[c]);
+				}
+
 				for (uint c = 0; c < 3; ++c)
-					dst_row[x * 4 + c] = encode(half_to_float(src_row[x * 4 + c]));
-				dst_row[x * 4 + 3] = unorm8(half_to_float(src_row[x * 4 + 3]));
+					dst_row[x * 4 + c] = encode(rgba[c]);
+				dst_row[x * 4 + 3] = unorm8(rgba[3]);
 			}
 		}
 		return out;
@@ -118,17 +160,18 @@ namespace Test
 		if (!actual)
 			throw TestFailure("check_texture_reference: readback failed for '" + name + "'");
 
-		// TEMP: Vulkan golden-compare investigation -- remove once found.
-		if (actual->format == HAL::Format::R16G16B16A16_FLOAT && actual->width > 200)
-		{
-			auto& m = actual->array[0]->mips[0];
-			auto  p = reinterpret_cast<const uint16_t*>(m->data.data() + (size_t)(actual->height / 2) * m->width_stride) + 200 * 4;
-			std::ofstream("texture_compare.temp", std::ios::app) << name << " raw fp16 @(200,mid) "
-				<< half_to_float(p[0]) << " " << half_to_float(p[1]) << " " << half_to_float(p[2]) << " " << half_to_float(p[3]) << "\n" << std::flush;
-		}
+		check_texture_data_reference(actual, name, compare, reference_dir, results_dir);
+	}
 
-		if (actual->format == HAL::Format::R16G16B16A16_FLOAT)
-			actual = fp16_to_rgba8(*actual, compare.float_encoding);
+	void check_texture_data_reference(
+		HAL::texture_data::ptr       actual,
+		const std::string&           name,
+		const TextureCompare&        compare,
+		const std::filesystem::path& reference_dir,
+		const std::filesystem::path& results_dir)
+	{
+		if (actual->format == HAL::Format::R16G16B16A16_FLOAT || actual->format == HAL::Format::R11G11B10_FLOAT)
+			actual = float_to_rgba8(*actual, compare);
 
 		auto actual_png = actual->to_png();
 		if (actual_png.empty())
@@ -180,21 +223,6 @@ namespace Test
 		size_t bpp_act = act_data.size() / pixel_count;
 		size_t bpp_ref = ref_data.size() / pixel_count;
 		size_t ch      = std::min({ bpp_act, bpp_ref, (size_t)3 });
-
-		// TEMP: Vulkan golden-compare investigation -- remove once found.
-		std::ofstream("texture_compare.temp", std::ios::app) << name << " fmt " << (int)actual->format
-			<< " act " << actual_rgba->width << "x" << actual_rgba->height << " bytes " << act_data.size() << " fmt " << (int)actual_rgba->format
-			<< " ref bytes " << ref_data.size() << " fmt " << (int)reference->format
-			<< " bpp " << bpp_act << "/" << bpp_ref << " ch " << ch;
-		if (actual_rgba->width > 200)
-		{
-			size_t p = (size_t)(actual_rgba->height / 2) * actual_rgba->width + 200;
-			auto& pre = actual->array[0]->mips[0]->data;
-			std::ofstream("texture_compare.temp", std::ios::app) << " | pre-png " << (int)pre[p*4] << "," << (int)pre[p*4+1] << "," << (int)pre[p*4+2]
-				<< " act " << (int)(uint8_t)act_data[p*bpp_act] << "," << (int)(uint8_t)act_data[p*bpp_act+1] << "," << (int)(uint8_t)act_data[p*bpp_act+2]
-				<< " ref " << (int)(uint8_t)ref_data[p*bpp_ref] << "," << (int)(uint8_t)ref_data[p*bpp_ref+1] << "," << (int)(uint8_t)ref_data[p*bpp_ref+2];
-		}
-		std::ofstream("texture_compare.temp", std::ios::app) << "\n" << std::flush;
 
 		for (size_t p = 0; p < pixel_count; ++p)
 		{

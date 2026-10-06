@@ -1889,6 +1889,7 @@ namespace FrameGraph
 			if (info->passed) continue;
 
 
+			info->min_storage_buffer_offset_alignment = RenderSystem::get().device().get_properties().min_storage_buffer_offset_alignment;
 			info->handler->init(*info);
 			info->heap_type = HAL::HeapType::DEFAULT;
 
@@ -2177,19 +2178,6 @@ namespace FrameGraph
 				{
 
 					auto creation_info = RenderSystem::get().device().get_alloc_info(info->d3ddesc);
-					// TEMP: AMD bring-up -- which resource gets a zero allocation size.
-					if (creation_info.size == 0)
-					{
-						std::string desc_text = "buffer";
-						if (info->d3ddesc.is_texture())
-						{
-							auto& t = info->d3ddesc.as_texture();
-							desc_text = "texture " + std::to_string(t.Dimensions.x) + "x" + std::to_string(t.Dimensions.y) + "x" + std::to_string(t.Dimensions.z)
-								+ " mips " + std::to_string(t.MipLevels) + " array " + std::to_string(t.ArraySize)
-								+ " format " + std::to_string((int)t.Format) + " flags " + std::to_string((uint)info->d3ddesc.Flags);
-						}
-						Log::get() << Log::LEVEL_ERROR << "[TEMP] zero alloc size: " << info->name() << " " << desc_text << Log::endl;
-					}
 					HeapIndex index = { HAL::MemoryType::COMMITED , info->heap_type };
 
 					Pass* creator = nullptr;
@@ -2663,8 +2651,9 @@ namespace FrameGraph
 	HAL::CommandListType Pass::get_type() const
 	{
 #ifdef HAL_BACKEND_VULKAN
-		// TEMP: Vulkan 3D bring-up -- every pass on the direct queue, no async
-		// compute, to rule cross-queue sync out of the device loss.
+		// Every pass on the direct queue: images are VK_SHARING_MODE_EXCLUSIVE and
+		// there are no queue-family ownership transfers yet, so a resource written
+		// on an async compute family would read undefined on the graphics one.
 		return HAL::CommandListType::DIRECT;
 #endif
 		HAL::CommandListType type = HAL::CommandListType::DIRECT;
