@@ -77,10 +77,6 @@ namespace nvidia
 			Log::get() << "[Streamline] DLSS-RR feature functions unavailable" << Log::endl;
 			return;
 		}
-
-		// Bring-up only — see HAL:Streamline's log_feature_requirements doc
-		// comment. Remove once DLSS-RR's required tag set is confirmed.
-		sl_core.log_feature_requirements(Feature::RayReconstruction, "dlss_rr_requirements.temp");
 	}
 
 	void DLSSRR::set_options(DLSSMode mode, ivec2 output_size, const mat4x4& world_to_view, bool hdr, uint32_t viewport) const

@@ -264,21 +264,12 @@ void VSM::plan_frame(FrameGraph::Graph& graph)
 	if (!scene)
 		return;
 
-	// TEMP: disabled while investigating the VoxelTrace-debug-mode freeze --
-	// this guard's own premise (nothing consumes VSM_Atlas/PageTable/
-	// PageCameras during a non-Final debug view, so FrameGraph culls
-	// VSM_RenderPages/VSM_HiZRebuild and this function must freeze planning
-	// to match) may no longer hold now that VoxelGI's Lighting pass also
-	// need()s those same resources, and Lighting stays required via
-	// VoxelDebug regardless of DebugMode -- see voxel_lighting.hlsl's VSM
-	// integration. If that's right, VSM_RenderPages is no longer culled in
-	// VoxelTrace mode, and this early-return was instead the thing freezing
-	// it (rendering still ran off here-frozen dirty_mask=0 plans). Original
-	// guard, restore if removing it regresses the earlier pages-evicted-on-
-	// return-to-Final bug this was written to fix:
-	//
-	// if (graph.get_context<FrameGraph::DebugContext>().mode != FrameGraph::DebugMode::Final)
-	// 	return;
+	// No early return for non-Final debug views: VoxelGI's Lighting pass
+	// need()s VSM_Atlas/PageTable/PageCameras in every DebugMode, so
+	// VSM_RenderPages is never culled there, and freezing planning here left it
+	// rendering stale plans (the VoxelTrace-mode freeze). If the old
+	// pages-evicted-on-return-to-Final bug comes back, that early return is
+	// what it guarded against.
 
 	// Re-enabling after a period with the pyramid un-rebuilt: any page
 	// redrawn while disabled has stale Hi-Z content that no longer matches
@@ -364,9 +355,8 @@ void VSM::update_active_window(float z_far)
 	else if (required_min > active_min) { if (++min_shrink_run >= ShrinkFrames) { active_min = required_min; min_shrink_run = 0; } }
 	else min_shrink_run = 0;
 
-	// TEMP diagnostics (Phase 5.7 tuning): confirm the computed window is
-	// tracking z_far/measured sensibly, throttled to avoid spam. Remove
-	// once confirmed working.
+	// Active-window diagnostic: whether the computed window tracks
+	// z_far/measured sensibly. Throttled to every 120 frames.
 	{
 		static uint64_t s_diag_frame = 0;
 		if ((s_diag_frame++ % 120) == 0)

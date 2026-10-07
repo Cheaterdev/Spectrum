@@ -45,9 +45,7 @@ public:
 	// (get_shadow_vsm's default path) and the PCSS-style blocker-search +
 	// penumbra-scaled variant (VSM_impl.hlsl, gated by VSM_PENUMBRA) -- picks
 	// which VSMApplyCompute PSO permutation gets bound in m_combine_render.
-	// Off by default: new, unvalidated shader math, kept separate from the
-	// known-working fixed-tap baseline until confirmed visually correct.
-	Variable<bool> use_vsm_penumbra = { true, "PCSS penumbra", this }; // TEMP: flip back to false after validation
+	Variable<bool> use_vsm_penumbra = { true, "PCSS penumbra", this };
 
 	// Runtime toggle for the RTX blocker-distance verification ray (Phase
 	// 5.18 Part B) -- only has any effect when use_vsm_penumbra is also on
