@@ -185,6 +185,7 @@ export namespace HAL
             PFN_vkCreateRayTracingPipelinesKHR       fn_create_rt_pipelines  = nullptr;
             PFN_vkGetRayTracingShaderGroupHandlesKHR fn_get_rt_group_handles = nullptr;
             PFN_vkCmdTraceRaysKHR                    fn_cmd_trace_rays       = nullptr;
+            PFN_vkCmdTraceRaysIndirect2KHR           fn_cmd_trace_rays_indirect2 = nullptr;   // null without ray_tracing_maintenance1
             uint32_t rt_max_recursion_depth = 0;
 
             // D3D12 names an acceleration structure by the GPU address of its

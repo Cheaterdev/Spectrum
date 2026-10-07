@@ -24,6 +24,7 @@ namespace HAL::Spirv
 	struct EntryPoint
 	{
 		uint32_t    execution_model = 0;
+		uint32_t    function_id     = 0;   // result id of its OpFunction
 		std::string name;
 	};
 
@@ -50,7 +51,7 @@ namespace HAL::Spirv
 				// Literal string: null-terminated, packed into the words after <model, id>.
 				const char*  str = reinterpret_cast<const char*>(words + i + 3);
 				const size_t max = (len - 3) * 4;
-				result.push_back({ words[i + 1], std::string(str, strnlen(str, max)) });
+				result.push_back({ words[i + 1], words[i + 2], std::string(str, strnlen(str, max)) });
 			}
 			i += len;
 		}

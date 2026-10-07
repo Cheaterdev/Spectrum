@@ -1431,6 +1431,28 @@ namespace HAL::API
                 vkCmdDispatchIndirect(vk_cmd, args, command_offset + static_cast<VkDeviceSize>(i) * stride);
             break;
         }
+        case IndirectKind::DispatchRays:
+        {
+            auto& dev = static_cast<API::Device&>(*m_device);
+            if (current_ray_tracing_pipeline == VK_NULL_HANDLE) return;
+            if (!dev.fn_cmd_trace_rays_indirect2)
+            {
+                static bool warned = false;
+                if (!warned) { warned = true; Log::get() << Log::LEVEL_WARNING << "[Vulkan] indirect DispatchRays skipped: VK_KHR_ray_tracing_maintenance1 unavailable" << Log::endl; }
+                return;
+            }
+            end_rendering_if_active();
+            vkCmdBindPipeline(vk_cmd, VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR, current_ray_tracing_pipeline);
+            flush_heaps();
+            push_full_constants();
+            // The record is a whole D3D12_DISPATCH_RAYS_DESC, shader-table
+            // addresses included, read by device address.
+            // get_address() already includes the placement offset command_offset was given.
+            const VkDeviceAddress base = args_res.get_address() + (command_offset - args_res.get_vk_buffer_offset());
+            for (uint32_t i = 0; i < max_commands; ++i)
+                dev.fn_cmd_trace_rays_indirect2(vk_cmd, base + static_cast<VkDeviceSize>(i) * stride);
+            break;
+        }
         default:
             break;
         }

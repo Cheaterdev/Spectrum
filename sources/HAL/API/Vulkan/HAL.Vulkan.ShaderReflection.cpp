@@ -27,17 +27,49 @@ namespace HAL
 {
     namespace
     {
-        // Push-constant member indices read anywhere in a SPIR-V module.
-        std::set<uint32_t> read_push_constant_members(const std::vector<std::byte>& blob)
+        // Push-constant member indices each function reads directly, and the
+        // functions it calls.
+        struct PushConstantReads
         {
-            std::set<uint32_t> members;
-            if (blob.size() < 20 || blob.size() % 4) return members;
+            std::unordered_map<uint32_t, std::set<uint32_t>> members;   // by function id
+            std::unordered_map<uint32_t, std::set<uint32_t>> callees;
+
+            std::set<uint32_t> all() const
+            {
+                std::set<uint32_t> result;
+                for (auto& [fn, m] : members) result.insert(m.begin(), m.end());
+                return result;
+            }
+
+            // What a function reads, through every function it reaches.
+            std::set<uint32_t> reachable_from(uint32_t entry) const
+            {
+                std::set<uint32_t> result, visited;
+                std::vector<uint32_t> stack{ entry };
+                while (!stack.empty())
+                {
+                    uint32_t fn = stack.back(); stack.pop_back();
+                    if (!visited.insert(fn).second) continue;
+                    if (auto it = members.find(fn); it != members.end()) result.insert(it->second.begin(), it->second.end());
+                    if (auto it = callees.find(fn); it != callees.end()) stack.insert(stack.end(), it->second.begin(), it->second.end());
+                }
+                return result;
+            }
+        };
+
+        PushConstantReads read_push_constant_members(const std::vector<std::byte>& blob)
+        {
+            PushConstantReads reads;
+            if (blob.size() < 20 || blob.size() % 4) return reads;
 
             const uint32_t* words = reinterpret_cast<const uint32_t*>(blob.data());
             const size_t    count = blob.size() / 4;
-            if (words[0] != 0x07230203u) return members;   // SPIR-V magic
+            if (words[0] != 0x07230203u) return reads;   // SPIR-V magic
 
             constexpr uint32_t OpConstant            = 43;
+            constexpr uint32_t OpFunction            = 54;
+            constexpr uint32_t OpFunctionEnd         = 56;
+            constexpr uint32_t OpFunctionCall        = 57;
             constexpr uint32_t OpVariable            = 59;
             constexpr uint32_t OpLoad                = 61;
             constexpr uint32_t OpAccessChain         = 65;
@@ -52,6 +84,7 @@ namespace HAL
             // function bodies that use them, but keep it order-independent.
             for (int pass = 0; pass < 2; pass++)
             {
+                uint32_t function = 0;
                 for (size_t i = 5; i < count;)
                 {
                     const uint32_t op  = words[i] & 0xFFFFu;
@@ -66,20 +99,24 @@ namespace HAL
                     }
                     else
                     {
+                        if (op == OpFunction && len >= 3) function = w[2];
+                        if (op == OpFunctionEnd)          function = 0;
+                        if (op == OpFunctionCall && len >= 4) reads.callees[function].insert(w[3]);
+
                         if ((op == OpAccessChain || op == OpInBoundsAccessChain) && len >= 5 && push_vars.contains(w[3]))
                         {
                             if (auto it = constants.find(w[4]); it != constants.end())
-                                members.insert(it->second);
+                                reads.members[function].insert(it->second);
                         }
                         if (op == OpLoad && len >= 4 && push_vars.contains(w[3]))
                             push_loads.insert(w[2]);
                         if (op == OpCompositeExtract && len >= 5 && push_loads.contains(w[3]))
-                            members.insert(w[4]);
+                            reads.members[function].insert(w[4]);
                     }
                     i += len;
                 }
             }
-            return members;
+            return reads;
         }
     }
 
@@ -87,34 +124,38 @@ namespace HAL
                         const std::string& entry_point, const std::set<std::string>& included_names,
                         CompiledShader& blob_str)
     {
-        // A DXR library has no -E entry point but one SPIR-V entry point per
-        // raygen/miss/hit shader. Push-constant reads aren't attributed to a
-        // function here, so each one gets the whole module's slots.
-        std::vector<std::string> names;
-        if (!entry_point.empty())
-            names.push_back(entry_point);
-        else
-            for (auto& ep : Spirv::entry_points(blob_str.blob.data(), blob_str.blob.size()))
-                names.push_back(ep.name);
-        if (names.empty()) return;
-
-        const auto read = read_push_constant_members(blob_str.blob);
-        UsedSlots module_slots;
-        for (auto& name : included_names)
-        {
-            auto slot = get_slot(name);
-            if (slot && read.contains(get_table_index(*slot)))
-                module_slots.merge(*slot);
-        }
-
-        for (auto& name : names)
-        {
+        const auto reads = read_push_constant_members(blob_str.blob);
+        auto slots_for = [&](const std::set<uint32_t>& read) {
+            UsedSlots slots;
+            for (auto& name : included_names)
+            {
+                auto slot = get_slot(name);
+                if (slot && read.contains(get_table_index(*slot)))
+                    slots.merge(*slot);
+            }
+            return slots;
+        };
+        auto add_function = [&](std::string name, UsedSlots slots) {
             blob_str.functions.emplace_back();
             auto& f = blob_str.functions.back();
-            f.name  = name;
+            f.name  = std::move(name);
             f.wname = convert(f.name);
-            f.slots = module_slots;
+            f.slots = std::move(slots);
+        };
+
+        if (!entry_point.empty())
+        {
+            add_function(entry_point, slots_for(reads.all()));
+            return;
         }
+
+        // A DXR library has no -E entry point but one SPIR-V entry point per
+        // raygen/miss/hit shader. Each gets only the slots its own call graph
+        // reads, as D3D12's per-function reflection does: the module-wide set
+        // made every raygen "use" every other raygen's slots, so the null-slot
+        // check fired on each dispatch.
+        for (auto& ep : Spirv::entry_points(blob_str.blob.data(), blob_str.blob.size()))
+            add_function(ep.name, slots_for(reads.reachable_from(ep.function_id)));
     }
 
     // Vulkan: compile HLSL to SPIR-V via DXC.

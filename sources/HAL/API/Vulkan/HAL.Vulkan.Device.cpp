@@ -329,6 +329,8 @@ namespace HAL
                 VK_KHR_RAY_QUERY_EXTENSION_NAME,
                 // Optional: ray tracing pipelines (rtx).
                 VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME,
+                // Optional: vkCmdTraceRaysIndirect2KHR (D3D12 ExecuteIndirect DISPATCH_RAYS).
+                VK_KHR_RAY_TRACING_MAINTENANCE_1_EXTENSION_NAME,
                 // nullDescriptor: D3D12-style null views for unbound slots.
                 VK_EXT_ROBUSTNESS_2_EXTENSION_NAME,
                 // Required by DXC SPIRV for 'discard' in pixel shaders.
@@ -485,6 +487,13 @@ namespace HAL
                 rt_features.pNext = feature_head;
                 feature_head = &rt_features;
             }
+            VkPhysicalDeviceRayTracingMaintenance1FeaturesKHR rt_maint1_features{
+                VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_MAINTENANCE_1_FEATURES_KHR };
+            const bool has_rt_maint1_ext = has_rt_pipeline_ext && has_ext(VK_KHR_RAY_TRACING_MAINTENANCE_1_EXTENSION_NAME);
+            if (has_rt_maint1_ext) {
+                rt_maint1_features.pNext = feature_head;
+                feature_head = &rt_maint1_features;
+            }
 
             VkPhysicalDeviceFeatures2 features2{
                 VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2 };
@@ -523,6 +532,13 @@ namespace HAL
             const bool rt_pipeline_features_ok = ray_query_ok && has_rt_pipeline_ext && rt_features.rayTracingPipeline;
             if (has_rt_pipeline_ext && !rt_pipeline_features_ok)
                 rt_features.rayTracingPipeline = VK_FALSE;
+            const bool trace_rays_indirect_ok = rt_pipeline_features_ok && has_rt_maint1_ext
+                && rt_maint1_features.rayTracingPipelineTraceRaysIndirect2;
+            if (!rt_pipeline_features_ok)
+            {
+                rt_maint1_features.rayTracingMaintenance1               = VK_FALSE;
+                rt_maint1_features.rayTracingPipelineTraceRaysIndirect2 = VK_FALSE;
+            }
             null_descriptor = has_robustness2 && robustness2_features.nullDescriptor;
             conservative_raster = has_ext(VK_EXT_CONSERVATIVE_RASTERIZATION_EXTENSION_NAME);
             if (!null_descriptor)
@@ -609,6 +625,9 @@ namespace HAL
                 load(fn_create_rt_pipelines,  "vkCreateRayTracingPipelinesKHR");
                 load(fn_get_rt_group_handles, "vkGetRayTracingShaderGroupHandlesKHR");
                 load(fn_cmd_trace_rays,       "vkCmdTraceRaysKHR");
+                if (trace_rays_indirect_ok)
+                    load(fn_cmd_trace_rays_indirect2, "vkCmdTraceRaysIndirect2KHR");
+                Log::get() << "[Vulkan] indirect ray dispatch: " << (fn_cmd_trace_rays_indirect2 ? "on" : "unavailable") << Log::endl;
                 // Shader tables are read straight off buffers.
                 buffer_usage |= VK_BUFFER_USAGE_SHADER_BINDING_TABLE_BIT_KHR;
             }

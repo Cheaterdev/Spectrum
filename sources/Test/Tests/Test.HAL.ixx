@@ -553,6 +553,79 @@ export namespace Test
 		ASSERT_TEXTURE(tex.get(), "clear_uav");
 	}
 
+	// neon.png as material textures load it (Texture::load_native): generated mips.
+	HAL::texture_data::ptr load_mipped_test_texture()
+	{
+		auto file = FileSystem::get().get_file(L"resources/neon.png");
+		if (!file)
+			throw Test::TestFailure("resources/neon.png missing");
+		auto data = HAL::texture_data::load_texture(file, HAL::texture_data::LoadFlags::GENERATE_MIPS);
+		if (!data || data->mip_maps <= 3)
+			throw Test::TestFailure("neon.png did not load with a mip chain");
+		return data;
+	}
+
+	// Reads every mip of `texture` back and compares it byte for byte with `expected`.
+	void expect_mips_match(HAL::TextureResource* texture, const HAL::texture_data& expected, HAL::Format format)
+	{
+		auto& device = RenderSystem::get().device();
+		const uint mips = expected.mip_maps;
+		const auto& want_mips = expected.array[0]->mips;
+
+		std::vector<HAL::texture_data::ptr> actual(mips);
+		std::vector<std::future<bool>> pending;
+		auto list = device.get_upload_list();
+		for (uint m = 0; m < mips; ++m)
+			pending.push_back(list->get_copy().read_texture(texture, m,
+				[&actual, m, w = want_mips[m]->width, h = want_mips[m]->height, format](std::span<std::byte> bytes, HAL::texture_layout layout) {
+					actual[m] = HAL::texture_data::from_readback(w, h, format, bytes, layout);
+				}));
+		list->execute_and_wait();
+		for (auto& p : pending)
+			p.wait();
+
+		for (uint m = 0; m < mips; ++m)
+		{
+			if (!actual[m])
+				throw Test::TestFailure("readback failed for mip " + std::to_string(m));
+			auto& got  = *actual[m]->array[0]->mips[0];
+			auto& want = *want_mips[m];
+			const uint row_bytes = got.width_stride;
+			for (uint y = 0; y < want.num_rows; ++y)
+				if (std::memcmp(got.data.data() + y * row_bytes, want.data.data() + y * want.width_stride, row_bytes) != 0)
+					throw Test::TestFailure("mip " + std::to_string(m) + " (" + std::to_string(want.width) + "x" + std::to_string(want.height)
+						+ ") differs from the loaded data at row " + std::to_string(y));
+		}
+	}
+
+	// Every mip of a loaded texture must reach the GPU as loaded.
+	TEST(Core.HAL, Texture_LoadedMipsUploadIntact)
+	{
+		auto data = load_mipped_test_texture();
+		// upload_data retypes data->format; keep what the CPU mips hold.
+		const HAL::Format format = data->format;
+		auto expected = data;
+		auto texture = HAL::Texture::create(RenderSystem::get().device(), data);
+		ASSERT_TRUE(texture != nullptr);
+		expect_mips_match(texture->resource.get(), *expected, format);
+	}
+
+	// The same, through the texture cache: the second get_resource deserializes
+	// the cache file written by the first, the path every later app start takes.
+	TEST(Core.HAL, Texture_CachedMipsIntact)
+	{
+		auto data = load_mipped_test_texture();
+		const HAL::Format format = data->format;
+
+		const HAL::texure_header header(L"resources/neon.png", false, true);
+		ASSERT_TRUE(HAL::Texture::get_resource(header) != nullptr);
+		HAL::Texture::reset_manager();
+		auto cached = HAL::Texture::get_resource(header);
+		ASSERT_TRUE(cached != nullptr);
+		ASSERT_TRUE(cached->get_desc().as_texture().MipLevels == data->mip_maps);
+		expect_mips_match(cached->resource.get(), *data, format);
+	}
+
 	// Vulkan keeps Append/Consume counters in their own binding, written apart
 	// from the view: reusing a slot for a counter-less or null UAV must clear it,
 	// or the slot keeps a counter descriptor that may name a freed buffer.

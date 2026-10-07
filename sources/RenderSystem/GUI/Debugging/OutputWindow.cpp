@@ -116,7 +116,7 @@ namespace GUI
                     auto item = add.front();
                     add.pop_front();
 
-                    if (!current_block || current_block->get_childs().size() >= 100)
+                    if (!current_block || current_block->get_childs().size() >= LINES_PER_BLOCK)
                     {
                         current_block.reset(new base());
                         current_block->docking = dock::TOP;
@@ -192,6 +192,10 @@ namespace GUI
 
                     std::lock_guard<std::mutex> g(m);
                     add.emplace_back(item);
+                    // think() drains this only while the window ticks; closed or
+                    // hidden, it would otherwise queue every line ever logged.
+                    while (add.size() > MAX_BLOCKS * LINES_PER_BLOCK)
+                        add.pop_front();
                 });
             }                                                                                           
         }

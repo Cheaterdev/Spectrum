@@ -23,7 +23,12 @@ export namespace HAL
     // Which vkCmd*Indirect the command buffer feeds.  The engine's argument
     // structs (SIG.ixx) are laid out identically to Vulkan's indirect command
     // structs, so no command signature is needed — only the kind + stride.
-    enum class IndirectKind : uint { Unknown, DrawIndexed, Dispatch, DispatchMesh };
+    enum class IndirectKind : uint { Unknown, DrawIndexed, Dispatch, DispatchMesh, DispatchRays };
+
+    // D3D12_DISPATCH_RAYS_DESC and VkTraceRaysIndirectCommand2KHR list the same
+    // fields in the same order (raygen address/size, then miss, hit and
+    // callable address/size/stride, then width/height/depth).
+    static_assert(sizeof(DispatchRaysArguments) == sizeof(VkTraceRaysIndirectCommand2KHR));
 
     template<class T>
     constexpr IndirectKind indirect_kind_of()
@@ -31,6 +36,7 @@ export namespace HAL
         if      constexpr (std::is_same_v<T, DrawIndexedArguments>)  return IndirectKind::DrawIndexed;
         else if constexpr (std::is_same_v<T, DispatchArguments>)     return IndirectKind::Dispatch;
         else if constexpr (std::is_same_v<T, DispatchMeshArguments>) return IndirectKind::DispatchMesh;
+        else if constexpr (std::is_same_v<T, DispatchRaysArguments>) return IndirectKind::DispatchRays;
         else                                                         return IndirectKind::Unknown;
     }
 

@@ -18,7 +18,6 @@ namespace EngineAssets
 		GUI_TEXTURE(tab_button_back)
 		GUI_TEXTURE(tab_button_hover)
 		GUI_TEXTURE(tab_button)
-		GUI_TEXTURE(buttotab_stripn)
 		GUI_TEXTURE(window_active)
 		GUI_TEXTURE(combo)
 		GUI_TEXTURE(combo_hover)

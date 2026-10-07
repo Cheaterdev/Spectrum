@@ -39,8 +39,12 @@ namespace HAL
                 // and #939/#940 (unbound slot or member reading descriptor 0)
                 // were found. The CPU layer only checks declared state at bind
                 // time and sees none of it.
-                if (spDebugController1)
-                    spDebugController1->SetEnableGPUBasedValidation(true);
+                //
+                // It also access-violates inside ExecuteIndirect(DISPATCH_RAYS),
+                // so DDGI's indirect probe trace and
+                // Core.RTX::MaterialTester_IndirectDispatch crash while it's on.
+                // if (spDebugController1)
+                //     spDebugController1->SetEnableGPUBasedValidation(true);
             }
 
     }

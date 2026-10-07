@@ -47,7 +47,9 @@ export namespace Test
 	// (material_tester) with a gray metallic material, then traces a shadow ray
 	// from each hit point toward the sun.  Writes the Lambertian color result
 	// directly to the output UAV — no GBuffer, no PSSM, no FSR.
-	TEST(Core.RTX, MaterialTester)
+	// indirect: launch through ExecuteIndirect(DISPATCH_RAYS) with a record
+	// written here, the way DDGIProbeTrace launches, instead of dispatch_rays.
+	std::shared_ptr<HAL::TextureResource> render_material_tester(bool indirect)
 	{
 		auto& device = RenderSystem::get().device();
 		constexpr uint W = kReferenceWidth, H = kReferenceHeight;
@@ -133,6 +135,7 @@ export namespace Test
 		// Captured during render: ColorOutput is transient, so the graph no
 		// longer holds it once the frame is committed.
 		std::shared_ptr<HAL::TextureResource> color_output;
+		auto dispatch_args = std::make_shared<HAL::StructuredBufferView<DispatchRaysArguments>>(device, 1);
 		graph.add_library_pass<Passes::Raytrace::Dev::RTXColorPass>(
 			[](auto&, FrameGraph::TaskBuilder&) -> FrameGraph::SetupResult { return true; },
 			[&](auto& data, FrameGraph::FrameContext& ctx) {
@@ -152,10 +155,34 @@ export namespace Test
 				output.GetOutput() = data.ColorOutput->rwTexture2D;
 				compute.set(output);
 
-				// Dispatch primary rays using ColorRTX raygen.
-				RTX::get().render<Raytrace::Dev::ColorRTX>(compute,
-					scene_info.scene->raytrace_scene, rtx_size);
-			},
+				if (!indirect)
+				{
+					RTX::get().render<Raytrace::Dev::ColorRTX>(compute,
+						scene_info.scene->raytrace_scene, rtx_size);
+					return;
+				}
+
+				auto& rtx = RTX::get().rtx;
+				DispatchRaysArguments args{};
+				args.RayGenStartAddress    = rtx.raygen_address<Raytrace::Dev::ColorRTX>().get_ptr();
+				args.RayGenSizeInBytes     = sizeof(HAL::shader_identifier);
+				args.MissStartAddress      = rtx.miss_ids.get_resource_address().get_ptr();
+				args.MissStrideInBytes     = sizeof(HAL::shader_identifier);
+				args.MissSizeInBytes       = args.MissStrideInBytes * rtx.miss_ids.get_count();
+				args.HitGroupStartAddress  = rtx.hitgroup_ids->buffer.get_resource_address().get_ptr();
+				args.HitGroupStrideInBytes = sizeof(std::remove_cvref_t<decltype(rtx)>::hit_type);
+				args.HitGroupSizeInBytes   = args.HitGroupStrideInBytes * rtx.hitgroup_ids->max_size();
+				args.Width  = rtx_size.x;
+				args.Height = rtx_size.y;
+				args.Depth  = 1;
+				ctx.get_list()->get_copy().update<DispatchRaysArguments>(*dispatch_args, 0, std::span(&args, 1));
+
+				Slots::Raytrace::Raytracing raytracing;
+				raytracing.GetScene() = scene_info.scene->raytrace_scene->get_handle();
+				compute.set(raytracing);
+				compute.set_pipeline(rtx.m_dxrStateObject);
+				compute.exec_indirect<DispatchRaysArguments>(*dispatch_args, 1, 0,
+					&rtx.raygen_slots<Raytrace::Dev::ColorRTX>());			},
 			FrameGraph::PassFlags::Compute | FrameGraph::PassFlags::Required);
 
 		// RTXColorPass [Always]-needs sky_cubemap_filtered to pull in the sky
@@ -178,10 +205,24 @@ export namespace Test
 		graph.commit_command_lists().wait();
 
 		graph.reset();
+		return color_output;
+	}
 
+	TEST(Core.RTX, MaterialTester)
+	{
+		auto color_output = render_material_tester(false);
 		ASSERT_TRUE(color_output != nullptr);
 		// A handful of pixels shift with texture re-bakes (texture-cache rebuild
 		// moved one shading sample); 0.1% keeps real regressions visible.
+		ASSERT_TEXTURE_EX(color_output.get(), "rtx_material_tester",
+			.max_mismatch_fraction = 0.001, .float_encoding = Test::FloatEncoding::Encoded);
+	}
+
+	// Same image, launched the way DDGIProbeTrace launches.
+	TEST(Core.RTX, MaterialTester_IndirectDispatch)
+	{
+		auto color_output = render_material_tester(true);
+		ASSERT_TRUE(color_output != nullptr);
 		ASSERT_TEXTURE_EX(color_output.get(), "rtx_material_tester",
 			.max_mismatch_fraction = 0.001, .float_encoding = Test::FloatEncoding::Encoded);
 	}

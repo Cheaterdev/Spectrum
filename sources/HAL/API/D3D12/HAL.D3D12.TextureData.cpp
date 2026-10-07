@@ -12,6 +12,13 @@ import d3d12;
 // where the header-based DXGI_FORMAT matches DirectXTex's ABI.
 std::vector<uint8_t> hal_r8_to_png(const uint8_t* src, uint32_t width, uint32_t height);
 
+// HAL.DirectXTexLoad.cpp: the file loader both backends share.
+bool hal_dxtex_load(const void* data, size_t size, std::string ext, bool generate_mips,
+                    std::vector<uint32_t>& desc,
+                    std::vector<std::vector<uint8_t>>& subresources,
+                    std::vector<uint32_t>& row_pitches,
+                    std::vector<uint32_t>& slice_pitches);
+
 namespace HAL
 {
 
@@ -283,38 +290,26 @@ namespace HAL
 
     texture_data::ptr texture_data::load_from_memory(const void* data, size_t size, std::string format_hint, int flags)
     {
-        bool mips = (flags & LoadFlags::GENERATE_MIPS);
-
-        if (!format_hint.empty() && format_hint[0] == '.')
-            format_hint.erase(0, 1);
-
-        for (auto& c : format_hint)
-            if (c >= 'A' && c <= 'Z') c += 'a' - 'A';
-
-        DirectXTex::TexMetadata metadata;
-        DirectXTex::ScratchImage orig_image;
-
-        CoInitialize(nullptr);
-
-        auto bytes = reinterpret_cast<const uint8_t*>(data);
-        HRESULT hr = 0;
-        if (format_hint == "tga")
-            hr = DirectXTex::LoadFromTGAMemory(bytes, size, &metadata, orig_image);
-        else if (format_hint == "dds")
-            hr = DirectXTex::LoadFromDDSMemory(bytes, size, DirectXTex::DDS_FLAGS::DDS_FLAGS_NONE, &metadata, orig_image);
-        else
-            hr = DirectXTex::LoadFromWICMemory(bytes, size, DirectXTex::WIC_FLAGS::WIC_FLAGS_NONE, &metadata, orig_image);
-
-        if (FAILED(hr))
+        std::vector<uint32_t> desc, row_pitches, slice_pitches;
+        std::vector<std::vector<uint8_t>> subresources;
+        if (!hal_dxtex_load(data, size, std::move(format_hint), (flags & LoadFlags::GENERATE_MIPS) != 0,
+                            desc, subresources, row_pitches, slice_pitches))
             return nullptr;
 
-        DirectXTex::ScratchImage mipChain;
-        bool res = true;
+        const Format format(static_cast<Format::Formats>(desc[0]));
+        const uint32_t array_size = desc[4], mips = desc[5];
+        auto result = std::make_shared<texture_data>(array_size, mips, desc[1], desc[2], desc[3], format);
 
-        if (!mips || FAILED(DirectXTex::GenerateMipMaps(orig_image.GetImages(), orig_image.GetImageCount(), orig_image.GetMetadata(), DirectXTex::TEX_FILTER_FLAGS::TEX_FILTER_DEFAULT, 0, mipChain)))
-            res = false;
-
-        return generate_tex_data(res ? mipChain : orig_image);
+        size_t i = 0;
+        for (uint32_t a = 0; a < array_size; ++a)
+            for (uint32_t m = 0; m < mips; ++m, ++i)
+            {
+                auto& mip = *result->array[a]->mips[m];
+                std::memcpy(mip.data.data(), subresources[i].data(), std::min(mip.data.size(), subresources[i].size()));
+                mip.width_stride = row_pitches[i];
+                mip.slice_stride = slice_pitches[i];
+            }
+        return result;
     }
 
     texture_data::ptr texture_data::load_texture(std::shared_ptr<file> file, int flags)
