@@ -191,6 +191,8 @@ namespace
 	// treat each of those calls as its own frame.
 	ivec3 g_ddgi_prev_window_origin[Constants::GI::DDGI::DDGI_CascadeCount];
 	bool  g_ddgi_scroll_initialized[Constants::GI::DDGI::DDGI_CascadeCount] = { false, false, false, false, false };
+	// TimeInfo::frame of the last ddgi_update_selectors, to detect a new graph.
+	uint64_t g_ddgi_last_frame = ~0ull;
 	// This frame's per-cascade eviction range, in the same (lo, count) shape
 	// DDGIProbeResidencyMarkData carries to the shader -- see that struct's
 	// own comment for the wrap-test derivation. count=0 on every axis when
@@ -203,11 +205,15 @@ void ddgi_update_selectors(FrameGraph::Graph& graph)
 {
 	graph.get_context<Table::GI::DDGI::DDGISelectors>().show_probes = g_ddgi_show_probes;
 
-	// Runs once per frame, before setup, so this is the one place a frame
-	// counter can live without being bumped several times per frame (every
-	// cascade calls into the render functions separately).
-	static uint64_t frame = 0;
-	++frame;
+	// Runs once per frame, before setup. The graph's frame number, not a
+	// counter of DDGI's own: a new graph restarts the stagger buckets, and its
+	// probe atlases are new, so the scroll tracking (the previous window
+	// origin) of whatever graph ran before is dropped.
+	const uint64_t frame = graph.get_context<TimeInfo>().frame;
+	if (g_ddgi_last_frame + 1 != frame)
+		for (bool& initialized : g_ddgi_scroll_initialized)
+			initialized = false;
+	g_ddgi_last_frame = frame;
 
 	const uint32_t base = (uint32_t)std::max(1, (int)g_ddgi_stagger_base);
 	const bool stagger_upper = g_ddgi_stagger_updates && base > 1;

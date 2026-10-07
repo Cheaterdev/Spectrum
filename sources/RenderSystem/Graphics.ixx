@@ -67,5 +67,6 @@ export import :NRD_IndirectCombine;
 export import :NRD_ShadowCombine;
 export import :RTXCombine;
 export import :BlueNoise;
+export import :SceneFrameRenderer;
 
 export import :System;

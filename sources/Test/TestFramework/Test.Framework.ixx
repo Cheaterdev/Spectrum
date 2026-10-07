@@ -106,15 +106,25 @@ export namespace Test
 			std::set<std::string> ranSetups;
 
 			// A leading '-' inverts the filter: run everything except the matches.
+			// '|' separates alternatives: a test matches if it contains any of them.
 			const bool exclude = filter.starts_with('-');
-			const std::string_view pattern = exclude ? filter.substr(1) : filter;
+			std::string pattern(exclude ? filter.substr(1) : filter);
+			std::transform(pattern.begin(), pattern.end(), pattern.begin(), [](unsigned char c){ return std::tolower(c); });
+			std::vector<std::string> alternatives;
+			for (size_t start = 0; start <= pattern.size();)
+			{
+				size_t end = pattern.find('|', start);
+				if (end == std::string::npos) end = pattern.size();
+				if (end > start) alternatives.push_back(pattern.substr(start, end - start));
+				start = end + 1;
+			}
 			auto matches = [&](const Test& t) -> bool {
-				if (pattern.empty()) return true;
+				if (alternatives.empty()) return true;
 				std::string full = t.category.empty() ? t.name : t.category + "::" + t.name;
-				std::string lf(pattern), lful(full);
-				std::transform(lf.begin(),   lf.end(),   lf.begin(),   [](unsigned char c){ return std::tolower(c); });
-				std::transform(lful.begin(), lful.end(), lful.begin(), [](unsigned char c){ return std::tolower(c); });
-				return lful.contains(lf) != exclude;
+				std::transform(full.begin(), full.end(), full.begin(), [](unsigned char c){ return std::tolower(c); });
+				const bool any = std::any_of(alternatives.begin(), alternatives.end(),
+					[&](const std::string& a) { return full.contains(a); });
+				return any != exclude;
 			};
 
 			auto matchCount = std::count_if(tests.begin(), tests.end(), matches);

@@ -97,6 +97,11 @@ export namespace nvidia
 		// length(t) > 0.001 guard), not a hard failure, so an unset caller
 		// wouldn't be caught by any error/validation check.
 		float3 sun_direction;
+
+		// The caller's frame number (its graph's TimeInfo::frame), passed on as
+		// CommonSettings::frameIndex. One that doesn't follow the previous call's
+		// is a new graph, whose history NRD must not blend with the old one's.
+		uint64 frame = 0;
 	};
 
 	class NRD : public Singleton<NRD>
@@ -172,11 +177,10 @@ export namespace nvidia
 
 		// CommonSettings::frameIndex must increment by exactly 1 per real
 		// frame per Instance (NRDSettings.h's own doc comment; NRD's
-		// reference integration asserts this) -- owned here, not by the
-		// caller, since execute_reblur()/execute_shadow() are each the one
-		// place guaranteed to run at most once/frame for their own Instance.
-		uint32_t reblur_frame_counter = 0;
-		uint32_t sigma_frame_counter = 0;
+		// reference integration asserts this). It is the caller's frame
+		// (NRDFrameInputs::frame); a gap restarts accumulation instead.
+		uint64 reblur_last_frame = ~0ull;
+		uint64 sigma_last_frame  = ~0ull;
 
 	public:
 		bool available() const { return reblur_resolved || sigma_resolved; }

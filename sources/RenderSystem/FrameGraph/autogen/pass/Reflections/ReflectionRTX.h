@@ -103,10 +103,14 @@ namespace Reflections
 				builder.need(data.TileRoughnessTiles, FrameGraph::ResourceFlags::Read);
 				builder.need(data.sky_cubemap_filtered, FrameGraph::ResourceFlags::Read);
 				builder.need(data.sky_cubemap_filtered_diffuse, FrameGraph::ResourceFlags::Read);
-				builder.need(data.DDGI_ProbeIrradiance, FrameGraph::ResourceFlags::Read);
-				builder.need(data.DDGI_ProbeVisibility, FrameGraph::ResourceFlags::Read);
-				builder.need(data.DDGI_ProbeResidency, FrameGraph::ResourceFlags::Read);
-				builder.need(data.DDGI_ProbeResidencyPending, FrameGraph::ResourceFlags::UnorderedAccess);
+				if (builder.graph->get_context<Table::GI::DDGI::DDGISelectors>().enabled)
+					builder.need(data.DDGI_ProbeIrradiance, FrameGraph::ResourceFlags::Read);
+				if (builder.graph->get_context<Table::GI::DDGI::DDGISelectors>().enabled)
+					builder.need(data.DDGI_ProbeVisibility, FrameGraph::ResourceFlags::Read);
+				if (builder.graph->get_context<Table::GI::DDGI::DDGISelectors>().enabled)
+					builder.need(data.DDGI_ProbeResidency, FrameGraph::ResourceFlags::Read);
+				if (builder.graph->get_context<Table::GI::DDGI::DDGISelectors>().enabled)
+					builder.need(data.DDGI_ProbeResidencyPending, FrameGraph::ResourceFlags::UnorderedAccess);
 			}
 
 			// Resources this pass always creates with a fixed desc, generated from

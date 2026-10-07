@@ -626,6 +626,47 @@ export namespace Test
 		expect_mips_match(cached->resource.get(), *data, format);
 	}
 
+	// Texture filtering alone, against a D3D12 golden: every static sampler,
+	// UNORM and sRGB views, footprints from magnified to past the last mip and
+	// anisotropy up to 16:1 (fgt_sampler_probe.hlsl). Gradients are explicit,
+	// so a mismatch here is the sampler or texture, not rasterization or
+	// derivatives.
+	TEST(Core.HAL, Sampler_FilteringProbe)
+	{
+		auto& device = RenderSystem::get().device();
+		auto data = load_mipped_test_texture();
+		auto texture = HAL::Texture::create(device, data);
+		ASSERT_TRUE(texture != nullptr);
+
+		constexpr uint W = 9 * 128, H = 512;
+		auto output = std::make_shared<HAL::TextureResource>(device,
+			HAL::ResourceDesc::Tex2D(HAL::Format::R8G8B8A8_UNORM, { W, H }, 1, 1, HAL::ResFlags::UnorderedAccess),
+			HAL::HeapType::DEFAULT);
+
+		auto list = device.get_queue(HAL::CommandListType::DIRECT)->get_free_list();
+		list->begin(L"Sampler probe");
+		HAL::Texture2DView output_view(output, *list);
+		auto& compute = list->get_compute();
+		compute.set_signature(Layouts::DefaultLayout);
+		{
+			Slots::FrameGraphTests::FGTSamplerProbe probe;
+			probe.GetSize()     = uint2(W, H);
+			probe.GetTex()      = texture->texture_2d().texture2D;
+			probe.GetTex_srgb() = texture->texture_2d_srgb().texture2D;
+			probe.GetOutput()   = output_view.rwTexture2D;
+			compute.set(probe);
+		}
+		compute.set_pipeline<PSOS::FrameGraphTests::FGTSamplerProbe>();
+		compute.dispatch(ivec2(W, H), ivec2(8, 8));
+		list->execute_and_wait();
+
+		// The footprint sweeps across every mip boundary, where nearest-mip
+		// selection rounds by each vendor's fixed-point LOD: AMD against the
+		// NVIDIA golden differs on ~140 pixels there (point picks the other
+		// mip; trilinear by 3/255). NVIDIA D3D12 vs Vulkan is exact.
+		ASSERT_TEXTURE_EX(output.get(), "sampler_probe", .max_mismatch_fraction = 0.0005);
+	}
+
 	// Vulkan keeps Append/Consume counters in their own binding, written apart
 	// from the view: reusing a slot for a counter-less or null UAV must clear it,
 	// or the slot keeps a counter descriptor that may name a freed buffer.

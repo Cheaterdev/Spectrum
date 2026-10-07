@@ -45,6 +45,7 @@ void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 	tasks.emplace_back(PSOBase::create<PSOS::Shadows::Denoise::DenoiserShadow_TileClassification>(device, pso[PSO::DenoiserShadow_TileClassification]));
 	tasks.emplace_back(PSOBase::create<PSOS::Shadows::Denoise::DenoiserShadow_Filter>(device, pso[PSO::DenoiserShadow_Filter]));
 	tasks.emplace_back(PSOBase::create<PSOS::FrameGraphTests::FGTRayQuery>(device, pso[PSO::FGTRayQuery]));
+	tasks.emplace_back(PSOBase::create<PSOS::FrameGraphTests::FGTSamplerProbe>(device, pso[PSO::FGTSamplerProbe]));
 	tasks.emplace_back(PSOBase::create<PSOS::FrameGraphTests::FGTAppendTiles>(device, pso[PSO::FGTAppendTiles]));
 	tasks.emplace_back(PSOBase::create<PSOS::Post::Upscale::FSR>(device, pso[PSO::FSR]));
 	tasks.emplace_back(PSOBase::create<PSOS::Post::Upscale::RCAS>(device, pso[PSO::RCAS]));

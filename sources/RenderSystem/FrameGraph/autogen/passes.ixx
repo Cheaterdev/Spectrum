@@ -72,6 +72,15 @@ export import "../defines.h";
 #include "pass/FrameGraphTests/FGT_ProduceGBuffer.h"
 #include "pass/FrameGraphTests/FGT_AppendTiles.h"
 #include "pass/FrameGraphTests/FGT_CopyTileList.h"
+#include "pass/FrameGraphTests/FGT_CaptureAlbedo.h"
+#include "pass/FrameGraphTests/FGT_CaptureNormals.h"
+#include "pass/FrameGraphTests/FGT_CaptureResult.h"
+#include "pass/FrameGraphTests/FGT_CaptureRTXIndirectNoise.h"
+#include "pass/FrameGraphTests/FGT_CaptureRTXReflectionNoise.h"
+#include "pass/FrameGraphTests/FGT_CaptureRTXIndirectDenoised.h"
+#include "pass/FrameGraphTests/FGT_CaptureRTXReflectionDenoised.h"
+#include "pass/FrameGraphTests/FGT_CaptureRTXReflectionNoiseHalf.h"
+#include "pass/FrameGraphTests/FGT_CaptureRTXReflectionDirPdfHalf.h"
 #include "pass/Post/Upscale/FSR.h"
 #include "pass/Frame/ResultCreation.h"
 #include "pass/Denoise/NRD/NRD_GBufferPack.h"
@@ -152,6 +161,8 @@ export import "../defines.h";
 #include "pass/FrameGraphTests/FGT_VSMFullChainPipeline.pipeline.h"
 #include "pass/FrameGraphTests/FGT_TileListPipeline.pipeline.h"
 #include "pass/FrameGraphTests/FGT_AliasingPipeline.pipeline.h"
+#include "pass/FrameGraphTests/FGT_RasterCapturePipeline.pipeline.h"
+#include "pass/FrameGraphTests/FGT_RTCapturePipeline.pipeline.h"
 #include "pass/Frame/MainPipeline.pipeline.h"
 #include "pass/UI/UIPipeline.pipeline.h"
 
@@ -415,6 +426,42 @@ export namespace Passes
 	namespace FrameGraphTests
 	{
 		using ::Passes::FrameGraphTests::FGT_CopyTileList;
+	}
+	namespace FrameGraphTests
+	{
+		using ::Passes::FrameGraphTests::FGT_CaptureAlbedo;
+	}
+	namespace FrameGraphTests
+	{
+		using ::Passes::FrameGraphTests::FGT_CaptureNormals;
+	}
+	namespace FrameGraphTests
+	{
+		using ::Passes::FrameGraphTests::FGT_CaptureResult;
+	}
+	namespace FrameGraphTests
+	{
+		using ::Passes::FrameGraphTests::FGT_CaptureRTXIndirectNoise;
+	}
+	namespace FrameGraphTests
+	{
+		using ::Passes::FrameGraphTests::FGT_CaptureRTXReflectionNoise;
+	}
+	namespace FrameGraphTests
+	{
+		using ::Passes::FrameGraphTests::FGT_CaptureRTXIndirectDenoised;
+	}
+	namespace FrameGraphTests
+	{
+		using ::Passes::FrameGraphTests::FGT_CaptureRTXReflectionDenoised;
+	}
+	namespace FrameGraphTests
+	{
+		using ::Passes::FrameGraphTests::FGT_CaptureRTXReflectionNoiseHalf;
+	}
+	namespace FrameGraphTests
+	{
+		using ::Passes::FrameGraphTests::FGT_CaptureRTXReflectionDirPdfHalf;
 	}
 	namespace Post
 	{
@@ -838,6 +885,14 @@ export namespace Pipelines
 	namespace FrameGraphTests
 	{
 		using ::Pipelines::FrameGraphTests::FGT_AliasingPipeline;
+	}
+	namespace FrameGraphTests
+	{
+		using ::Pipelines::FrameGraphTests::FGT_RasterCapturePipeline;
+	}
+	namespace FrameGraphTests
+	{
+		using ::Pipelines::FrameGraphTests::FGT_RTCapturePipeline;
 	}
 	namespace Frame
 	{

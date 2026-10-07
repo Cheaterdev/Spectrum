@@ -429,6 +429,15 @@ void ColorPass()
 }
 
 
+// A miss is not dist == 0: MyMissShader reports it as the sky distance,
+// 100000. Hit-only terms (DDGI at the hit point) must test for a real hit --
+// on a miss the payload's hit_normal/albedo were never written, and reading
+// them is undefined (zero on D3D12, garbage on Vulkan).
+bool payload_hit(float dist)
+{
+	return dist > 0.0 && dist < 100000 - 5;
+}
+
 // Shared body for MyRaygenShaderIndirectRTXOnly/MyRaygenShaderIndirectRTXHalfRes
 // (see voxel.prism's PassNode IndirectRTX/IndirectRTXHalf): one ray per pixel,
 // GGX-importance-sampled hemisphere direction, fixed reach, no voxel grid
@@ -482,7 +491,7 @@ void TraceIndirectDiffuse(Texture2D<float> depth_tex, Texture2D<float4> normal_t
 	// that's fine given the multi-bounce loop is already inherently
 	// multi-frame). No pi/BRDF normalization on the added term yet (tuning
 	// item, not structural).
-	if (payload_gi.dist > 0.0)
+	if (payload_hit(payload_gi.dist))
 	{
 		const VoxelOutput voxel_output = CreateVoxelOutput();
 		DDGIInfo ddgi_cascade0 = voxel_output.GetDdgi_cascade0();
@@ -656,6 +665,8 @@ void TraceReflection(Texture2D<float> depth_tex, Texture2D<float4> normal_tex, R
 	[raypayload]
 	RayPayload payload;
 	payload.color = float4(0, 0, 0, 0);
+	payload.albedo = 0;
+	payload.hit_normal = 0;
 	payload.recursion = 0;
 	payload.dist = 0;
 	payload.cone.angle = 0;
@@ -676,7 +687,7 @@ void TraceReflection(Texture2D<float> depth_tex, Texture2D<float4> normal_tex, R
 	// reflection ray that hits something otherwise unlit (no direct sun
 	// visibility, no other GI term reaching it) picks up the probe grid's
 	// accumulated multi-bounce light too, instead of coming back flat black.
-	if (payload.dist > 0.0)
+	if (payload_hit(payload.dist))
 	{
 		const VoxelOutput voxel_output = CreateVoxelOutput();
 		DDGIInfo ddgi_cascade0 = voxel_output.GetDdgi_cascade0();

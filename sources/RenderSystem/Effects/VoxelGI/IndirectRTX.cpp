@@ -48,10 +48,7 @@ void PassDefault<Passes::GI::IndirectRTXHalf>::render(
 				output.GetDdgi_cascade3() = ddgi_make_info(cam_pos, 3);
 				output.GetDdgi_cascade4() = ddgi_make_info(cam_pos, 4);
 			}
-			output.GetDdgi_irradiance()  = data.DDGI_ProbeIrradiance->texture2DArray;
-			output.GetDdgi_visibility()  = data.DDGI_ProbeVisibility->texture2DArray;
-			output.GetDdgi_residency()   = data.DDGI_ProbeResidency->structuredBuffer;
-			output.GetDdgi_residency_pending() = data.DDGI_ProbeResidencyPending->rwStructuredBuffer;
+			ddgi_bind_feedback(output, data, *context.graph);
 			compute.set(output);
 		}
 		RTX::get().render<GI::IndirectRTXHalf>(compute, sceneinfo.scene->raytrace_scene, noisy_output.get_size());
@@ -115,10 +112,7 @@ void PassDefault<Passes::GI::IndirectRTX>::render(
 				output.GetDdgi_cascade3() = ddgi_make_info(cam_pos, 3);
 				output.GetDdgi_cascade4() = ddgi_make_info(cam_pos, 4);
 			}
-			output.GetDdgi_irradiance()  = data.DDGI_ProbeIrradiance->texture2DArray;
-			output.GetDdgi_visibility()  = data.DDGI_ProbeVisibility->texture2DArray;
-			output.GetDdgi_residency()   = data.DDGI_ProbeResidency->structuredBuffer;
-			output.GetDdgi_residency_pending() = data.DDGI_ProbeResidencyPending->rwStructuredBuffer;
+			ddgi_bind_feedback(output, data, *context.graph);
 			compute.set(output);
 		}
 		RTX::get().render<GI::IndirectRTX>(compute, sceneinfo.scene->raytrace_scene, noisy_output.get_size());

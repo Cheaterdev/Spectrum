@@ -63,6 +63,7 @@ void PassDefault<Passes::Denoise::NRD::NRD_SIGMA_Execute>::render(
 	memcpy(inputs.view_to_clip_prev,  cam->camera_cb.prev.proj.elems.data(),    sizeof(inputs.view_to_clip_prev));
 	inputs.jitter      = float2(cam->camera_cb.current.jitter.x, cam->camera_cb.current.jitter.y);
 	inputs.jitter_prev = float2(cam->camera_cb.prev.jitter.x, cam->camera_cb.prev.jitter.y);
+	inputs.frame       = context.graph->get_context<TimeInfo>().frame;
 
 	nvidia::NRD::get().execute_shadow(*context.get_list(), inputs);
 }

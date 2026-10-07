@@ -532,10 +532,10 @@ namespace Reflections
 		# same rationale as IndirectRTXHalf's own comment on these four fields --
 		# a reflection ray that misses everything else falls back to the probe
 		# grid instead of pure sky/black.
-		[Always = Read] Texture DDGI_ProbeIrradiance;
-		[Always = Read] Texture DDGI_ProbeVisibility;
-		[Always = Read] StructuredBuffer<uint> DDGI_ProbeResidency;
-		[Always = UnorderedAccess] StructuredBuffer<uint> DDGI_ProbeResidencyPending;
+		[Always = Read] [Optional = DDGISelectors::enabled] Texture DDGI_ProbeIrradiance;
+		[Always = Read] [Optional = DDGISelectors::enabled] Texture DDGI_ProbeVisibility;
+		[Always = Read] [Optional = DDGISelectors::enabled] StructuredBuffer<uint> DDGI_ProbeResidency;
+		[Always = UnorderedAccess] [Optional = DDGISelectors::enabled] StructuredBuffer<uint> DDGI_ProbeResidencyPending;
 
 		[Always = UnorderedAccess] [Size = tiles(ViewportContext::frame_size, 2)] [Format = R16G16B16A16_FLOAT]
 		Texture RTXReflectionNoiseHalf;
@@ -576,10 +576,10 @@ namespace Reflections
 		[Always = Read] TextureCube sky_cubemap_filtered;
 		[Always = Read] TextureCube sky_cubemap_filtered_diffuse;
 		# See ReflectionRTXHalf's own comment on the same four fields.
-		[Always = Read] Texture DDGI_ProbeIrradiance;
-		[Always = Read] Texture DDGI_ProbeVisibility;
-		[Always = Read] StructuredBuffer<uint> DDGI_ProbeResidency;
-		[Always = UnorderedAccess] StructuredBuffer<uint> DDGI_ProbeResidencyPending;
+		[Always = Read] [Optional = DDGISelectors::enabled] Texture DDGI_ProbeIrradiance;
+		[Always = Read] [Optional = DDGISelectors::enabled] Texture DDGI_ProbeVisibility;
+		[Always = Read] [Optional = DDGISelectors::enabled] StructuredBuffer<uint> DDGI_ProbeResidency;
+		[Always = UnorderedAccess] [Optional = DDGISelectors::enabled] StructuredBuffer<uint> DDGI_ProbeResidencyPending;
 
 		[Always = UnorderedAccess] [Size = ViewportContext::frame_size] [Format = R16G16B16A16_FLOAT] Texture RTXReflectionNoise;
 		[Always = UnorderedAccess] [Size = ViewportContext::frame_size] [Format = R16G16B16A16_FLOAT] Texture RTXReflectionDirPdf;
@@ -646,15 +646,15 @@ namespace GI
 		# creator and always runs earlier in test.prism's MainPipeline -- not
 		# gated on DDGISelectors::enabled here yet since that toggle has no real
 		# control path today (always true); revisit once it does.
-		[Always = Read] Texture DDGI_ProbeIrradiance;
-		[Always = Read] Texture DDGI_ProbeVisibility;
+		[Always = Read] [Optional = DDGISelectors::enabled] Texture DDGI_ProbeIrradiance;
+		[Always = Read] [Optional = DDGISelectors::enabled] Texture DDGI_ProbeVisibility;
 		# Gates ddgi_sample_irradiance's trilinear blend -- see VoxelOutput's own
 		# comment on ddgi_residency.
-		[Always = Read] StructuredBuffer<uint> DDGI_ProbeResidency;
+		[Always = Read] [Optional = DDGISelectors::enabled] StructuredBuffer<uint> DDGI_ProbeResidency;
 		# Written at this pass's own ray hit points -- see VoxelOutput's own
 		# comment on ddgi_residency_pending and DDGI_ProbeResidencyPending's
 		# (ddgi.prism).
-		[Always = UnorderedAccess] StructuredBuffer<uint> DDGI_ProbeResidencyPending;
+		[Always = UnorderedAccess] [Optional = DDGISelectors::enabled] StructuredBuffer<uint> DDGI_ProbeResidencyPending;
 
 		[Always = UnorderedAccess] [Size = tiles(ViewportContext::frame_size, 2)] [Format = R16G16B16A16_FLOAT]
 		Texture RTXIndirectNoiseHalf;
@@ -691,12 +691,12 @@ namespace GI
 		[Always = Read] TextureCube sky_cubemap_filtered;
 		[Always = Read] TextureCube sky_cubemap_filtered_diffuse;
 		# See IndirectRTXHalf's own comment on the same two fields.
-		[Always = Read] Texture DDGI_ProbeIrradiance;
-		[Always = Read] Texture DDGI_ProbeVisibility;
+		[Always = Read] [Optional = DDGISelectors::enabled] Texture DDGI_ProbeIrradiance;
+		[Always = Read] [Optional = DDGISelectors::enabled] Texture DDGI_ProbeVisibility;
 		# See IndirectRTXHalf's own comment on the same field.
-		[Always = Read] StructuredBuffer<uint> DDGI_ProbeResidency;
+		[Always = Read] [Optional = DDGISelectors::enabled] StructuredBuffer<uint> DDGI_ProbeResidency;
 		# See IndirectRTXHalf's own comment.
-		[Always = UnorderedAccess] StructuredBuffer<uint> DDGI_ProbeResidencyPending;
+		[Always = UnorderedAccess] [Optional = DDGISelectors::enabled] StructuredBuffer<uint> DDGI_ProbeResidencyPending;
 
 		[Always = UnorderedAccess] [Size = ViewportContext::frame_size] [Format = R16G16B16A16_FLOAT] Texture RTXIndirectNoise;
 	}

@@ -346,7 +346,8 @@ namespace HAL
 
                 counter_resource = Buffer.CounterResource;
 
-                ASSERT((desc.Buffer.FirstElement + desc.Buffer.NumElements) * desc.Buffer.StructureByteStride <= (view.Resource)->get_desc().as_buffer().SizeInBytes);
+                // No resource: a null view ([Auto] fallback for an unbound member).
+                ASSERT(!view.Resource || (desc.Buffer.FirstElement + desc.Buffer.NumElements) * desc.Buffer.StructureByteStride <= view.Resource->get_desc().as_buffer().SizeInBytes);
                 ASSERT(!counter_resource || Buffer.StructureByteStride);
                 ASSERT(!counter_resource || Buffer.StructureByteStride);
             },

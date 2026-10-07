@@ -1177,6 +1177,105 @@ struct PassSetupDefault<Passes::FrameGraphTests::FGT_CopyTileList>
 
 
 template<>
+struct PassSetupDefault<Passes::FrameGraphTests::FGT_CaptureAlbedo>
+{
+	static constexpr bool enabled = true;
+
+	// Generated from this pass's [RunAlways]/[SetupCondition]/
+	// [RenderCondition]; defined in autogen/pass_defaults.cpp.
+	static FrameGraph::SetupResult setup(Passes::FrameGraphTests::FGT_CaptureAlbedo::Context& data, FrameGraph::TaskBuilder& builder);
+};
+
+
+template<>
+struct PassSetupDefault<Passes::FrameGraphTests::FGT_CaptureNormals>
+{
+	static constexpr bool enabled = true;
+
+	// Generated from this pass's [RunAlways]/[SetupCondition]/
+	// [RenderCondition]; defined in autogen/pass_defaults.cpp.
+	static FrameGraph::SetupResult setup(Passes::FrameGraphTests::FGT_CaptureNormals::Context& data, FrameGraph::TaskBuilder& builder);
+};
+
+
+template<>
+struct PassSetupDefault<Passes::FrameGraphTests::FGT_CaptureResult>
+{
+	static constexpr bool enabled = true;
+
+	// Generated from this pass's [RunAlways]/[SetupCondition]/
+	// [RenderCondition]; defined in autogen/pass_defaults.cpp.
+	static FrameGraph::SetupResult setup(Passes::FrameGraphTests::FGT_CaptureResult::Context& data, FrameGraph::TaskBuilder& builder);
+};
+
+
+template<>
+struct PassSetupDefault<Passes::FrameGraphTests::FGT_CaptureRTXIndirectNoise>
+{
+	static constexpr bool enabled = true;
+
+	// Generated from this pass's [RunAlways]/[SetupCondition]/
+	// [RenderCondition]; defined in autogen/pass_defaults.cpp.
+	static FrameGraph::SetupResult setup(Passes::FrameGraphTests::FGT_CaptureRTXIndirectNoise::Context& data, FrameGraph::TaskBuilder& builder);
+};
+
+
+template<>
+struct PassSetupDefault<Passes::FrameGraphTests::FGT_CaptureRTXReflectionNoise>
+{
+	static constexpr bool enabled = true;
+
+	// Generated from this pass's [RunAlways]/[SetupCondition]/
+	// [RenderCondition]; defined in autogen/pass_defaults.cpp.
+	static FrameGraph::SetupResult setup(Passes::FrameGraphTests::FGT_CaptureRTXReflectionNoise::Context& data, FrameGraph::TaskBuilder& builder);
+};
+
+
+template<>
+struct PassSetupDefault<Passes::FrameGraphTests::FGT_CaptureRTXIndirectDenoised>
+{
+	static constexpr bool enabled = true;
+
+	// Generated from this pass's [RunAlways]/[SetupCondition]/
+	// [RenderCondition]; defined in autogen/pass_defaults.cpp.
+	static FrameGraph::SetupResult setup(Passes::FrameGraphTests::FGT_CaptureRTXIndirectDenoised::Context& data, FrameGraph::TaskBuilder& builder);
+};
+
+
+template<>
+struct PassSetupDefault<Passes::FrameGraphTests::FGT_CaptureRTXReflectionDenoised>
+{
+	static constexpr bool enabled = true;
+
+	// Generated from this pass's [RunAlways]/[SetupCondition]/
+	// [RenderCondition]; defined in autogen/pass_defaults.cpp.
+	static FrameGraph::SetupResult setup(Passes::FrameGraphTests::FGT_CaptureRTXReflectionDenoised::Context& data, FrameGraph::TaskBuilder& builder);
+};
+
+
+template<>
+struct PassSetupDefault<Passes::FrameGraphTests::FGT_CaptureRTXReflectionNoiseHalf>
+{
+	static constexpr bool enabled = true;
+
+	// Generated from this pass's [RunAlways]/[SetupCondition]/
+	// [RenderCondition]; defined in autogen/pass_defaults.cpp.
+	static FrameGraph::SetupResult setup(Passes::FrameGraphTests::FGT_CaptureRTXReflectionNoiseHalf::Context& data, FrameGraph::TaskBuilder& builder);
+};
+
+
+template<>
+struct PassSetupDefault<Passes::FrameGraphTests::FGT_CaptureRTXReflectionDirPdfHalf>
+{
+	static constexpr bool enabled = true;
+
+	// Generated from this pass's [RunAlways]/[SetupCondition]/
+	// [RenderCondition]; defined in autogen/pass_defaults.cpp.
+	static FrameGraph::SetupResult setup(Passes::FrameGraphTests::FGT_CaptureRTXReflectionDirPdfHalf::Context& data, FrameGraph::TaskBuilder& builder);
+};
+
+
+template<>
 struct PassSetupDefault<Passes::Shadows::PSSM::PSSM_Cascade>
 {
 	static constexpr bool enabled = true;

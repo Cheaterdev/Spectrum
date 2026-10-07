@@ -528,6 +528,28 @@ namespace FrameGraphTests
 		compute = "framegraph/fgt_ray_query.hlsl";
 	}
 
+	# ---- sampler probe ---------------------------------------------------------------
+	# Samples one mipped texture through every static sampler with explicit
+	# gradients (fgt_sampler_probe.hlsl): texture filtering alone, no
+	# rasterization or derivatives, so D3D12 and Vulkan get identical inputs.
+
+	[Bind = DefaultLayout::Instance0]
+	struct FGTSamplerProbe
+	{
+		uint2 size;
+		Texture2D<float4> tex;
+		Texture2D<float4> tex_srgb;
+		RWTexture2D<float4> output;
+	}
+
+	ComputePSO FGTSamplerProbe
+	{
+		root = DefaultLayout;
+
+		[EntryPoint = CS]
+		compute = "framegraph/fgt_sampler_probe.hlsl";
+	}
+
 	# ---- counted tile lists ---------------------------------------------------------
 	# A [Counted] list declared like VSM_LitTiles, appended by a shader with a
 	# known tile set, then copied raw (counter prefix included) into a Static
@@ -578,5 +600,93 @@ namespace FrameGraphTests
 		FGT_CopyAlias1;
 		FGT_ProduceAlias2;
 		FGT_CopyAlias2;
+	}
+
+	# ---- scene-frame parity (Test.SceneParity.ixx) ---------------------------------
+	# Added after SceneFrameRenderer's MainPipeline. Each is the last reader of
+	# one of its outputs and only hands the resource to the test, which reads it
+	# back once the frame is done; being last keeps transient aliasing off it.
+
+	[Required]
+	[RunAlways]
+	PassNode FGT_CaptureAlbedo
+	{
+		[Always = Read] Texture GBuffer_Albedo;
+	}
+
+	[Required]
+	[RunAlways]
+	PassNode FGT_CaptureNormals
+	{
+		[Always = Read] Texture GBuffer_Normals;
+	}
+
+	[Required]
+	[RunAlways]
+	PassNode FGT_CaptureResult
+	{
+		[Always = Read] Texture ResultTexture;
+	}
+
+	Pipeline FGT_RasterCapturePipeline
+	{
+		FGT_CaptureAlbedo;
+		FGT_CaptureNormals;
+		FGT_CaptureResult;
+	}
+
+	# Ray-traced lighting stages: the raw traced signal, then NRD's output.
+	# Only produced with ray-traced indirect/reflections selected.
+
+	[Required]
+	[RunAlways]
+	PassNode FGT_CaptureRTXIndirectNoise
+	{
+		[Always = Read] Texture RTXIndirectNoise;
+	}
+
+	[Required]
+	[RunAlways]
+	PassNode FGT_CaptureRTXReflectionNoise
+	{
+		[Always = Read] Texture RTXReflectionNoise;
+	}
+
+	[Required]
+	[RunAlways]
+	PassNode FGT_CaptureRTXIndirectDenoised
+	{
+		[Always = Read] Texture RTXIndirectDenoised;
+	}
+
+	[Required]
+	[RunAlways]
+	PassNode FGT_CaptureRTXReflectionDenoised
+	{
+		[Always = Read] Texture RTXReflectionDenoised;
+	}
+
+	[Required]
+	[RunAlways]
+	PassNode FGT_CaptureRTXReflectionNoiseHalf
+	{
+		[Always = Read] Texture RTXReflectionNoiseHalf;
+	}
+
+	[Required]
+	[RunAlways]
+	PassNode FGT_CaptureRTXReflectionDirPdfHalf
+	{
+		[Always = Read] Texture RTXReflectionDirPdfHalf;
+	}
+
+	Pipeline FGT_RTCapturePipeline
+	{
+		FGT_CaptureRTXReflectionNoiseHalf;
+		FGT_CaptureRTXReflectionDirPdfHalf;
+		FGT_CaptureRTXIndirectNoise;
+		FGT_CaptureRTXReflectionNoise;
+		FGT_CaptureRTXIndirectDenoised;
+		FGT_CaptureRTXReflectionDenoised;
 	}
 }

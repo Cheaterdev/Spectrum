@@ -20,6 +20,29 @@ import :VSM;
 // for the buffer/atlas offsets this also fills in.
 export Slots::GI::DDGI::DDGIInfo ddgi_make_info(float3 camera_pos, uint32_t cascade_index);
 
+// The probe-volume feedback inputs of a ray tracing pass that samples DDGI
+// (IndirectRTX*, ReflectionRTX*), after ddgi_make_info filled the cascades.
+// Its DDGI_* resources are [Optional = DDGISelectors::enabled] (voxel.prism):
+// with DDGI off nothing creates them, so they stay at the members' null
+// fallback and every cascade's sampling flag is cleared instead.
+export template<class Data>
+void ddgi_bind_feedback(Slots::GI::Voxel::VoxelOutput& output, Data& data, FrameGraph::Graph& graph)
+{
+	if (graph.get_context<Table::GI::DDGI::DDGISelectors>().enabled)
+	{
+		output.GetDdgi_irradiance()        = data.DDGI_ProbeIrradiance->texture2DArray;
+		output.GetDdgi_visibility()        = data.DDGI_ProbeVisibility->texture2DArray;
+		output.GetDdgi_residency()         = data.DDGI_ProbeResidency->structuredBuffer;
+		output.GetDdgi_residency_pending() = data.DDGI_ProbeResidencyPending->rwStructuredBuffer;
+		return;
+	}
+	output.GetDdgi_cascade0().GetFlags().x = 0;
+	output.GetDdgi_cascade1().GetFlags().x = 0;
+	output.GetDdgi_cascade2().GetFlags().x = 0;
+	output.GetDdgi_cascade3().GetFlags().x = 0;
+	output.GetDdgi_cascade4().GetFlags().x = 0;
+}
+
 // Mirrors DDGIGraph.cpp's own free-standing Variable<bool>s (no owning DDGI
 // instance exists yet, see DDGISelectors' own comment, ddgi.prism) into
 // Table::GI::DDGI::DDGISelectors for the generated setups below to read. Must run

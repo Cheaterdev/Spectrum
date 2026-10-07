@@ -10,6 +10,7 @@ import Test.Profiling;
 import Test.HAL;
 import Test.HAL.SubresRangeMap;
 import Test.RenderSystem.FrameGraph;
+import Test.SceneParity;
 import Core;
 import HAL;
 import RenderSystem;
@@ -23,10 +24,22 @@ void SetupLogging()
 	Log::get().set_logging_level(Log::LEVEL_ALL);
 }
 
+// CrashHandler.cpp
+void install_crash_handler();
+
 int main(int argc, char** argv)
 {
+	install_crash_handler();
 	Application::test_mode = true;
 	SetupLogging();
+
+	// Anisotropic filtering is vendor-defined (AMD and NVIDIA differ by up to
+	// 21/255 on the same footprint), so a golden made on one GPU can't hold on
+	// another. Tests sample through the anisotropic samplers trilinearly,
+	// which the APIs define. Must precede device creation: both backends
+	// build their static samplers from these descriptors.
+	for (auto* desc : { &HAL::Samplers::SamplerAnisoWrapDesc, &HAL::Samplers::SamplerAnisoBorderDesc })
+		desc->MinFilter = desc->MagFilter = desc->MipFilter = HAL::Filter::LINEAR;
 
 
 	std::string filter;

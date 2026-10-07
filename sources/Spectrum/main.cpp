@@ -77,9 +77,6 @@ public:
 
 class triangle_drawer : public GUI::Elements::image, public GraphGenerator, VariableContext
 {
-		Pipelines::Frame::MainPipeline pipeline;
-	main_renderer::ptr scene_renderer;
-	main_renderer::ptr gpu_scene_renderer;
 	stencil_renderer::ptr stenciler;
 
 	GUI::Elements::label::ptr info;
@@ -108,69 +105,30 @@ public:
 	GUI::Elements::circle_selector::ptr sun_direction_circle;
 	Variable<bool> auto_rotate_sun = { false, "Auto rotate sun", this };
 
-	Variable<bool>  cluster_lod     = { true, "Cluster LOD", this };
-	Variable<float> lod_error_pixels = { 1.0f, "LOD error (px)", this, 0.25f, 16.0f };
-	// FrameInfo::lodThreshold for this frame, shared with the debug view so its
-	// replay of the captured masks covers the same clusters.
-	float lod_threshold = 0;
-	// The main view's GBuffer mesh_renderer, whose draws walk the LOD hierarchy.
-	mesh_renderer::ptr main_view_mesh_renderer;
-
-	// Grouping contexts for the mesh_renderer instances constructed below --
-	// mesh_renderer always names itself "mesh_renderer" (see MeshRenderer.cpp),
-	// so without these every instance across the whole app would land as an
-	// identically-named sibling directly under global, with no way to tell
-	// them apart in the Properties tree. Declared as members (not locals in
-	// the constructor body) so they stay alive for the whole app, same as the
-	// mesh_renderer instances parented under them.
-	VariableContext main_view_forward_context{ L"Main View / Forward" };
-	VariableContext main_view_gpu_context{ L"Main View / GPU" };
 	float sun_rotation_angle = 0;
 	static constexpr float sun_rotation_speed = 0.2f; // radians/sec
 
 	int visible_count;
 
-	mesh_renderer::ptr meshes_renderer;
-
 	Scene::ptr scene;
 	float draw_time;
 	MeshAssetInstance::ptr instance;
 
-	VSM vsm;
-	SkyRender sky;
+	// The scene frame itself (pipeline, VSM, sky, GI, scene renderers); this
+	// widget adds the editor around it: camera input, gizmos, debug view.
+	std::unique_ptr<SceneFrameRenderer> renderer;
 
-	BlueNoise blue_noise;
-	VoxelGI::ptr voxel_gi;
-		SMAA smaa;
 		 ~triangle_drawer()
 		 {
 			 RenderSystem::get().device().wait_idle();
 		 }
-		triangle_drawer() : VariableContext(L"triangle_drawer"), pipeline(), blue_noise(pipeline), smaa(pipeline), sky(pipeline), vsm(pipeline)
+		triangle_drawer() : VariableContext(L"triangle_drawer")
 	{
 		// Pushed for the rest of this constructor: any VariableContext-derived
-		// member constructed from here on (stenciler, voxel_gi, mesh_renderer
-		// via register_renderer, ...) nests under "triangle_drawer" instead of
-		// landing as a flat sibling of it under global, with no per-member
-		// wiring needed at each construction site. Doesn't cover vsm/
-		// main_view_*_context below -- those are member-initializer-list
-		// entries (or plain default members) that already finished
-		// constructing before this body even starts, so they need the
-		// explicit add_child re-parent instead.
+		// object constructed from here on (the scene renderer, stenciler, ...)
+		// nests under "triangle_drawer" instead of landing as a flat sibling of
+		// it under global.
 		VariableContext::Scope self_scope(*this);
-
-		// vsm/main_view_*_context construct before this body runs (regular data
-		// members), so by the ctor-body-start rule they land under whatever was
-		// on the Scope stack at that point -- nothing, here, so they'd otherwise
-		// sit as flat top-level siblings of "triangle_drawer" instead of nested
-		// under it. VariableContext::add_child re-parents them explicitly (it
-		// already detaches from the current parent first -- see tree::add_child
-		// -- so this is safe even though vsm etc. are already attached to
-		// global); qualified because triangle_drawer also inherits GUI::base's
-		// unrelated add_child(GUI::base::ptr), which unqualified lookup prefers.
-		VariableContext::add_child(&main_view_forward_context);
-		VariableContext::add_child(&main_view_gpu_context);
-		VariableContext::add_child(&vsm);
 
 		texture.mul_color = { 1, 1, 1, 0 };
 		texture.add_color = { 0, 0, 0, 1 };
@@ -184,48 +142,22 @@ public:
 		scene.reset(new Scene());
 		scene->name = L"Scene";
 
-		scene_renderer = std::make_shared<main_renderer>();
-		{
-			// Distinguishes this mesh_renderer's Properties-tree entry from the
-			// otherwise-identically-named ones below and in AssetRenderer.cpp.
-			VariableContext::Scope scope(main_view_forward_context);
-			scene_renderer->register_renderer(meshes_renderer = std::make_shared<mesh_renderer>());
-		}
-
-		gpu_scene_renderer = std::make_shared<main_renderer>();
-
-		// The renderer the Scene pass draws the GBuffer with (sceneinfo.renderer
-		// below) -- the one whose draws the debug view's capture records.
-		mesh_renderer::ptr main_view_renderer;
-		{
-			VariableContext::Scope scope(main_view_gpu_context);
-			gpu_scene_renderer->register_renderer(main_view_renderer = std::make_shared<mesh_renderer>());
-		}
-
-
-		//gpu_scene_renderer->register_renderer(gpu_meshes_renderer_static = std::make_shared<gpu_cached_renderer>(scene, MESH_TYPE::STATIC));
-		//gpu_scene_renderer->register_renderer(gpu_meshes_renderer_dynamic = std::make_shared<gpu_cached_renderer>(scene, MESH_TYPE::DYNAMIC));
-		//cam.position = vec3(0, 5, -30);
+		renderer = std::make_unique<SceneFrameRenderer>(scene);
 
 		cam.position = vec3(0, 0, 0);
 
-		stenciler.reset(new stencil_renderer(pipeline));
+		stenciler.reset(new stencil_renderer(renderer->pipeline()));
 		stenciler->player_cam = &cam;
 		stenciler->scene = scene;
 		base::add_child(stenciler);
 
 		// Its own window (GraphRender puts it in the right dock), not a child of
-		// this viewport; it only borrows this pipeline, scene and camera.
-		debug_window = std::make_shared<debug_view>(pipeline);
+		// this viewport; it only borrows this pipeline, scene and camera. It
+		// records the draws of the renderer the Scene pass draws the GBuffer with.
+		debug_window = std::make_shared<debug_view>(renderer->pipeline());
 		debug_window->scene    = scene;
 		debug_window->main_cam = &cam;
-		main_view_renderer->capture = debug_window->capture;
-		main_view_mesh_renderer = main_view_renderer;
-
-		// VSM is a class member (wired at construction, before scene exists
-		// above) -- its Phase 2 invalidation tracker registers scene event
-		// handlers here instead, once the scene is actually available.
-		vsm.attach_scene(scene);
+		renderer->main_view_mesh_renderer()->capture = debug_window->capture;
 
 
 		info.reset(new GUI::Elements::label);
@@ -257,7 +189,7 @@ public:
 			{
 				float2 v = value;
 				float3 dir = { 0.001 + v.x, sqrt(1.001 - v.length_squared()), -v.y };
-				vsm.set_position(dir);
+				renderer->set_sun_direction(dir);
 			});
 
 		sun_direction_circle->set_value({ 1, 0 });
@@ -343,16 +275,6 @@ public:
 				scene->add_child(instance);
 			}
 		}
-
-
-		// Its voxel volumes are tiled 3D textures, and its lighting samples VSM's
-		// atlas (a tiled depth texture).
-		if (RenderSystem::get().device().is_tiled_3d_supported() && RenderSystem::get().device().is_tiled_depth_supported())
-			voxel_gi = std::make_shared<VoxelGI>(pipeline,scene,vsm);
-
-		// DDGI's [Multiple=5] passes (ddgi.prism) are runtime-wired, not
-		// [Static] -- see DDGI.ixx's own comment on ddgi_register_passes.
-		ddgi_register_passes(pipeline, vsm);
 	}
 
 	float scale_speed = 0;
@@ -410,235 +332,21 @@ public:
 		PROFILE(L"triangle_drawer");
 		last_graph = &graph;
 
-		ivec2 size = ivec2::max(ivec2(get_render_bounds().size), ivec2(64, 64));
-		struct pass_data
-		{
-			ResourceHandler* o_texture;
-			ResourceHandler* sky_cubemap;
-			GBufferViewDesc gbuffer;
-		};
+		SceneFrameParams params;
+		params.cam         = &cam;
+		params.dt          = (float)my_timer.tick();
+		params.output_size = ivec2::max(ivec2(get_render_bounds().size), ivec2(64, 64));
+		params.upscale     = downsampled;
+		renderer->begin_frame(graph, params);
 
-		scene->update(*graph.builder.current_frame);
-
-
-		auto& timeinfo = graph.get_context<TimeInfo>();
-		auto& skyinfo = graph.get_context<SkyInfo>();
-		auto& caminfo = graph.get_context<CameraInfo>();
-		auto& sceneinfo = graph.get_context<SceneInfo>();
-		auto& vp = graph.get_context<ViewportInfo>();
-
-
-		g_upscaling_enabled = downsampled;
-
-		// Mirrors g_upscaler_type/g_upscaling_enabled into the SIG context --
-		// see UpscalingDLSS.prism's own comment on UpscalerSelectors for why.
-		{
-			auto& upscaler_ctx = graph.get_context<Table::Post::Upscale::UpscalerSelectors>();
-			upscaler_ctx.upscaler_type     = g_upscaler_type;
-			upscaler_ctx.upscaling_enabled = g_upscaling_enabled;
-		}
-		// Mirrors fixed hardware/SDK capabilities into the SIG context -- see
-		// raytracing.prism's own comment on RenderDeviceCapabilities for why.
-		{
-			auto& device_caps = graph.get_context<Table::Raytrace::RenderDeviceCapabilities>();
-			device_caps.rtx_supported    = RenderSystem::get().device().is_rtx_supported();
-			device_caps.dlss_available   = nvidia::DLSS::get().available();		}
-
-		if (downsampled)
-		{
-			// Use DLSS's own recommended render resolution for the current
-			// mode when available; get_optimal_settings can return eOk with
-			// render_size (0,0) for an unsupported mode/size, so validate
-			// before using it. Falls back to /1.5 (the FSR path).
-			nvidia::DLSSOptimalSettings settings{};
-			if (nvidia::DLSS::get().available() &&
-			    nvidia::DLSS::get().get_optimal_settings(g_upscaling_dlss_mode, size, /*hdr=*/true, settings) &&
-			    settings.render_size.x > 0 && settings.render_size.y > 0)
-			{
-				if (g_upscaling_dlss_scale_override >= 0.0f)
-				{
-					float t = g_upscaling_dlss_scale_override / 100.0f;
-					vp.frame_size.x = int(settings.render_size_min.x + (settings.render_size_max.x - settings.render_size_min.x) * t);
-					vp.frame_size.y = int(settings.render_size_min.y + (settings.render_size_max.y - settings.render_size_min.y) * t);
-				}
-				else
-					vp.frame_size = settings.render_size;
-			}
-			else
-				vp.frame_size = size / 1.5;
-		}
-		else
-			vp.frame_size = size;
-
-		vp.upscale_size = size;
-
-		// Edge-triggered: logs only when the actual computed size driving
-		// GBuffer_HiZ/GBuffer_HiZ_UAV's size/8 dimensions changes, whatever
-		// the cause (window resize, DLSS mode switch, scale override drag) --
-		// for correlating against a suspected resize/DLSS-triggered Hi-Z
-		// content bug. Remove once that's tracked down.
-		static ivec2 last_logged_frame_size = { -1, -1 };
-		static ivec2 last_logged_upscale_size = { -1, -1 };
-		if (vp.frame_size != last_logged_frame_size || vp.upscale_size != last_logged_upscale_size)
-		{
-			Log::get() << "[Viewport] frame_size " << last_logged_frame_size.x << "x" << last_logged_frame_size.y
-				<< " -> " << vp.frame_size.x << "x" << vp.frame_size.y
-				<< ", upscale_size " << last_logged_upscale_size.x << "x" << last_logged_upscale_size.y
-				<< " -> " << vp.upscale_size.x << "x" << vp.upscale_size.y
-				<< ", dlss_mode=" << (int)g_upscaling_dlss_mode
-				<< ", scale_override=" << g_upscaling_dlss_scale_override << Log::endl;
-			last_logged_frame_size = vp.frame_size;
-			last_logged_upscale_size = vp.upscale_size;
-		}
-
-		sceneinfo.scene = scene;
-		sceneinfo.renderer = gpu_scene_renderer;
-		caminfo.cam = &cam;
-		timeinfo.time = (float)my_timer.tick();
-		timeinfo.totalTime += timeinfo.time;
-		skyinfo.sunDir = vsm.get_position();
-
-		// Exactly once per frame — a second call anywhere else would desync
-		// SL's internal frame counter.
-		if (nvidia::Streamline::get().available())
-			nvidia::Streamline::get().begin_frame();
-
-		// Jitter only matters when something accumulates it temporally (DLSS)
-		// AND DLSS is actually the pass running this frame — g_upscaling_enabled
-		// off (downsampled toggled off) or a non-DLSS selection both mean
-		// nothing consumes the jitter, so applying it would just add visible
-		// instability for no benefit. FSR1/native have no such accumulation
-		// either way. No availability re-check: g_upscaler_type can't hold an
-		// unavailable type (see its invariant, UpscalingDLSS.ixx).
-		vec2 jitter_px(0, 0);
-		if (g_upscaling_enabled && g_upscaler_type != Post::Upscale::UpscalerType::FSR)
-		{
-			// Halton(2,3); phase count per NVIDIA's guidance: 8*(display/render)^2.
-			const float scale_x = float(vp.upscale_size.x) / float(vp.frame_size.x);
-			const float scale_y = float(vp.upscale_size.y) / float(vp.frame_size.y);
-			const uint32_t phase_count = std::max<uint32_t>(1,
-				static_cast<uint32_t>(8.0f * scale_x * scale_y + 0.5f));
-			const uint32_t phase = static_cast<uint32_t>(graph.builder.current_frame->get_frame() % phase_count) + 1;
-
-			auto halton = [](uint32_t index, uint32_t base) -> float
-				{
-					float f = 1.0f, r = 0.0f;
-					while (index > 0)
-					{
-						f /= static_cast<float>(base);
-						r += f * (index % base);
-						index /= base;
-					}
-					return r;
-				};
-
-			// [-0.5, 0.5] pixels, screen convention: +x = right, +y = down.
-			jitter_px = { halton(phase, 2) - 0.5f, halton(phase, 3) - 0.5f };
-		}
-
-		// NDC is [-1,1]; Y negated since NDC +y is up, jitter_px +y is down.
-		const vec2 jitter_ndc(
-			jitter_px.x / float(vp.frame_size.x),
-			-jitter_px.y / float(vp.frame_size.y));
-		cam.update(jitter_ndc);
-
-
-	
-		// Per-frame mirrors into the Table:: contexts the generated setups read,
-		// plus the CPU work that used to live in those setups' bodies. All of it
-		// needs an owning instance, which a generated static setup cannot reach.
-		// Must run before graph.setup(), and before run_pre_setups() for the
-		// same reason: nothing orders one pass's setup relative to another's.
-		vsm.update_frame(graph);
-		if (voxel_gi) voxel_gi->update_frame(graph);
-		ddgi_update_selectors(graph);
-		tonemap_update_selectors(graph);
-		bloom_update_selectors(graph);
+		// The editor's own per-frame work: it must see this frame's selectors
+		// and run before the passes are added (end_frame).
 		stenciler->update_frame(graph);
-		lod_threshold = cluster_lod ? lod_error_pixels / std::max(float(vp.frame_size.y), 1.0f) : 0.0f;
-		debug_window->lod_threshold = lod_threshold;
-		main_view_mesh_renderer->cluster_lod = lod_threshold > 0;
-		// After cam.update() above: draws this frame's main-camera frustum.
+		debug_window->lod_threshold = renderer->lod_threshold();
+		// After begin_frame's camera update: draws this frame's main-camera frustum.
 		debug_window->update_frame(graph);
 
-		{
-			PROFILE(L"graph");
-			pipeline.add_passes(graph);
-			// This pipeline's own [PreSetup] hooks: PreScene's
-			// raytrace_scene->new_frame(), NRD_REBLUR_Execute's ensure_pools(),
-			// CubeSky's sun-direction diff.
-			pipeline.run_pre_setups(graph);
-		}
-
-		if (voxel_gi) voxel_gi->pass_data(graph.builder);
-
-		vsm.pass_data(graph.builder);
-
-		// Single-threaded allocation-planning pass for all VSM clip levels,
-		// run once per frame here (via add_slot_generator's pre_run hook)
-		// strictly before VSM_RenderPages' single render() is dispatched
-		// to the thread pool -- see the LevelPlan comment in VSM.ixx for why
-		// this can't safely happen inside render() itself.
-		graph.add_slot_generator([this](Graph& graph)
-			{
-				vsm.plan_frame(graph);
-			});
-
-		graph.add_slot_generator([this](Graph& graph)
-			{
-				PROFILE(L"FrameInfo");
-				auto& time = graph.get_context<TimeInfo>();
-				auto& skyinfo = graph.get_context<SkyInfo>();
-				auto& cam = graph.get_context<CameraInfo>();
-
-
-				Slots::Frame::FrameInfo frameInfo;
-				//// hack zone
-				auto sky = graph.builder.get(FrameGraph::ResourceID::sky_cubemap_filtered);
-				if (sky && sky->resource)
-					frameInfo.GetSky() = *sky->get_handler<Handlers::TextureCube>();
-
-				/////////
-				frameInfo.GetSunDir().xyz = skyinfo.sunDir;
-				frameInfo.GetTime() = { time.time, time.totalTime, 0, 0 };
-
-
-				frameInfo.GetCamera() = cam.cam->camera_cb.current;
-				frameInfo.GetPrevCamera() = cam.cam->camera_cb.prev;
-
-				frameInfo.GetBrdf() = EngineAssets::brdf.get_asset()->get_texture()->texture_3d();
-				frameInfo.GetBestFitNormals() = EngineAssets::best_fit_normals.get_asset()->get_texture()->texture_2d();
-
-				// Material texture LOD bias — see FrameData.prism's mipBias comment.
-				{
-					auto& vp = graph.get_context<ViewportInfo>();
-					frameInfo.GetMipBias() = downsampled
-						? (std::log2(float(vp.frame_size.x) / float(vp.upscale_size.x)) - 1.0f)
-						: 0.0f;
-				}
-
-				// Hi-Z pyramid for per-meshlet occlusion; the PSO permutation
-				// decides whether it is sampled (scene.prism's HiZOcclusion).
-				{
-					auto hiz = graph.builder.get(FrameGraph::ResourceID::GBuffer_HiZ_UAV);
-					if (hiz && hiz->resource)
-						frameInfo.GetMainHiZ() = hiz->get_handler<Handlers::Texture>()->texture2D;
-				}
-
-				// Dev::RTXDebugFlags bitmask -- see DDGI.ixx's ddgi_sky_fallback_disabled
-				// comment for why this DDGI-owned toggle is mirrored here instead of
-				// living on DDGIInfo (its effect isn't DDGI-exclusive).
-				frameInfo.GetDebugFlags() = ddgi_sky_fallback_disabled() ? (uint32_t)Dev::RTXDebugFlags::DisableSkyFallback : 0u;
-				frameInfo.GetLodThreshold() = lod_threshold;
-
-				auto compiled = frameInfo.compile(*graph.builder.current_frame);
-				graph.register_slot_setter(compiled);
-			});
-
-		graph.add_slot_generator([this](Graph& graph)
-			{
-				graph.register_slot_setter(scene->compiledScene);
-			});
+		renderer->end_frame(graph);
 	}
 
 	void draw(base::Context& t) override

@@ -78,6 +78,15 @@ export
 		Library::FGT_ProduceGBuffer FGT_ProduceGBuffer;
 		Library::FGT_AppendTiles FGT_AppendTiles;
 		Library::FGT_CopyTileList FGT_CopyTileList;
+		Library::FGT_CaptureAlbedo FGT_CaptureAlbedo;
+		Library::FGT_CaptureNormals FGT_CaptureNormals;
+		Library::FGT_CaptureResult FGT_CaptureResult;
+		Library::FGT_CaptureRTXIndirectNoise FGT_CaptureRTXIndirectNoise;
+		Library::FGT_CaptureRTXReflectionNoise FGT_CaptureRTXReflectionNoise;
+		Library::FGT_CaptureRTXIndirectDenoised FGT_CaptureRTXIndirectDenoised;
+		Library::FGT_CaptureRTXReflectionDenoised FGT_CaptureRTXReflectionDenoised;
+		Library::FGT_CaptureRTXReflectionNoiseHalf FGT_CaptureRTXReflectionNoiseHalf;
+		Library::FGT_CaptureRTXReflectionDirPdfHalf FGT_CaptureRTXReflectionDirPdfHalf;
 		Library::FSR FSR;
 		Library::ResultCreation ResultCreation;
 		Library::NRD_GBufferPack NRD_GBufferPack;

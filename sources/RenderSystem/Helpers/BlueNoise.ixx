@@ -13,10 +13,6 @@ export class BlueNoise
 	HAL::StructuredBufferView<int32_t> ranking_buffer_view;
 	HAL::StructuredBufferView<int32_t> scrambling_buffer_view;
 
-	// Per instance, not a function static: the sequence then depends only on this
-	// owner's frames, not on every BlueNoise that ran before it in the process.
-	uint frame_index = 0;
-
 	// setup() is generated (BlueNoise.prism's own [RunAlways]) -- render only.
 	Passes::Utility::BlueNoise::render_func_type m_bluenoise_render;
 

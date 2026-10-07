@@ -1054,8 +1054,10 @@ namespace nvidia
 		static const std::vector<DispatchFnPair> dispatch_table = build_dispatch_table(idesc);
 
 		nrd::CommonSettings common{};
-		fill_common_settings(common, inputs, pools_render_size, reblur_frame_counter++, reblur_needs_history_reset);
+		fill_common_settings(common, inputs, pools_render_size, (uint32_t)inputs.frame,
+			reblur_needs_history_reset || inputs.frame != reblur_last_frame + 1);
 		reblur_needs_history_reset = false;
+		reblur_last_frame = inputs.frame;
 		nrd::SetCommonSettings(*reblur_instance, common);
 
 		// Library defaults throughout (see nrd_sig_test.prism's REBLURSharedConstants
@@ -1123,8 +1125,10 @@ namespace nvidia
 		static const std::vector<DispatchFnPair> dispatch_table = build_dispatch_table(idesc);
 
 		nrd::CommonSettings common{};
-		fill_common_settings(common, inputs, pools_render_size, sigma_frame_counter++, sigma_needs_history_reset);
+		fill_common_settings(common, inputs, pools_render_size, (uint32_t)inputs.frame,
+			sigma_needs_history_reset || inputs.frame != sigma_last_frame + 1);
 		sigma_needs_history_reset = false;
+		sigma_last_frame = inputs.frame;
 		nrd::SetCommonSettings(*sigma_instance, common);
 
 		nrd::SigmaSettings sigma_settings{};

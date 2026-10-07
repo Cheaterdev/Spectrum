@@ -70,6 +70,10 @@ void PassDefault<Passes::Post::Tonemap>::render(Passes::Post::Tonemap::Context& 
 	// Never below 1: the curve's peak can't sit under SDR white.
 	const float peak        = std::max(peak_nits / sdr_white, 1.0f);
 	const float paper_white = std::min(g_paper_white / sdr_white, peak);
+	// A freshly created ExposureState holds no adapted value (Bloom zeroes it),
+	// so snap to the target instead of adapting up from EV 0 -- per graph, not
+	// only for the first graph in the process, which g_reset alone covers.
+	const bool reset = g_reset || data.ExposureState.is_new();
 
 	// Every dispatch rebinds the full struct so each one records its own UAV
 	// usages -- that is what makes the HAL insert the UAV barriers between
@@ -87,7 +91,7 @@ void PassDefault<Passes::Post::Tonemap>::render(Passes::Post::Tonemap::Context& 
 		params.GetExposure_compensation() = g_compensation;
 		params.GetMin_ev()                = g_min_ev;
 		params.GetMax_ev()                = g_max_ev;
-		params.GetReset()                 = g_reset ? 1u : 0u;
+		params.GetReset()                 = reset ? 1u : 0u;
 		params.GetAuto_exposure()         = g_auto_exposure ? 1u : 0u;
 		params.GetManual_ev()             = g_manual_ev;
 		params.GetTonemap_operator()      = g_operator;

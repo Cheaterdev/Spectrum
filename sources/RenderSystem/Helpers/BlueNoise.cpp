@@ -1,5 +1,6 @@
 ﻿module Graphics:BlueNoise;
 import RenderSystem;
+import :FrameGraphContext;
 
 
 import HAL;
@@ -77,7 +78,7 @@ BlueNoise::BlueNoise()
 		compute.set_pipeline<PSOS::Utility::BlueNoise>();
 
 		Slots::Utility::BlueNoise blue_data;
-		blue_data.GetFrame_index()            = frame_index++;
+		blue_data.GetFrame_index()            = static_cast<uint>(context.graph->get_context<TimeInfo>().frame);
 		blue_data.GetSobol_buffer()           = HLSL::StructuredBuffer<uint>(sobol_buffer_view.structuredBuffer);
 		blue_data.GetRanking_tile_buffer()    = HLSL::StructuredBuffer<uint>(ranking_buffer_view.structuredBuffer);
 		blue_data.GetScrambling_tile_buffer() = HLSL::StructuredBuffer<uint>(scrambling_buffer_view.structuredBuffer);

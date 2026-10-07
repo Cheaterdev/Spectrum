@@ -467,6 +467,69 @@ FrameGraph::SetupResult PassSetupDefault<Passes::FrameGraphTests::FGT_CopyTileLi
 }
 
 
+FrameGraph::SetupResult PassSetupDefault<Passes::FrameGraphTests::FGT_CaptureAlbedo>::setup(
+	Passes::FrameGraphTests::FGT_CaptureAlbedo::Context& data, FrameGraph::TaskBuilder& builder)
+{
+	return FrameGraph::SetupResult::NeedsRender;
+}
+
+
+FrameGraph::SetupResult PassSetupDefault<Passes::FrameGraphTests::FGT_CaptureNormals>::setup(
+	Passes::FrameGraphTests::FGT_CaptureNormals::Context& data, FrameGraph::TaskBuilder& builder)
+{
+	return FrameGraph::SetupResult::NeedsRender;
+}
+
+
+FrameGraph::SetupResult PassSetupDefault<Passes::FrameGraphTests::FGT_CaptureResult>::setup(
+	Passes::FrameGraphTests::FGT_CaptureResult::Context& data, FrameGraph::TaskBuilder& builder)
+{
+	return FrameGraph::SetupResult::NeedsRender;
+}
+
+
+FrameGraph::SetupResult PassSetupDefault<Passes::FrameGraphTests::FGT_CaptureRTXIndirectNoise>::setup(
+	Passes::FrameGraphTests::FGT_CaptureRTXIndirectNoise::Context& data, FrameGraph::TaskBuilder& builder)
+{
+	return FrameGraph::SetupResult::NeedsRender;
+}
+
+
+FrameGraph::SetupResult PassSetupDefault<Passes::FrameGraphTests::FGT_CaptureRTXReflectionNoise>::setup(
+	Passes::FrameGraphTests::FGT_CaptureRTXReflectionNoise::Context& data, FrameGraph::TaskBuilder& builder)
+{
+	return FrameGraph::SetupResult::NeedsRender;
+}
+
+
+FrameGraph::SetupResult PassSetupDefault<Passes::FrameGraphTests::FGT_CaptureRTXIndirectDenoised>::setup(
+	Passes::FrameGraphTests::FGT_CaptureRTXIndirectDenoised::Context& data, FrameGraph::TaskBuilder& builder)
+{
+	return FrameGraph::SetupResult::NeedsRender;
+}
+
+
+FrameGraph::SetupResult PassSetupDefault<Passes::FrameGraphTests::FGT_CaptureRTXReflectionDenoised>::setup(
+	Passes::FrameGraphTests::FGT_CaptureRTXReflectionDenoised::Context& data, FrameGraph::TaskBuilder& builder)
+{
+	return FrameGraph::SetupResult::NeedsRender;
+}
+
+
+FrameGraph::SetupResult PassSetupDefault<Passes::FrameGraphTests::FGT_CaptureRTXReflectionNoiseHalf>::setup(
+	Passes::FrameGraphTests::FGT_CaptureRTXReflectionNoiseHalf::Context& data, FrameGraph::TaskBuilder& builder)
+{
+	return FrameGraph::SetupResult::NeedsRender;
+}
+
+
+FrameGraph::SetupResult PassSetupDefault<Passes::FrameGraphTests::FGT_CaptureRTXReflectionDirPdfHalf>::setup(
+	Passes::FrameGraphTests::FGT_CaptureRTXReflectionDirPdfHalf::Context& data, FrameGraph::TaskBuilder& builder)
+{
+	return FrameGraph::SetupResult::NeedsRender;
+}
+
+
 FrameGraph::SetupResult PassDefault<Passes::Post::Upscale::FSR>::setup(
 	Passes::Post::Upscale::FSR::Context& data, FrameGraph::TaskBuilder& builder)
 {

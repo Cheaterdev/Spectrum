@@ -109,6 +109,7 @@ namespace
 		                     ivec2 size = ivec2(W, H), bool wait = true)
 		{
 			graph.start_new_frame();
+			graph.get_context<TimeInfo>().frame = frame;
 			state().size = size;
 			if (on_frame_start)
 				on_frame_start(graph);

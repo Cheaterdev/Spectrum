@@ -60,6 +60,14 @@ void PassDefault<Passes::Denoise::NRD::NRD_REBLUR_Execute>::render(
 	memcpy(inputs.view_to_clip_prev,  cam->camera_cb.prev.proj.elems.data(),    sizeof(inputs.view_to_clip_prev));
 	inputs.jitter      = float2(cam->camera_cb.current.jitter.x, cam->camera_cb.current.jitter.y);
 	inputs.jitter_prev = float2(cam->camera_cb.prev.jitter.x, cam->camera_cb.prev.jitter.y);
+	inputs.frame       = context.graph->get_context<TimeInfo>().frame;
+
+	// NRD leaves pixels outside its denoising range (sky) unwritten. The
+	// combine passes skip them, but the outputs are transient and their
+	// memory reused, so without a clear they hold whatever was there before --
+	// different every run, and garbage in the debug views.
+	context.get_list()->clear_uav(data.RTXIndirectDenoised->rwTexture2D, vec4(0, 0, 0, 0));
+	context.get_list()->clear_uav(data.RTXReflectionDenoised->rwTexture2D, vec4(0, 0, 0, 0));
 
 	nvidia::NRD::get().execute_reblur(*context.get_list(), inputs);
 

@@ -195,7 +195,7 @@ void PassDefault<Passes::Post::BloomBuild>::render(Passes::Post::BloomBuild::Con
 	reset_exposure_if_new(data, context);
 	bloom_level0(compute, *data.ResultTexture, current, data.ExposureState->structuredBuffer, true);
 
-	const uint64_t frame = context.graph->builder.current_frame->get_frame();
+	const uint64_t frame = context.graph->get_context<TimeInfo>().frame;
 	const bool reset = !g_temporal
 		|| g_last_temporal_frame + 1 != frame
 		|| g_last_temporal_size != taa.get_size();
