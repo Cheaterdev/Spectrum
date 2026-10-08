@@ -8,6 +8,7 @@ import :FrameGraphContext;
 import FrameGraph;
 import HAL;
 import GUI;
+import Core;   // Plane; MSVC leaks it through the other partitions' imports
 
 export class stencil_renderer : public GUI::base, public Events::Runner, public VariableContext
 {

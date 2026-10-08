@@ -39,7 +39,7 @@ export namespace HAL
 		using HeapPageType = HAL::QueryHeap;
 		using HeapMemoryOptions = QueryType;
 
-		static const size_t PageAlignment = 64;
+		static constexpr size_t PageAlignment = 64;
 	};
 
 

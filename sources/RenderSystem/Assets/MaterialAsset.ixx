@@ -8,7 +8,7 @@ import :Texture;
 import :Context;
 import :Asset;
 
-class MaterialAsset;
+export class MaterialAsset;   // defined below as exported; every declaration must agree (Clang)
 export namespace materials
 {
 

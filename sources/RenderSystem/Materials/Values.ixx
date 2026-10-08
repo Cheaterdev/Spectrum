@@ -11,7 +11,7 @@ export
 
 class VectorType;
 
-constexpr struct ShaderParamType:public ::FlowGraph::parameter_type
+struct ShaderParamType:public ::FlowGraph::parameter_type
 {
 	 int M;
      int N;
@@ -755,6 +755,8 @@ class ReconstructNormalZNode : public MaterialNode
 
 };
 
+} // end export: Clang rejects out-of-class member definitions inside `export { }`
+
 template <class T>
 void MaterialTNode<T>::operator()(::FlowGraph::GraphContext* c)
 {
@@ -809,6 +811,8 @@ GUI::base::ptr MaterialTNode<T>::build_live_preview_widget()
     }
     return nullptr;
 }
+
+export {   // reopened for the classes that follow
 
 class SpecToMetNode : public MaterialNode
 {

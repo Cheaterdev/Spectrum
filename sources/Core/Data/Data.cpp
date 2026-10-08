@@ -30,7 +30,7 @@ namespace DataPacker
 	{
 		std::string result;
 		s.seekg(0, std::ios::end);
-		auto size = unsigned int(s.tellg());
+		auto size = static_cast<unsigned int>(s.tellg());
 		result.resize(size);
 		s.seekg(0, std::ios::beg);
 		s.read(const_cast<char*>(result.data()), result.size());

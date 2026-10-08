@@ -201,8 +201,8 @@ export {
 	class matrix_data_t
 	{
 	public:
-		static const int N = _N;
-		static const int M = _M;
+		static constexpr int N = _N;
+		static constexpr int M = _M;
 		typedef data_type Format;
 		typedef Vector<vector_data_t<Format, N>> RowFormat;
 		typedef Vector<vector_data_t<Format, M>> ColumnFormat;
@@ -236,8 +236,8 @@ static std::string get_typename()
 	class matrix_data_4x4_t
 	{
 	public:
-		static const int N = 4;
-		static const int M = 4;
+		static constexpr int N = 4;
+		static constexpr int M = 4;
 		typedef data_type Format;
 		typedef Vector<vector_data_t<Format,4>> RowFormat;
 		typedef Vector<vector_data_t<Format,4>> ColumnFormat;
@@ -282,7 +282,7 @@ static std::string get_typename()
 	{
 		const int N = MatrixFormat::N;
 		const int M = MatrixFormat::M;
-		typedef MatrixFormat::Format Format;
+		typedef typename MatrixFormat::Format Format;
 		Vector<vector_data_t<Format, M>> result;
 
 		for (int i = 0; i < M; ++i)
@@ -297,7 +297,7 @@ static std::string get_typename()
 	}
 
 	template<typename T, typename T2>
-	typename Vector<vector_data_t<T,3>> operator*(Vector<vector_data_t<T,3>> v, matrix<matrix_data_4x4_t<T2>> m)
+	Vector<vector_data_t<T,3>> operator*(Vector<vector_data_t<T,3>> v, matrix<matrix_data_4x4_t<T2>> m)
 	{
 		Vector<vector_data_t<T,4>> data(v, 1);
 		data = data * m;

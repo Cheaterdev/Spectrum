@@ -15,10 +15,10 @@ export
 		HAL::RootSignatureDesc desc;
 
 
-		template<class T>
+		template<class U>   // not T: that would shadow the struct's own parameter
 		void process_one()
 		{
-			desc[T::ID] = HAL::DescriptorConstants(T::ID, 1, HAL::ShaderVisibility::ALL, T::ID); // b-register = slot.id for push constant offset alignment
+			desc[U::ID] = HAL::DescriptorConstants(U::ID, 1, HAL::ShaderVisibility::ALL, U::ID); // b-register = slot.id for push constant offset alignment
 		}
 
 		template< class ...A>
@@ -78,15 +78,15 @@ export
 		std::optional<Layouts> layout;
 
 
-		template<SIG_TYPES::Slot T>
+		template<SIG_TYPES::Slot U>
 		void process_one()
 		{
 			//if constexpr (SIG_TYPES::SLOT<T>)
 				layout = Layouts::DefaultLayout;  // TODO: make command per each supported layout
 		}
 
-		
-		template<class T>
+
+		template<class U>
 		void process_one()
 		{
 			//if constexpr (SIG_TYPES::SLOT<T>)

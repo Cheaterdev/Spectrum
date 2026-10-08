@@ -1,12 +1,13 @@
 export module Core:Serializer;
 export import :serialization;
-using serialization_exception = cereal::Exception;
 import :Log;
 import :Utils;
 import :crc32;
 
 import :Data;
 import windows;
+
+using serialization_exception = cereal::Exception;   // after all imports (Clang)
 
 template<class Archive>
 class SerializationArchive: public Archive

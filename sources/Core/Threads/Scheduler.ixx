@@ -29,7 +29,7 @@ public:
 	template<class F>
 	auto enqueue(F&& f) -> std::future<typename std::invoke_result<F>::type>
 	{
-		if (stop) throw std::exception("wtf");
+		if (stop) throw std::runtime_error("wtf");
 		using return_type = typename std::invoke_result<F>::type;
 		auto task = std::make_shared<std::packaged_task<return_type()>>(std::forward<F>(f));
 		auto fut = task->get_future();
@@ -42,7 +42,7 @@ public:
 	template<class F>
 	void enqueue_detached(F&& f)
 	{
-		if (stop) throw std::exception("wtf");
+		if (stop) throw std::runtime_error("wtf");
 		submit_impl(std::forward<F>(f));
 	}
 

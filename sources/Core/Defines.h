@@ -9,15 +9,23 @@
 
 // ---- Token utilities, compiler helpers, thread-safety annotations ----------
 #include "utils/utils_macros.h"
-#include <cstdio>   // assert_fail diagnostics (fopen/fprintf)
 
 // ============================================================================
 // Assert  (no standalone header — originates in Core/Core_defs.h alongside
 // non-macro content, so the macro and its helper live here directly)
 // ============================================================================
 
+#ifdef _WIN32
+#include <cstdio>   // assert_fail diagnostics (fopen/fprintf)
+#endif
+
 #ifndef DEV
 #  define ASSERT(expr)  ((void)0)
+#elif !defined(_WIN32)
+// Clang rejects declarations in a forced include ahead of `module X;`
+// ("module declaration must occur at the start of the translation unit"), so
+// this header must stay macro-only off MSVC: no <cstdio>, no assert_fail().
+#  define ASSERT(expr)  ((!!(expr)) ? (void)0 : __builtin_debugtrap())
 #else
 #  define ASSERT(expr) \
        ((!!(expr)) ? (void)0 : ::Core::assert_fail(#expr, __FILE__, __LINE__))
@@ -26,7 +34,7 @@
 // Core::assert_fail — called by ASSERT on failure (DEV builds only).
 // The #ifndef guard prevents a redefinition when Core_defs.h is also
 // compiled into the same TU (the antlr generated header still imports it).
-#ifndef CORE_ASSERT_FAIL_DEFINED
+#if defined(_WIN32) && !defined(CORE_ASSERT_FAIL_DEFINED)
 #define CORE_ASSERT_FAIL_DEFINED
 namespace Core {
     [[noreturn]] inline void assert_fail(const char* expr, const char* file, int line) noexcept {

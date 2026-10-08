@@ -928,7 +928,7 @@ bool GUI::Elements::FlowGraph::link_item::can_accept(drag_n_drop_package::ptr e)
 
 bool GUI::Elements::FlowGraph::link_item::on_drop(drag_n_drop_package::ptr e, vec2)
 {
-	//throw std::exception("The method or operation is not implemented.");
+	//throw std::runtime_error("The method or operation is not implemented.");
 	auto l = e->element.lock()->get_ptr<link_item>();
 	l->p->link(p->get_ptr());
 	return true;

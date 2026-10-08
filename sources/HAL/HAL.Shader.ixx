@@ -5,7 +5,7 @@ import Core;
 import :Enums;
 import :Slots;
 import :Utils;   // get_backend_name() for per-backend shader cache
-std::optional<SlotID> get_slot(std::string_view slot_name);
+export std::optional<SlotID> get_slot(std::string_view slot_name);   // autogen.ixx exports it too; every declaration must agree (Clang)
 export
 {
 
@@ -114,7 +114,7 @@ export
 		{
 			using Manager = resource_manager<_shader_type, shader_header>;
 
-			friend class Manager;
+			friend Manager;
 		protected:
 			static const char* compile_code;
 			static const char* compile_code_dxil;

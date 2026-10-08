@@ -1,6 +1,7 @@
 ﻿using Sharpmake;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Spectrum
 {
@@ -26,6 +27,78 @@ namespace Spectrum
         public Optimization Optimization;
         public Mode Mode;
         public Backend Backend;
+        // Left at 0 for Windows targets: Sharpmake omits zero-valued fragments
+        // from target/config names, so existing Windows config names don't change.
+        public Android.AndroidBuildTargets AndroidBuildTargets;
+    }
+
+    public static class AndroidSetup
+    {
+        // Resolves SDK/NDK/JDK without requiring environment variables (a freshly
+        // set variable isn't seen by already-running shells): explicit env var
+        // wins, then the default Android Studio / cmdline-tools location.
+        public static bool Configure()
+        {
+            string sdk = FirstExisting(
+                Environment.GetEnvironmentVariable("ANDROID_HOME"),
+                Environment.GetEnvironmentVariable("ANDROID_SDK_ROOT"),
+                System.IO.Path.Combine(Environment.GetEnvironmentVariable("LOCALAPPDATA") ?? "", "Android", "Sdk"));
+
+            string ndk = FirstExisting(
+                Environment.GetEnvironmentVariable("ANDROID_NDK_HOME"),
+                Environment.GetEnvironmentVariable("ANDROID_NDK_ROOT"),
+                LatestSubdir(sdk == null ? null : System.IO.Path.Combine(sdk, "ndk"), "", MaxAgdeNdkMajor));
+
+            string java = FirstExisting(
+                Environment.GetEnvironmentVariable("JAVA_HOME"),
+                LatestSubdir(@"C:\Program Files\Java", "jdk"),
+                @"C:\Program Files\Android\Android Studio\jbr");
+
+            if (sdk == null || ndk == null || java == null)
+            {
+                Console.WriteLine("WARNING: Android SDK/NDK/JDK not found (sdk={0}, ndk={1} [AGDE needs r<={2}], jdk={3}); " +
+                    "skipping the Android solution. Set ANDROID_HOME / ANDROID_NDK_HOME / JAVA_HOME to override.",
+                    sdk ?? "-", ndk ?? "-", MaxAgdeNdkMajor, java ?? "-");
+                return false;
+            }
+
+            Android.GlobalSettings.AndroidHome = sdk;
+            Android.GlobalSettings.NdkRoot = ndk;
+            Android.GlobalSettings.JavaHome = java;
+            return true;
+        }
+
+        static string FirstExisting(params string[] paths)
+        {
+            foreach (var p in paths)
+                if (!string.IsNullOrEmpty(p) && System.IO.Directory.Exists(p))
+                    return p;
+            return null;
+        }
+
+        // AGDE's MSBuild integration only ships toolset files up to NDK r29
+        // (Google.Android.Cpp.Toolset.r*.props); newer NDKs fail with
+        // "NDK major version N is unknown or not supported".
+        const int MaxAgdeNdkMajor = 29;
+
+        static string LatestSubdir(string root, string prefix = "", int maxMajor = int.MaxValue)
+        {
+            if (string.IsNullOrEmpty(root) || !System.IO.Directory.Exists(root))
+                return null;
+            string best = null;
+            foreach (var d in System.IO.Directory.GetDirectories(root))
+            {
+                string name = System.IO.Path.GetFileName(d);
+                if (!name.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+                    continue;
+                var digits = new string(name.Substring(prefix.Length).TrimStart('-').TakeWhile(char.IsDigit).ToArray());
+                if (maxMajor != int.MaxValue && (digits.Length == 0 || int.Parse(digits) > maxMajor))
+                    continue;
+                if (best == null || string.Compare(d, best, StringComparison.OrdinalIgnoreCase) > 0)
+                    best = d;
+            }
+            return best;
+        }
     }
 
     // Subdirectory (relative to the exe) holding the NVIDIA Streamline runtime.
@@ -72,6 +145,8 @@ namespace Spectrum
                 Backend = Backend.D3D12 | Backend.Vulkan
             });
 
+            AddTargets(AndroidTarget());
+
             CustomProperties.Add("VcpkgEnabled", "true");
             CustomProperties.Add("VcpkgEnableManifest", "true");
 			CustomProperties.Add("VcpkgTriplet", Vcpkg.Triplet);
@@ -85,6 +160,20 @@ namespace Spectrum
         //    GeneratableBlobCount  = 8;
         }
 
+        // UI-only Android (arm64, Vulkan) for now; 3D passes are compiled out.
+        public static CustomTarget AndroidTarget()
+        {
+            return new CustomTarget
+            {
+                Platform = Platform.agde,
+                DevEnv = DevEnv.vs2026,
+                Optimization = Optimization.Release,
+                Mode = Mode.Debug | Mode.Retail,
+                Backend = Backend.Vulkan,
+                AndroidBuildTargets = Android.AndroidBuildTargets.arm64_v8a
+            };
+        }
+
         [Configure]
         public virtual void ConfigureAll(Configuration conf, CustomTarget target)
         {
@@ -93,6 +182,17 @@ namespace Spectrum
 
             conf.ProjectFileName = "[project.Name]";
             conf.ProjectPath = @"[project.RootPath]";
+
+            if (target.Platform == Platform.agde)
+            {
+                // A separate vcxproj: AGDE projects can't share a file with the win64 ones.
+                conf.ProjectFileName = "[project.Name]_Android";
+                conf.ProjectName = "[project.Name]_Android";
+                conf.IntermediatePath = @"[project.SharpmakeCsPath]\projects\obj\android\[target.Mode]\[project.Name]";
+                conf.TargetLibraryPath = conf.IntermediatePath;
+                ConfigureAndroid(conf, target);
+                return;
+            }
 
             conf.IncludePaths.Add(SourceRootPath);
             // Repository sources root — allows cross-project Defines.h chains
@@ -165,6 +265,44 @@ namespace Spectrum
             }
 
 
+        }
+
+        void ConfigureAndroid(Configuration conf, CustomTarget target)
+        {
+            conf.IncludePaths.Add(SourceRootPath);
+            conf.IncludePaths.Add(@"[project.SharpmakeCsPath]\sources");
+            conf.ForcedIncludes.Add(@"[project.SourceRootPath]\Defines.h");
+            conf.PrecompSourceExcludeExtension.Add(".ixx");
+
+            conf.Options.Add(new Options.Agde.General.AndroidGradleBuildDir("$(SolutionDir)"));
+            conf.Options.Add(Options.Android.General.AndroidAPILevel.Android29);
+            conf.Options.Add(Options.Agde.General.UseOfStl.LibCpp_Shared);
+            conf.Options.Add(Options.Agde.Linker.BuildId.Md5);
+            conf.Options.Add(Options.Agde.Compiler.ExceptionHandling.Enable);
+            conf.Options.Add(Options.Agde.Compiler.CppLanguageStandard.Cpp20);
+
+            // The project-level Vcpkg properties are x64-windows; the msbuild integration
+            // would feed Windows include/lib paths into the NDK build.
+            conf.CustomProperties["VcpkgEnabled"] = "false";
+            conf.CustomProperties["VcpkgEnableManifest"] = "false";
+            conf.CustomProperties["VcpkgApplocalDeps"] = "false";
+            // AGDE has no C++23 enum value; modules are built from .ixx by the
+            // compiler's own scanning, which needs a >= C++20 standard.
+            conf.AdditionalCompilerOptions.Add("-std=c++2b", "-frtti");
+
+            conf.Defines.Add("SPECTRUM_PLATFORM_ANDROID");
+            conf.Defines.Add("SPECTRUM_ENABLE_EXCEPTIONS");
+            conf.Defines.Add("HAL_BACKEND_VULKAN");
+
+            if (target.Mode == Mode.Debug)
+            {
+                conf.Defines.Add("DEV");
+                conf.Defines.Add("PROFILING");
+            }
+            else
+            {
+                conf.Defines.Add("RETAIL");
+            }
         }
 
 
@@ -250,6 +388,16 @@ namespace Spectrum
         {
             base.ConfigureAll(conf, target);
             conf.IncludePaths.Add(@"[project.SourceRootPath]/include");
+
+            if (target.Platform == Platform.agde)
+            {
+                // Windows/DirectX/NVIDIA wrappers can't exist on Android. The vcpkg-backed
+                // ones are off until their arm64-android builds are set up.
+                foreach (var w in new[] { "windows", "WRL", "ppl", "d3d12", "dxc", "streamline", "nrd", "vulkan",
+                                          "assimp", "antlr4", "jinja2cpp", "meshoptimizer", "skribidi", "zlib" })
+                    conf.SourceFilesBuildExcludeRegex.Add(@".*\\Modules\\" + w + @"\\.*");
+                return;
+            }
 
 			conf.ExportAdditionalLibrariesEvenForStaticLib = false;
 
@@ -585,8 +733,34 @@ namespace Spectrum
         [Sharpmake.Main]
         public static void SharpmakeMain(Sharpmake.Arguments arguments)
         {
+            bool android = AndroidSetup.Configure();
             FastBuildSettings.FastBuildMakeCommand = @"[project.SharpmakeCsPath]\tools\FastBuild\FBuild.exe";
             arguments.Generate<SpectrumSolution>();
+            if (android)
+                arguments.Generate<SpectrumAndroidSolution>();
+        }
+    }
+
+    // Separate from SpectrumSolution: the generator emits an Android platform entry
+    // for every solution target, so mixing would force an Android architecture
+    // onto the Windows targets (and rename their configs).
+    [Sharpmake.Generate]
+    public class SpectrumAndroidSolution : Solution
+    {
+        public SpectrumAndroidSolution()
+        : base(typeof(CustomTarget))
+        {
+            AddTargets(Common.AndroidTarget());
+        }
+
+        [Configure()]
+        public void ConfigureAll(Configuration conf, CustomTarget target)
+        {
+            conf.SolutionFileName = "SpectrumAndroid";
+            conf.SolutionPath = @"[solution.SharpmakeCsPath]\projects\";
+            conf.Name = target.Mode + "-Android";
+
+            conf.AddProject<Core>(target);   // pulls in Modules; grows as more layers port
         }
     }
 }

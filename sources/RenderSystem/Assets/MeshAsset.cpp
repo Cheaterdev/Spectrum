@@ -19,7 +19,7 @@ static mat3x4 to_transform3x4(const mat4x4& m)
 
 	for (int r = 0; r < 3; r++)
 		for (int c = 0; c < 4; c++)
-			result.rows[r][c] = m.rows[c][r];
+			result[r][c] = m[c][r];   // rows is private; operator[] is the public row accessor
 
 	return result;
 }

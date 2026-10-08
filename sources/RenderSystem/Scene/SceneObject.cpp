@@ -138,12 +138,12 @@ scene_object::scene_object()
 /*
 void Scene::on_element_add(scene_object* node, scene_object* add_node)
 {
-	//throw std::exception("The method or operation is not implemented.");
+	//throw std::runtime_error("The method or operation is not implemented.");
 }
 
 void Scene::on_element_remove(scene_object * node, scene_object* remove_node)
 {
-	//throw std::exception("The method or operation is not implemented.");
+	//throw std::runtime_error("The method or operation is not implemented.");
 }
 
 scene_object* Scene::get_child(scene_object*node, int i)

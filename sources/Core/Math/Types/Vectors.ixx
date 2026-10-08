@@ -45,7 +45,7 @@ export
 		using T::values;
 		using Format = typename T::Format;
 		using T::N;
-		using raw = typename T;
+		using raw = T;
 	private:
 
 
@@ -509,7 +509,7 @@ export
 	struct vector_data_t
 	{
 		typedef T Format;
-		static const int N = Count;
+		static constexpr int N = Count;
 
 		std::array<T, Count> values;
 
@@ -530,7 +530,7 @@ export
 	struct vector_data_t<T, 2>
 	{
 		typedef T Format;
-		static const int N = 2;
+		static constexpr int N = 2;
 
 		union
 		{
@@ -560,7 +560,7 @@ export
 	struct vector_data_t<T, 3>
 	{
 		typedef T Format;
-		static const int N = 3;
+		static constexpr int N = 3;
 
 		union
 		{
@@ -603,7 +603,7 @@ export
 	struct vector_data_t<T, 4>
 	{
 		typedef T Format;
-		static const int N = 4;
+		static constexpr int N = 4;
 
 		union
 		{
@@ -658,7 +658,7 @@ export
 	struct box_t
 	{
 		typedef T Format;
-		static const int N = 6;
+		static constexpr int N = 6;
 
 		union
 		{
@@ -701,7 +701,7 @@ export
 	struct rect_t
 	{
 		typedef T Format;
-		static const int N = 4;
+		static constexpr int N = 4;
 
 		union
 		{
@@ -738,7 +738,7 @@ export
 	struct margin_t
 	{
 		typedef T Format;
-		static const int N = 4;
+		static constexpr int N = 4;
 
 		union
 		{

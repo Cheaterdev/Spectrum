@@ -98,7 +98,7 @@ export namespace GUI
                 {
                     if (button == mouse_button::LEFT)
                         if (action == mouse_action::DOWN)
-                            owner->main_tree.lock()->on_select_internal(owner->get_ptr<tree_element<TreeNode,Creator>>());
+                            owner->main_tree.lock()->on_select_internal(owner->template get_ptr<tree_element<TreeNode,Creator>>());
 
                     return true;
                 }

@@ -327,42 +327,42 @@ struct SelectLocal<T>
 		RTXPSO(HAL::Device& device)
 		{
 			m_device = &device;
-			m_root_sig = device.get_engine_root_layout_holder().GetSignature(T::global_sig)->create_global_signature<SelectLocal<Passes>::type...>();
-			m_local_sig = create_local_signature<SelectLocal<Passes>::type...>(device);
+			m_root_sig = device.get_engine_root_layout_holder().GetSignature(T::global_sig)->template create_global_signature<typename SelectLocal<Passes>::type...>();
+			m_local_sig = create_local_signature<typename SelectLocal<Passes>::type...>(device);
 			hitgroup_ids = std::make_shared< HAL::virtual_gpu_buffer<hit_type>>(device, 1024 * 1024);
 			init();
 		}
 
-		template<class T>
+		template<class Rg>   // not T: that would shadow the struct's own parameter
 		void dispatch(ivec3 size, HAL::ComputeContext& compute)
 		{
-			constexpr size_t generator = tuple_element_index<T, std::tuple<Raygens...> >();
+			constexpr size_t generator = tuple_element_index<Rg, std::tuple<Raygens...> >();
 
 
-			static_assert(static_cast<UINT>(generator) == T::ID);
+			static_assert(static_cast<UINT>(generator) == Rg::ID);
 			compute.set_pipeline(m_dxrStateObject);
 			compute.dispatch_rays<hit_type, HAL::shader_identifier, HAL::shader_identifier>(size,
 				hitgroup_ids->buffer.get_resource_address(), static_cast<UINT>(hitgroup_ids->max_size()),
 				miss_ids.get_resource_address(), static_cast<UINT>(miss_ids.get_count()),
 				raygen_ids.get_resource_address(generator),
-				&raygen_slots<T>());
+				&raygen_slots<Rg>());
 		}
 
-		template<class T>
+		template<class Rg>
 		const UsedSlots& raygen_slots() const
 		{
-			return std::get<T>(raygen).slots;
+			return std::get<Rg>(raygen).slots;
 		}
 
 		// Same generator-index lookup dispatch<T>() uses, exposed on its own
 		// for callers building a DispatchRaysArguments record (raytracing.prism)
 		// for GPU-driven ExecuteIndirect instead of a direct dispatch_rays call
 		// (DDGIProbeDispatchArgsBuild, ddgi.prism, is the first user).
-		template<class T>
+		template<class Rg>
 		HAL::ResourceAddress raygen_address() const
 		{
-			constexpr size_t generator = tuple_element_index<T, std::tuple<Raygens...> >();
-			static_assert(static_cast<UINT>(generator) == T::ID);
+			constexpr size_t generator = tuple_element_index<Rg, std::tuple<Raygens...> >();
+			static_assert(static_cast<UINT>(generator) == Rg::ID);
 			return raygen_ids.get_resource_address(generator);
 		}
 	};

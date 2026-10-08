@@ -22,6 +22,7 @@ export namespace HAL
 	class GPUTimeProfiler;
 	class GPUEntityStorageInterface;
 	class CommandAllocator;
+	class CommandList;
 	class Resource;
 	class Device : public API::Device, public TypedObject<Device>
 	{

@@ -19,7 +19,7 @@ struct placement_info
 
 	}
 };
-std::optional<SlotID> get_slot(std::string_view slot_name);
+export std::optional<SlotID> get_slot(std::string_view slot_name);   // autogen.ixx exports it too; every declaration must agree (Clang)
 
 // Report a table slot that compiled with nothing bound, once per slot.
 //
@@ -299,7 +299,7 @@ public:
 			}
 
 			auto info = context->place_raw(offsets);
-			auto srv = info.resource->create_view<HAL::StructuredBufferView<UINT>>(*context, HAL::StructuredBufferViewDesc{ (uint)info.resource_offset, (uint)info.size,HAL::counterType::NONE }).structuredBuffer;
+			auto srv = info.resource->template create_view<HAL::StructuredBufferView<UINT>>(*context, HAL::StructuredBufferViewDesc{ (uint)info.resource_offset, (uint)info.size,HAL::counterType::NONE }).structuredBuffer;
 			if (srv.get_storage()->can_free())
 				descriptors.insert(srv.get_storage());
 			offset = srv.get_offset();
@@ -392,7 +392,7 @@ public:
 
 
 			auto info = context->place_raw(offsets);
-			auto srv = info.resource->create_view<HAL::StructuredBufferView<UINT>>(*context, HAL::StructuredBufferViewDesc{ (uint)info.resource_offset, (uint)info.size,HAL::counterType::NONE }).structuredBuffer;
+			auto srv = info.resource->template create_view<HAL::StructuredBufferView<UINT>>(*context, HAL::StructuredBufferViewDesc{ (uint)info.resource_offset, (uint)info.size,HAL::counterType::NONE }).structuredBuffer;
 			if (srv.get_storage()->can_free())
 				descriptors.insert(srv.get_storage());
 			offset = srv.get_offset();

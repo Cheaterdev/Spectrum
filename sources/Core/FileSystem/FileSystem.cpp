@@ -257,7 +257,7 @@ std::shared_ptr<file> native_file_provider::get_file(std::filesystem::path file_
 
 std::shared_ptr<std::istream> native_file_provider::create_stream(std::filesystem::path file_name)
 {
-	return std::shared_ptr<std::istream>(new std::ifstream(file_name.generic_wstring(), std::ios::binary), [](std::istream* str) {
+	return std::shared_ptr<std::istream>(new std::ifstream(file_name, std::ios::binary), [](std::istream* str) {
 		((std::ifstream*)str)->close();
 		delete str;
 	});

@@ -3,7 +3,7 @@ export module HAL:Raytracing;
 import :VirtualBuffer;
 import :ResourceViews;
 
-class MaterialAsset;
+// MaterialAsset belongs to RenderSystem; a second declaration here would be attached to HAL and clash with it (Clang).
 
 export
 {
@@ -39,7 +39,7 @@ export
 			StructuredBufferView<std::byte> *cur_buffer;
 			using ptr = std::shared_ptr<RaytracingAccelerationStructure>;
 
-			MaterialAsset* material;
+			void* material;   // opaque RenderSystem MaterialAsset*
 
 
 			RaytracingAccelerationStructure(Device& device, std::vector<HAL::GeometryDesc>  desc, CommandList::ptr list);

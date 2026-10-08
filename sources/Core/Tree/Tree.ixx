@@ -68,8 +68,8 @@ export template<class T, class _child_holder, class  ...Args >
 class tree : public  tree_selector<typename _child_holder::value_type, tree<T, _child_holder, Args...>>, public base_tree, public Args...
 {
 
-	friend typename T;
-	friend typename tree<T, _child_holder, Args...>;
+	friend T;
+	friend tree<T, _child_holder, Args...>;
 
 protected:
 
@@ -169,7 +169,7 @@ virtual 	int calculate_depth()
 		while (root->parent)
 			root = root->parent;
 
-		return root->get_ptr<T2>();
+		return root->template get_ptr<T2>();
 	}
 
 	virtual void on_add(T* _parent)

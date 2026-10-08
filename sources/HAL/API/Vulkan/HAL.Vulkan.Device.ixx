@@ -19,7 +19,9 @@ using namespace HAL;
 // Forward declarations for HAL-layer classes that live outside namespace API
 // but must access protected API::Device fields (e.g. via static_cast<API::Device&>).
 // Full definitions live in their own partitions; only names needed here.
-namespace HAL
+// export: these are later defined as exported classes, and Clang rejects exporting a
+// redeclaration of something first declared with module linkage.
+export namespace HAL
 {
     class Heap;
     class SwapChain;

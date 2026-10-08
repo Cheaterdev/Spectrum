@@ -52,7 +52,7 @@ export
 		}
 
 		virtual ~ListAllocator() = default;
-		uint64 get_max_usage() const override;
+		uint64 get_max_usage() const;
 
 		Block* TryAllocate(uint64 size, uint64 align, Checker checker) {
 			auto start_block = &blocks.first();
@@ -178,8 +178,8 @@ export
 			if (after_block)after_block->prev = inserted_center;
 
 
-			inserted_center.next = after_block;
-			inserted_center.prev = prev_block;
+			inserted_center->next = after_block;
+			inserted_center->prev = prev_block;
 
 
 

@@ -20,6 +20,8 @@ export
 		void put(int i);
 	};
 
+} // end export: Clang rejects out-of-class member definitions inside `export { }`
+
 	template <class LockPolicy>
 	int IdGenerator<LockPolicy>::get()
 	{
@@ -41,5 +43,3 @@ export
 		ASSERT(std::find(free.begin(), free.end(), i) == free.end());
 		free.emplace_back(i);
 	}
-
-}

@@ -46,8 +46,13 @@ void BRDF::serialize(Archive& ar)
 
 }
 
-EngineAsset<BRDF> EngineAssets::brdf(L"brdf", [] {
+// A named function rather than a lambda: Clang fails to build a std::function from a
+// namespace-scope lambda in this module implementation unit.
+static BRDF* create_brdf_asset()
+{
 	BRDF* brdf = new BRDF();
 	brdf->create_new();
-	return  brdf;
-	});
+	return brdf;
+}
+
+EngineAsset<BRDF> EngineAssets::brdf(L"brdf", create_brdf_asset);

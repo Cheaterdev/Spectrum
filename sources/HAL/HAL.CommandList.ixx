@@ -72,7 +72,11 @@ export{
 		};
 
 		class TransitionCommandList;
-
+		// Used before their definitions; Clang doesn't treat a friend declaration as one.
+		class Eventer;
+		class GraphicsContext;
+		class ComputeContext;
+		class CopyContext;
 
 		class Transitions : public virtual CommandListBase
 		{
@@ -545,7 +549,7 @@ export{
 			template<class T>
 			void update(HAL::StructuredBufferView<T>& view, uint64 offset, std::span<typename HAL::StructuredBufferView<T>::UnderlyingType> data)
 			{
-				update_buffer(view.resource, view.desc.offset + offset * sizeof(HAL::StructuredBufferView<T>::UnderlyingType), reinterpret_cast<const char*>(data.data()), data.size_bytes());
+				update_buffer(view.resource, view.desc.offset + offset * sizeof(typename HAL::StructuredBufferView<T>::UnderlyingType), reinterpret_cast<const char*>(data.data()), data.size_bytes());
 
 			}
 
@@ -553,10 +557,10 @@ export{
 			template<class T>
 			std::future<bool> read(HAL::StructuredBufferView<T>& view, uint64 offset, UINT64 count, std::function<void(std::span<T>)> f)
 			{
-				return read_buffer(view.resource.get(), view.desc.offset + offset * sizeof(HAL::StructuredBufferView<T>::UnderlyingType), count * sizeof(HAL::StructuredBufferView<T>::UnderlyingType),
+				return read_buffer(view.resource.get(), view.desc.offset + offset * sizeof(typename HAL::StructuredBufferView<T>::UnderlyingType), count * sizeof(typename HAL::StructuredBufferView<T>::UnderlyingType),
 					[f](std::span<std::byte> memory)
 					{
-						uint read = uint(memory.size())/sizeof(HAL::StructuredBufferView<T>::UnderlyingType);
+						uint read = uint(memory.size())/sizeof(typename HAL::StructuredBufferView<T>::UnderlyingType);
 						auto data = reinterpret_cast<T*>(memory.data());
 
 

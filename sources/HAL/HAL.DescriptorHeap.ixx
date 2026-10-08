@@ -99,7 +99,7 @@ export
 			using HeapPageType = HAL::DescriptorHeap;
 			using HeapMemoryOptions = DescriptorHeapIndex;
 
-			static const size_t PageAlignment = 256;
+			static constexpr size_t PageAlignment = 256;
 		};
 
 		using DescriptorHeapAllocation = Allocators::PagedAllocation<HAL::DescriptorHeap>;

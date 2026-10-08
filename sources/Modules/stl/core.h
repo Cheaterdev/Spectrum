@@ -27,6 +27,7 @@
 #include <queue>
 #include <functional>
 #include <stdexcept>
+#include <charconv>   // std::from_chars (libc++ does not pull it in transitively)
 #include <queue>
 #include <optional>
 #include <compare>
@@ -66,4 +67,7 @@
 // memory (formerly stl/memory.h)
 #include <memory>
 
+// libc++ (Android NDK) doesn't ship <stacktrace>; Core/Debug/Exceptions.ixx has a stub.
+#if __has_include(<stacktrace>)
  #include <stacktrace>
+#endif

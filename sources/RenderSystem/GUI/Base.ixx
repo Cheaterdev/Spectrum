@@ -277,7 +277,7 @@ namespace GUI
     class drag_n_drop;
     class base : public tree<base, my_unique_vector<std::shared_ptr<base>>>, public Events::prop_handler //, public Graphics::renderable
     {
-            friend class tree_base;
+            friend tree_base;
             friend class user_interface;
             friend class drag_n_drop;
             friend class Elements::layouts::horizontal;

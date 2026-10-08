@@ -114,12 +114,21 @@ namespace HAL
         owner_device   = api_dev.vk_device;
         owner_instance = instance;
 
+#ifdef _WIN32
         // ---- Win32 surface --------------------------------------------------
         VkWin32SurfaceCreateInfoKHR surface_ci{
             VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR };
         surface_ci.hinstance = GetModuleHandle(nullptr);
         surface_ci.hwnd      = c_desc.window->get_hwnd();
         vkCreateWin32SurfaceKHR(instance, &surface_ci, nullptr, &vk_surface);
+#else
+        // ---- Android surface ------------------------------------------------
+        // On Android the "HWND" handed out by the window is its ANativeWindow*.
+        VkAndroidSurfaceCreateInfoKHR surface_ci{
+            VK_STRUCTURE_TYPE_ANDROID_SURFACE_CREATE_INFO_KHR };
+        surface_ci.window = static_cast<ANativeWindow*>(c_desc.window->get_hwnd());
+        vkCreateAndroidSurfaceKHR(instance, &surface_ci, nullptr, &vk_surface);
+#endif
 
         // ---- Surface capabilities + format ----------------------------------
         VkSurfaceCapabilitiesKHR caps{};
@@ -200,6 +209,7 @@ namespace HAL
         }
         else
         {
+#ifdef _WIN32
             RECT r{};
             GetClientRect(c_desc.window->get_hwnd(), &r);
             extent = {
@@ -208,6 +218,10 @@ namespace HAL
                 std::clamp(static_cast<uint32_t>(std::max(0L, r.bottom - r.top)),
                            caps.minImageExtent.height, caps.maxImageExtent.height)
             };
+#else
+            // Android surfaces always report a definite currentExtent; this is unreachable there.
+            extent = caps.minImageExtent;
+#endif
         }
 
         Log::get() << "[Vulkan swapchain] caps.currentExtent="

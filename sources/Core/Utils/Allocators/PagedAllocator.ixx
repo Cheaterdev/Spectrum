@@ -149,8 +149,8 @@ export namespace Allocators
 	class PageCache : public PageSourceInterface<Context>
 	{
 	protected:
-		using PageSourceInterface<Context>::ptr_type;
-		using PageSourceInterface<Context>::page_type;
+		using typename PageSourceInterface<Context>::ptr_type;
+		using typename PageSourceInterface<Context>::page_type;
 
 		struct page_allocator
 		{
