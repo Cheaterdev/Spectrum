@@ -625,6 +625,62 @@ def run(cmd, **kw):
     return subprocess.run([str(c) for c in cmd], capture_output=True, text=True, **kw)
 
 
+def refresh_unported_stubs(out, app_objs, libs, stubs_s):
+    """Make libspectrum.so loadable while parts of the engine are not ported yet.
+
+    Android's loader resolves every undefined symbol at dlopen, so one reference to code this port
+    doesn't compile (3D FrameGraph passes, the image decoders) kills the whole app at startup.
+    Link a probe without stubs, list what is undefined and not exported by an NDK system library,
+    and emit a stub for each that logs the symbol name and traps when actually called.
+    Regenerated from scratch every build, so a stub disappears as soon as the real code is ported.
+    """
+    nm, cxxfilt = BIN / "llvm-nm.exe", BIN / "llvm-cxxfilt.exe"
+    sysroot_libs = BIN.parent / "sysroot" / "usr" / "lib" / ABI_TRIPLE / str(API)
+    system = set()
+    for so in sysroot_libs.glob("*.so"):
+        for line in run([nm, "-D", "--defined-only", so]).stdout.splitlines():
+            if line.split():
+                system.add(line.split()[-1].split("@")[0])
+
+    probe = out / "lib" / "probe.so"
+    third_party = sorted((OUT / "vcpkg_installed" / "arm64-android" / "lib").glob("*.a"))
+    link = [CLANGXX, f"--target={ABI_TRIPLE}{API}", "-shared", "-fuse-ld=lld", "-static-libstdc++",
+            "-Wl,-z,max-page-size=16384", "-o", probe, *app_objs, "-Wl,--start-group", *libs, *third_party,
+            "-Wl,--end-group", "-llog", "-landroid", "-lvulkan"]
+    r = run(link)
+    if r.returncode != 0:
+        print(r.stderr[-2000:])
+        sys.exit("probe link failed")
+
+    undefined = [l.split()[-1].split("@")[0] for l in run([nm, "-D", "-u", probe]).stdout.splitlines() if l.split()]
+    # Only C++ symbols: the engine's own code. Plain C ones (vkCmdPipelineBarrier2, memfd_create, ...)
+    # are newer than the NDK's API-29 link stubs but exist in the device's libraries, so they
+    # resolve at load time; stubbing them would shadow the real functions.
+    missing = sorted(s for s in set(undefined) if s not in system and s.startswith("_Z"))
+    probe.unlink(missing_ok=True)
+    demangled = run([cxxfilt], input="\n".join(missing)).stdout.splitlines() if missing else []
+
+    asm = [".text"]
+    data = []
+    for i, (sym, name) in enumerate(zip(missing, demangled)):
+        is_data = ("(" not in name) or name.startswith(("vtable for", "typeinfo for", "typeinfo name for", "guard variable"))
+        label = f".Lunported_{i}"
+        escaped = name.replace("\\", "\\\\").replace('"', '\\"')
+        if is_data:
+            data.append(f".globl {sym}\n.type {sym},%object\n{sym}:\n.space 256\n")
+        else:
+            asm.append(f".globl {sym}\n.type {sym},%function\n{sym}:\n"
+                       f"  adrp x0, {label}\n  add x0, x0, :lo12:{label}\n  b spectrum_unported_called\n")
+            data.append(f".section .rodata\n{label}:\n.asciz \"{escaped}\"\n.text\n")
+    text = "\n".join(asm) + "\n.bss\n.balign 16\n" + "\n".join(d for d in data if "%object" in d) \
+        + "\n.section .rodata\n" + "\n".join(d for d in data if "%object" not in d) + "\n"
+    old = stubs_s.read_text() if stubs_s.exists() else ""
+    if text != old:
+        stubs_s.write_text(text)
+    funcs = sum(1 for sym, name in zip(missing, demangled) if "(" in name)
+    print(f"unported stubs: {funcs} functions, {len(missing) - funcs} data symbols (see {fwd(stubs_s)})")
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--mode", default="debug", choices=["debug", "retail"])
@@ -886,10 +942,17 @@ def main():
         so = out / "lib" / "libspectrum.so"
         lines.append(
             f'rule link\n  command = "{CLANGXX}" --target={ABI_TRIPLE}{API} -shared -fuse-ld=lld -static-libstdc++ '
-            f'-Wl,-z,max-page-size=16384 {"-Wl,--wrap=__cxa_throw " if os.environ.get("SPECTRUM_TRACE_THROWS") else ""}'
-            f'-o $out @$out.rsp -Wl,--start-group $libs -Wl,--end-group '
+            f'-Wl,-z,max-page-size=16384 -o $out @$out.rsp -Wl,--start-group $libs -Wl,--end-group '
             f'-llog -landroid -lvulkan\n  rspfile = $out.rsp\n  rspfile_content = $in\n  description = LINK $out\n')
         third_party = sorted((OUT / "vcpkg_installed" / "arm64-android" / "lib").glob("*.a"))   # see android/vcpkg.json
+        stubs_s = out / "gen" / "unported_stubs.s"
+        stubs_o = out / "obj" / "unported_stubs.o"
+        stubs_s.parent.mkdir(parents=True, exist_ok=True)
+        if not stubs_s.exists():
+            stubs_s.write_text(".text\n")
+        lines.append(f'rule asm\n  command = "{CLANGXX}" --target={ABI_TRIPLE}{API} -c $in -o $out\n  description = ASM $out\n')
+        lines.append(f"build {ninja_path(stubs_o)}: asm {ninja_path(stubs_s)}\n")
+        objs["app"] = objs["app"] + [stubs_o]
         lines.append(f"build {ninja_path(so)}: link {' '.join(ninja_path(o) for o in objs['app'])}"
                      f" | {' '.join(ninja_path(l) for l in libs)}\n"
                      f"  libs = {' '.join(ninja_path(l) for l in libs + third_party)}\n")
@@ -901,6 +964,11 @@ def main():
     if args.no_build:
         return 0
     cmd = [str(NINJA), "-C", str(out), "-j", str(args.j)] + (["-k", "0"] if args.k else [])
+    if "app" in order and objs["app"]:
+        # Stubs depend on what the finished libraries leave undefined, so build those first.
+        pre = subprocess.run(cmd + [fwd(p) for p in libs + objs["app"][:-1]]).returncode
+        if pre == 0:
+            refresh_unported_stubs(out, objs["app"][:-1], libs, stubs_s)
     rc = subprocess.run(cmd).returncode
     if rc != 0:
         # The NDK's Clang crashes at random under heavy parallel load (access violation while

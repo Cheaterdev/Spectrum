@@ -7,6 +7,8 @@ import Core;
 import HAL;
 import vulkan;
 import RenderSystem;
+import Graphics;
+import GUI;
 
 namespace
 {
@@ -151,20 +153,172 @@ namespace
 	extern "C++" const char* libc_getenv(const char* name) __asm__("getenv");
 	extern "C++" int libc_chdir(const char* path) __asm__("chdir");
 
-	void draw_clear_frame(int frame)
+	// DisplayOutput.ui_scale: where SDR white lands in the scRGB swapchain. The desktop engine feeds
+	// sdr_white_nits / 80; Android has no such query here, so MainActivity passes a measured value
+	// (intent extra "ui_scale", exported as SPECTRUM_UI_SCALE).
+	float g_ui_scale = 1.0f;
+
+	void read_ui_scale()
+	{
+		if (const char* v = libc_getenv("SPECTRUM_UI_SCALE"))
+			g_ui_scale = std::stof(v);
+		Log::get() << Log::LEVEL_INFO << "ui_scale = " << std::to_string(g_ui_scale) << Log::endl;
+	}
+
+	// The swapchain is scRGB (linear), the UI colors below are written as sRGB.
+	float srgb_to_linear(float c)
+	{
+		return c <= 0.04045f ? c / 12.92f : std::pow((c + 0.055f) / 1.055f, 2.4f);
+	}
+
+	vec4 srgb(float r, float g, float b, float a = 1.0f)
+	{
+		return vec4(srgb_to_linear(r), srgb_to_linear(g), srgb_to_linear(b), a);
+	}
+
+	// GUI skin textures, baked by `spectrum_tool textures` into cache/vulkan (the device has no image
+	// decoders). The header must match the one the engine's Skin asks for: force_srgb = true.
+	struct UiTextures
+	{
+		HAL::Texture::ptr window, button, button_hover, button_pressed;
+	} g_tex;
+	std::unique_ptr<GUI::NinePatch> g_nine_patch;
+	std::shared_ptr<HAL::TextureResource> g_ui_target;   // FP16 UI render target, converted into the swapchain
+
+	HAL::Texture::ptr load_gui_texture(const char* name)
+	{
+		auto texture = HAL::Texture::get_resource(HAL::texure_header(to_path(std::string("textures/gui/") + name + ".png"), true));
+		const bool ok = texture && texture != HAL::Texture::null;
+		if (ok)
+			Log::get() << Log::LEVEL_INFO << "UI texture " << name << ": loaded" << Log::endl;
+		else
+			Log::get() << Log::LEVEL_ERROR << "UI texture " << name << ": MISSING" << Log::endl;
+		return texture;
+	}
+
+	void load_ui_textures()
+	{
+		g_tex.window = load_gui_texture("window_active");
+		g_tex.button = load_gui_texture("button");
+		g_tex.button_hover = load_gui_texture("button_hover");
+		g_tex.button_pressed = load_gui_texture("button_pressed");
+		g_nine_patch = std::make_unique<GUI::NinePatch>();
+	}
+
+	// A skin entry as GUI::Skin builds it: the texture plus its nine-patch padding / margins.
+	GUI::Texture skin_item(const HAL::Texture::ptr& texture)
+	{
+		GUI::Texture item;
+		if (texture && texture != HAL::Texture::null)
+			item = texture->texture_2d();
+		return item;
+	}
+
+	// Stage 1 of the minimal UI screen: solid rects through the production UI::SimpleRect PSO and
+	// Slots::UI::ColorRect (the same path Test.HAL.UI exercises on desktop), laid out in pixels.
+	// Stage 2 swaps in textured nine-patches, stage 3 adds a text label.
+	void draw_ui_frame(int frame)
 	{
 		g_swap->wait_for_free();
 
 		auto list = g_device->get_queue(HAL::CommandListType::DIRECT)->get_free_list();
-		list->begin(L"android_clear");
-		HAL::Texture2DView view(g_swap->get_current_frame(), *list);
+		list->begin(L"android_ui");
 
-		// Slow hue drift so a frozen image is distinguishable from a live swapchain.
-		const float t = frame * 0.02f;
+		auto target = g_swap->get_current_frame();
+		const auto& dims = target->get_desc().as_texture().Dimensions;
+		const float W = (float)dims.x, H = (float)dims.y;
+
+		// The UI PSOs write R16G16B16A16_FLOAT (scRGB), so the UI renders into an FP16 target and is
+		// converted into the 8-bit swapchain at the end (see the CopyTexture pass below).
+		HAL::Texture2DView view(g_ui_target, *list);
+		auto& gfx = list->get_graphics();
+
 		HAL::CompiledRT compiled;
 		compiled.table_rtv = view.renderTarget;
-		list->get_graphics().set_rtv(compiled, HAL::RTOptions::Default | HAL::RTOptions::ClearColor, 0, 0,
-		                             vec4(0.1f, 0.25f + 0.2f * std::sin(t), 0.6f + 0.2f * std::cos(t), 1.0f));
+		const vec4 clear = srgb(0.08f, 0.09f, 0.12f);
+		gfx.set_rtv(compiled, HAL::RTOptions::Default | HAL::RTOptions::ClearColor, 0, 0, clear);
+
+		Slots::UI::DisplayOutput output;
+		output.GetUi_scale() = g_ui_scale;
+		gfx.set(output);
+
+		const float margin = W * 0.05f;
+		const float panel_x = margin, panel_w = W - 2 * margin, panel_y = H * 0.08f, panel_h = H * 0.42f;
+		const float pad = 32.0f;
+		const float btn_h = 120.0f, btn_y = panel_y + 120.0f + 2 * pad;
+		const float btn_w = (panel_w - 4 * pad) / 3.0f;
+		const float bar_y = btn_y + btn_h + 2 * pad, bar_h = 40.0f, bar_w = panel_w - 2 * pad;
+
+		// Textured nine-patches through the real GUI::NinePatch batcher, which needs only this much of
+		// a GUI::GUIInfo: the list, the window size, the scale and the clip rect.
+		{
+			GUIInfo c;
+			c.command_list = list;
+			c.window_size = vec2(W, H);
+			c.scale = 3.0f;   // phone density; scales the patches' padding and margins
+			c.ui_clipping.left_top.x = 0;
+			c.ui_clipping.left_top.y = 0;
+			c.ui_clipping.right_bottom.x = W;
+			c.ui_clipping.right_bottom.y = H;
+
+			auto window = skin_item(g_tex.window);
+			window.padding = { 11, 40, 13, 13 };   // as Skin::DefaultWindow.Active
+			window.margins = { 12, 11, 11, 10 };
+			g_nine_patch->draw(c, window, ::rect{ panel_x, panel_y, panel_w, panel_h });
+
+			// The last button cycles through its three skin states so a frozen frame is distinguishable.
+			const HAL::Texture::ptr states[3] = { g_tex.button, g_tex.button_hover, g_tex.button_pressed };
+			for (int i = 0; i < 3; ++i)
+			{
+				auto button = skin_item(i == 2 ? states[(frame / 30) % 3] : (i == 1 ? g_tex.button_hover : g_tex.button));
+				button.padding = { 3, 3, 3, 3 };
+				g_nine_patch->draw(c, button, ::rect{ panel_x + pad + i * (btn_w + pad), btn_y, btn_w, btn_h });
+			}
+			g_nine_patch->flush(c);
+		}
+
+		gfx.set_pipeline<PSOS::UI::SimpleRect>();
+		gfx.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::STRIP);
+
+		// Pixel rect (origin top-left) -> clip space quad: pos[0] = (TL, TR), pos[1] = (BL, BR).
+		auto rect = [&](float x, float y, float w, float h, vec4 color) {
+			const float l = 2.0f * x / W - 1.0f, r = 2.0f * (x + w) / W - 1.0f;
+			const float t = 1.0f - 2.0f * y / H, b = 1.0f - 2.0f * (y + h) / H;
+			Slots::UI::ColorRect slot;
+			auto* p = slot.GetPos();
+			p[0] = float4(l, t, r, t);
+			p[1] = float4(l, b, r, b);
+			for (int i = 0; i < 4; ++i)
+				slot.GetColor()[i] = float4(color.x, color.y, color.z, color.w);
+			gfx.set(slot);
+			gfx.draw(4);
+		};
+
+		// Progress bar (still a solid rect): track + fill sweeping left to right.
+		const float progress = std::fmod(frame * 0.004f, 1.0f);
+		rect(panel_x + pad, bar_y, bar_w, bar_h, srgb(0.08f, 0.09f, 0.11f));
+		rect(panel_x + pad, bar_y, bar_w * progress, bar_h, srgb(0.95f, 0.65f, 0.15f));
+
+		// FP16 UI target -> SDR swapchain through the engine's CopyTexture PSO (gamma-encodes for 8-bit).
+		{
+			HAL::Texture2DView sc_view(target, *list);
+			HAL::Format sc_format = target->get_desc().as_texture().Format;   // non-const: its conversion operator isn't
+
+			gfx.set_pipeline<PSOS::Utility::CopyTexture>(PSOS::Utility::CopyTexture::Format(sc_format));
+			gfx.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::STRIP);
+			gfx.set_viewport(sc_view.get_viewport());
+			gfx.set_scissor(sc_view.get_scissor());
+
+			Slots::Utility::CopyTexture copy;
+			copy.GetSrcTex() = view.texture2D;
+			gfx.set(copy);
+
+			RT::Frame::SingleColor rt;
+			rt.GetColor() = sc_view.renderTarget;
+			gfx.set_rtv(rt);
+			gfx.draw(4);
+		}
+
 		list->execute_and_wait();
 		g_swap->present();
 	}
@@ -183,16 +337,33 @@ namespace
 			           << " size=" << width << "x" << height << Log::endl;
 
 			HAL::swap_chain_desc desc{};
-			desc.format = HAL::Format::R16G16B16A16_FLOAT;
+			desc.format = HAL::Format::R8G8B8A8_UNORM;   // SDR surface; the UI is rendered to FP16 and converted
 			desc.window = &g_window;
 			desc.fullscreen = nullptr;
 			desc.stereo = false;
 			g_swap = std::make_shared<HAL::SwapChain>(*g_device, desc);
 			Log::get() << Log::LEVEL_INFO << "surface: SwapChain created" << Log::endl;
 
-			for (int i = 0; i < 120; ++i)
-				draw_clear_frame(i);
-			Log::get() << Log::LEVEL_INFO << "surface: 120 clear frames presented" << Log::endl;
+			{
+				const auto& dims = g_swap->get_current_frame()->get_desc().as_texture().Dimensions;
+				g_ui_target = std::make_shared<HAL::TextureResource>(*g_device,
+					HAL::ResourceDesc::Tex2D(HAL::Format::R16G16B16A16_FLOAT, { dims.x, dims.y }, 1, 1, HAL::ResFlags::RenderTarget | HAL::ResFlags::ShaderResource),   // sampled by the conversion pass
+					HAL::HeapType::DEFAULT);
+			}
+			read_ui_scale();
+			load_ui_textures();
+
+			// Keep drawing for five minutes: long enough to look at on the phone. There is no
+			// surfaceDestroyed handling yet, so the loop ends by time rather than by lifecycle.
+			const auto start = std::chrono::steady_clock::now();
+			int frame = 0;
+			while (std::chrono::steady_clock::now() - start < std::chrono::minutes(5))
+			{
+				draw_ui_frame(frame++);
+				if (frame == 1 || frame == 120)
+					Log::get() << Log::LEVEL_INFO << "surface: UI frame " << frame << " presented" << Log::endl;
+			}
+			Log::get() << Log::LEVEL_INFO << "surface: " << frame << " UI frames presented" << Log::endl;
 		}
 		catch (const std::exception& e)
 		{
@@ -267,66 +438,12 @@ namespace
 		}
 	};
 
-	// TEMPORARY (throw tracing, linked only with SPECTRUM_TRACE_THROWS=1 -> -Wl,--wrap=__cxa_throw):
-	// logs the first throws' backtrace as <module offset> pairs for llvm-symbolizer.
-	struct DlInfo { const char* fname; void* fbase; const char* sname; void* saddr; };
-	using TraceFn = int (*)(void*, void*);
-	extern "C++" int unwind_backtrace(TraceFn fn, void* arg) __asm__("_Unwind_Backtrace");
-	extern "C++" unsigned long unwind_get_ip(void* ctx) __asm__("_Unwind_GetIP");
-	extern "C++" int libc_dladdr(const void* addr, DlInfo* info) __asm__("dladdr");
-
-	struct TraceState { std::string text; int frames = 0; };
-
-	int trace_frame(void* ctx, void* arg)
-	{
-		auto& state = *static_cast<TraceState*>(arg);
-		const auto ip = unwind_get_ip(ctx);
-		DlInfo info{};
-		if (libc_dladdr((void*)ip, &info) && info.fbase)
-			state.text += " " + hex(ip - (uint64_t)info.fbase);
-		return ++state.frames >= 14 ? 5 : 0;   // _URC_END_OF_STACK stops the walk
-	}
-
-	extern "C" void __real___cxa_throw(void*, void*, void (*)(void*));
-	extern "C" __attribute__((visibility("default"))) void __wrap___cxa_throw(void* object, void* type, void (*destructor)(void*))
-	{
-		static int logged = 0;
-		if (logged++ < 40)
-		{
-			TraceState state;
-			unwind_backtrace(trace_frame, &state);
-			Log::get() << Log::LEVEL_ERROR << "TMPTHROW" << state.text << Log::endl;
-		}
-		__real___cxa_throw(object, type, destructor);
-	}
-
-	// TEMPORARY (locale investigation): which std facility throws "locale not supported" here.
-	void probe_locale()
-	{
-		auto attempt = [](const char* what, auto&& fn) {
-			try { fn(); Log::get() << Log::LEVEL_INFO << "TMPPROBE " << what << ": ok" << Log::endl; }
-			catch (const std::exception& e) { Log::get() << Log::LEVEL_ERROR << "TMPPROBE " << what << ": THREW " << e.what() << Log::endl; }
-		};
-		attempt("std::locale(\"\")", [] { std::locale l(""); });
-		attempt("std::locale(\"C\")", [] { std::locale l("C"); });
-		attempt("std::locale()", [] { std::locale l; });
-		attempt("convert(string)", [] { auto w = convert(std::string_view("abc")); });
-		attempt("path(wstring)", [] { std::filesystem::path p(std::wstring(L"abc")); });
-		attempt("path(wstring).string()", [] { std::filesystem::path p(std::wstring(L"abc")); auto s = p.string(); });
-		attempt("to_path(string)", [] { auto p = to_path(std::string("cache/vulkan/x.bin")); });
-		attempt("to_path(string).string()", [] { auto p = to_path(std::string("cache/vulkan/x.bin")); auto s = p.string(); });
-		attempt("filesystem::exists", [] { std::filesystem::exists(to_path(std::string("cache/vulkan"))); });
-		attempt("ifstream", [] { std::ifstream f("cache/vulkan/none.bin", std::ios::binary); });
-		attempt("ostringstream", [] { std::ostringstream s(std::ios::binary | std::ios::out); s << 1; });
-	}
-
 	void boot()
 	{
 		VSOutputLogger::create();   // Log -> OutputDebugStringA -> logcat (android/shims/windows.ixx)
 		Log::get().set_logging_level(Log::LEVEL_ALL);
 
 		Log::get() << Log::LEVEL_INFO << "Spectrum (Android): Core loaded" << Log::endl;
-		probe_locale();
 
 		// The working directory is the app's files dir (MainActivity.prepareWorkDir), holding cache/vulkan.
 		FileSystem::get().register_provider(std::make_shared<native_file_provider>());
@@ -338,6 +455,14 @@ namespace
 
 extern "C"
 {
+	// Target of the generated stubs (android/build.py, unported_stubs.s): code this port doesn't compile
+	// yet is linked as a stub that lands here with its demangled name instead of failing dlopen.
+	__attribute__((visibility("default"))) void spectrum_unported_called(const char* name)
+	{
+		Log::get() << Log::LEVEL_ERROR << "UNPORTED function called: " << name << Log::endl;
+		__builtin_trap();
+	}
+
 	// JNI_VERSION_1_6; the VM and reserved pointers are unused.
 	__attribute__((visibility("default"))) int JNI_OnLoad(void*, void*)
 	{

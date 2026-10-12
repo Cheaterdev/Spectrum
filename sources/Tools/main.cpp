@@ -15,6 +15,7 @@ namespace
 
 	const Command commands[] = {
 		{ "shaders", "precompile every PSO shader variant and write the cache + manifest for a target", command_shaders },
+		{ "textures", "decode images and write their texture cache blobs (for devices without image decoders)", command_textures },
 	};
 
 	void print_usage()

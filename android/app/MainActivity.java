@@ -26,6 +26,7 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback
     private static native void nativeProbeGpu();
     private static native void nativeSurface(Surface surface, int width, int height);
 
+    private SurfaceView view;
     private final Object lock = new Object();
     private Surface surface;
     private int surfaceWidth, surfaceHeight;
@@ -38,7 +39,7 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback
         Log.i("Spectrum", "MainActivity.onCreate");
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
-        SurfaceView view = new SurfaceView(this);
+        view = new SurfaceView(this);
         view.getHolder().addCallback(this);
         setContentView(view);
 
@@ -68,6 +69,11 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback
         {
             File root = getFilesDir();
             Os.setenv("SPECTRUM_WORKDIR", root.getAbsolutePath(), true);
+            // UI brightness in the engine's scRGB convention (DisplayOutput.ui_scale; the desktop uses
+            // sdr_white_nits / 80). adb screencap re-renders the FP16 layer and does not match the
+            // panel, so judge it on the display. Tune without a rebuild:
+            //   adb shell am start -n com.spectrum/.MainActivity --ef ui_scale 0.7
+            Os.setenv("SPECTRUM_UI_SCALE", String.valueOf(getIntent().getFloatExtra("ui_scale", 1.0f)), true);
             // Adreno's shader compiler never finishes the ray-query DDGI debug shader (runaway CPU/memory).
             Os.setenv("SPECTRUM_DISABLE_RAY_QUERY", "1", true);
             nativeEnterWorkDir();

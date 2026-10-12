@@ -152,11 +152,21 @@ namespace HAL
         vk_color_space = formats[0].colorSpace;
         VkColorSpaceKHR color_space = formats[0].colorSpace;
         {
-            constexpr std::pair<VkFormat, VkColorSpaceKHR> preferred[] = {
+            // A caller asking for anything but FP16 wants an SDR surface (Android: the compositor treats
+            // an FP16 scRGB layer as HDR and its brightness handling is not predictable). The caller
+            // then renders to an FP16 target and converts into this format itself.
+            const bool want_sdr = c_desc.format != Format::R16G16B16A16_FLOAT;
+            constexpr std::pair<VkFormat, VkColorSpaceKHR> hdr_first[] = {
                 { VK_FORMAT_R16G16B16A16_SFLOAT, VK_COLOR_SPACE_EXTENDED_SRGB_LINEAR_EXT },
                 { VK_FORMAT_B8G8R8A8_UNORM,      VK_COLOR_SPACE_SRGB_NONLINEAR_KHR },
                 { VK_FORMAT_R8G8B8A8_UNORM,      VK_COLOR_SPACE_SRGB_NONLINEAR_KHR },
             };
+            constexpr std::pair<VkFormat, VkColorSpaceKHR> sdr_first[] = {
+                { VK_FORMAT_R8G8B8A8_UNORM,      VK_COLOR_SPACE_SRGB_NONLINEAR_KHR },
+                { VK_FORMAT_B8G8R8A8_UNORM,      VK_COLOR_SPACE_SRGB_NONLINEAR_KHR },
+                { VK_FORMAT_R16G16B16A16_SFLOAT, VK_COLOR_SPACE_EXTENDED_SRGB_LINEAR_EXT },
+            };
+            const auto& preferred = want_sdr ? sdr_first : hdr_first;
             bool found = false;
             for (auto [want_format, want_space] : preferred)
             {
@@ -172,7 +182,7 @@ namespace HAL
                 }
                 if (found) break;
             }
-            if (vk_format != VK_FORMAT_R16G16B16A16_SFLOAT)
+            if (!want_sdr && vk_format != VK_FORMAT_R16G16B16A16_SFLOAT)
                 Log::get() << Log::LEVEL_ERROR
                     << "[Vulkan swapchain] FP16 scRGB surface format unavailable; UI PSOs expect R16G16B16A16_FLOAT" << Log::endl;
         }
