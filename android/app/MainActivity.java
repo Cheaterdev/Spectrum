@@ -24,13 +24,18 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback
     private static native void nativeRun();
     private static native void nativeEnterWorkDir();   // chdir to $SPECTRUM_WORKDIR
     private static native void nativeProbeGpu();
-    private static native void nativeSurface(Surface surface, int width, int height);
+    // Renders into `surface` until nativeSetGeneration() is called with a number other than `generation`
+    // (the surface was resized, rotated or destroyed), then releases the swapchain and returns.
+    private static native void nativeRenderSurface(Surface surface, int generation);
+    private static native void nativeSetGeneration(int generation);
 
     private SurfaceView view;
     private final Object lock = new Object();
     private Surface surface;
-    private int surfaceWidth, surfaceHeight;
     private boolean surfaceReady;
+    private boolean renderActive;   // the render thread is inside nativeRenderSurface
+    private boolean running = true;
+    private int generation;         // bumped on every surface change; the native loop ends when it moves
 
     @Override
     protected void onCreate(Bundle savedInstanceState)
@@ -50,13 +55,46 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback
             nativeRun();
             nativeProbeGpu();
 
-            synchronized (lock)
+            // One pass per surface: rotation or resize destroys the old swapchain and builds a new one.
+            while (true)
             {
-                while (!surfaceReady)
-                    try { lock.wait(); } catch (InterruptedException e) { return; }
-                nativeSurface(surface, surfaceWidth, surfaceHeight);
+                Surface current;
+                int currentGeneration;
+                synchronized (lock)
+                {
+                    while (running && !surfaceReady)
+                        try { lock.wait(); } catch (InterruptedException e) { return; }
+                    if (!running)
+                        return;
+                    current = surface;
+                    currentGeneration = generation;
+                    renderActive = true;
+                }
+
+                try { nativeRenderSurface(current, currentGeneration); }
+                finally
+                {
+                    synchronized (lock)
+                    {
+                        renderActive = false;
+                        lock.notifyAll();
+                    }
+                }
             }
         }, "spectrum-main").start();
+    }
+
+    @Override
+    protected void onDestroy()
+    {
+        synchronized (lock)
+        {
+            running = false;
+            generation++;
+            nativeSetGeneration(generation);
+            lock.notifyAll();
+        }
+        super.onDestroy();
     }
 
     // The engine reads/writes cache/vulkan/<hash>.bin relative to the working directory. Make that
@@ -119,12 +157,27 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback
         synchronized (lock)
         {
             surface = holder.getSurface();
-            surfaceWidth = width;
-            surfaceHeight = height;
             surfaceReady = true;
+            // A new generation ends the running native loop; the render thread then starts a fresh
+            // one for this surface (new swapchain at the new size).
+            generation++;
+            nativeSetGeneration(generation);
             lock.notifyAll();
         }
     }
 
-    @Override public void surfaceDestroyed(SurfaceHolder holder) {}
+    // The surface must not be touched once this returns, so wait for the native loop to let go of it.
+    @Override
+    public void surfaceDestroyed(SurfaceHolder holder)
+    {
+        Log.i("Spectrum", "surfaceDestroyed");
+        synchronized (lock)
+        {
+            surfaceReady = false;
+            generation++;
+            nativeSetGeneration(generation);
+            while (renderActive)
+                try { lock.wait(); } catch (InterruptedException e) { break; }
+        }
+    }
 }

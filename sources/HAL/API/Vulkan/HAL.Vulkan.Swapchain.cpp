@@ -276,7 +276,11 @@ namespace HAL
                                   VK_IMAGE_USAGE_TRANSFER_DST_BIT     |
                                   VK_IMAGE_USAGE_SAMPLED_BIT;          // needed for SRV in descriptor heap
         sc_ci.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
-        sc_ci.preTransform     = caps.currentTransform;
+        // Identity: the engine renders upright and never pre-rotates its output. Echoing currentTransform
+        // instead tells Android the content is already rotated for the display, so a rotated phone
+        // (landscape) showed the whole UI turned and squashed; with identity the compositor rotates.
+        sc_ci.preTransform     = (caps.supportedTransforms & VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR)
+                                     ? VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR : caps.currentTransform;
         sc_ci.compositeAlpha   = composite_alpha;
         sc_ci.presentMode      = present_mode;
         sc_ci.clipped          = VK_TRUE;
@@ -750,7 +754,8 @@ namespace HAL
                                   VK_IMAGE_USAGE_TRANSFER_DST_BIT     |
                                   VK_IMAGE_USAGE_SAMPLED_BIT;          // needed for SRV in descriptor heap
         sc_ci.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
-        sc_ci.preTransform     = caps.currentTransform;
+        sc_ci.preTransform     = (caps.supportedTransforms & VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR)
+                                     ? VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR : caps.currentTransform;
         {
             VkCompositeAlphaFlagBitsKHR ca = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
             for (auto f : { VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,

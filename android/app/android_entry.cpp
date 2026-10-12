@@ -262,7 +262,7 @@ namespace
 		gfx.set(output);
 
 		const float margin = W * 0.05f;
-		const float panel_x = margin, panel_w = W - 2 * margin, panel_y = H * 0.08f, panel_h = H * 0.42f;
+		const float panel_x = margin, panel_w = W - 2 * margin, panel_y = H * 0.08f, panel_h = std::max(H * 0.42f, 620.0f);   // tall enough for its content in landscape too
 		const float pad = 32.0f;
 		const float btn_h = 120.0f, btn_y = panel_y + 120.0f + 2 * pad;
 		const float btn_w = (panel_w - 4 * pad) / 3.0f;
@@ -357,18 +357,50 @@ namespace
 		g_swap->present();
 	}
 
-	void on_surface(void* env, void* surface, int width, int height)
+	// Bumped by MainActivity on every surface change (resize, rotation, destroy); a render loop belongs to
+	// one generation and ends as soon as it is no longer the latest.
+	std::atomic<int> g_latest_generation{ 0 };
+
+	extern "C++" void native_window_release(void* window) __asm__("ANativeWindow_release");
+	extern "C++" int native_window_width(void* window) __asm__("ANativeWindow_getWidth");
+	extern "C++" int native_window_height(void* window) __asm__("ANativeWindow_getHeight");
+
+	// Everything built for one surface, torn down in dependency order when the loop ends: the GPU is
+	// idled first so no frame still references the swapchain images or the UI target.
+	void render_surface(void* env, void* surface, int generation)
 	{
 		if (!g_device)
 		{
 			Log::get() << Log::LEVEL_ERROR << "surface: no HAL::Device" << Log::endl;
 			return;
 		}
+
+		struct Cleanup
+		{
+			~Cleanup()
+			{
+				try
+				{
+					g_device->wait_idle();
+					g_ui_target.reset();
+					g_swap.reset();
+				}
+				catch (const std::exception& e)
+				{
+					Log::get() << Log::LEVEL_ERROR << "surface: cleanup threw: " << e.what() << Log::endl;
+				}
+				if (g_window.window)
+					native_window_release(g_window.window);
+				g_window.window = nullptr;
+				Log::get() << Log::LEVEL_INFO << "surface: released" << Log::endl;
+			}
+		} cleanup;
+
 		try
 		{
 			g_window.window = surface_to_window(env, surface);
-			Log::get() << Log::LEVEL_INFO << "surface: ANativeWindow=" << hex((uint64_t)g_window.window)
-			           << " size=" << width << "x" << height << Log::endl;
+			Log::get() << Log::LEVEL_INFO << "surface: generation " << generation << " ANativeWindow=" << hex((uint64_t)g_window.window)
+			           << " size=" << native_window_width(g_window.window) << "x" << native_window_height(g_window.window) << Log::endl;
 
 			HAL::swap_chain_desc desc{};
 			desc.format = HAL::Format::R8G8B8A8_UNORM;   // SDR surface; the UI is rendered to FP16 and converted
@@ -385,19 +417,17 @@ namespace
 					HAL::HeapType::DEFAULT);
 			}
 			read_ui_scale();
-			load_ui_textures();
+			if (!g_nine_patch)   // textures and the nine-patch batcher outlive any one surface
+				load_ui_textures();
 
-			// Keep drawing for five minutes: long enough to look at on the phone. There is no
-			// surfaceDestroyed handling yet, so the loop ends by time rather than by lifecycle.
-			const auto start = std::chrono::steady_clock::now();
 			int frame = 0;
-			while (std::chrono::steady_clock::now() - start < std::chrono::minutes(5))
+			while (g_latest_generation.load() == generation)
 			{
 				draw_ui_frame(frame++);
 				if (frame == 1 || frame == 120)
 					Log::get() << Log::LEVEL_INFO << "surface: UI frame " << frame << " presented" << Log::endl;
 			}
-			Log::get() << Log::LEVEL_INFO << "surface: " << frame << " UI frames presented" << Log::endl;
+			Log::get() << Log::LEVEL_INFO << "surface: generation " << generation << " ended after " << frame << " frames" << Log::endl;
 		}
 		catch (const std::exception& e)
 		{
@@ -510,10 +540,16 @@ extern "C"
 		probe_gpu();
 	}
 
-	// MainActivity.nativeSurface(Surface, w, h): surfaceChanged from the SurfaceView.
-	__attribute__((visibility("default"))) void Java_com_spectrum_MainActivity_nativeSurface(void* env, void*, void* surface, int w, int h)
+	// MainActivity.nativeRenderSurface(Surface, generation): renders until the generation moves on.
+	__attribute__((visibility("default"))) void Java_com_spectrum_MainActivity_nativeRenderSurface(void* env, void*, void* surface, int generation)
 	{
-		on_surface(env, surface, w, h);
+		render_surface(env, surface, generation);
+	}
+
+	// MainActivity.nativeSetGeneration(generation): called on every surface change / destroy.
+	__attribute__((visibility("default"))) void Java_com_spectrum_MainActivity_nativeSetGeneration(void*, void*, int generation)
+	{
+		g_latest_generation.store(generation);
 	}
 
 	// MainActivity.nativeEnterWorkDir(): the engine's relative cache/ paths resolve against the app's
