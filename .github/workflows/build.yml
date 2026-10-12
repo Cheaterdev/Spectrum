@@ -144,7 +144,8 @@ jobs:
       shell: powershell
       working-directory: ./bin/Debug
       run: |
-        & ".\test.exe"
+        $exe = if ("${{ matrix.configuration }}" -like "*-Vulkan") { ".\test_vulkan.exe" } else { ".\test.exe" }
+        & $exe
         if ($LASTEXITCODE -ne 0) {
           Write-Error "Tests failed with exit code $LASTEXITCODE"
           exit $LASTEXITCODE
