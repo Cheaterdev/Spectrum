@@ -29,6 +29,15 @@ Open `projects/Spectrum.sln` in Visual Studio 2026. Three configurations: **Debu
 
 Executables output to `bin/Debug`, `bin/Profile`, `bin/Retail`. The working directory for running is `workdir/`.
 
+### Kill MSBuild after every build
+After any `msbuild` invocation you run, always kill the lingering worker
+(`/nodeReuse:true` keeps `MSBuild.exe` alive after the build). It locks files,
+blocks Visual Studio / AGDE / other installers, and often prevents Claude Code
+from being restarted. Pass `-nodeReuse:false` when building, and also run:
+```powershell
+Get-Process MSBuild,VBCSCompiler -ErrorAction SilentlyContinue | Stop-Process -Force
+```
+
 ## Architecture
 
 ### Layer Stack (bottom to top)

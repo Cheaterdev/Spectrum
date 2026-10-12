@@ -33,26 +33,41 @@ export namespace HAL
 		// before and after each test, so a GPU test that triggers one fails.
 		class ValidationLog
 		{
-			static inline std::atomic<uint64> count = 0;
-			static inline std::mutex          last_mutex;
-			static inline std::string         last;
+			// Function-local statics, not `static inline` members: clang (Android NDK)
+			// emits a dynamic-init .init_array entry for a module-interface inline
+			// variable that points at a comdat discarded in favour of the importer's
+			// copy, failing the link with "relocation refers to a discarded section".
+			struct State
+			{
+				std::atomic<uint64> count = 0;
+				std::mutex          last_mutex;
+				std::string         last;
+			};
+
+			static State& state()
+			{
+				static State s;
+				return s;
+			}
 
 		public:
 			static void report(std::string_view message)
 			{
+				auto& s = state();
 				{
-					std::lock_guard lock(last_mutex);
-					last = message;
+					std::lock_guard lock(s.last_mutex);
+					s.last = message;
 				}
-				++count;
+				++s.count;
 			}
 
-			static uint64 error_count() { return count.load(); }
+			static uint64 error_count() { return state().count.load(); }
 
 			static std::string last_error()
 			{
-				std::lock_guard lock(last_mutex);
-				return last;
+				auto& s = state();
+				std::lock_guard lock(s.last_mutex);
+				return s.last;
 			}
 		};
 

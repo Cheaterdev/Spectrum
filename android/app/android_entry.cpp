@@ -146,6 +146,10 @@ namespace
 	// from clashing with the NDK declaration if a header module ever exposes it.
 	extern "C++" void* surface_to_window(void* env, void* surface) __asm__("ANativeWindow_fromSurface");
 
+	// Same trick for the two libc calls: no <stdlib.h>/<unistd.h> next to the header unit.
+	extern "C++" const char* libc_getenv(const char* name) __asm__("getenv");
+	extern "C++" int libc_chdir(const char* path) __asm__("chdir");
+
 	void draw_clear_frame(int frame)
 	{
 		g_swap->wait_for_free();
@@ -264,6 +268,9 @@ namespace
 
 		Log::get() << Log::LEVEL_INFO << "Spectrum (Android): Core loaded" << Log::endl;
 
+		// The working directory is the app's files dir (MainActivity.prepareWorkDir), holding cache/vulkan.
+		FileSystem::get().register_provider(std::make_shared<native_file_provider>());
+
 		auto& app = Application::get<AndroidApplication>();
 		Log::get() << Log::LEVEL_INFO << "Application singleton created, alive=" << app.is_alive() << Log::endl;
 	}
@@ -288,6 +295,15 @@ extern "C"
 	__attribute__((visibility("default"))) void Java_com_spectrum_MainActivity_nativeSurface(void* env, void*, void* surface, int w, int h)
 	{
 		on_surface(env, surface, w, h);
+	}
+
+	// MainActivity.nativeEnterWorkDir(): the engine's relative cache/ paths resolve against the app's
+	// files dir, which Java exports as SPECTRUM_WORKDIR (Os.chdir isn't public API).
+	__attribute__((visibility("default"))) void Java_com_spectrum_MainActivity_nativeEnterWorkDir(void*, void*)
+	{
+		const char* dir = libc_getenv("SPECTRUM_WORKDIR");
+		const int r = dir ? libc_chdir(dir) : -1;
+		Log::get() << Log::LEVEL_INFO << "workdir: " << (dir ? dir : "(unset)") << (r == 0 ? " ok" : " FAILED") << Log::endl;
 	}
 
 	// MainActivity.nativeRun(): the Java side of the same smoke test.

@@ -197,6 +197,12 @@ export
 					// device a failure is permanent, so give back an empty shader instead of spinning.
 					if (!res_blob)
 					{
+						std::string macros;
+						for (auto& m : header.macros)
+							macros += " " + m.name + "=" + m.value;
+						Log::get() << Log::LEVEL_ERROR << "missing precompiled shader cache/" << get_backend_name() << "/" << Hasher::hash(header)
+						           << ".bin: " << header.file_name << " " << header.entry_point << macros << Log::endl;
+
 						auto empty = std::make_shared<_shader_type>();
 						empty->header = header;
 						return empty;

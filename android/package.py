@@ -18,6 +18,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 APP = ROOT / "android" / "app"
 OUT = ROOT / "projects" / "android"
+SHADER_CACHE = OUT / "shader_cache" / "vulkan"
 
 SDK = next(Path(p) for p in (os.environ.get("ANDROID_HOME"), os.environ.get("ANDROID_SDK_ROOT"),
                              os.path.join(os.environ.get("LOCALAPPDATA", ""), "Android", "Sdk"))
@@ -65,7 +66,9 @@ def main():
     run([java_tool("javac"), "--release", "8", "-Xlint:-options", "-classpath", ANDROID_JAR,
          "-d", work / "classes", APP / "MainActivity.java"])
     class_files = [str(p) for p in (work / "classes").rglob("*.class")]
-    run([BUILD_TOOLS / "d8.bat", "--lib", ANDROID_JAR, "--min-api", "29", "--output", work, *class_files])
+    # d8.bat passes -Djava.ext.dirs, which JDK 9+ refuses to start with.
+    run([java_tool("java"), "-cp", BUILD_TOOLS / "lib" / "d8.jar", "com.android.tools.r8.D8",
+         "--lib", ANDROID_JAR, "--min-api", "29", "--output", work, *class_files])
 
     # 2. manifest -> base apk
     base = work / "base.apk"
@@ -81,9 +84,24 @@ def main():
         # Stored (uncompressed) so zipalign can page-align it and the loader can map it in place.
         dst.write(so, "lib/arm64-v8a/libspectrum.so", compress_type=zipfile.ZIP_STORED)
 
+        # Precompiled shaders from `spectrum_tool shaders --target android` (the device has no
+        # compiler). MainActivity extracts them to <files>/cache/vulkan, where the engine's
+        # shader cache looks.
+        blobs = sorted(SHADER_CACHE.glob("*.bin"))
+        if not blobs:
+            print(f"warning: no shader blobs in {SHADER_CACHE}; run spectrum_tool shaders --target android --out projects/android/shader_cache")
+        for blob in blobs:
+            dst.write(blob, f"assets/shader_cache/{blob.name}", compress_type=zipfile.ZIP_DEFLATED)
+
     # 4. align, sign
     aligned = work / "aligned.apk"
-    run([BUILD_TOOLS / "zipalign.exe", "-f", "-P", "16", "4", unaligned, aligned])
+    zipalign = [BUILD_TOOLS / "zipalign.exe", "-f"]
+    try:
+        run([*zipalign, "-P", "16", "4", unaligned, aligned])
+    except SystemExit:
+        # -P (16 KB page alignment) needs build-tools 35+; fine for 4 KB-page devices only.
+        print("warning: zipalign lacks -P, falling back to 4 KB page alignment")
+        run([*zipalign, "-p", "4", unaligned, aligned])
 
     keystore = OUT / "debug.keystore"
     if not keystore.exists():

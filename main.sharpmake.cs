@@ -682,6 +682,32 @@ namespace Spectrum
         }
     }
 
+    // Offline command-line tooling on top of the whole engine (shader precompile
+    // for other targets, more commands later). Run from workdir/.
+    [Sharpmake.Generate]
+    public class Tools : Application
+    {
+        public Tools()
+        {
+            SourceRootPath = @"[project.SharpmakeCsPath]\sources\Tools";
+            AssemblyName = "SpectrumTools";
+        }
+
+        public override void ConfigureAll(Configuration conf, CustomTarget target)
+        {
+            base.ConfigureAll(conf, target);
+
+            conf.Options.Remove(Options.Vc.Linker.SubSystem.Windows);
+
+            conf.TargetFileName = target.Backend == Backend.Vulkan ? "spectrum_tool_vulkan" : "spectrum_tool";
+
+            conf.VcxprojUserFile = new Project.Configuration.VcxprojUserFileSettings();
+            conf.VcxprojUserFile.LocalDebuggerWorkingDirectory = @"[project.SharpmakeCsPath]\workdir";
+
+            conf.AddPublicDependency<RenderSystem>(target);
+        }
+    }
+
     [Sharpmake.Generate]
     public class SpectrumSolution : Solution
     {
@@ -727,6 +753,7 @@ namespace Spectrum
             conf.AddProject<Spectrum>(target);
             conf.AddProject<Prism>(target);
             conf.AddProject<Test>(target);
+            conf.AddProject<Tools>(target);
             conf.AddProject<Resources>(target);
         }
 

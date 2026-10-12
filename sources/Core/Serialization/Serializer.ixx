@@ -96,7 +96,7 @@ public:
 			result = DataPacker::pack(stream.str());
 		else
 		{
-			result.resize(sizeof(unsigned long), 0);
+			result.resize(sizeof(uint32_t), 0);
 			result += stream.str();
 		}
 
@@ -126,7 +126,7 @@ public:
 			result = DataPacker::pack(stream.str());
 		else
 		{
-			result.resize(sizeof(unsigned long), 0);
+			result.resize(sizeof(uint32_t), 0);
 			result += stream.str();
 		}
 
@@ -174,7 +174,7 @@ public:
 	template<class T>
 	static std::shared_ptr<T> deserialize(const std::string& data)
 	{
-		if (data.size() < sizeof(unsigned long))
+		if (data.size() < sizeof(uint32_t))
 			return std::shared_ptr<T>();
 
 		try
@@ -214,7 +214,7 @@ public:
 	template<class T>
 	static void deserialize(const std::string& data, T& obj)
 	{
-		if (data.size() < sizeof(unsigned long))
+		if (data.size() < sizeof(uint32_t))
 			return;
 
 		try
@@ -244,7 +244,7 @@ public:
 	template<class T>
 	static std::shared_ptr<T> deserialize_ptr(const std::string& data)
 	{
-		if (data.size() < sizeof(unsigned long))
+		if (data.size() < sizeof(uint32_t))
 			return std::shared_ptr<T>();
 
 		try
@@ -264,16 +264,18 @@ public:
 
 	static serialization_istream get_stream(const std::string& data)
 	{
-		unsigned long S = *reinterpret_cast<unsigned long*>(const_cast<char*>(data.data()));
+		// Fixed 32-bit header: `unsigned long` is 4 bytes on Windows but 8 on Android, which would
+		// change every stream hash (shader cache names) and misread files written on the other platform.
+		uint32_t S = *reinterpret_cast<uint32_t*>(const_cast<char*>(data.data()));
 
 		if (S)
 			return serialization_istream(DataPacker::unpack(data), 0);
 
-		return serialization_istream(data, sizeof(unsigned long));
+		return serialization_istream(data, sizeof(uint32_t));
 	}
 	static serialization_istream get_stream(std::istream & stream)
 	{
-		unsigned long S = 0;
+		uint32_t S = 0;
 		stream.read(reinterpret_cast<char*>(&S), sizeof(S));
 
 		return serialization_istream(stream);

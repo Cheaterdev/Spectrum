@@ -8,21 +8,25 @@ namespace DataPacker
 	std::string pack(std::string unpacked)
 	{
 		std::string packed;
-		packed.resize(int(1.01 * unpacked.size()) + 12 + sizeof(unsigned long));
-		unsigned long T = (unsigned long)packed.size() - sizeof(unsigned long);
-		compress((unsigned char *)packed.data() + sizeof(unsigned long), &T, (unsigned char *)unpacked.data(), (unsigned long)unpacked.size());
-		packed.resize(T + sizeof(unsigned long));
-		T = (unsigned long)unpacked.size();
-		std::memcpy((void*)packed.data(), &T, sizeof(T));
+		// The length header is a fixed 32 bits (see Serializer::get_stream); zlib's own lengths
+		// are `unsigned long`, so T stays that width and only the stored header is narrowed.
+		constexpr size_t header = sizeof(uint32_t);
+		packed.resize(int(1.01 * unpacked.size()) + 12 + header);
+		unsigned long T = (unsigned long)(packed.size() - header);
+		compress((unsigned char *)packed.data() + header, &T, (unsigned char *)unpacked.data(), (unsigned long)unpacked.size());
+		packed.resize(T + header);
+		const uint32_t unpacked_size = (uint32_t)unpacked.size();
+		std::memcpy((void*)packed.data(), &unpacked_size, sizeof(unpacked_size));
 		return std::move(packed);
 	}
 
 	std::string unpack(std::string str)
 	{
+		constexpr size_t header = sizeof(uint32_t);
 		std::string result;
-		unsigned long T = *reinterpret_cast<unsigned long*>(const_cast<char*>(str.data()));
+		unsigned long T = *reinterpret_cast<uint32_t*>(const_cast<char*>(str.data()));
 		result.resize(T);
-		uncompress((unsigned char *)result.data(), &T, (unsigned char *)str.data() + sizeof(unsigned long), (unsigned long)str.size() - sizeof(unsigned long));
+		uncompress((unsigned char *)result.data(), &T, (unsigned char *)str.data() + header, (unsigned long)(str.size() - header));
 		return std::move(result);
 	}
 
