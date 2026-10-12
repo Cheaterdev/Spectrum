@@ -58,7 +58,9 @@ public:
     explicit task(std::shared_future<T> future) : future_(std::move(future)) {}
 
     T get() const { return future_.get(); }
-    void wait() const { future_.wait(); }
+    // Like PPL's, rethrows an exception the task died with; std::future::wait() alone would
+    // swallow it and leave whatever the task was filling in (an engine PSO) silently null.
+    void wait() const { future_.get(); }
 
     template<class F>
     auto then(F f) const

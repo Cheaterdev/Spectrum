@@ -370,8 +370,10 @@ namespace HAL
         gp_ci.pNext               = &rendering_ci;
 
         VkPipeline pipeline = VK_NULL_HANDLE;
+        Log::get() << Log::LEVEL_INFO << "TMPPSO begin graphics " << name << Log::endl;
         VkResult r = vkCreateGraphicsPipelines(vk_dev, VK_NULL_HANDLE, 1, &gp_ci,
                                                nullptr, &pipeline);
+        Log::get() << Log::LEVEL_INFO << "TMPPSO end graphics " << name << " r=" << (int)r << Log::endl;
         if (r == VK_SUCCESS)
         {
             tracked_info->vk_pipeline = pipeline;
@@ -428,7 +430,9 @@ namespace HAL
         cp_ci.layout       = api_dev.get_pipeline_layout();
 
         VkPipeline pipeline = VK_NULL_HANDLE;
+        Log::get() << Log::LEVEL_INFO << "TMPPSO begin compute " << name << " spirv=" << blob.size() << " entry=" << cs_entry << Log::endl;
         vkCreateComputePipelines(vk_dev, VK_NULL_HANDLE, 1, &cp_ci, nullptr, &pipeline);
+        Log::get() << Log::LEVEL_INFO << "TMPPSO end compute " << name << Log::endl;
         tracked_info->vk_pipeline = pipeline;
         tracked_info->vk_device   = vk_dev;
 

@@ -426,7 +426,17 @@ public:
 		return create_task([&]()
 		{
 		//		PROFILE(convert(typeid(T).name()));
-				target = std::make_shared<T>(device);
+				// A throw here would only surface at when_all().wait() (or, with PPL, never), leaving
+				// the engine holder's entry null; name the PSO so the cause is in the log.
+				try
+				{
+					target = std::make_shared<T>(device);
+				}
+				catch (const std::exception& e)
+				{
+					Log::get() << Log::LEVEL_ERROR << "PSO " << typeid(T).name() << " creation threw: " << e.what() << Log::endl;
+					throw;
+				}
 		});
 	}
 };

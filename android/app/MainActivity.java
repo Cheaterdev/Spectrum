@@ -68,6 +68,8 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback
         {
             File root = getFilesDir();
             Os.setenv("SPECTRUM_WORKDIR", root.getAbsolutePath(), true);
+            // Adreno's shader compiler never finishes the ray-query DDGI debug shader (runaway CPU/memory).
+            Os.setenv("SPECTRUM_DISABLE_RAY_QUERY", "1", true);
             nativeEnterWorkDir();
 
             File stamp = new File(root, "cache/.apk_stamp");

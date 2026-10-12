@@ -886,7 +886,8 @@ def main():
         so = out / "lib" / "libspectrum.so"
         lines.append(
             f'rule link\n  command = "{CLANGXX}" --target={ABI_TRIPLE}{API} -shared -fuse-ld=lld -static-libstdc++ '
-            f'-Wl,-z,max-page-size=16384 -o $out @$out.rsp -Wl,--start-group $libs -Wl,--end-group '
+            f'-Wl,-z,max-page-size=16384 {"-Wl,--wrap=__cxa_throw " if os.environ.get("SPECTRUM_TRACE_THROWS") else ""}'
+            f'-o $out @$out.rsp -Wl,--start-group $libs -Wl,--end-group '
             f'-llog -landroid -lvulkan\n  rspfile = $out.rsp\n  rspfile_content = $in\n  description = LINK $out\n')
         third_party = sorted((OUT / "vcpkg_installed" / "arm64-android" / "lib").glob("*.a"))   # see android/vcpkg.json
         lines.append(f"build {ninja_path(so)}: link {' '.join(ninja_path(o) for o in objs['app'])}"

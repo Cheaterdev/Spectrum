@@ -6,6 +6,7 @@
 import Core;
 import HAL;
 import vulkan;
+import RenderSystem;
 
 namespace
 {
@@ -131,7 +132,7 @@ namespace
 		vkDestroyDevice(device, nullptr);
 	}
 
-	std::shared_ptr<HAL::Device> g_device;
+	HAL::Device* g_device = nullptr;   // owned by RenderSystem
 	std::shared_ptr<HAL::SwapChain> g_swap;
 
 	// The Activity's SurfaceView surface as an ANativeWindow*; get_hwnd() is what the Vulkan
@@ -199,13 +200,38 @@ namespace
 		}
 	}
 
-	// Creates the HAL's Vulkan instance, probes every adapter the way RenderSystem::select_adapter()
-	// does on Windows, then builds a real HAL::Device on the first usable one. Everything is logged
-	// so `adb logcat -s Spectrum` shows how far the engine's own device path gets on this GPU.
+	// Brings the engine's RenderSystem up exactly as the desktop app does (adapter selection, HAL::Device,
+	// init_managers -> every engine PSO from the precompiled shader cache), then logs the adapters and the
+	// sparse-resource probe for diagnosis. `adb logcat -s Spectrum` shows how far it gets on this GPU.
 	void probe_gpu()
 	{
-		Log::get() << Log::LEVEL_INFO << "GPU: HAL::init()" << Log::endl;
-		HAL::init();
+		try
+		{
+			Log::get() << Log::LEVEL_INFO << "GPU: RenderSystem::create()" << Log::endl;
+			if (!RenderSystem::create())
+			{
+				Log::get() << Log::LEVEL_ERROR << "GPU: RenderSystem::create() found no usable adapter" << Log::endl;
+				return;
+			}
+			g_device = &RenderSystem::get().device();
+			Log::get() << Log::LEVEL_INFO << "GPU: RenderSystem ready" << Log::endl;
+
+			// GetPSO asserts on a null entry (DEV), so a missing UI pipeline shows up as a trap here.
+			auto& psos = g_device->get_engine_pso_holder();
+			auto report = [](const char* name, auto pso) {
+				Log::get() << Log::LEVEL_INFO << "UI PSO " << name << ": " << (pso ? "ok" : "MISSING") << Log::endl;
+			};
+			report("NinePatch", psos.GetPSO<PSOS::UI::NinePatch>());
+			report("SimpleRect", psos.GetPSO<PSOS::UI::SimpleRect>());
+			report("CanvasBack", psos.GetPSO<PSOS::UI::CanvasBack>());
+			report("CanvasLines", psos.GetPSO<PSOS::UI::CanvasLines>());
+			report("StatGraphLines", psos.GetPSO<PSOS::Dev::StatGraphLines>());
+		}
+		catch (const std::exception& e)
+		{
+			Log::get() << Log::LEVEL_ERROR << "GPU: RenderSystem::create() threw: " << e.what() << Log::endl;
+			return;
+		}
 
 		HAL::Adapter::ptr chosen;
 		int index = 0;
@@ -221,28 +247,8 @@ namespace
 				chosen = adapter;
 		});
 
-		if (!chosen)
-		{
-			Log::get() << Log::LEVEL_ERROR << "GPU: no adapter with full bindless support" << Log::endl;
-			return;
-		}
-
-		probe_sparse(chosen->get_vk_physical());
-
-		try
-		{
-			Log::get() << Log::LEVEL_INFO << "GPU: creating HAL::Device" << Log::endl;
-			HAL::DeviceDesc desc;
-			desc.adapter = chosen;
-			g_device = std::make_shared<HAL::Device>(desc);
-			Log::get() << Log::LEVEL_INFO << "GPU: HAL::Device created OK, init_managers" << Log::endl;
-			g_device->init_managers();
-			Log::get() << Log::LEVEL_INFO << "GPU: managers ready" << Log::endl;
-		}
-		catch (const std::exception& e)
-		{
-			Log::get() << Log::LEVEL_ERROR << "GPU: HAL::Device creation threw: " << e.what() << Log::endl;
-		}
+		if (chosen)
+			probe_sparse(chosen->get_vk_physical());
 	}
 
 	class AndroidApplication : public Application
@@ -261,12 +267,66 @@ namespace
 		}
 	};
 
+	// TEMPORARY (throw tracing, linked only with SPECTRUM_TRACE_THROWS=1 -> -Wl,--wrap=__cxa_throw):
+	// logs the first throws' backtrace as <module offset> pairs for llvm-symbolizer.
+	struct DlInfo { const char* fname; void* fbase; const char* sname; void* saddr; };
+	using TraceFn = int (*)(void*, void*);
+	extern "C++" int unwind_backtrace(TraceFn fn, void* arg) __asm__("_Unwind_Backtrace");
+	extern "C++" unsigned long unwind_get_ip(void* ctx) __asm__("_Unwind_GetIP");
+	extern "C++" int libc_dladdr(const void* addr, DlInfo* info) __asm__("dladdr");
+
+	struct TraceState { std::string text; int frames = 0; };
+
+	int trace_frame(void* ctx, void* arg)
+	{
+		auto& state = *static_cast<TraceState*>(arg);
+		const auto ip = unwind_get_ip(ctx);
+		DlInfo info{};
+		if (libc_dladdr((void*)ip, &info) && info.fbase)
+			state.text += " " + hex(ip - (uint64_t)info.fbase);
+		return ++state.frames >= 14 ? 5 : 0;   // _URC_END_OF_STACK stops the walk
+	}
+
+	extern "C" void __real___cxa_throw(void*, void*, void (*)(void*));
+	extern "C" __attribute__((visibility("default"))) void __wrap___cxa_throw(void* object, void* type, void (*destructor)(void*))
+	{
+		static int logged = 0;
+		if (logged++ < 40)
+		{
+			TraceState state;
+			unwind_backtrace(trace_frame, &state);
+			Log::get() << Log::LEVEL_ERROR << "TMPTHROW" << state.text << Log::endl;
+		}
+		__real___cxa_throw(object, type, destructor);
+	}
+
+	// TEMPORARY (locale investigation): which std facility throws "locale not supported" here.
+	void probe_locale()
+	{
+		auto attempt = [](const char* what, auto&& fn) {
+			try { fn(); Log::get() << Log::LEVEL_INFO << "TMPPROBE " << what << ": ok" << Log::endl; }
+			catch (const std::exception& e) { Log::get() << Log::LEVEL_ERROR << "TMPPROBE " << what << ": THREW " << e.what() << Log::endl; }
+		};
+		attempt("std::locale(\"\")", [] { std::locale l(""); });
+		attempt("std::locale(\"C\")", [] { std::locale l("C"); });
+		attempt("std::locale()", [] { std::locale l; });
+		attempt("convert(string)", [] { auto w = convert(std::string_view("abc")); });
+		attempt("path(wstring)", [] { std::filesystem::path p(std::wstring(L"abc")); });
+		attempt("path(wstring).string()", [] { std::filesystem::path p(std::wstring(L"abc")); auto s = p.string(); });
+		attempt("to_path(string)", [] { auto p = to_path(std::string("cache/vulkan/x.bin")); });
+		attempt("to_path(string).string()", [] { auto p = to_path(std::string("cache/vulkan/x.bin")); auto s = p.string(); });
+		attempt("filesystem::exists", [] { std::filesystem::exists(to_path(std::string("cache/vulkan"))); });
+		attempt("ifstream", [] { std::ifstream f("cache/vulkan/none.bin", std::ios::binary); });
+		attempt("ostringstream", [] { std::ostringstream s(std::ios::binary | std::ios::out); s << 1; });
+	}
+
 	void boot()
 	{
 		VSOutputLogger::create();   // Log -> OutputDebugStringA -> logcat (android/shims/windows.ixx)
 		Log::get().set_logging_level(Log::LEVEL_ALL);
 
 		Log::get() << Log::LEVEL_INFO << "Spectrum (Android): Core loaded" << Log::endl;
+		probe_locale();
 
 		// The working directory is the app's files dir (MainActivity.prepareWorkDir), holding cache/vulkan.
 		FileSystem::get().register_provider(std::make_shared<native_file_provider>());

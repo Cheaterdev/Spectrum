@@ -59,11 +59,11 @@ namespace
 	{
 		if (name == "all")
 			return TargetProfile{ "all", true, true, true };
-		// Ray queries are optional on Android but present on current Adreno (830 reports them), and
-		// PSO::create skips them on devices without; mesh shaders are not available on any
-		// Android GPU the port targets. Both are still gated at runtime by the device's own caps.
+		// Adreno 830 reports ray queries, but its shader compiler never finishes DDGIIndirectDebug
+		// (100% CPU, GBs of memory), so Android runs with ray queries off (MainActivity sets
+		// SPECTRUM_DISABLE_RAY_QUERY) and those PSOs aren't shipped. Mesh shaders don't exist there.
 		if (name == "android")
-			return TargetProfile{ "android", false, true, false };
+			return TargetProfile{ "android", false, false, false };
 		return std::nullopt;
 	}
 
