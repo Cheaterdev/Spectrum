@@ -9,6 +9,7 @@ import vulkan;
 import RenderSystem;
 import Graphics;
 import GUI;
+import TextEngine;
 
 namespace
 {
@@ -233,6 +234,24 @@ namespace
 		HAL::Texture2DView view(g_ui_target, *list);
 		auto& gfx = list->get_graphics();
 
+		// Stage 3: text through the real Text::Engine (Skribidi shaping + glyph atlas). Layouts are built
+		// (requesting their glyphs) before anything is drawn, and rasterized glyphs are uploaded in this
+		// same list ahead of the draws, as the asset preview does. Sizes are scaled by the phone density.
+		constexpr float density = 3.0f;
+		auto& text = Text::Engine::get();
+		text.begin_frame();
+		const Text::Style label_style{ 16.0f * density, Text::Weight::Normal, Text::Family::Sans };
+		const Text::Style title_style{ 18.0f * density, Text::Weight::Normal, Text::Family::Sans };
+		Text::Layout title, labels[3], body;
+		text.build("Spectrum \xE2\x80\x94 Android", title_style, title);
+		text.build("Play", label_style, labels[0]);
+		text.build("Options", label_style, labels[1]);
+		text.build("Quit", label_style, labels[2]);
+		text.build("Hello \xD0\x9F\xD1\x80\xD0\xB8\xD0\xB2\xD1\x96\xD1\x82 \xCE\x93\xCE\xB5\xCE\xB9\xCE\xAC  frame " + std::to_string(frame),
+		           label_style, body);   // Latin, Cyrillic, Greek + a changing number
+		if (text.has_pending_upload())
+			text.upload(list);
+
 		HAL::CompiledRT compiled;
 		compiled.table_rtv = view.renderTarget;
 		const vec4 clear = srgb(0.08f, 0.09f, 0.12f);
@@ -298,6 +317,21 @@ namespace
 		const float progress = std::fmod(frame * 0.004f, 1.0f);
 		rect(panel_x + pad, bar_y, bar_w, bar_h, srgb(0.08f, 0.09f, 0.11f));
 		rect(panel_x + pad, bar_y, bar_w * progress, bar_h, srgb(0.95f, 0.65f, 0.15f));
+
+		// Text on top: window title, centred button labels, and a body line under the progress bar.
+		{
+			const sizer clip = { 0.0f, 0.0f, W, H };
+			const vec2 window_size(W, H);
+			const float4 white(1.0f, 1.0f, 1.0f, 1.0f);
+
+			text.draw(list, title, vec2(panel_x + 3.0f * pad, panel_y + (120.0f - title.size.y) * 0.5f), white, clip, window_size);
+			for (int i = 0; i < 3; ++i)
+			{
+				const float bx = panel_x + pad + i * (btn_w + pad);
+				text.draw(list, labels[i], vec2(bx + (btn_w - labels[i].size.x) * 0.5f, btn_y + (btn_h - labels[i].size.y) * 0.5f), white, clip, window_size);
+			}
+			text.draw(list, body, vec2(panel_x + pad, bar_y + bar_h + pad), float4(0.85f, 0.88f, 0.95f, 1.0f), clip, window_size);
+		}
 
 		// FP16 UI target -> SDR swapchain through the engine's CopyTexture PSO (gamma-encodes for 8-bit).
 		{

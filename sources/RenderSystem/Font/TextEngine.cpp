@@ -22,6 +22,21 @@ namespace Text
             uint8_t     family;
         };
 
+#ifdef SPECTRUM_PLATFORM_ANDROID
+        // Segoe UI / Consolas are Windows fonts (and not redistributable), so Android uses the fonts
+        // every device ships in /system/fonts: Roboto covers Latin, Greek and Cyrillic; the Noto
+        // Hebrew and symbols files fill in what it lacks. Color emoji (NotoColorEmoji) is left out
+        // until its bitmap glyph format is checked against the rasterizer.
+        constexpr const char* system_font_dir = "/system/fonts/";
+        constexpr FontFile system_fonts[] = {
+            { "Roboto-Regular.ttf",                    SKB_FONT_FAMILY_DEFAULT },
+            { "NotoSansHebrew-Regular.ttf",            SKB_FONT_FAMILY_DEFAULT },
+            { "NotoSansHebrew-Bold.ttf",               SKB_FONT_FAMILY_DEFAULT },
+            { "NotoSansSymbols-Regular-Subsetted.ttf", SKB_FONT_FAMILY_DEFAULT },
+            { "NotoSansSymbols-Regular-Subsetted2.ttf", SKB_FONT_FAMILY_DEFAULT },
+            { "DroidSansMono.ttf",                     SKB_FONT_FAMILY_MONOSPACE },
+        };
+#else
         // Segoe UI covers Latin, Greek, Cyrillic, Arabic and Hebrew; the rest fall back.
         // Weights are picked by Skribidi from each file's own metadata.
         constexpr FontFile system_fonts[] = {
@@ -38,6 +53,7 @@ namespace Text
             { "consolaz.ttf", SKB_FONT_FAMILY_MONOSPACE },
             { "seguiemj.ttf", SKB_FONT_FAMILY_EMOJI },
         };
+#endif
 
         skb_weight_t to_skb(Weight weight)
         {
@@ -386,9 +402,13 @@ namespace Text
     {
         impl->fonts = skb_font_collection_create();
 
+#ifdef SPECTRUM_PLATFORM_ANDROID
+        const std::string font_dir = system_font_dir;
+#else
         char windows_dir[MAX_PATH] = {};
         GetWindowsDirectoryA(windows_dir, MAX_PATH);
         const std::string font_dir = std::string(windows_dir) + "\\Fonts\\";
+#endif
 
         for (auto& f : system_fonts)
         {
