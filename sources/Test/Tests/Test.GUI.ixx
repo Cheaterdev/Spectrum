@@ -26,6 +26,46 @@ namespace
 	using Test::UI_RT_FORMAT;
 	using Test::set_ui_target;
 
+	// Records what the touch layer sends it, and whether any mouse handler ran (it must not).
+	struct touch_probe : GUI::base
+	{
+		std::string actions;       // "DOWN UP", "DOWN CANCEL", ...
+		int  moves = 0;
+		int  long_presses = 0;
+		int  mouse_calls = 0;
+		bool accept = true;        // what on_touch_action returns for DOWN
+
+		bool on_touch_action(mouse_action action, GUI::touch& t) override
+		{
+			actions += (actions.empty() ? "" : " ");
+			actions += action == mouse_action::DOWN ? "DOWN" : action == mouse_action::UP ? "UP" : "CANCEL";
+			return accept;
+		}
+
+		void on_touch_move(std::vector<GUI::touch*>& e) override
+		{
+			++moves;
+			e[0]->catched = false;
+		}
+
+		bool on_long_pressed(const GUI::touch&) override
+		{
+			++long_presses;
+			return true;
+		}
+
+		bool on_mouse_action(mouse_action, mouse_button, vec2) override { ++mouse_calls; return true; }
+		bool on_mouse_move(vec2) override { ++mouse_calls; return true; }
+	};
+
+	GUI::touch_event make_touch(int flags, int id, float x, float y)
+	{
+		GUI::touch_event e;
+		e.flags = flags;
+		e.touches.push_back({ id, x, y });
+		return e;
+	}
+
 	std::shared_ptr<HAL::TextureResource> make_ninepatch_src(HAL::Device& device)
 	{
 		constexpr uint TEX_W = 32, TEX_H = 32, CORNER = 8;
@@ -121,6 +161,104 @@ export namespace Test
 		ASSERT_TRUE(b.y == 0.0f);
 		ASSERT_TRUE(b.w == 256.0f);
 		ASSERT_TRUE(b.h == 256.0f);
+	}
+
+	// Touch is its own input path: a finger pressed and lifted inside an element gives it DOWN then UP,
+	// and no mouse handler runs. Pure CPU, like the layout tests.
+	TEST(Core.HAL, GUITouch_TapInside)
+	{
+		THREAD_SCOPE(GUI);
+		// Owned by a shared_ptr, as in the app: the touch path walks up to parents via shared_from_this.
+		auto ui_owner = std::make_shared<GUI::user_interface>();
+		GUI::user_interface& ui = *ui_owner;
+		ui.size = vec2(256.0f, 256.0f);
+
+		auto probe = std::make_shared<touch_probe>();
+		probe->docking = GUI::dock::FILL;
+		ui.add_child(probe);
+		ui.process_ui(0.0f);
+
+		ASSERT_TRUE(ui.on_touch_event(make_touch(GUI::touch_event::DOWN, 7, 100.0f, 100.0f)));
+		ASSERT_TRUE(ui.on_touch_event(make_touch(GUI::touch_event::UP, 7, 100.0f, 100.0f)));
+
+		ASSERT_TRUE(probe->actions == "DOWN UP");
+		ASSERT_TRUE(probe->mouse_calls == 0);
+	}
+
+	// A finger that slides off the element before lifting cancels the press instead of activating it,
+	// and the element still sees the move.
+	TEST(Core.HAL, GUITouch_SlideOffCancels)
+	{
+		THREAD_SCOPE(GUI);
+		auto ui_owner = std::make_shared<GUI::user_interface>();
+		GUI::user_interface& ui = *ui_owner;
+		ui.size = vec2(256.0f, 256.0f);
+
+		auto probe = std::make_shared<touch_probe>();
+		probe->docking = GUI::dock::FILL;
+		ui.add_child(probe);
+		ui.process_ui(0.0f);
+
+		ui.on_touch_event(make_touch(GUI::touch_event::DOWN, 3, 100.0f, 100.0f));
+		ui.on_touch_event(make_touch(GUI::touch_event::MOVE, 3, 300.0f, 300.0f));
+		ui.on_touch_event(make_touch(GUI::touch_event::UP, 3, 300.0f, 300.0f));
+
+		ASSERT_TRUE(probe->actions == "DOWN CANCEL");
+		ASSERT_TRUE(probe->moves == 1);
+		ASSERT_TRUE(probe->mouse_calls == 0);
+	}
+
+	// A finger held for the long-press delay offers a long press once, from process_ui.
+	TEST(Core.HAL, GUITouch_LongPress)
+	{
+		THREAD_SCOPE(GUI);
+		auto ui_owner = std::make_shared<GUI::user_interface>();
+		GUI::user_interface& ui = *ui_owner;
+		ui.size = vec2(256.0f, 256.0f);
+
+		auto probe = std::make_shared<touch_probe>();
+		probe->docking = GUI::dock::FILL;
+		ui.add_child(probe);
+		ui.process_ui(0.0f);
+
+		ui.on_touch_event(make_touch(GUI::touch_event::DOWN, 1, 50.0f, 50.0f));
+		ui.process_ui(0.0f);
+		ASSERT_TRUE(probe->long_presses == 0);   // not held long enough yet
+
+		std::this_thread::sleep_for(std::chrono::milliseconds(600));
+		ui.process_ui(0.0f);
+		ui.process_ui(0.0f);
+		ASSERT_TRUE(probe->long_presses == 1);   // once, not on every update
+
+		ui.on_touch_event(make_touch(GUI::touch_event::UP, 1, 50.0f, 50.0f));
+	}
+
+	// Front-most element is offered the touch first; one that takes it ends the search, one that
+	// declines passes it on to the element behind.
+	TEST(Core.HAL, GUITouch_FrontMostFirst)
+	{
+		THREAD_SCOPE(GUI);
+		auto ui_owner = std::make_shared<GUI::user_interface>();
+		GUI::user_interface& ui = *ui_owner;
+		ui.size = vec2(256.0f, 256.0f);
+
+		auto back = std::make_shared<touch_probe>();
+		auto front = std::make_shared<touch_probe>();
+		back->docking = front->docking = GUI::dock::FILL;
+		ui.add_child(back);
+		ui.add_child(front);
+		ui.process_ui(0.0f);
+
+		ui.on_touch_event(make_touch(GUI::touch_event::DOWN, 1, 10.0f, 10.0f));
+		ASSERT_TRUE(front->actions == "DOWN");
+		ASSERT_TRUE(back->actions.empty());
+		ui.on_touch_event(make_touch(GUI::touch_event::UP, 1, 10.0f, 10.0f));
+
+		front->actions.clear();
+		front->accept = false;   // declines: the element behind gets its chance
+		ui.on_touch_event(make_touch(GUI::touch_event::DOWN, 2, 10.0f, 10.0f));
+		ASSERT_TRUE(front->actions == "DOWN");
+		ASSERT_TRUE(back->actions == "DOWN");
 	}
 
 	// Verifies that dock::TOP elements consume space from the top and dock::FILL

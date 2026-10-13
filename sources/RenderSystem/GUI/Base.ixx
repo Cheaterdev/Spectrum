@@ -274,6 +274,33 @@ namespace GUI
         void operator=(const HAL::Texture2DView& texture);
     };
 	
+    // Touch input. A separate path from the mouse one (InputHandler): user_interface::on_touch_event
+    // and the elements' on_touch_action / on_touch_move. Ported from the NDK GUI.
+    struct touch
+    {
+        vec2 pos;
+        int id = 0;
+        bool catched = false;
+    };
+
+    // One platform touch message: flags is MOVE, DOWN or UP, touches the fingers it concerns.
+    struct touch_event
+    {
+        static constexpr int MOVE = 1 << 0;
+        static constexpr int DOWN = 1 << 1;
+        static constexpr int UP   = 1 << 2;
+
+        struct finger
+        {
+            int   id;
+            float x;
+            float y;
+        };
+
+        int                 flags = 0;
+        std::vector<finger> touches;
+    };
+
     class drag_n_drop;
     class base : public tree<base, my_unique_vector<std::shared_ptr<base>>>, public Events::prop_handler //, public Graphics::renderable
     {
@@ -310,6 +337,12 @@ namespace GUI
             sizer_long parent_sizer;
 			std::set<base*> listeners;
             virtual std::vector<ptr> find_control(vec2 at, bool click_only);
+
+            // Touch variant of find_control: every element a finger is over, with the fingers over it.
+            virtual std::vector<std::pair<ptr, std::vector<touch*>>> find_control(std::vector<touch>& at, bool click_only);
+            virtual std::vector<std::pair<ptr, std::vector<touch*>>> find_childs_control(std::vector<touch>& touches, bool click_only);
+
+            bool point_in(vec2 at);
 
             virtual bool test_local_visible();
 
@@ -348,6 +381,8 @@ namespace GUI
             float scale = 1;
             float result_scale = 1;
             bool clip_child  = true;
+            bool can_multitouch = false;   // wants all of its fingers in one on_touch_move call
+            int  touch_id = -1;            // the finger this element is currently pressed by
             bool clickable;
             bool draw_helper = false;
             bool map_to_pixels = false;
@@ -360,6 +395,14 @@ namespace GUI
             virtual void on_key_action(key_action action, long key, key_mods mods);
             virtual void on_char(char32_t ch);
             virtual bool on_mouse_move(vec2 pos);
+
+            // Touch. Like the mouse handlers, but per finger: DOWN, then UP when the finger lifts inside
+            // the element or CANCEL when it slid off, with on_touch_move in between. The defaults hand a
+            // single finger to the mouse handlers, as the original GUI did; override them for real touch
+            // behaviour (multi-touch elements set can_multitouch).
+            virtual bool on_touch_action(mouse_action action, touch& t);
+            virtual bool on_long_pressed(const touch& t);
+            virtual void on_touch_move(std::vector<touch*>& e);
             virtual void on_mouse_enter(vec2 pos);
             virtual void on_mouse_leave(vec2 pos);
             virtual bool on_mouse_action(mouse_action action, mouse_button button, vec2 pos);
@@ -507,6 +550,7 @@ namespace GUI
     };
     class drag_n_drop
     {
+            friend class user_interface;   // the touch path asks whether a drag is pressed
             base::wptr pressed;
             base::wptr hovered;
             drag_n_drop_package::wptr package;
@@ -574,6 +618,16 @@ namespace GUI
             std::vector<base::wptr> hovered_controls;
             base::wptr focused;
 
+            struct touch_info
+            {
+                std::vector<base::ptr> pressed;
+                int64_t start_time = 0;
+                vec2    pos = { 0, 0 };
+
+                bool was_long_pressed = false;
+            };
+            std::map<int, touch_info> touch_infos;
+
     
             drag_n_drop drag;
 
@@ -611,6 +665,10 @@ namespace GUI
             void key_action_event_internal(key_action action, long key, key_mods mods);
             void char_event_internal(char32_t ch);
 
+
+            // Touch input, deliberately not routed through the mouse handlers below. Returns whether an
+            // element took the touch.
+            bool on_touch_event(const touch_event& event);
 
             virtual void mouse_move_event(vec2 pos);
             virtual void mouse_action_event(mouse_action action, mouse_button button, vec2 pos);

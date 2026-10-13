@@ -653,6 +653,90 @@ namespace GUI
         on_touch();
     }
 
+    // ---- Touch (ported from the NDK GUI; separate from the mouse path) --------------------------
+
+    bool base::on_touch_action(mouse_action action, touch& t)
+    {
+        if (touch_id == t.id || touch_id == -1)
+        {
+            touch_id = action == mouse_action::DOWN ? t.id : -1;
+            return on_mouse_action(action, mouse_button::LEFT, t.pos);
+        }
+
+        return false;
+    }
+
+    bool base::on_long_pressed(const touch& t)
+    {
+        // The original returned its catch_clicks flag, which defaulted to false and which this engine
+        // has no equivalent of: elements opt in by overriding this.
+        return false;
+    }
+
+    void base::on_touch_move(std::vector<touch*>& e)
+    {
+        e[0]->catched = on_mouse_move(e[0]->pos);
+    }
+
+    bool base::point_in(vec2 at)
+    {
+        return !(render_bounds->pos.x > at.x || render_bounds->pos.y > at.y
+                 || render_bounds->pos.x + render_bounds->w < at.x || render_bounds->pos.y + render_bounds->h < at.y);
+    }
+
+    std::vector<std::pair<base::ptr, std::vector<touch*>>> base::find_childs_control(std::vector<touch>& touches, bool click_only)
+    {
+        std::vector<std::pair<base::ptr, std::vector<touch*>>> res;
+
+        for (auto it = childs.rbegin(); it != childs.rend(); ++it)
+        {
+            auto c = *it;
+            auto cur = c->find_control(touches, click_only);
+            res.insert(res.end(), cur.begin(), cur.end());
+        }
+
+        return res;
+    }
+
+    std::vector<std::pair<base::ptr, std::vector<touch*>>> base::find_control(std::vector<touch>& touches, bool click_only)
+    {
+        std::vector<std::pair<base::ptr, std::vector<touch*>>> res;
+
+        if (!test_local_visible() || !visible.get())
+            return res;
+
+        if (!clip_child)
+        {
+            bool all_touches_out = true;
+
+            for (auto& at : touches)
+                if (point_in(at.pos))
+                {
+                    all_touches_out = false;
+                    break;
+                }
+
+            if (all_touches_out)
+                return res;
+        }
+
+        res = find_childs_control(touches, click_only);
+
+        if (click_only && !clickable)
+            return res;
+
+        std::vector<touch*> touches_in_me;
+
+        for (auto& at : touches)
+            if (point_in(at.pos))
+                touches_in_me.push_back(&at);
+
+        if (touches_in_me.size())
+            res.push_back(std::make_pair(get_ptr(), touches_in_me));
+
+        return res;
+    }
+
     void base::on_bounds_changed(const rect& r)
     {
         if (!parent)
@@ -1009,6 +1093,31 @@ namespace GUI
 				 t->think(delta_time);
 
 		 }
+
+		 {
+			 // Long press: a finger held for LONG_PRESSED_DELAY_IN_MS offers the press to its elements.
+			 constexpr int64_t LONG_PRESSED_DELAY_IN_MS = 500;
+			 const int64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
+
+			 for (auto& pair : touch_infos)
+			 {
+				 const auto& id = pair.first;
+				 auto& info = pair.second;
+
+				 if (info.was_long_pressed || (now - info.start_time) < LONG_PRESSED_DELAY_IN_MS)
+					 continue;
+
+				 info.was_long_pressed = true;
+
+				 touch tch;
+				 tch.id = id;
+				 tch.pos = info.pos;
+
+				 for (auto& obj : info.pressed)
+					 if (obj->on_long_pressed(tch))
+						 break;
+			 }
+		 }
 		 is_updating_layout = true;
 		 {
              PROFILE(L"layout");
@@ -1137,6 +1246,193 @@ namespace GUI
             res.emplace_back(p);
 
         return res;
+    }
+
+    // Touch dispatch, ported from the NDK GUI. It does not go through the mouse handlers: each finger is
+    // tracked in touch_infos with the elements it pressed, those get on_touch_action(DOWN / UP / CANCEL)
+    // and on_touch_move, and a finger held long enough offers a long press (process_ui).
+    bool user_interface::on_touch_event(const touch_event& event)
+    {
+        auto&& g = lock();   // touch events arrive on the platform thread, like the mouse ones
+
+        bool catched = false;
+
+        if (event.flags == touch_event::UP)
+        {
+            for (auto& e : event.touches)
+            {
+                vec2 pos = { e.x, e.y };
+                auto& touch_info = touch_infos[e.id];
+
+                // Ends a drag started by this finger (the element is what the drag keys on).
+                drag.mouse_action_event(touch_info.pressed.empty() ? nullptr : touch_info.pressed.front(), mouse_action::UP, mouse_button::LEFT, pos);
+
+                touch t;
+                t.id = e.id;
+                t.pos = pos;
+
+                for (unsigned int i = 0; i < touch_info.pressed.size(); i++)
+                {
+                    base::ptr control = touch_info.pressed[i];
+
+                    if (!control->user_ui)
+                        continue;
+
+                    control->on_touch_action(control->point_in(pos) ? mouse_action::UP : mouse_action::CANCEL, t);
+                    catched = true;
+                }
+
+                touch_infos.erase(e.id);
+            }
+        }
+
+        if (event.flags == touch_event::DOWN)
+        {
+            for (auto& e : event.touches)
+            {
+                vec2 pos = { e.x, e.y };
+
+                auto& touch_info = touch_infos[e.id];
+                touch_info.start_time = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
+                touch_info.pos = pos;
+                touch_info.was_long_pressed = false;
+
+                auto hovered_controls = find_control(pos, true);
+
+                touch t;
+                t.id = e.id;
+                t.pos = pos;
+                touch_info.pressed.clear();
+
+                for (auto& control : hovered_controls)
+                {
+                    touch_info.pressed.push_back(control);
+
+                    if (!control->on_touch_action(mouse_action::DOWN, t))
+                        continue;
+
+                    catched = true;
+                    control->on_touch();
+                    drag.mouse_action_event(control, mouse_action::DOWN, mouse_button::LEFT, pos);
+
+                    struct smallfuncs
+                    {
+                        inline static void close_menus_in_children(base::ptr obj)
+                        {
+                            auto copy = obj->childs;
+
+                            for (auto& child : copy)
+                                child->close_menus();
+                        }
+
+                        inline static void close_menus_in_all_neighbors_of_all_parents(base::ptr obj)
+                        {
+                            base::ptr parent = obj->get_parent();
+
+                            while (parent)
+                            {
+                                auto copy = parent->childs;
+
+                                for (auto& child : copy)
+                                    if (child != obj)
+                                        child->close_menus();
+
+                                obj = parent;
+                                parent = obj->get_parent();
+                            }
+                        }
+
+                        inline static void close_menus(base::ptr obj)
+                        {
+                            close_menus_in_children(obj);
+                            close_menus_in_all_neighbors_of_all_parents(obj);
+                        }
+                    };
+
+                    smallfuncs::close_menus(control);
+
+                    break;
+                }
+            }
+        }
+
+        if (event.flags == touch_event::MOVE)
+        {
+            if (drag.pressed.lock())
+            {
+                for (auto& e : event.touches)
+                {
+                    vec2 pos = { e.x, e.y };
+                    auto drag_hovered_controls = find_control(pos, true);
+                    drag.mouse_move_event(drag_hovered_controls.empty() ? nullptr : drag_hovered_controls.front(), pos);
+                }
+            }
+
+            // Reserved up front: touch_ids keeps pointers into this vector, so it must not reallocate.
+            std::vector<touch> touches;
+            touches.reserve(event.touches.size());
+            std::map<int, touch*> touch_ids;
+
+            // The original ordered pressed elements by a draw-order id (topmost last, walked in reverse).
+            // Each finger's pressed list is already front-most first, so walk those in order instead.
+            std::vector<base*> ordered;
+
+            for (auto& e : event.touches)
+            {
+                vec2 pos = { e.x, e.y };
+                auto& touch_info = touch_infos[e.id];
+                touch_info.pos = pos;
+                touch t;
+                t.id = e.id;
+                t.pos = pos;
+                touches.push_back(t);
+                touch_ids[e.id] = &touches.back();
+            }
+
+            std::map<base*, std::vector<touch*>> to_send;
+
+            for (auto& e : touch_infos)
+                for (auto& t : e.second.pressed)
+                    if (std::find(ordered.begin(), ordered.end(), t.get()) == ordered.end())
+                        ordered.push_back(t.get());
+
+            for (auto& e : event.touches)
+            {
+                auto& touch_info = touch_infos[e.id];
+                touch* t = touch_ids[e.id];
+
+                for (auto& i : touch_info.pressed)
+                    to_send[i.get()].push_back(t);
+            }
+
+            for (base* elem : ordered)
+            {
+                auto& touch_data = to_send[elem];
+
+                touch_data.erase(std::remove_if(touch_data.begin(), touch_data.end(), [this, &elem](touch* t) {
+                    if (t->catched)
+                    {
+                        elem->on_touch_action(mouse_action::CANCEL, *t);
+
+                        auto& infos = touch_infos[t->id];
+
+                        infos.pressed.erase(std::remove_if(infos.pressed.begin(), infos.pressed.end(), [&elem](const base::ptr& b) {
+                            return elem == b.get();
+                        }), infos.pressed.end());
+                    }
+
+                    return t->catched;
+                }), touch_data.end());
+
+                if (!touch_data.empty())
+                {
+                    elem->on_touch_move(touch_data);
+                    catched = true;
+                }
+            }
+        }
+
+        return catched;
     }
 
     void user_interface::mouse_action_event_internal(mouse_action action, mouse_button button, vec2 pos)

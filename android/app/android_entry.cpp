@@ -215,6 +215,76 @@ namespace
 		return item;
 	}
 
+	// Layout unit: 1 = 1 dp. MainActivity exports DisplayMetrics.density (2.6 on the test phone) as
+	// SPECTRUM_DENSITY; the old NDK GUI derived its scale from DPI (max(1, DPI / 260)) instead.
+	float g_density = 2.0f;
+
+	void read_density()
+	{
+		if (const char* v = libc_getenv("SPECTRUM_DENSITY"))
+			g_density = std::stof(v);
+		Log::get() << Log::LEVEL_INFO << "density = " << std::to_string(g_density) << Log::endl;
+	}
+
+	// A real GUI element: touch events hit-test it through user_interface::on_touch_event, which hands it
+	// DOWN, then UP (finger lifted inside) or CANCEL (slid off). It tracks its own finger.
+	struct touch_button : GUI::base
+	{
+		int  finger = -1;
+		bool down = false;
+		int  clicks = 0;
+
+		bool on_touch_action(mouse_action action, GUI::touch& t) override
+		{
+			if (action == mouse_action::DOWN)
+			{
+				if (finger != -1)
+					return false;
+				finger = t.id;
+				down = true;
+				return true;
+			}
+
+			if (finger != t.id)
+				return false;
+
+			finger = -1;
+			down = false;
+			if (action == mouse_action::UP)
+				++clicks;
+			return true;
+		}
+	};
+
+	std::mutex g_ui_mutex;   // the touch thread reads g_ui while the render thread creates it
+	std::shared_ptr<GUI::user_interface> g_ui;
+	std::shared_ptr<touch_button> g_buttons[3];
+
+	std::shared_ptr<GUI::user_interface> current_ui()
+	{
+		std::lock_guard<std::mutex> lock(g_ui_mutex);
+		return g_ui;
+	}
+
+	void ensure_ui()
+	{
+		std::lock_guard<std::mutex> lock(g_ui_mutex);
+		if (g_ui)
+			return;
+
+		THREAD_SCOPE(GUI);
+		g_ui = std::make_shared<GUI::user_interface>();   // shared-owned: the touch path walks to parents via shared_from_this
+		for (auto& b : g_buttons)
+		{
+			b = std::make_shared<touch_button>();
+			g_ui->add_child(b);
+		}
+	}
+
+	// Touch arrives as one nativeTouchPoint per finger and a nativeTouchFlush(flags) that ends the message.
+	std::mutex g_touch_mutex;
+	GUI::touch_event g_touch_pending;
+
 	// Stage 1 of the minimal UI screen: solid rects through the production UI::SimpleRect PSO and
 	// Slots::UI::ColorRect (the same path Test.HAL.UI exercises on desktop), laid out in pixels.
 	// Stage 2 swaps in textured nine-patches, stage 3 adds a text label.
@@ -237,16 +307,37 @@ namespace
 		// Stage 3: text through the real Text::Engine (Skribidi shaping + glyph atlas). Layouts are built
 		// (requesting their glyphs) before anything is drawn, and rasterized glyphs are uploaded in this
 		// same list ahead of the draws, as the asset preview does. Sizes are scaled by the phone density.
-		constexpr float density = 3.0f;
+		const float density = g_density;
+
+		// Layout in dp. The buttons are real GUI elements placed here; touch (MainActivity -> JNI ->
+		// user_interface::on_touch_event) hit-tests them and reports DOWN / UP / CANCEL, and the drawing
+		// below only reads their state.
+		const float margin = W * 0.05f;
+		const float pad = 12.0f * density, title_h = 40.0f * density, btn_h = 44.0f * density, bar_h = 14.0f * density;
+		const float panel_x = margin, panel_w = W - 2 * margin, panel_y = H * 0.08f;
+		const float panel_h = std::max(H * 0.42f, 230.0f * density);   // tall enough for its content in landscape too
+		const float btn_y = panel_y + title_h + 2 * pad;
+		const float btn_w = (panel_w - 4 * pad) / 3.0f;
+		const float bar_y = btn_y + btn_h + 2 * pad, bar_w = panel_w - 2 * pad;
+
+		ensure_ui();
+		for (int i = 0; i < 3; ++i)
+		{
+			g_buttons[i]->pos = vec2(panel_x + pad + i * (btn_w + pad), btn_y);
+			g_buttons[i]->size = vec2(btn_w, btn_h);
+		}
+		g_ui->size = vec2(W, H);
+		g_ui->process_ui(0.0f);
+
 		auto& text = Text::Engine::get();
 		text.begin_frame();
 		const Text::Style label_style{ 16.0f * density, Text::Weight::Normal, Text::Family::Sans };
 		const Text::Style title_style{ 18.0f * density, Text::Weight::Normal, Text::Family::Sans };
 		Text::Layout title, labels[3], body;
 		text.build("Spectrum \xE2\x80\x94 Android", title_style, title);
-		text.build("Play", label_style, labels[0]);
-		text.build("Options", label_style, labels[1]);
-		text.build("Quit", label_style, labels[2]);
+		const char* const button_names[3] = { "Play", "Options", "Quit" };
+		for (int i = 0; i < 3; ++i)
+			text.build(g_buttons[i]->clicks ? std::string(button_names[i]) + "  " + std::to_string(g_buttons[i]->clicks) : button_names[i], label_style, labels[i]);
 		text.build("Hello \xD0\x9F\xD1\x80\xD0\xB8\xD0\xB2\xD1\x96\xD1\x82 \xCE\x93\xCE\xB5\xCE\xB9\xCE\xAC  frame " + std::to_string(frame),
 		           label_style, body);   // Latin, Cyrillic, Greek + a changing number
 		if (text.has_pending_upload())
@@ -261,20 +352,13 @@ namespace
 		output.GetUi_scale() = g_ui_scale;
 		gfx.set(output);
 
-		const float margin = W * 0.05f;
-		const float panel_x = margin, panel_w = W - 2 * margin, panel_y = H * 0.08f, panel_h = std::max(H * 0.42f, 620.0f);   // tall enough for its content in landscape too
-		const float pad = 32.0f;
-		const float btn_h = 120.0f, btn_y = panel_y + 120.0f + 2 * pad;
-		const float btn_w = (panel_w - 4 * pad) / 3.0f;
-		const float bar_y = btn_y + btn_h + 2 * pad, bar_h = 40.0f, bar_w = panel_w - 2 * pad;
-
 		// Textured nine-patches through the real GUI::NinePatch batcher, which needs only this much of
 		// a GUI::GUIInfo: the list, the window size, the scale and the clip rect.
 		{
 			GUIInfo c;
 			c.command_list = list;
 			c.window_size = vec2(W, H);
-			c.scale = 3.0f;   // phone density; scales the patches' padding and margins
+			c.scale = density;   // scales the patches' padding and margins
 			c.ui_clipping.left_top.x = 0;
 			c.ui_clipping.left_top.y = 0;
 			c.ui_clipping.right_bottom.x = W;
@@ -285,11 +369,10 @@ namespace
 			window.margins = { 12, 11, 11, 10 };
 			g_nine_patch->draw(c, window, ::rect{ panel_x, panel_y, panel_w, panel_h });
 
-			// The last button cycles through its three skin states so a frozen frame is distinguishable.
-			const HAL::Texture::ptr states[3] = { g_tex.button, g_tex.button_hover, g_tex.button_pressed };
+			// A button looks pressed while its finger is down: state comes from the touch path.
 			for (int i = 0; i < 3; ++i)
 			{
-				auto button = skin_item(i == 2 ? states[(frame / 30) % 3] : (i == 1 ? g_tex.button_hover : g_tex.button));
+				auto button = skin_item(g_buttons[i]->down ? g_tex.button_pressed : g_tex.button);
 				button.padding = { 3, 3, 3, 3 };
 				g_nine_patch->draw(c, button, ::rect{ panel_x + pad + i * (btn_w + pad), btn_y, btn_w, btn_h });
 			}
@@ -324,7 +407,7 @@ namespace
 			const vec2 window_size(W, H);
 			const float4 white(1.0f, 1.0f, 1.0f, 1.0f);
 
-			text.draw(list, title, vec2(panel_x + 3.0f * pad, panel_y + (120.0f - title.size.y) * 0.5f), white, clip, window_size);
+			text.draw(list, title, vec2(panel_x + 3.0f * pad, panel_y + (title_h - title.size.y) * 0.5f), white, clip, window_size);
 			for (int i = 0; i < 3; ++i)
 			{
 				const float bx = panel_x + pad + i * (btn_w + pad);
@@ -417,6 +500,7 @@ namespace
 					HAL::HeapType::DEFAULT);
 			}
 			read_ui_scale();
+			read_density();
 			if (!g_nine_patch)   // textures and the nine-patch batcher outlive any one surface
 				load_ui_textures();
 
@@ -544,6 +628,28 @@ extern "C"
 	__attribute__((visibility("default"))) void Java_com_spectrum_MainActivity_nativeRenderSurface(void* env, void*, void* surface, int generation)
 	{
 		render_surface(env, surface, generation);
+	}
+
+	// MainActivity.nativeTouchPoint / nativeTouchFlush: Android's touch, as one GUI::touch_event per
+	// MotionEvent. It goes straight to user_interface::on_touch_event, never through the mouse handlers.
+	__attribute__((visibility("default"))) void Java_com_spectrum_MainActivity_nativeTouchPoint(void*, void*, int id, float x, float y)
+	{
+		std::lock_guard<std::mutex> lock(g_touch_mutex);
+		g_touch_pending.touches.push_back({ id, x, y });
+	}
+
+	__attribute__((visibility("default"))) void Java_com_spectrum_MainActivity_nativeTouchFlush(void*, void*, int flags)
+	{
+		GUI::touch_event event;
+		{
+			std::lock_guard<std::mutex> lock(g_touch_mutex);
+			event = std::move(g_touch_pending);
+			g_touch_pending = {};
+		}
+		event.flags = flags;
+
+		if (auto ui = current_ui())
+			ui->on_touch_event(event);
 	}
 
 	// MainActivity.nativeSetGeneration(generation): called on every surface change / destroy.

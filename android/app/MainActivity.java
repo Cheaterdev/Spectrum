@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.os.Bundle;
 import android.system.Os;
 import android.util.Log;
+import android.view.MotionEvent;
 import android.view.Surface;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
@@ -28,6 +29,11 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback
     // (the surface was resized, rotated or destroyed), then releases the swapchain and returns.
     private static native void nativeRenderSurface(Surface surface, int generation);
     private static native void nativeSetGeneration(int generation);
+
+    // Touch: one nativeTouchPoint per finger the event concerns, then nativeTouchFlush(flags) with
+    // MOVE (1), DOWN (2) or UP (4) - the shape of GUI::touch_event, so native builds one message.
+    private static native void nativeTouchPoint(int id, float x, float y);
+    private static native void nativeTouchFlush(int flags);
 
     private SurfaceView view;
     private final Object lock = new Object();
@@ -84,6 +90,44 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback
         }, "spectrum-main").start();
     }
 
+    // Fingers go to native code untouched by any mouse emulation. The action says which finger changed:
+    // DOWN / UP for the one that went down or up, MOVE for all of them (Android batches moves).
+    @Override
+    public boolean onTouchEvent(MotionEvent event)
+    {
+        final int index = event.getActionIndex();
+        switch (event.getActionMasked())
+        {
+            case MotionEvent.ACTION_DOWN:
+            case MotionEvent.ACTION_POINTER_DOWN:
+                nativeTouchPoint(event.getPointerId(index), event.getX(index), event.getY(index));
+                nativeTouchFlush(2);
+                break;
+
+            case MotionEvent.ACTION_UP:
+            case MotionEvent.ACTION_POINTER_UP:
+                nativeTouchPoint(event.getPointerId(index), event.getX(index), event.getY(index));
+                nativeTouchFlush(4);
+                break;
+
+            case MotionEvent.ACTION_MOVE:
+                for (int i = 0; i < event.getPointerCount(); i++)
+                    nativeTouchPoint(event.getPointerId(i), event.getX(i), event.getY(i));
+                nativeTouchFlush(1);
+                break;
+
+            case MotionEvent.ACTION_CANCEL:   // the system took the gesture: lift every finger where it is
+                for (int i = 0; i < event.getPointerCount(); i++)
+                    nativeTouchPoint(event.getPointerId(i), event.getX(i), event.getY(i));
+                nativeTouchFlush(4);
+                break;
+
+            default:
+                return super.onTouchEvent(event);
+        }
+        return true;
+    }
+
     @Override
     protected void onDestroy()
     {
@@ -112,6 +156,11 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback
             // panel, so judge it on the display. Tune without a rebuild:
             //   adb shell am start -n com.spectrum/.MainActivity --ef ui_scale 0.7
             Os.setenv("SPECTRUM_UI_SCALE", String.valueOf(getIntent().getFloatExtra("ui_scale", 1.0f)), true);
+
+            // UI size: 1 layout unit = 1 dp, so DisplayMetrics.density (2.6 on this phone). The old NDK GUI
+            // derived its scale from DPI instead (max(1, DPI / 260)); the density factor is the same idea
+            // in the platform's own terms. Override with:  --ef density 2
+            Os.setenv("SPECTRUM_DENSITY", String.valueOf(getIntent().getFloatExtra("density", getResources().getDisplayMetrics().density)), true);
             // Adreno's shader compiler never finishes the ray-query DDGI debug shader (runaway CPU/memory).
             Os.setenv("SPECTRUM_DISABLE_RAY_QUERY", "1", true);
             nativeEnterWorkDir();
