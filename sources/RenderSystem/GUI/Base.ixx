@@ -681,6 +681,10 @@ namespace GUI
 			virtual void process_ui(float dt);
 			virtual void create_graph(FrameGraph::Graph& graph);
 
+            // Walks the tree into draw_infos / pre_draw_infos. create_graph does this for the FrameGraph
+            // passes; a host without the graph calls it directly and replays the lists itself.
+            void collect_draw_infos();
+
             void add_task(std::function<void()> f);
 
             void process_graph(FrameGraph::Graph& graph);

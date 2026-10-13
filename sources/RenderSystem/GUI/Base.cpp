@@ -1131,25 +1131,27 @@ namespace GUI
 
 
 
-     void user_interface::create_graph(Graph& graph)
+     void user_interface::collect_draw_infos()
      {
+        PROFILE(L"collect_draw_infos");
         GUIInfo c;
 
-         c.offset = { 0, 0 };
-         c.window_size = scaled_size.get();
-         c.scale = 1;
-         c.delta_time = dt;
+        c.offset = { 0, 0 };
+        c.window_size = scaled_size.get();
+        c.scale = 1;
+        c.delta_time = dt;
 
+        draw_infos.clear();
+        pre_draw_infos.clear();
+        draw_recursive(c);
+        drag.draw(c);
+     }
+
+     void user_interface::create_graph(Graph& graph)
+     {
         // Before the tree walk: widgets request atlas glyphs from on_pre_render.
         Text::Engine::get().begin_frame();
-
-        {
-            PROFILE(L"collect_draw_infos");
-            draw_infos.clear();
-            pre_draw_infos.clear();
-            draw_recursive(c);
-            drag.draw(c);
-        }
+        collect_draw_infos();
 
         auto& ui_ctx = graph.get_context<UIContext>();
         ui_ctx.draw_infos = std::move(draw_infos);

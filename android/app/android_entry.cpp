@@ -260,6 +260,8 @@ namespace
 	std::mutex g_ui_mutex;   // the touch thread reads g_ui while the render thread creates it
 	std::shared_ptr<GUI::user_interface> g_ui;
 	std::shared_ptr<touch_button> g_buttons[3];
+	GUI::base::ptr g_graph_panel;
+	GUI::Elements::stat_graph::ptr g_graph_ms, g_graph_fps;
 
 	std::shared_ptr<GUI::user_interface> current_ui()
 	{
@@ -280,6 +282,27 @@ namespace
 			b = std::make_shared<touch_button>();
 			g_ui->add_child(b);
 		}
+
+		// The graphs live in dp: their container carries the density as its layout scale.
+		g_graph_panel = std::make_shared<GUI::base>();
+		g_graph_panel->docking = GUI::dock::NONE;
+		g_graph_panel->scale = g_density;
+		g_ui->add_child(g_graph_panel);
+
+		auto make_graph = [](const char* title, const char* unit, float min_range, float4 color) {
+			auto g = std::make_shared<GUI::Elements::stat_graph>();
+			g->title = title;
+			g->unit = unit;
+			g->min_range = min_range;
+			g->line_color = color;
+			g->fill_color = { color.x, color.y, color.z, 0.3f };
+			g->docking = GUI::dock::NONE;
+			g->width_size = GUI::size_type::FIXED;
+			g_graph_panel->add_child(g);
+			return g;
+		};
+		g_graph_ms = make_graph("Frame time", "ms", 5.0f, { 0.30f, 0.85f, 0.30f, 1.0f });
+		g_graph_fps = make_graph("FPS", "", 20.0f, { 0.35f, 0.65f, 1.0f, 1.0f });
 	}
 
 	// Touch arrives as one nativeTouchPoint per finger and a nativeTouchFlush(flags) that ends the message.
@@ -328,6 +351,28 @@ namespace
 			g_buttons[i]->size = vec2(btn_w, btn_h);
 		}
 		g_ui->size = vec2(W, H);
+
+		// Realtime graphs under the panel, fed with the measured frame time.
+		{
+			static auto last = std::chrono::steady_clock::now();
+			const auto now = std::chrono::steady_clock::now();
+			const float dt = std::chrono::duration<float>(now - last).count();
+			last = now;
+			if (dt > 0.0f)
+			{
+				g_graph_ms->push(dt * 1000.0f);
+				g_graph_fps->push(1.0f / dt);
+			}
+
+			// dp, inside g_graph_panel (which starts at the screen origin)
+			const float gy = (panel_y + panel_h + pad) / density, gh = 90.0f, dp_pad = pad / density;
+			const float gw = panel_w / density;   // stacked full width: the header and max labels need the room
+			g_graph_panel->size = vec2(W, H);   // its own size is in the parent's (pixel) scale; only its children use density
+			g_graph_ms->pos = vec2(panel_x / density, gy);
+			g_graph_ms->size = vec2(gw, gh);
+			g_graph_fps->pos = vec2(panel_x / density, gy + gh + dp_pad);
+			g_graph_fps->size = vec2(gw, gh);
+		}
 		g_ui->process_ui(0.0f);
 
 		auto& text = Text::Engine::get();
@@ -341,6 +386,11 @@ namespace
 			text.build(g_buttons[i]->clicks ? std::string(button_names[i]) + "  " + std::to_string(g_buttons[i]->clicks) : button_names[i], label_style, labels[i]);
 		text.build("Hello \xD0\x9F\xD1\x80\xD0\xB8\xD0\xB2\xD1\x96\xD1\x82 \xCE\x93\xCE\xB5\xCE\xB9\xCE\xAC \xF0\x9F\x98\x80\xF0\x9F\x9A\x80 frame " + std::to_string(frame),
 		           label_style, body);   // Latin, Cyrillic, Greek, two emoji + a changing number
+		// The real elements (graphs): walk the tree, then let them render their own textures. This runs
+		// before the UI render target is set since those passes are compute / own render targets.
+		g_ui->collect_draw_infos();
+		GUI::user_interface::run_pre_draw(g_ui->pre_draw_infos, list);
+
 		if (text.has_pending_upload())
 			text.upload(list);
 
@@ -415,6 +465,32 @@ namespace
 				text.draw(list, labels[i], vec2(bx + (btn_w - labels[i].size.x) * 0.5f, btn_y + (btn_h - labels[i].size.y) * 0.5f), white, clip, window_size);
 			}
 			text.draw(list, body, vec2(panel_x + pad, bar_y + bar_h + pad), float4(0.85f, 0.88f, 0.95f, 1.0f), clip, window_size);
+		}
+
+		// Collected elements (graphs), as UI_Render replays them.
+		{
+			GUI::Renderer renderer{ GUI::Renderer::no_skin_t{} };   // the Skin's asset system isn't ported
+			GUIInfo c;
+			c.renderer = &renderer;
+			c.command_list = list;
+			c.window_size = vec2(W, H);
+			for (auto& e : g_ui->draw_infos)
+			{
+				if (c.scissors != e.scissors)
+				{
+					renderer.flush(c);
+					gfx.set_scissors(e.scissors);
+				}
+				c.scale = e.scale;
+				c.ui_clipping = e.clip;
+				c.offset = e.offset;
+				c.scissors = e.scissors;
+				if (e.before)
+					e.elem->draw(c);
+				else
+					e.elem->draw_after(c);
+			}
+			renderer.flush(c);
 		}
 
 		// FP16 UI target -> SDR swapchain through the engine's CopyTexture PSO (gamma-encodes for 8-bit).

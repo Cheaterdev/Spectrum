@@ -37,7 +37,7 @@ namespace GUI
             header_label->x_type      = pos_x_type::LEFT;
             header_label->y_type      = pos_y_type::TOP;
             header_label->pos         = {4, 2};
-            header_label->width_size  = size_type::MATCH_PARENT;
+            header_label->width_size  = size_type::FIXED;
             header_label->height_size = size_type::FIXED;
             header_label->size        = {0, 14};
             header_label->magnet_text = FW1_LEFT | FW1_VCENTER | FW1_NOWORDWRAP;
@@ -50,7 +50,7 @@ namespace GUI
                 l->x_type      = pos_x_type::LEFT;
                 l->y_type      = pos_y_type::TOP;
                 l->pos         = {0, 2};
-                l->width_size  = size_type::MATCH_PARENT;
+                l->width_size  = size_type::FIXED;
                 l->height_size = size_type::FIXED;
                 l->size        = {0, 12};
                 l->magnet_text = FW1_RIGHT | FW1_VCENTER | FW1_NOWORDWRAP;
@@ -245,8 +245,18 @@ namespace GUI
         {
             // Keep min label pinned to the bottom edge
             auto bounds = get_render_bounds();
-            if (bounds.h > 14.0f)
-                _min_label->pos = {0, bounds.h - 14.0f};
+            // Label positions are in layout units; the bounds are pixels.
+            const float layout_scale = result_scale * scale;
+            const float h = bounds.h / layout_scale;
+            if (h > 14.0f)
+                _min_label->pos = {0, h - 14.0f};
+
+            // MATCH_PARENT would copy the parent's pixel width into layout units, overshooting by the
+            // scale factor (and right-aligned text would land outside the graph).
+            const float w = bounds.w / layout_scale;
+            header_label->size = {w, 14};
+            _max_label->size   = {w, 12};
+            _min_label->size   = {w, 12};
 
             if (count == 0) return;
             if (bounds.w < 4.0f || bounds.h < 4.0f) return;

@@ -53,6 +53,11 @@ export namespace GUI
 		void draw(base::Context& c, HAL::PipelineState::ptr state, rect r);
 		Renderer();
 
+		// Without the Skin's area/virtual/container textures (and the asset system loading them): for hosts that
+		// draw elements which bring their own textures. draw_area/_container/_virtual are not usable then.
+		struct no_skin_t {};
+		explicit Renderer(no_skin_t) {}
+
 		void start();
 		void set(base::Context& c);
 	};
