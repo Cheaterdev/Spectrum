@@ -25,8 +25,7 @@ namespace Text
 #ifdef SPECTRUM_PLATFORM_ANDROID
         // Segoe UI / Consolas are Windows fonts (and not redistributable), so Android uses the fonts
         // every device ships in /system/fonts: Roboto covers Latin, Greek and Cyrillic; the Noto
-        // Hebrew and symbols files fill in what it lacks. Color emoji (NotoColorEmoji) is left out
-        // until its bitmap glyph format is checked against the rasterizer.
+        // Hebrew and symbols files fill in what it lacks, and NotoColorEmoji supplies emoji.
         constexpr const char* system_font_dir = "/system/fonts/";
         constexpr FontFile system_fonts[] = {
             { "Roboto-Regular.ttf",                    SKB_FONT_FAMILY_DEFAULT },
@@ -35,6 +34,7 @@ namespace Text
             { "NotoSansSymbols-Regular-Subsetted.ttf", SKB_FONT_FAMILY_DEFAULT },
             { "NotoSansSymbols-Regular-Subsetted2.ttf", SKB_FONT_FAMILY_DEFAULT },
             { "DroidSansMono.ttf",                     SKB_FONT_FAMILY_MONOSPACE },
+            { "NotoColorEmoji.ttf",                    SKB_FONT_FAMILY_EMOJI },
         };
 #else
         // Segoe UI covers Latin, Greek, Cyrillic, Arabic and Hebrew; the rest fall back.

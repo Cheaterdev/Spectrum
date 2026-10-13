@@ -10,6 +10,7 @@ import RenderSystem;
 import Graphics;
 import GUI;
 import TextEngine;
+import Test.Framework;
 
 namespace
 {
@@ -338,8 +339,8 @@ namespace
 		const char* const button_names[3] = { "Play", "Options", "Quit" };
 		for (int i = 0; i < 3; ++i)
 			text.build(g_buttons[i]->clicks ? std::string(button_names[i]) + "  " + std::to_string(g_buttons[i]->clicks) : button_names[i], label_style, labels[i]);
-		text.build("Hello \xD0\x9F\xD1\x80\xD0\xB8\xD0\xB2\xD1\x96\xD1\x82 \xCE\x93\xCE\xB5\xCE\xB9\xCE\xAC  frame " + std::to_string(frame),
-		           label_style, body);   // Latin, Cyrillic, Greek + a changing number
+		text.build("Hello \xD0\x9F\xD1\x80\xD0\xB8\xD0\xB2\xD1\x96\xD1\x82 \xCE\x93\xCE\xB5\xCE\xB9\xCE\xAC \xF0\x9F\x98\x80\xF0\x9F\x9A\x80 frame " + std::to_string(frame),
+		           label_style, body);   // Latin, Cyrillic, Greek, two emoji + a changing number
 		if (text.has_pending_upload())
 			text.upload(list);
 
@@ -594,7 +595,10 @@ namespace
 		Log::get() << Log::LEVEL_INFO << "Spectrum (Android): Core loaded" << Log::endl;
 
 		// The working directory is the app's files dir (MainActivity.prepareWorkDir), holding cache/vulkan.
-		FileSystem::get().register_provider(std::make_shared<native_file_provider>());
+		// Not when one is already there: the linked test modules register their own at load time, and two
+		// native providers make FileSystem::iterate visit every file twice.
+		if (!FileSystem::get().has_providers())
+			FileSystem::get().register_provider(std::make_shared<native_file_provider>());
 
 		auto& app = Application::get<AndroidApplication>();
 		Log::get() << Log::LEVEL_INFO << "Application singleton created, alive=" << app.is_alive() << Log::endl;
@@ -628,6 +632,32 @@ extern "C"
 	__attribute__((visibility("default"))) void Java_com_spectrum_MainActivity_nativeRenderSurface(void* env, void*, void* surface, int generation)
 	{
 		render_surface(env, surface, generation);
+	}
+
+	// MainActivity.nativeRunTests(): runs the CPU tests linked into this library (the `tests` target of
+	// android/build.py) instead of the UI. The filter comes from SPECTRUM_TEST_FILTER (intent extra
+	// "tests"; empty = all). Results go to logcat: `adb logcat -s Spectrum | grep -E "PASS|FAIL|TESTS"`.
+	__attribute__((visibility("default"))) void Java_com_spectrum_MainActivity_nativeRunTests(void*, void*)
+	{
+		const char* filter = libc_getenv("SPECTRUM_TEST_FILTER");
+		Application::test_mode = true;
+
+		auto& registry = Test::TestRegistry::Instance();
+		auto results = registry.RunAll(filter ? filter : "");
+		registry.PrintResults(results);
+
+		size_t passed = 0, failed = 0, skipped = 0;
+		for (auto& r : results)
+		{
+			if (r.skipped)
+				++skipped;
+			else if (r.passed)
+				++passed;
+			else
+				++failed;
+		}
+		Log::get() << Log::LEVEL_INFO << "TESTS: " << std::to_string(results.size()) << " total, " << std::to_string(passed)
+		           << " passed, " << std::to_string(failed) << " failed, " << std::to_string(skipped) << " skipped" << Log::endl;
 	}
 
 	// MainActivity.nativeTouchPoint / nativeTouchFlush: Android's touch, as one GUI::touch_event per

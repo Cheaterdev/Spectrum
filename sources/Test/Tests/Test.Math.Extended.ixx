@@ -1,7 +1,5 @@
 module;
 
-#include <cmath>
-
 export module Test.Math.Extended;
 
 #define TEST_MODULE_ID MathExtended

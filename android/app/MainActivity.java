@@ -29,6 +29,7 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback
     // (the surface was resized, rotated or destroyed), then releases the swapchain and returns.
     private static native void nativeRenderSurface(Surface surface, int generation);
     private static native void nativeSetGeneration(int generation);
+    private static native void nativeRunTests();   // the CPU tests linked into the library; filter in $SPECTRUM_TEST_FILTER
 
     // Touch: one nativeTouchPoint per finger the event concerns, then nativeTouchFlush(flags) with
     // MOVE (1), DOWN (2) or UP (4) - the shape of GUI::touch_event, so native builds one message.
@@ -58,6 +59,20 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback
         // or Android reports the activity as not responding.
         new Thread(() -> {
             prepareWorkDir();
+
+            // Test mode: run the tests instead of the UI, then close.   adb shell am start -n
+            // com.spectrum/.MainActivity --es tests Core.Serialization      ("all" runs everything)
+            String tests = getIntent().getStringExtra("tests");
+            if (tests != null)
+            {
+                if (tests.equals("all"))
+                    tests = "";
+                try { Os.setenv("SPECTRUM_TEST_FILTER", tests, true); } catch (Exception e) { Log.e("Spectrum", "setenv failed", e); }
+                nativeRunTests();
+                runOnUiThread(this::finish);
+                return;
+            }
+
             nativeRun();
             nativeProbeGpu();
 
@@ -151,6 +166,7 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback
         {
             File root = getFilesDir();
             Os.setenv("SPECTRUM_WORKDIR", root.getAbsolutePath(), true);
+            Os.setenv("TMPDIR", getCacheDir().getAbsolutePath(), true);   // std::filesystem::temp_directory_path()
             // UI brightness in the engine's scRGB convention (DisplayOutput.ui_scale; the desktop uses
             // sdr_white_nits / 80). adb screencap re-renders the FP16 layer and does not match the
             // panel, so judge it on the display. Tune without a rebuild:
@@ -161,8 +177,6 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback
             // derived its scale from DPI instead (max(1, DPI / 260)); the density factor is the same idea
             // in the platform's own terms. Override with:  --ef density 2
             Os.setenv("SPECTRUM_DENSITY", String.valueOf(getIntent().getFloatExtra("density", getResources().getDisplayMetrics().density)), true);
-            // Adreno's shader compiler never finishes the ray-query DDGI debug shader (runaway CPU/memory).
-            Os.setenv("SPECTRUM_DISABLE_RAY_QUERY", "1", true);
             nativeEnterWorkDir();
 
             File stamp = new File(root, "cache/.apk_stamp");

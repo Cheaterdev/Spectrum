@@ -22,6 +22,28 @@ static void init_indirect_commands(HAL::Device& device, enum_array<IndirectComma
 		commands[IndirectCommands::DrawMeshCommand].slots.merge(slot);
 }
 
+// PSOs a specific GPU's driver cannot build, by GPU name fragment and PSO name. These are skipped
+// like any other unsupported PSO (create() returns null), so only that one pipeline is lost, not the
+// whole feature it belongs to. Temporary: remove an entry once the shader or the driver is fixed.
+static bool driver_cannot_build(HAL::Device& device, const std::string& pso_name)
+{
+	struct Entry { const char* gpu; const char* pso; const char* why; };
+	static const Entry entries[] = {
+		// Adreno's shader compiler never finishes it (100% CPU, GBs of memory, the app is killed).
+		// A debug visualization, so nothing is lost; cause not isolated yet (2 ray queries only).
+		{ "Adreno", "DDGIIndirectDebug", "driver shader compiler never finishes" },
+	};
+
+	const auto& gpu = device.get_properties().name;
+	for (const auto& e : entries)
+		if (pso_name == e.pso && gpu.find(e.gpu) != std::string::npos)
+		{
+			Log::get() << "PSO " << pso_name << " skipped on " << gpu << ": " << e.why << Log::endl;
+			return true;
+		}
+	return false;
+}
+
 HAL::ComputePipelineState::ptr SimpleComputePSO::create(HAL::Device& device)
 {
 	// [Requires = Raytracing] on a compute/graphics PSO means inline RayQuery:
@@ -37,6 +59,12 @@ HAL::ComputePipelineState::ptr SimpleComputePSO::create(HAL::Device& device)
 	{
 		if (PSOBuildObserver::compile_unsupported())
 			HAL::compute_shader::get_resource(compute);
+		report(PSOBuildResult::Unsupported);
+		return nullptr;
+	}
+
+	if (driver_cannot_build(device, name))
+	{
 		report(PSOBuildResult::Unsupported);
 		return nullptr;
 	}

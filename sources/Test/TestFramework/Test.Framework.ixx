@@ -1,13 +1,7 @@
 module;
 
-#include <string>
-#include <vector>
-#include <functional>
-#include <sstream>
-#include <map>
-#include <set>
-#include <algorithm>
-#include <cctype>
+// No standard headers here: `import Core` provides the standard library, and on Android a textual
+// include in this fragment collides with the header unit Core is built on.
 
 export module Test.Framework;
 

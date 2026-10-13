@@ -55,12 +55,22 @@ TARGETS = {
         forced="HAL/Defines.h",
         deps=["core"],
     ),
+    # The CPU-only tests (Core / math / serialization / threading / events / file system / profiling).
+    # Test files that need a desktop GPU or PNG goldens are in EXCLUDE. Their objects are linked straight
+    # into libspectrum.so (not through an archive): each TEST() registers itself from a static
+    # initializer, which an archive member nobody references would never run.
+    "tests": dict(
+        dirs=["Test/TestFramework", "Test/Tests"],
+        root="Test",
+        forced="Test/Defines.h",
+        deps=["hal"],
+    ),
     "app": dict(
         dirs=[],
         extra=["android/app/android_entry.cpp"],   # JNI_OnLoad -> Application singleton + logs
         root="Core",
         forced="Core/Defines.h",
-        deps=["rendersystem"],
+        deps=["rendersystem", "tests"],
     ),
     "rendersystem": dict(
         dirs=["RenderSystem"],
@@ -75,6 +85,11 @@ TARGETS = {
 
 # Files that cannot build on Android yet (Windows-only etc.), relative to sources/.
 EXCLUDE = {
+    # Tests that need a desktop device, the GUI/render stack, or PNG goldens (WIC): not on Android yet.
+    "Test/Tests/Test.HAL.ixx", "Test/Tests/Test.HAL.Rendering.ixx", "Test/Tests/Test.HAL.SIG.ixx",
+    "Test/Tests/Test.HAL.UI.ixx", "Test/Tests/Test.HAL.TextureUtils.ixx", "Test/Tests/Test.HAL.TextureUtils.cpp",
+    "Test/Tests/Test.GUI.ixx", "Test/Tests/Test.FrameGraph.ixx", "Test/Tests/Test.RenderSystem.FrameGraph.ixx",
+    "Test/Tests/Test.RTX.ixx", "Test/Tests/Test.SceneParity.ixx",
     # NVIDIA-only: Streamline / DLSS / NRD
     "HAL/HAL.Streamline.ixx", "HAL/HAL.Streamline.cpp", "HAL/API/Vulkan/HAL.Vulkan.Streamline.ixx",
     "HAL/HAL.DLSS.ixx", "HAL/HAL.DLSS.cpp", "HAL/HAL.DLSSRR.ixx", "HAL/HAL.DLSSRR.cpp",
@@ -930,7 +945,7 @@ def main():
         objs[t].append(obj)
     libs = []
     for t in order:
-        if not objs[t] or t == "app":
+        if not objs[t] or t in ("app", "tests"):
             continue
         lib = out / "lib" / f"lib{t}.a"
         libs.append(lib)
@@ -952,7 +967,7 @@ def main():
             stubs_s.write_text(".text\n")
         lines.append(f'rule asm\n  command = "{CLANGXX}" --target={ABI_TRIPLE}{API} -c $in -o $out\n  description = ASM $out\n')
         lines.append(f"build {ninja_path(stubs_o)}: asm {ninja_path(stubs_s)}\n")
-        objs["app"] = objs["app"] + [stubs_o]
+        objs["app"] = objs["app"] + objs.get("tests", []) + [stubs_o]   # tests link directly, see TARGETS["tests"]
         lines.append(f"build {ninja_path(so)}: link {' '.join(ninja_path(o) for o in objs['app'])}"
                      f" | {' '.join(ninja_path(l) for l in libs)}\n"
                      f"  libs = {' '.join(ninja_path(l) for l in libs + third_party)}\n")

@@ -59,11 +59,13 @@ namespace
 	{
 		if (name == "all")
 			return TargetProfile{ "all", true, true, true };
-		// Adreno 830 reports ray queries, but its shader compiler never finishes DDGIIndirectDebug
-		// (100% CPU, GBs of memory), so Android runs with ray queries off (MainActivity sets
-		// SPECTRUM_DISABLE_RAY_QUERY) and those PSOs aren't shipped. Mesh shaders don't exist there.
+		// Android ships everything: which feature paths run is decided on the device. PSOs it can't run
+		// (mesh shaders, ray queries, tiled depth) are skipped by PSO::create from the device's own
+		// capabilities, and known-bad GPUs are handled by quirks in Device::init_managers (Adreno's
+		// compiler hang on a ray-query shader). Leaving the blobs out would break any device that does
+		// have a feature.
 		if (name == "android")
-			return TargetProfile{ "android", false, false, false };
+			return TargetProfile{ "android", true, true, true };
 		return std::nullopt;
 	}
 
