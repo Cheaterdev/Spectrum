@@ -489,7 +489,7 @@ class AssetManager : public Singleton<AssetManager>, public EditContainer, publi
 			auto storage = (new AssetStorage(asset))->get_ptr();
 
 			if (!id.isValid())
-				id = xg::newGuid();
+				id = xg::new_guid();
 
 			if (name.empty())
 				name = convert(to_string(id));

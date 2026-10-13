@@ -8,6 +8,7 @@ import HAL;
 import vulkan;
 import RenderSystem;
 import Graphics;
+import FrameGraph;
 import GUI;
 import TextEngine;
 import Test.Framework;
@@ -178,43 +179,7 @@ namespace
 		return vec4(srgb_to_linear(r), srgb_to_linear(g), srgb_to_linear(b), a);
 	}
 
-	// GUI skin textures, baked by `spectrum_tool textures` into cache/vulkan (the device has no image
-	// decoders). The header must match the one the engine's Skin asks for: force_srgb = true.
-	struct UiTextures
-	{
-		HAL::Texture::ptr window, button, button_hover, button_pressed;
-	} g_tex;
-	std::unique_ptr<GUI::NinePatch> g_nine_patch;
 	std::shared_ptr<HAL::TextureResource> g_ui_target;   // FP16 UI render target, converted into the swapchain
-
-	HAL::Texture::ptr load_gui_texture(const char* name)
-	{
-		auto texture = HAL::Texture::get_resource(HAL::texure_header(to_path(std::string("textures/gui/") + name + ".png"), true));
-		const bool ok = texture && texture != HAL::Texture::null;
-		if (ok)
-			Log::get() << Log::LEVEL_INFO << "UI texture " << name << ": loaded" << Log::endl;
-		else
-			Log::get() << Log::LEVEL_ERROR << "UI texture " << name << ": MISSING" << Log::endl;
-		return texture;
-	}
-
-	void load_ui_textures()
-	{
-		g_tex.window = load_gui_texture("window_active");
-		g_tex.button = load_gui_texture("button");
-		g_tex.button_hover = load_gui_texture("button_hover");
-		g_tex.button_pressed = load_gui_texture("button_pressed");
-		g_nine_patch = std::make_unique<GUI::NinePatch>();
-	}
-
-	// A skin entry as GUI::Skin builds it: the texture plus its nine-patch padding / margins.
-	GUI::Texture skin_item(const HAL::Texture::ptr& texture)
-	{
-		GUI::Texture item;
-		if (texture && texture != HAL::Texture::null)
-			item = texture->texture_2d();
-		return item;
-	}
 
 	// Layout unit: 1 = 1 dp. MainActivity exports DisplayMetrics.density (2.6 on the test phone) as
 	// SPECTRUM_DENSITY; the old NDK GUI derived its scale from DPI (max(1, DPI / 260)) instead.
@@ -227,47 +192,25 @@ namespace
 		Log::get() << Log::LEVEL_INFO << "density = " << std::to_string(g_density) << Log::endl;
 	}
 
-	// A real GUI element: touch events hit-test it through user_interface::on_touch_event, which hands it
-	// DOWN, then UP (finger lifted inside) or CANCEL (slid off). It tracks its own finger.
-	struct touch_button : GUI::base
-	{
-		int  finger = -1;
-		bool down = false;
-		int  clicks = 0;
-
-		bool on_touch_action(mouse_action action, GUI::touch& t) override
-		{
-			if (action == mouse_action::DOWN)
-			{
-				if (finger != -1)
-					return false;
-				finger = t.id;
-				down = true;
-				return true;
-			}
-
-			if (finger != t.id)
-				return false;
-
-			finger = -1;
-			down = false;
-			if (action == mouse_action::UP)
-				++clicks;
-			return true;
-		}
-	};
-
 	std::mutex g_ui_mutex;   // the touch thread reads g_ui while the render thread creates it
 	std::shared_ptr<GUI::user_interface> g_ui;
-	std::shared_ptr<touch_button> g_buttons[3];
-	GUI::base::ptr g_graph_panel;
-	GUI::Elements::stat_graph::ptr g_graph_ms, g_graph_fps;
 
 	std::shared_ptr<GUI::user_interface> current_ui()
 	{
 		std::lock_guard<std::mutex> lock(g_ui_mutex);
 		return g_ui;
 	}
+
+	// The demo screen, built from the engine's own elements. Everything sits in `g_root`, whose layout
+	// scale is the density: children are positioned and sized in dp, the root itself in pixels.
+	GUI::base::ptr g_root;
+	GUI::Elements::window::ptr g_window_el;
+	GUI::Elements::button::ptr g_buttons[3];
+	GUI::Elements::progress_bar::ptr g_progress;
+	GUI::Elements::label::ptr g_body;
+	GUI::Elements::stat_graph::ptr g_graph_ms, g_graph_fps;
+	int g_clicks[3] = {};
+	ivec2 g_laid_out_for = { 0, 0 };
 
 	void ensure_ui()
 	{
@@ -276,18 +219,49 @@ namespace
 			return;
 
 		THREAD_SCOPE(GUI);
+		Skin::get();   // loads every skin texture now rather than inside the first frame
 		g_ui = std::make_shared<GUI::user_interface>();   // shared-owned: the touch path walks to parents via shared_from_this
-		for (auto& b : g_buttons)
+
+		// Hooks the desktop window provides; set_capture is called by draggable elements (the window title).
+		g_ui->set_capture = [](bool) {};
+		g_ui->get_clipboard = [] { return std::wstring(); };
+		g_ui->set_clipboard = [](std::wstring_view) {};
+
+		g_root = std::make_shared<GUI::base>();
+		g_root->docking = GUI::dock::NONE;
+		g_root->scale = g_density;
+		g_ui->add_child(g_root);
+
+		g_window_el = std::make_shared<GUI::Elements::window>();
+		g_window_el->set_title("Spectrum \xE2\x80\x94 Android");
+		g_root->add_child(g_window_el);
+
+		static const char* const names[3] = { "Play", "Options", "Quit" };
+		for (int i = 0; i < 3; ++i)
 		{
-			b = std::make_shared<touch_button>();
-			g_ui->add_child(b);
+			auto b = std::make_shared<GUI::Elements::button>();
+			b->docking = GUI::dock::NONE;
+			b->get_label()->text = names[i];
+			b->get_label()->font_size = 16.0f;
+			b->get_label()->magnet_text = FW1_CENTER | FW1_VCENTER | FW1_NOWORDWRAP;
+			b->on_click = [i](GUI::Elements::button::ptr button) {
+				const char* name = names[i];
+				button->get_label()->text = std::string(name) + "  " + std::to_string(++g_clicks[i]);
+			};
+			g_window_el->add_child(b);
+			g_buttons[i] = b;
 		}
 
-		// The graphs live in dp: their container carries the density as its layout scale.
-		g_graph_panel = std::make_shared<GUI::base>();
-		g_graph_panel->docking = GUI::dock::NONE;
-		g_graph_panel->scale = g_density;
-		g_ui->add_child(g_graph_panel);
+		g_progress = std::make_shared<GUI::Elements::progress_bar>();
+		g_progress->docking = GUI::dock::NONE;
+		g_progress->track_color = { 0.08f, 0.09f, 0.11f, 1.0f };
+		g_progress->fill_color = { 0.95f, 0.65f, 0.15f, 1.0f };
+		g_window_el->add_child(g_progress);
+
+		g_body = std::make_shared<GUI::Elements::label>();
+		g_body->docking = GUI::dock::NONE;
+		g_body->font_size = 16.0f;
+		g_window_el->add_child(g_body);
 
 		auto make_graph = [](const char* title, const char* unit, float min_range, float4 color) {
 			auto g = std::make_shared<GUI::Elements::stat_graph>();
@@ -298,200 +272,129 @@ namespace
 			g->fill_color = { color.x, color.y, color.z, 0.3f };
 			g->docking = GUI::dock::NONE;
 			g->width_size = GUI::size_type::FIXED;
-			g_graph_panel->add_child(g);
+			g_root->add_child(g);
 			return g;
 		};
 		g_graph_ms = make_graph("Frame time", "ms", 5.0f, { 0.30f, 0.85f, 0.30f, 1.0f });
 		g_graph_fps = make_graph("FPS", "", 20.0f, { 0.35f, 0.65f, 1.0f, 1.0f });
 	}
 
+	// Positions in dp for a surface of (W, H) pixels. Done when the size changes only, so a window the
+	// user has dragged stays where it was put.
+	void layout_ui(float W, float H)
+	{
+		const float wdp = W / g_density, hdp = H / g_density;
+		const float margin = wdp * 0.05f, pad = 12.0f, title_h = 40.0f, btn_h = 44.0f, bar_h = 14.0f;
+		const float panel_x = margin, panel_w = wdp - 2 * margin, panel_y = hdp * 0.08f;
+		const float panel_h = std::max(hdp * 0.42f, 230.0f);
+		const float inner_w = panel_w - 40.0f;   // the window's 20dp margin sits outside its pos/size
+
+		g_ui->size = vec2(W, H);
+		g_root->size = vec2(W, H);   // the root is sized in pixels, only its children are in dp
+		g_window_el->pos = vec2(panel_x + 20.0f, panel_y + 20.0f);
+		g_window_el->size = vec2(inner_w, panel_h - 40.0f);
+
+		const float btn_w = (inner_w - 4 * pad) / 3.0f;
+		for (int i = 0; i < 3; ++i)
+		{
+			g_buttons[i]->pos = vec2(pad + i * (btn_w + pad), pad);
+			g_buttons[i]->size = vec2(btn_w, btn_h);
+		}
+		const float bar_y = pad + btn_h + pad;
+		g_progress->pos = vec2(pad, bar_y);
+		g_progress->size = vec2(inner_w - 2 * pad, bar_h);
+		g_body->pos = vec2(pad, bar_y + bar_h + pad);
+		g_body->size = vec2(inner_w - 2 * pad, 30.0f);
+
+		const float gy = panel_y + panel_h + pad, gh = 90.0f;
+		g_graph_ms->pos = vec2(panel_x, gy);
+		g_graph_ms->size = vec2(panel_w, gh);
+		g_graph_fps->pos = vec2(panel_x, gy + gh + pad);
+		g_graph_fps->size = vec2(panel_w, gh);
+	}
+
 	// Touch arrives as one nativeTouchPoint per finger and a nativeTouchFlush(flags) that ends the message.
 	std::mutex g_touch_mutex;
 	GUI::touch_event g_touch_pending;
 
-	// Stage 1 of the minimal UI screen: solid rects through the production UI::SimpleRect PSO and
-	// Slots::UI::ColorRect (the same path Test.HAL.UI exercises on desktop), laid out in pixels.
-	// Stage 2 swaps in textured nine-patches, stage 3 adds a text label.
+	std::unique_ptr<FrameGraph::Graph> g_graph;
+	std::unique_ptr<Pipelines::UI::UIPipeline> g_pipeline;
+
+	// One UI frame through the FrameGraph, as the desktop app does it: the widget tree is walked into
+	// the UI context (create_graph), UIPipeline's UI_PreDraw / UI_Render passes are added, and the graph
+	// draws into g_ui_target in place of the swapchain. That target is FP16 because the UI PSOs write
+	// FP16; the SDR swapchain gets it through the CopyTexture pass at the end.
 	void draw_ui_frame(int frame)
 	{
 		g_swap->wait_for_free();
+		ensure_ui();
 
-		auto list = g_device->get_queue(HAL::CommandListType::DIRECT)->get_free_list();
-		list->begin(L"android_ui");
+		if (!g_graph)
+		{
+			g_graph = std::make_unique<FrameGraph::Graph>();
+			g_pipeline = std::make_unique<Pipelines::UI::UIPipeline>();
+		}
+		auto& graph = *g_graph;
 
 		auto target = g_swap->get_current_frame();
 		const auto& dims = target->get_desc().as_texture().Dimensions;
 		const float W = (float)dims.x, H = (float)dims.y;
 
-		// The UI PSOs write R16G16B16A16_FLOAT (scRGB), so the UI renders into an FP16 target and is
-		// converted into the 8-bit swapchain at the end (see the CopyTexture pass below).
-		HAL::Texture2DView view(g_ui_target, *list);
-		auto& gfx = list->get_graphics();
+		static auto last = std::chrono::steady_clock::now();
+		const auto now = std::chrono::steady_clock::now();
+		const float dt = std::chrono::duration<float>(now - last).count();
+		last = now;
 
-		// Stage 3: text through the real Text::Engine (Skribidi shaping + glyph atlas). Layouts are built
-		// (requesting their glyphs) before anything is drawn, and rasterized glyphs are uploaded in this
-		// same list ahead of the draws, as the asset preview does. Sizes are scaled by the phone density.
-		const float density = g_density;
-
-		// Layout in dp. The buttons are real GUI elements placed here; touch (MainActivity -> JNI ->
-		// user_interface::on_touch_event) hit-tests them and reports DOWN / UP / CANCEL, and the drawing
-		// below only reads their state.
-		const float margin = W * 0.05f;
-		const float pad = 12.0f * density, title_h = 40.0f * density, btn_h = 44.0f * density, bar_h = 14.0f * density;
-		const float panel_x = margin, panel_w = W - 2 * margin, panel_y = H * 0.08f;
-		const float panel_h = std::max(H * 0.42f, 230.0f * density);   // tall enough for its content in landscape too
-		const float btn_y = panel_y + title_h + 2 * pad;
-		const float btn_w = (panel_w - 4 * pad) / 3.0f;
-		const float bar_y = btn_y + btn_h + 2 * pad, bar_w = panel_w - 2 * pad;
-
-		ensure_ui();
-		for (int i = 0; i < 3; ++i)
 		{
-			g_buttons[i]->pos = vec2(panel_x + pad + i * (btn_w + pad), btn_y);
-			g_buttons[i]->size = vec2(btn_w, btn_h);
-		}
-		g_ui->size = vec2(W, H);
+			PROFILE(L"android_ui_update");
+			if (g_laid_out_for != ivec2((int)dims.x, (int)dims.y))
+			{
+				layout_ui(W, H);
+				g_laid_out_for = ivec2((int)dims.x, (int)dims.y);
+			}
 
-		// Realtime graphs under the panel, fed with the measured frame time.
-		{
-			static auto last = std::chrono::steady_clock::now();
-			const auto now = std::chrono::steady_clock::now();
-			const float dt = std::chrono::duration<float>(now - last).count();
-			last = now;
+			g_progress->value = std::fmod(frame * 0.004f, 1.0f);
+			g_body->text = "Hello \xD0\x9F\xD1\x80\xD0\xB8\xD0\xB2\xD1\x96\xD1\x82 \xCE\x93\xCE\xB5\xCE\xB9\xCE\xAC \xF0\x9F\x98\x80\xF0\x9F\x9A\x80 frame " + std::to_string(frame);
 			if (dt > 0.0f)
 			{
-				g_graph_ms->push(dt * 1000.0f);
-				g_graph_fps->push(1.0f / dt);
+				g_graph_ms->push(dt * 1000.0f, dt);
+				g_graph_fps->push(1.0f / dt, dt);
 			}
-
-			// dp, inside g_graph_panel (which starts at the screen origin)
-			const float gy = (panel_y + panel_h + pad) / density, gh = 90.0f, dp_pad = pad / density;
-			const float gw = panel_w / density;   // stacked full width: the header and max labels need the room
-			g_graph_panel->size = vec2(W, H);   // its own size is in the parent's (pixel) scale; only its children use density
-			g_graph_ms->pos = vec2(panel_x / density, gy);
-			g_graph_ms->size = vec2(gw, gh);
-			g_graph_fps->pos = vec2(panel_x / density, gy + gh + dp_pad);
-			g_graph_fps->size = vec2(gw, gh);
+			g_ui->process_ui(dt);
 		}
-		g_ui->process_ui(0.0f);
 
-		auto& text = Text::Engine::get();
-		text.begin_frame();
-		const Text::Style label_style{ 16.0f * density, Text::Weight::Normal, Text::Family::Sans };
-		const Text::Style title_style{ 18.0f * density, Text::Weight::Normal, Text::Family::Sans };
-		Text::Layout title, labels[3], body;
-		text.build("Spectrum \xE2\x80\x94 Android", title_style, title);
-		const char* const button_names[3] = { "Play", "Options", "Quit" };
-		for (int i = 0; i < 3; ++i)
-			text.build(g_buttons[i]->clicks ? std::string(button_names[i]) + "  " + std::to_string(g_buttons[i]->clicks) : button_names[i], label_style, labels[i]);
-		text.build("Hello \xD0\x9F\xD1\x80\xD0\xB8\xD0\xB2\xD1\x96\xD1\x82 \xCE\x93\xCE\xB5\xCE\xB9\xCE\xAC \xF0\x9F\x98\x80\xF0\x9F\x9A\x80 frame " + std::to_string(frame),
-		           label_style, body);   // Latin, Cyrillic, Greek, two emoji + a changing number
-		// The real elements (graphs): walk the tree, then let them render their own textures. This runs
-		// before the UI render target is set since those passes are compute / own render targets.
-		g_ui->collect_draw_infos();
-		GUI::user_interface::run_pre_draw(g_ui->pre_draw_infos, list);
-
-		if (text.has_pending_upload())
-			text.upload(list);
-
-		HAL::CompiledRT compiled;
-		compiled.table_rtv = view.renderTarget;
-		const vec4 clear = srgb(0.08f, 0.09f, 0.12f);
-		gfx.set_rtv(compiled, HAL::RTOptions::Default | HAL::RTOptions::ClearColor, 0, 0, clear);
-
-		Slots::UI::DisplayOutput output;
-		output.GetUi_scale() = g_ui_scale;
-		gfx.set(output);
-
-		// Textured nine-patches through the real GUI::NinePatch batcher, which needs only this much of
-		// a GUI::GUIInfo: the list, the window size, the scale and the clip rect.
 		{
-			GUIInfo c;
-			c.command_list = list;
-			c.window_size = vec2(W, H);
-			c.scale = density;   // scales the patches' padding and margins
-			c.ui_clipping.left_top.x = 0;
-			c.ui_clipping.left_top.y = 0;
-			c.ui_clipping.right_bottom.x = W;
-			c.ui_clipping.right_bottom.y = H;
+			PROFILE(L"android_graph_build");
+			graph.start_new_frame();
+			graph.get_context<TimeInfo>().frame = frame;
 
-			auto window = skin_item(g_tex.window);
-			window.padding = { 11, 40, 13, 13 };   // as Skin::DefaultWindow.Active
-			window.margins = { 12, 11, 11, 10 };
-			g_nine_patch->draw(c, window, ::rect{ panel_x, panel_y, panel_w, panel_h });
+			auto& display = graph.get_context<Table::UI::DisplayState>();
+			display.hdr = false;
+			display.max_nits = 80.0f;
+			display.sdr_white_nits = 80.0f;
 
-			// A button looks pressed while its finger is down: state comes from the touch path.
-			for (int i = 0; i < 3; ++i)
-			{
-				auto button = skin_item(g_buttons[i]->down ? g_tex.button_pressed : g_tex.button);
-				button.padding = { 3, 3, 3, 3 };
-				g_nine_patch->draw(c, button, ::rect{ panel_x + pad + i * (btn_w + pad), btn_y, btn_w, btn_h });
-			}
-			g_nine_patch->flush(c);
+			g_ui->create_graph(graph);
+			g_pipeline->add_passes(graph);
+			// After every pass exists: per-resource state is sized from the pass count at creation.
+			graph.builder.pass_texture(FrameGraph::ResourceID::swapchain, g_ui_target, {}, FrameGraph::ResourceFlags::Required);
+			g_pipeline->run_pre_setups(graph);
+			graph.setup();
+			graph.compile(frame);
 		}
 
-		gfx.set_pipeline<PSOS::UI::SimpleRect>();
-		gfx.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::STRIP);
-
-		// Pixel rect (origin top-left) -> clip space quad: pos[0] = (TL, TR), pos[1] = (BL, BR).
-		auto rect = [&](float x, float y, float w, float h, vec4 color) {
-			const float l = 2.0f * x / W - 1.0f, r = 2.0f * (x + w) / W - 1.0f;
-			const float t = 1.0f - 2.0f * y / H, b = 1.0f - 2.0f * (y + h) / H;
-			Slots::UI::ColorRect slot;
-			auto* p = slot.GetPos();
-			p[0] = float4(l, t, r, t);
-			p[1] = float4(l, b, r, b);
-			for (int i = 0; i < 4; ++i)
-				slot.GetColor()[i] = float4(color.x, color.y, color.z, color.w);
-			gfx.set(slot);
-			gfx.draw(4);
-		};
-
-		// Progress bar (still a solid rect): track + fill sweeping left to right.
-		const float progress = std::fmod(frame * 0.004f, 1.0f);
-		rect(panel_x + pad, bar_y, bar_w, bar_h, srgb(0.08f, 0.09f, 0.11f));
-		rect(panel_x + pad, bar_y, bar_w * progress, bar_h, srgb(0.95f, 0.65f, 0.15f));
-
-		// Text on top: window title, centred button labels, and a body line under the progress bar.
+		HAL::FenceWaiter fence;
 		{
-			const sizer clip = { 0.0f, 0.0f, W, H };
-			const vec2 window_size(W, H);
-			const float4 white(1.0f, 1.0f, 1.0f, 1.0f);
-
-			text.draw(list, title, vec2(panel_x + 3.0f * pad, panel_y + (title_h - title.size.y) * 0.5f), white, clip, window_size);
-			for (int i = 0; i < 3; ++i)
-			{
-				const float bx = panel_x + pad + i * (btn_w + pad);
-				text.draw(list, labels[i], vec2(bx + (btn_w - labels[i].size.x) * 0.5f, btn_y + (btn_h - labels[i].size.y) * 0.5f), white, clip, window_size);
-			}
-			text.draw(list, body, vec2(panel_x + pad, bar_y + bar_h + pad), float4(0.85f, 0.88f, 0.95f, 1.0f), clip, window_size);
+			PROFILE(L"android_graph_render");
+			graph.render();
+			fence = graph.commit_command_lists();
+			fence.wait();
+			graph.reset();
 		}
 
-		// Collected elements (graphs), as UI_Render replays them.
-		{
-			GUI::Renderer renderer{ GUI::Renderer::no_skin_t{} };   // the Skin's asset system isn't ported
-			GUIInfo c;
-			c.renderer = &renderer;
-			c.command_list = list;
-			c.window_size = vec2(W, H);
-			for (auto& e : g_ui->draw_infos)
-			{
-				if (c.scissors != e.scissors)
-				{
-					renderer.flush(c);
-					gfx.set_scissors(e.scissors);
-				}
-				c.scale = e.scale;
-				c.ui_clipping = e.clip;
-				c.offset = e.offset;
-				c.scissors = e.scissors;
-				if (e.before)
-					e.elem->draw(c);
-				else
-					e.elem->draw_after(c);
-			}
-			renderer.flush(c);
-		}
+		auto list = g_device->get_queue(HAL::CommandListType::DIRECT)->get_free_list();
+		list->begin(L"android_present");
+		HAL::Texture2DView view(g_ui_target, *list);
+		auto& gfx = list->get_graphics();
 
 		// FP16 UI target -> SDR swapchain through the engine's CopyTexture PSO (gamma-encodes for 8-bit).
 		{
@@ -516,6 +419,7 @@ namespace
 		list->execute_and_wait();
 		g_swap->present();
 	}
+
 
 	// Bumped by MainActivity on every surface change (resize, rotation, destroy); a render loop belongs to
 	// one generation and ends as soon as it is no longer the latest.
@@ -578,8 +482,6 @@ namespace
 			}
 			read_ui_scale();
 			read_density();
-			if (!g_nine_patch)   // textures and the nine-patch batcher outlive any one surface
-				load_ui_textures();
 
 			int frame = 0;
 			while (g_latest_generation.load() == generation)

@@ -410,7 +410,7 @@ AssetStorage::AssetStorage(Asset::ptr _asset) : asset(_asset)
 	editor.set(Editor());
 
 	if (!header->id.isValid())
-		header->id = xg::newGuid();
+		header->id = xg::new_guid();
 
 	if (header->name.empty())
 		header->name = convert(to_string(header->id));

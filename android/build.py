@@ -77,6 +77,7 @@ TARGETS = {
         # legacy raw4 mesh format: raw4.h does `import Core;` and its .cpp files then include C
         # headers textually, which can't coexist with the combined header unit
         exclude_dirs=["RenderSystem/Mesh/raw4"],
+        extra=["android/app/android_pass_members.cpp"],   # module FrameGraph member bodies the excluded PassDefaults.cpp would have provided
         root="RenderSystem",
         forced="RenderSystem/Defines.h",
         deps=["hal"],
@@ -103,7 +104,7 @@ EXCLUDE = {
     # does not (a member must be defined in its class's module). The declarations still
     # compile, so the pipelines that name these passes build; only the bodies are missing.
     # Revisit by compiling these as `module FrameGraph;` implementation units.
-    "RenderSystem/FrameGraph/autogen/pass_defaults.cpp", "RenderSystem/FrameGraph/PassDefaults.cpp",
+    "RenderSystem/FrameGraph/PassDefaults.cpp",
     "RenderSystem/Effects/FSR/FSR.cpp", "RenderSystem/Effects/Sky.cpp",
     "RenderSystem/Effects/PostProcess/Bloom.cpp", "RenderSystem/Effects/PostProcess/Tonemap.cpp",
     "RenderSystem/Effects/DDGI/DDGIGraph.cpp", "RenderSystem/Effects/VoxelGI/VoxelGIGraph.cpp",
@@ -158,6 +159,11 @@ WINDOWS_HEADER_UNITS = {"windows/windows.h"}
 # be (a primary implementation unit of) that module.
 IMPL_OF_MODULE = {"RenderSystem/GUI/Renderer/NinePatch.cpp": "GUI",
                   "RenderSystem/Scene/SceneObject.cpp": "Graphics"}
+
+# Files written as `module Graphics;` that define members of classes declared in FrameGraph:Passes
+# (the generated PassDefault<>::setup bodies): Clang only accepts that from module FrameGraph itself.
+# The import of FrameGraph goes, since a unit cannot import its own module.
+RETARGET_MODULE = {"RenderSystem/FrameGraph/autogen/pass_defaults.cpp": ("Graphics", "FrameGraph")}
 
 # Partitions removed above: umbrella modules (HAL.ixx) re-export them, so drop those imports.
 DROP_MODULE_IMPORTS = {":Streamline", ":DLSS", ":DLSSRR", ":NRD"}
@@ -378,6 +384,10 @@ def patched_source(p, gen_dir, wrapper=False, drop=frozenset(), ifaces={}):
     patched = text
     if rel(p) in IMPL_OF_MODULE and not MODULE_DECL_LINE_RE.search(patched):
         patched = f"module {IMPL_OF_MODULE[rel(p)]};\n" + patched
+    if rel(p) in RETARGET_MODULE:
+        old, new = RETARGET_MODULE[rel(p)]
+        patched = re.sub(rf"^module\s+{old}\s*;", f"module {new};", patched, count=1, flags=re.M)
+        patched = re.sub(rf"^[ \t]*import\s+{new}\s*;[^\n]*$", "", patched, flags=re.M)
     m = PART_IMPL_RE.search(patched) if p.suffix == ".cpp" else None
     prim = None if m or p.suffix != ".cpp" else PRIMARY_IMPL_RE.search(patched)
     if prim:

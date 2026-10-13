@@ -704,6 +704,7 @@ namespace HAL
                         Log::get().crash_error(std::string("[Vulkan] sparse block size of ") + what + " is "
                             + std::to_string(req.alignment) + ", the tile grid assumes 64 KB");
                     sparse_memory_type_bits &= req.memoryTypeBits;
+
                 };
 
                 VkBufferCreateInfo bci{ VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
@@ -749,7 +750,50 @@ namespace HAL
                     p.tiled_3d = probe_image(VK_IMAGE_TYPE_3D, VK_FORMAT_R16G16B16A16_SFLOAT, VK_IMAGE_USAGE_STORAGE_BIT, "3D image");
 
                 if (!sparse_memory_type_bits)
-                    Log::get().crash_error("[Vulkan] no memory type accepts every sparse resource kind");
+                {
+                    // Adreno: sparse buffers and sparse images require different memory types, so no one tile
+                    // heap can back every sparse kind. Heaps also carry the memory placed (non-sparse)
+                    // resources are bound into, so fall back to a type every plain kind accepts and give up on
+                    // sparse-bound (reserved) resources, which would need the tile heap.
+                    Log::get() << Log::LEVEL_WARNING << "[Vulkan] no memory type accepts every sparse resource kind; "
+                        "heaps use the placed-resource memory type, reserved (sparse) resources are unavailable" << Log::endl;
+
+                    uint32_t plain_bits = ~0u;
+                    VkBufferCreateInfo pbci{ VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
+                    pbci.size  = SPARSE_TILE_SIZE;
+                    pbci.usage = buffer_usage;
+                    VkBuffer plain_buffer = VK_NULL_HANDLE;
+                    vkCreateBuffer(vk_device, &pbci, nullptr, &plain_buffer);
+                    VkMemoryRequirements preq{};
+                    vkGetBufferMemoryRequirements(vk_device, plain_buffer, &preq);
+                    plain_bits &= preq.memoryTypeBits;
+                    vkDestroyBuffer(vk_device, plain_buffer, nullptr);
+
+                    auto plain_image = [&](VkFormat format, VkImageUsageFlags usage) {
+                        VkImageCreateInfo ici{ VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO };
+                        ici.imageType   = VK_IMAGE_TYPE_2D;
+                        ici.format      = format;
+                        ici.extent      = { 256, 256, 1 };
+                        ici.mipLevels   = 1;
+                        ici.arrayLayers = 1;
+                        ici.samples     = VK_SAMPLE_COUNT_1_BIT;
+                        ici.usage       = usage | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+                        VkImage image = VK_NULL_HANDLE;
+                        if (vkCreateImage(vk_device, &ici, nullptr, &image) != VK_SUCCESS)
+                            return;
+                        VkMemoryRequirements ireq{};
+                        vkGetImageMemoryRequirements(vk_device, image, &ireq);
+                        plain_bits &= ireq.memoryTypeBits;
+                        vkDestroyImage(vk_device, image, nullptr);
+                    };
+                    plain_image(VK_FORMAT_R16G16B16A16_SFLOAT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_STORAGE_BIT);
+                    plain_image(VK_FORMAT_D32_SFLOAT, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT);
+
+                    Log::get() << Log::LEVEL_INFO << "[Vulkan] placed-resource memoryTypeBits 0x" << std::hex << plain_bits << std::dec << Log::endl;
+                    if (!plain_bits)
+                        Log::get().crash_error("[Vulkan] no memory type accepts every placed resource kind either");
+                    sparse_memory_type_bits = plain_bits;
+                }
             }
 
             // ---- VRAM info --------------------------------------------------
