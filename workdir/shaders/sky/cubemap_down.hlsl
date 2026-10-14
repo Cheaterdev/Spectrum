@@ -124,8 +124,22 @@ void CS(uint3 DTid : SV_DispatchThreadID)
 	float roughness = (float(mip) + 0.5) / mip_count;
 	float3 itc = face_direction(xy, face, size);
 
-	GetEnvFilter().GetTargets(mip)[uint3(xy, face)] =
-		float4(PrefilterEnvMap(roughness, itc, MipSamples[min(mip, 4u)]), 1);
+	float4 color = float4(PrefilterEnvMap(roughness, itc, MipSamples[min(mip, 4u)]), 1);
+	uint3 coord = uint3(xy, face);
+
+	// Threads of one group straddle mip boundaries, so the target is picked with constant indices:
+	// a divergent index into the descriptor array is not valid on every GPU (Adreno writes nothing).
+	switch (mip)
+	{
+	case 0: GetEnvFilter().GetTargets(0)[coord] = color; break;
+	case 1: GetEnvFilter().GetTargets(1)[coord] = color; break;
+	case 2: GetEnvFilter().GetTargets(2)[coord] = color; break;
+	case 3: GetEnvFilter().GetTargets(3)[coord] = color; break;
+	case 4: GetEnvFilter().GetTargets(4)[coord] = color; break;
+	case 5: GetEnvFilter().GetTargets(5)[coord] = color; break;
+	case 6: GetEnvFilter().GetTargets(6)[coord] = color; break;
+	default: GetEnvFilter().GetTargets(7)[coord] = color; break;
+	}
 }
 
 #endif

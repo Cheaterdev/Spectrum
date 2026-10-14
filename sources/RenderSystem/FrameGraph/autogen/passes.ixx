@@ -163,6 +163,7 @@ export import "../defines.h";
 #include "pass/FrameGraphTests/FGT_AliasingPipeline.pipeline.h"
 #include "pass/FrameGraphTests/FGT_RasterCapturePipeline.pipeline.h"
 #include "pass/FrameGraphTests/FGT_RTCapturePipeline.pipeline.h"
+#include "pass/Environment/SkyViewPipeline.pipeline.h"
 #include "pass/Frame/MainPipeline.pipeline.h"
 #include "pass/UI/UIPipeline.pipeline.h"
 
@@ -893,6 +894,10 @@ export namespace Pipelines
 	namespace FrameGraphTests
 	{
 		using ::Pipelines::FrameGraphTests::FGT_RTCapturePipeline;
+	}
+	namespace Environment
+	{
+		using ::Pipelines::Environment::SkyViewPipeline;
 	}
 	namespace Frame
 	{

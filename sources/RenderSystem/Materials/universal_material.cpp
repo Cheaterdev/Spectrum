@@ -133,8 +133,44 @@ materials::PipelinePasses::PipelinePasses(UINT id, std::string pixel, std::strin
 		});
 	}
 
+	// Not with tessellation: its front end is hull/domain shaders, and a vertex stage is no replacement.
+	if (tess.empty() && (!RenderSystem::get().device().is_mesh_shader_supported() || PipelineOptions::vertex_front_end()))
+	{
+		auto vertex_macros = pixel_macros;
+		vertex_macros.emplace_back("VERTEX_FRONT_END", "1");   // draw id as a flat input (draw_data.hlsl)
+
+		gbuffer_vs = std::make_shared<PSOS::Meshes::GBufferDrawVS>(RenderSystem::get().device(), [&](SimpleGraphicsPSO& target, PSOS::Meshes::GBufferDrawVS::Keys&)
+		{
+			target.name += std::to_string(id);
+			target.pixel = { pixel, "PS", HAL::ShaderOptions::None, vertex_macros, true };
+			target.topology = HAL::PrimitiveTopologyType::TRIANGLE;
+		});
+	}
+
 	if (RenderSystem::get().device().is_rtx_supported())
 		raytrace_lib = HAL::library_shader::get_resource({ raytracing, "" , HAL::ShaderOptions::None, context->hit_shader.macros, true });
+}
+
+bool materials::PipelinePasses::is_built() const
+{
+	if (RenderSystem::get().device().is_mesh_shader_supported())
+	{
+		for (auto& [key, pso] : gbuffer->psos)
+			if (!pso || !pso->is_built()) return false;
+		for (auto& [key, pso] : depth_draw->psos)
+			if (!pso || !pso->is_built()) return false;
+	}
+
+	if (gbuffer_vs)
+		for (auto& [key, pso] : gbuffer_vs->psos)
+			if (!pso || !pso->is_built()) return false;
+
+	return true;
+}
+
+void materials::PipelinePasses::set_vertex_front_end(HAL::GraphicsContext& graphics)
+{
+	graphics.set_pipeline(gbuffer_vs->GetPSO());
 }
 
 void materials::PipelinePasses::set(RENDER_TYPE render_type, MESH_TYPE type, HAL::GraphicsContext& graphics, bool hiz_occlusion, bool capture_meshlets, bool cluster_lod)
@@ -437,18 +473,21 @@ void materials::universal_material::compile()
 	// that entirely -- ResourceDescriptorHeap[opacity_texture_index] is a
 	// plain Texture2D, unconditionally, from anywhere.
 	elem[0].opacity_texture_index = ~0u;
-	auto opacity_tex = transparency_mode == Meshes::TransparencyMode::Masked ? find_opacity_texture(graph.get().get()) : nullptr;
-	if (opacity_tex)
+	// The slot is worked out from the graph when there is one and stored with the material; a device build
+	// has no graph and uses the stored slot.
+	if (graph.get() && context && transparency_mode == Meshes::TransparencyMode::Masked)
 	{
-		auto srv_list = context->get_textures();
-		auto it = std::find(srv_list.begin(), srv_list.end(), opacity_tex);
-		if (it != srv_list.end())
+		opacity_texture_slot = -1;
+		if (auto opacity_tex = find_opacity_texture(graph.get().get()))
 		{
-			size_t idx = it - srv_list.begin();
-			if (idx < texture_srvs.size())
-				elem[0].opacity_texture_index = texture_srvs[idx].get_offset();
+			auto srv_list = context->get_textures();
+			auto it = std::find(srv_list.begin(), srv_list.end(), opacity_tex);
+			if (it != srv_list.end())
+				opacity_texture_slot = (int)(it - srv_list.begin());
 		}
 	}
+	if (opacity_texture_slot >= 0 && (size_t)opacity_texture_slot < texture_srvs.size())
+		elem[0].opacity_texture_index = texture_srvs[opacity_texture_slot].get_offset();
 
 	info_handle.write(0, elem);
 
@@ -469,9 +508,11 @@ void materials::universal_material::generate_texture_handles()
 void materials::universal_material::resolve_transparency_mode()
 {
 	auto g = graph.get();
-	if (g && g->get_refraction()->has_input())
+	if (!g)
+		return;   // a device build has no graph: the mode stored with the material stands
+	if (g->get_refraction()->has_input())
 		transparency_mode = Meshes::TransparencyMode::Translucent;
-	else if (g && g->get_opacity()->has_input())
+	else if (g->get_opacity()->has_input())
 		transparency_mode = Meshes::TransparencyMode::Masked;
 	else
 		transparency_mode = Meshes::TransparencyMode::Opaque;

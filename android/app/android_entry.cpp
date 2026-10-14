@@ -12,6 +12,7 @@ import FrameGraph;
 import GUI;
 import TextEngine;
 import Test.Framework;
+import Demo;
 
 namespace
 {
@@ -192,236 +193,10 @@ namespace
 		Log::get() << Log::LEVEL_INFO << "density = " << std::to_string(g_density) << Log::endl;
 	}
 
-	std::mutex g_ui_mutex;   // the touch thread reads g_ui while the render thread creates it
-	std::shared_ptr<GUI::user_interface> g_ui;
 
-	std::shared_ptr<GUI::user_interface> current_ui()
-	{
-		std::lock_guard<std::mutex> lock(g_ui_mutex);
-		return g_ui;
-	}
-
-	// The demo screen, built from the engine's own elements. Everything sits in `g_root`, whose layout
-	// scale is the density: children are positioned and sized in dp, the root itself in pixels.
-	GUI::base::ptr g_root;
-	GUI::Elements::window::ptr g_window_el;
-	GUI::Elements::button::ptr g_buttons[3];
-	GUI::Elements::progress_bar::ptr g_progress;
-	GUI::Elements::label::ptr g_body;
-	GUI::Elements::stat_graph::ptr g_graph_ms, g_graph_fps;
-	int g_clicks[3] = {};
-	ivec2 g_laid_out_for = { 0, 0 };
-
-	void ensure_ui()
-	{
-		std::lock_guard<std::mutex> lock(g_ui_mutex);
-		if (g_ui)
-			return;
-
-		THREAD_SCOPE(GUI);
-		Skin::get();   // loads every skin texture now rather than inside the first frame
-		g_ui = std::make_shared<GUI::user_interface>();   // shared-owned: the touch path walks to parents via shared_from_this
-
-		// Hooks the desktop window provides; set_capture is called by draggable elements (the window title).
-		g_ui->set_capture = [](bool) {};
-		g_ui->get_clipboard = [] { return std::wstring(); };
-		g_ui->set_clipboard = [](std::wstring_view) {};
-
-		g_root = std::make_shared<GUI::base>();
-		g_root->docking = GUI::dock::NONE;
-		g_root->scale = g_density;
-		g_ui->add_child(g_root);
-
-		g_window_el = std::make_shared<GUI::Elements::window>();
-		g_window_el->set_title("Spectrum \xE2\x80\x94 Android");
-		g_root->add_child(g_window_el);
-
-		static const char* const names[3] = { "Play", "Options", "Quit" };
-		for (int i = 0; i < 3; ++i)
-		{
-			auto b = std::make_shared<GUI::Elements::button>();
-			b->docking = GUI::dock::NONE;
-			b->get_label()->text = names[i];
-			b->get_label()->font_size = 16.0f;
-			b->get_label()->magnet_text = FW1_CENTER | FW1_VCENTER | FW1_NOWORDWRAP;
-			b->on_click = [i](GUI::Elements::button::ptr button) {
-				const char* name = names[i];
-				button->get_label()->text = std::string(name) + "  " + std::to_string(++g_clicks[i]);
-			};
-			g_window_el->add_child(b);
-			g_buttons[i] = b;
-		}
-
-		g_progress = std::make_shared<GUI::Elements::progress_bar>();
-		g_progress->docking = GUI::dock::NONE;
-		g_progress->track_color = { 0.08f, 0.09f, 0.11f, 1.0f };
-		g_progress->fill_color = { 0.95f, 0.65f, 0.15f, 1.0f };
-		g_window_el->add_child(g_progress);
-
-		g_body = std::make_shared<GUI::Elements::label>();
-		g_body->docking = GUI::dock::NONE;
-		g_body->font_size = 16.0f;
-		g_window_el->add_child(g_body);
-
-		auto make_graph = [](const char* title, const char* unit, float min_range, float4 color) {
-			auto g = std::make_shared<GUI::Elements::stat_graph>();
-			g->title = title;
-			g->unit = unit;
-			g->min_range = min_range;
-			g->line_color = color;
-			g->fill_color = { color.x, color.y, color.z, 0.3f };
-			g->docking = GUI::dock::NONE;
-			g->width_size = GUI::size_type::FIXED;
-			g_root->add_child(g);
-			return g;
-		};
-		g_graph_ms = make_graph("Frame time", "ms", 5.0f, { 0.30f, 0.85f, 0.30f, 1.0f });
-		g_graph_fps = make_graph("FPS", "", 20.0f, { 0.35f, 0.65f, 1.0f, 1.0f });
-	}
-
-	// Positions in dp for a surface of (W, H) pixels. Done when the size changes only, so a window the
-	// user has dragged stays where it was put.
-	void layout_ui(float W, float H)
-	{
-		const float wdp = W / g_density, hdp = H / g_density;
-		const float margin = wdp * 0.05f, pad = 12.0f, title_h = 40.0f, btn_h = 44.0f, bar_h = 14.0f;
-		const float panel_x = margin, panel_w = wdp - 2 * margin, panel_y = hdp * 0.08f;
-		const float panel_h = std::max(hdp * 0.42f, 230.0f);
-		const float inner_w = panel_w - 40.0f;   // the window's 20dp margin sits outside its pos/size
-
-		g_ui->size = vec2(W, H);
-		g_root->size = vec2(W, H);   // the root is sized in pixels, only its children are in dp
-		g_window_el->pos = vec2(panel_x + 20.0f, panel_y + 20.0f);
-		g_window_el->size = vec2(inner_w, panel_h - 40.0f);
-
-		const float btn_w = (inner_w - 4 * pad) / 3.0f;
-		for (int i = 0; i < 3; ++i)
-		{
-			g_buttons[i]->pos = vec2(pad + i * (btn_w + pad), pad);
-			g_buttons[i]->size = vec2(btn_w, btn_h);
-		}
-		const float bar_y = pad + btn_h + pad;
-		g_progress->pos = vec2(pad, bar_y);
-		g_progress->size = vec2(inner_w - 2 * pad, bar_h);
-		g_body->pos = vec2(pad, bar_y + bar_h + pad);
-		g_body->size = vec2(inner_w - 2 * pad, 30.0f);
-
-		const float gy = panel_y + panel_h + pad, gh = 90.0f;
-		g_graph_ms->pos = vec2(panel_x, gy);
-		g_graph_ms->size = vec2(panel_w, gh);
-		g_graph_fps->pos = vec2(panel_x, gy + gh + pad);
-		g_graph_fps->size = vec2(panel_w, gh);
-	}
-
-	// Touch arrives as one nativeTouchPoint per finger and a nativeTouchFlush(flags) that ends the message.
 	std::mutex g_touch_mutex;
 	GUI::touch_event g_touch_pending;
 
-	std::unique_ptr<FrameGraph::Graph> g_graph;
-	std::unique_ptr<Pipelines::UI::UIPipeline> g_pipeline;
-
-	// One UI frame through the FrameGraph, as the desktop app does it: the widget tree is walked into
-	// the UI context (create_graph), UIPipeline's UI_PreDraw / UI_Render passes are added, and the graph
-	// draws into g_ui_target in place of the swapchain. That target is FP16 because the UI PSOs write
-	// FP16; the SDR swapchain gets it through the CopyTexture pass at the end.
-	void draw_ui_frame(int frame)
-	{
-		g_swap->wait_for_free();
-		ensure_ui();
-
-		if (!g_graph)
-		{
-			g_graph = std::make_unique<FrameGraph::Graph>();
-			g_pipeline = std::make_unique<Pipelines::UI::UIPipeline>();
-		}
-		auto& graph = *g_graph;
-
-		auto target = g_swap->get_current_frame();
-		const auto& dims = target->get_desc().as_texture().Dimensions;
-		const float W = (float)dims.x, H = (float)dims.y;
-
-		static auto last = std::chrono::steady_clock::now();
-		const auto now = std::chrono::steady_clock::now();
-		const float dt = std::chrono::duration<float>(now - last).count();
-		last = now;
-
-		{
-			PROFILE(L"android_ui_update");
-			if (g_laid_out_for != ivec2((int)dims.x, (int)dims.y))
-			{
-				layout_ui(W, H);
-				g_laid_out_for = ivec2((int)dims.x, (int)dims.y);
-			}
-
-			g_progress->value = std::fmod(frame * 0.004f, 1.0f);
-			g_body->text = "Hello \xD0\x9F\xD1\x80\xD0\xB8\xD0\xB2\xD1\x96\xD1\x82 \xCE\x93\xCE\xB5\xCE\xB9\xCE\xAC \xF0\x9F\x98\x80\xF0\x9F\x9A\x80 frame " + std::to_string(frame);
-			if (dt > 0.0f)
-			{
-				g_graph_ms->push(dt * 1000.0f, dt);
-				g_graph_fps->push(1.0f / dt, dt);
-			}
-			g_ui->process_ui(dt);
-		}
-
-		{
-			PROFILE(L"android_graph_build");
-			graph.start_new_frame();
-			graph.get_context<TimeInfo>().frame = frame;
-
-			auto& display = graph.get_context<Table::UI::DisplayState>();
-			display.hdr = false;
-			display.max_nits = 80.0f;
-			display.sdr_white_nits = 80.0f;
-
-			g_ui->create_graph(graph);
-			g_pipeline->add_passes(graph);
-			// After every pass exists: per-resource state is sized from the pass count at creation.
-			graph.builder.pass_texture(FrameGraph::ResourceID::swapchain, g_ui_target, {}, FrameGraph::ResourceFlags::Required);
-			g_pipeline->run_pre_setups(graph);
-			graph.setup();
-			graph.compile(frame);
-		}
-
-		HAL::FenceWaiter fence;
-		{
-			PROFILE(L"android_graph_render");
-			graph.render();
-			fence = graph.commit_command_lists();
-			fence.wait();
-			graph.reset();
-		}
-
-		auto list = g_device->get_queue(HAL::CommandListType::DIRECT)->get_free_list();
-		list->begin(L"android_present");
-		HAL::Texture2DView view(g_ui_target, *list);
-		auto& gfx = list->get_graphics();
-
-		// FP16 UI target -> SDR swapchain through the engine's CopyTexture PSO (gamma-encodes for 8-bit).
-		{
-			HAL::Texture2DView sc_view(target, *list);
-			HAL::Format sc_format = target->get_desc().as_texture().Format;   // non-const: its conversion operator isn't
-
-			gfx.set_pipeline<PSOS::Utility::CopyTexture>(PSOS::Utility::CopyTexture::Format(sc_format));
-			gfx.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::STRIP);
-			gfx.set_viewport(sc_view.get_viewport());
-			gfx.set_scissor(sc_view.get_scissor());
-
-			Slots::Utility::CopyTexture copy;
-			copy.GetSrcTex() = view.texture2D;
-			gfx.set(copy);
-
-			RT::Frame::SingleColor rt;
-			rt.GetColor() = sc_view.renderTarget;
-			gfx.set_rtv(rt);
-			gfx.draw(4);
-		}
-
-		list->execute_and_wait();
-		g_swap->present();
-	}
-
-
-	// Bumped by MainActivity on every surface change (resize, rotation, destroy); a render loop belongs to
 	// one generation and ends as soon as it is no longer the latest.
 	std::atomic<int> g_latest_generation{ 0 };
 
@@ -476,17 +251,17 @@ namespace
 
 			{
 				const auto& dims = g_swap->get_current_frame()->get_desc().as_texture().Dimensions;
-				g_ui_target = std::make_shared<HAL::TextureResource>(*g_device,
-					HAL::ResourceDesc::Tex2D(HAL::Format::R16G16B16A16_FLOAT, { dims.x, dims.y }, 1, 1, HAL::ResFlags::RenderTarget | HAL::ResFlags::ShaderResource),   // sampled by the conversion pass
-					HAL::HeapType::DEFAULT);
+				g_ui_target = demo::make_target(*g_device, ivec2((int)dims.x, (int)dims.y));
 			}
 			read_ui_scale();
 			read_density();
+			demo::set_density(g_density);
+			demo::surface_changed();
 
 			int frame = 0;
 			while (g_latest_generation.load() == generation)
 			{
-				draw_ui_frame(frame++);
+				demo::draw_frame(*g_device, *g_swap, g_ui_target, frame++);
 				if (frame == 1 || frame == 120)
 					Log::get() << Log::LEVEL_INFO << "surface: UI frame " << frame << " presented" << Log::endl;
 			}
@@ -656,7 +431,7 @@ extern "C"
 		}
 		event.flags = flags;
 
-		if (auto ui = current_ui())
+		if (auto ui = demo::ui())
 			ui->on_touch_event(event);
 	}
 

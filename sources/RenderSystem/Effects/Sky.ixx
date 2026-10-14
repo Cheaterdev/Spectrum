@@ -35,7 +35,9 @@ public:
 	template<typename TPipeline>
 	explicit SkyRender(TPipeline& pipeline) : SkyRender()
 	{
-		pipeline.cubeSky.render_func = m_cubesky_render;
+		// Optional: a pipeline that only draws the sky (SkyViewPipeline) has no cubemap bake.
+		if constexpr (requires { pipeline.cubeSky; })
+			pipeline.cubeSky.render_func = m_cubesky_render;
 		// Optional: a pipeline that only bakes the cubemaps (the FrameGraph
 		// tests' FGT_SkyPipeline) has no full-screen Sky pass.
 		if constexpr (requires { pipeline.sky; })

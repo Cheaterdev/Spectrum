@@ -9,3 +9,5 @@ using CommandArgs = std::vector<std::string>;
 
 int command_shaders(const CommandArgs& args);
 int command_textures(const CommandArgs& args);
+int command_assets(const CommandArgs& args);
+int command_demo(const CommandArgs& args);

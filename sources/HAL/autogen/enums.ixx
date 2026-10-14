@@ -149,6 +149,7 @@ export
 		PSSMMask,
 		PSSMApply,
 		GBufferDraw,
+		GBufferDrawVS,
 		DepthDraw,
 		Voxelization,
 		Sky,

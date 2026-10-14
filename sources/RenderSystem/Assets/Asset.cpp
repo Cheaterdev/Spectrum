@@ -554,6 +554,16 @@ std::future<Asset::ptr> AssetStorage::load_asset()
 		for (auto r : header->references)
 		{
 				auto storage = AssetManager::get().get_storage(r);
+
+			// A reference to an asset that isn't in any asset folder (not shipped, deleted): the load
+			// fails like any other failed reference instead of dereferencing nothing.
+			if (!storage)
+			{
+				Log::get() << Log::LEVEL_ERROR << "asset " << convert(header->name) << " references " << r << ", which does not exist" << Log::endl;
+				tasks.emplace_back(create_task([]() { return false; }));
+				continue;
+			}
+
 			if(!storage->is_loaded())
 			tasks.emplace_back(create_task([r,storage]()
 				{
@@ -571,7 +581,7 @@ std::future<Asset::ptr> AssetStorage::load_asset()
 								Log::get() << "asset loaded " << storage->get_name()<<" " << r <<Log::endl;
 					}
 
-					catch (std::exception e)
+					catch (const std::exception& e)
 					{
 						Log::get() << "asset loading fail" << e.what() << Log::endl;
 					}
@@ -605,7 +615,7 @@ std::future<Asset::ptr> AssetStorage::load_asset()
 					asset->holder = this;
 
 				}
-				catch (std::exception e)
+				catch (const std::exception& e)
 				{
 					Log::get() << "asset loading fail" << e.what() << Log::endl;
 				}
@@ -707,8 +717,9 @@ std::set<Guid> AssetHolder::get_reference_ids()
 	std::set<Guid> r;
 	m.lock();
 
+	// An empty reference (nothing assigned, or dropped before saving) has no id and names nothing.
 	for (auto a : assets)
-		if (a)
+		if (a && a->get_id().isValid())
 			r.insert(a->get_id());
 
 	m.unlock();

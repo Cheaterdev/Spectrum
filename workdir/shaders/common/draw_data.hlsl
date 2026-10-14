@@ -48,7 +48,12 @@ static const uint gl_DrawIndex;
 
 // 5271 = PerPrimitiveEXT, 5283 = MeshShadingEXT: a pixel-shader input written
 // per primitive by the mesh shader.
+#ifdef VERTEX_FRONT_END
+// Behind a vertex shader (gbuffer/vertex_shader.hlsl) the same value is a flat per-vertex output.
+#define PER_PRIMITIVE_INPUT nointerpolation
+#else
 #define PER_PRIMITIVE_INPUT [[vk::ext_extension("SPV_EXT_mesh_shader")]] [[vk::ext_capability(5283)]] [[vk::ext_decorate(5271)]]
+#endif
 #else
 #define PER_PRIMITIVE_INPUT
 #endif

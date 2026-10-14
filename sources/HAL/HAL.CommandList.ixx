@@ -507,6 +507,7 @@ export{
 			friend class CommandList;
 			friend class Resource;
 					friend class Buffer;
+			friend class DirectStorageQueue;   // Vulkan's streaming upload copies buffer ranges in
 
 			CommandList& base;
 			DelayedCommandList* list;

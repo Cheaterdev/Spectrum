@@ -19,6 +19,7 @@ ROOT = Path(__file__).resolve().parent.parent
 APP = ROOT / "android" / "app"
 OUT = ROOT / "projects" / "android"
 SHADER_CACHE = OUT / "shader_cache" / "vulkan"
+ENGINE_ASSETS = OUT / "shader_cache" / "assets"
 
 SDK = next(Path(p) for p in (os.environ.get("ANDROID_HOME"), os.environ.get("ANDROID_SDK_ROOT"),
                              os.path.join(os.environ.get("LOCALAPPDATA", ""), "Android", "Sdk"))
@@ -92,6 +93,12 @@ def main():
             print(f"warning: no shader blobs in {SHADER_CACHE}; run spectrum_tool shaders --target android --out projects/android/shader_cache")
         for blob in blobs:
             dst.write(blob, f"assets/shader_cache/{blob.name}", compress_type=zipfile.ZIP_DEFLATED)
+
+        # Engine assets saved by `spectrum_tool assets` (real .asset files: skin and sky textures, ...).
+        # MainActivity extracts them to <files>/assets, where the AssetManager scans.
+        for asset in sorted(ENGINE_ASSETS.rglob("*")):
+            if asset.is_file():
+                dst.write(asset, f"assets/engine_assets/{asset.relative_to(ENGINE_ASSETS).as_posix()}", compress_type=zipfile.ZIP_DEFLATED)
 
     # 4. align, sign
     aligned = work / "aligned.apk"

@@ -85,6 +85,51 @@ export
 			}
 		}
 
+		// Archives a std::wstring in the Windows layout (UTF-16 code units) on every platform, so a file
+		// saved on Windows loads on Android. Called explicitly at the members of files that travel between
+		// the two (assets); an overload for std::wstring itself is not picked over cereal's generic
+		// basic_string one.
+		// Only the binary archives (the files); the others (object viewer, logs) archive the string as is.
+		template<class Archive>
+		constexpr bool is_binary_archive = std::is_base_of_v<BinaryInputArchive, Archive> || std::is_base_of_v<BinaryOutputArchive, Archive>;
+
+		template<class Archive>
+		void wide_serialize(Archive& ar, std::wstring& s)
+		{
+			if constexpr (!is_binary_archive<Archive>)
+				ar(s);
+			else if constexpr (Archive::is_loading::value)
+			{
+				std::u16string u;
+				ar(u);
+				s = wide_detail::from_utf16(u);
+			}
+			else
+				ar(wide_detail::to_utf16(s));
+		}
+
+		template<class Archive>
+		void wide_serialize(Archive& ar, std::set<std::wstring>& set)
+		{
+			if constexpr (!is_binary_archive<Archive>)
+				ar(set);
+			else if constexpr (Archive::is_loading::value)
+			{
+				std::set<std::u16string> u;
+				ar(u);
+				set.clear();
+				for (auto& s : u)
+					set.insert(wide_detail::from_utf16(s));
+			}
+			else
+			{
+				std::set<std::u16string> u;
+				for (auto& s : set)
+					u.insert(wide_detail::to_utf16(s));
+				ar(u);
+			}
+		}
+
 		template<class Archive>
 		void serialize(Archive& ar, std::filesystem::path& p)
 		{

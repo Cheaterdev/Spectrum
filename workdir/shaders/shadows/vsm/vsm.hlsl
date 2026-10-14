@@ -104,16 +104,42 @@ float4 combine_result(float2 tc, uint2 pixel)
 }
 
 // VSM_Unshadowed: the same direct lighting as combine_result, without a shadow
-// term -- for devices without sparse depth textures, where VSM does not run.
+// term -- for devices without sparse depth textures, where VSM does not run. The sky the pipeline baked
+// (FrameInfo.sky, the specular-filtered cube) stands in for the indirect light the full pipeline gets from
+// ray tracing and voxel GI: diffuse ambient from its blurred top mip, and the reflection a metal shows.
+// Without it a metallic material (spec_to_metallic) has no diffuse term and renders black.
 float4 unshadowed_result(float2 tc)
 {
 	float raw_z = gbuffer.GetDepth().SampleLevel(pointClampSampler, tc, 0);
 	if (raw_z == 0) return 0;
 
+	Camera camera = GetFrameInfo().GetCamera();
+
 	float4 packed_0 = gbuffer.GetAlbedo().SampleLevel(pointClampSampler, tc, 0);
-	float3 normal   = normalize(gbuffer.GetNormals().SampleLevel(pointClampSampler, tc, 0).xyz * 2 - 1);
-	float  NL       = saturate(dot(normal, normalize(GetFrameInfo().GetSunDir().xyz)));
-	return float4(NL * packed_0.rgb * (1 - packed_0.w), 1);
+	float4 packed_n = gbuffer.GetNormals().SampleLevel(pointClampSampler, tc, 0);
+	float3 albedo   = packed_0.rgb;
+	float  metallic = packed_0.w;
+	float3 normal   = normalize(packed_n.xyz * 2 - 1);
+	float  roughness = pow(max(MIN_ROUGHNESS, packed_n.w), 2);
+
+	float3 pos  = depth_to_wpos(raw_z, tc, camera.GetInvViewProj());
+	float3 view = normalize(camera.GetPosition() - pos);
+
+	float NL = saturate(dot(normal, normalize(GetFrameInfo().GetSunDir().xyz)));
+	float NV = saturate(dot(normal, view));
+
+	float3 diffuse_color = albedo * (1 - metallic);
+	float3 f0 = lerp(float3(0.04, 0.04, 0.04), albedo, metallic);
+
+	const float sky_mips = 6;   // sky_cubemap_filtered has 7
+	float3 ambient = GetFrameInfo().GetSky().SampleLevel(linearClampSampler, normal, sky_mips).rgb;
+	float3 reflection = GetFrameInfo().GetSky().SampleLevel(linearClampSampler, reflect(-view, normal), roughness * sky_mips).rgb;
+	float2 env_brdf = GetFrameInfo().GetBrdf().SampleLevel(linearClampSampler, float3(roughness, metallic, NV), 0);
+
+	float3 color = NL * diffuse_color
+	             + ambient * diffuse_color
+	             + reflection * (f0 * env_brdf.x + env_brdf.y);
+	return float4(color, 1);
 }
 
 [numthreads(16, 16, 1)]

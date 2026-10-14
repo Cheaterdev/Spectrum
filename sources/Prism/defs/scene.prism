@@ -70,6 +70,23 @@ namespace Meshes
 
 
 
+	# GBufferDraw for GPUs without mesh shaders: a vertex stage over a direct indexed draw (see
+	# gbuffer/vertex_shader.hlsl). The material supplies the pixel shader, built with VERTEX_FRONT_END.
+	[Base]
+	GraphicsPSO GBufferDrawVS
+	{
+		root = DefaultLayout;
+
+		[EntryPoint = VSVertex]
+		vertex = "gbuffer/vertex_shader.hlsl";
+
+		rtv = { R8G8B8A8_UNORM, R8G8B8A8_UNORM, R8G8B8A8_UNORM, R16G16_FLOAT, R32_UINT };
+
+		ds = D32_FLOAT;
+		cull = None;
+	}
+
+
 	[Base]
 	GraphicsPSO DepthDraw
 	{

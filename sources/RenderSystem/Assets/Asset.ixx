@@ -18,6 +18,21 @@ enum class Asset_Type : int
 	TILED_TEXTURE
 };
 
+// What an asset file is for. An asset class serializes the parts the target needs and records in the file
+// what it wrote, so one loader reads either: the editor keeps everything (a material's graph and its
+// shader sources), a device build drops the editing data and keeps what drawing needs (a material's
+// parameters, textures and compiled pipelines). Set by the offline tool before saving; Editor otherwise.
+enum class AssetTarget : int
+{
+	Editor,
+	Device
+};
+
+struct AssetSerialization
+{
+	static AssetTarget& target() { static AssetTarget t = AssetTarget::Editor; return t; }
+};
+
 
 class Asset;
 class AssetManagerHolder;
@@ -269,8 +284,8 @@ public:
 		SERIALIZE()
 		{
 			 SAVE_PARENT(AssetHolder);
-			ar& NVP(name);
-			ar& NVP(additional_files);
+			cereal::wide_serialize(ar, name);
+			cereal::wide_serialize(ar, additional_files);
 			ar& NVP(version);
 		}
 };
@@ -299,9 +314,9 @@ class AssetStorage : public SharedObject<AssetStorage>, public EditObject
 				SERIALIZE()
 				{
 					ar& NVP(id);
-					ar& NVP(name);
+					cereal::wide_serialize(ar, name);
 					ar& NVP(references);
-					ar& NVP(additional_files);
+					cereal::wide_serialize(ar, additional_files);
 					ar& NVP(type);
 				}
 

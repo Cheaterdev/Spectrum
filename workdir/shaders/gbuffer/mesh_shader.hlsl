@@ -565,6 +565,7 @@ void AS(uint gtid : SV_GroupThreadID, uint gid : SV_GroupID)
 #endif
 
 
+#ifndef VERTEX_FRONT_END   // the mesh stage; vertex_shader.hlsl reuses everything above it
 [NumThreads(128, 1, 1)]
 [OutputTopology("triangle")]
 void VS(
@@ -619,3 +620,4 @@ void VS(
 
 
 
+#endif

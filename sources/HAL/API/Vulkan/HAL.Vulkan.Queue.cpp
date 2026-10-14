@@ -161,9 +161,12 @@ namespace HAL
         auto list = device.get_upload_list();
 
         std::visit(overloaded{
-            [&](const StorageRequest::Buffer&)
+            [&](const StorageRequest::Buffer& buffer)
             {
-                ASSERT(false); // buffer cache upload not yet implemented for Vulkan
+                // Raw bytes, never compressed here; copied through a staging buffer into the range
+                // the request names.
+                list->get_copy().update_buffer(srequest.resource.get(), buffer.offset,
+                    reinterpret_cast<const char*>(data.data()), data.size());
             },
             [&](const StorageRequest::Texture& texture)
             {

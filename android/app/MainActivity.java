@@ -202,13 +202,56 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback
                         out.write(buffer, 0, n);
                 }
             }
+            // Engine assets (.asset files saved by spectrum_tool assets): the AssetManager scans <files>/assets.
+            File assetRoot = new File(root, "assets");
+            deleteTree(assetRoot);
+            int assetCount = extractTree("engine_assets", assetRoot, buffer);
+
             Files.write(stamp.toPath(), current.getBytes());
-            Log.i("Spectrum", "extracted " + names.length + " shader blobs to " + shaders);
+            Log.i("Spectrum", "extracted " + names.length + " shader blobs to " + shaders + ", " + assetCount + " engine assets");
         }
         catch (Exception e)
         {
             Log.e("Spectrum", "prepareWorkDir failed", e);
         }
+    }
+
+    private static void deleteTree(File f)
+    {
+        File[] children = f.listFiles();
+        if (children != null)
+            for (File c : children)
+                deleteTree(c);
+        f.delete();
+    }
+
+    // Copies the APK asset folder `path` into `dst`, keeping its sub-folders. Returns the number of files.
+    private int extractTree(String path, File dst, byte[] buffer) throws java.io.IOException
+    {
+        String[] entries = getAssets().list(path);
+        if (entries == null || entries.length == 0)
+            return 0;
+
+        dst.mkdirs();
+        int count = 0;
+        for (String entry : entries)
+        {
+            String child = path + "/" + entry;
+            String[] below = getAssets().list(child);
+            if (below != null && below.length > 0)
+                count += extractTree(child, new File(dst, entry), buffer);
+            else
+            {
+                try (InputStream in = getAssets().open(child);
+                     OutputStream out = new FileOutputStream(new File(dst, entry)))
+                {
+                    for (int n; (n = in.read(buffer)) > 0; )
+                        out.write(buffer, 0, n);
+                }
+                ++count;
+            }
+        }
+        return count;
     }
 
     @Override public void surfaceCreated(SurfaceHolder holder) {}

@@ -1245,6 +1245,11 @@ namespace Shadows
 			[Always = Read] Texture GBuffer_Speed;
 			[Always = None] Texture GBuffer_DepthMips;
 			[Always = UnorderedAccess] Texture ResultTexture;
+			# The baked sky (the specular-filtered cube) stands in for the indirect light the full pipeline gets from
+			# ray tracing and voxel GI: ambient and the reflection of metals (unshadowed_result, vsm.hlsl). Read through
+			# the pass itself so it is ordered after the bake and live when render() records; absent when no
+			# pipeline bakes one.
+			[Always = Read] [Optional = exists(sky_cubemap_filtered)] TextureCube sky_cubemap_filtered;
 		}
 
 		namespace Dev

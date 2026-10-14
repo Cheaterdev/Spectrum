@@ -16,6 +16,8 @@ namespace
 	const Command commands[] = {
 		{ "shaders", "precompile every PSO shader variant and write the cache + manifest for a target", command_shaders },
 		{ "textures", "decode images and write their texture cache blobs (for devices without image decoders)", command_textures },
+		{ "assets", "save every engine asset as a real asset file (textures included) for devices without image decoders", command_assets },
+		{ "demo", "run the Android demo screen in a window here, held to the phone GPU's feature set (--full to lift that)", command_demo },
 	};
 
 	void print_usage()

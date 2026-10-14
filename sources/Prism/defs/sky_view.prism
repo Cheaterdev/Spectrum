@@ -1,0 +1,19 @@
+# A scene view for hosts that have no shadow maps (VSM needs sparse depth textures): the GBuffer of the scene
+# lit by the sun alone (VSM_Unshadowed, the engine's own fallback for that case) with the atmosphere behind
+# it. The Android demo uses it; nothing in it needs ray tracing, mesh shaders or sparse resources.
+namespace Environment
+{
+	Pipeline SkyViewPipeline
+	{
+		PreScene;
+		Scene;
+		ResultCreation;
+
+		CubeSky;
+		CubeMapDownsample;
+		CubeMapEnviromentProcessor;
+
+		VSM_Unshadowed;
+		Sky;
+	}
+}

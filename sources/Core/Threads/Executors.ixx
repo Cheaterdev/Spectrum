@@ -16,11 +16,18 @@ class SingleThreadExecutor : public concurrency::agent, public concurrency::unbo
 
 {
 public:
-	explicit SingleThreadExecutor(bool start = true)
+	explicit SingleThreadExecutor(bool start = true) : stopped(!start)
 	{
 		if (start)
 			concurrency::agent::start();
 	}
+
+	// The worker blocks on its queue until told to stop. Destroying the executor without stopping it
+	// (an exception unwinding through its owner) would otherwise wait forever on the agent's join, which
+	// the ppl shim does where Windows' agent destructor does not.
+	// Defined in Executors.cpp: an in-class body here is emitted again by every module that imports Core
+	// (MSVC: LNK2005 against hal.lib).
+	~SingleThreadExecutor();
 
 	void stop_and_wait();
 
@@ -28,7 +35,7 @@ protected:
 	void run();
 
 private:
-
+	bool stopped = false;
 };
 
 

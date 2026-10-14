@@ -3,6 +3,7 @@ import RenderSystem;
 
 
 import :EngineAssets;
+import :Materials.UniversalMaterial;
 import :MipMapGenerator;
 
 import HAL;
@@ -37,9 +38,15 @@ void mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, Scene::pt
 	std::map<size_t, materials::Pipeline::ptr>& pipelines = *pipelines_ptr;
 
 	if (meshes_count == 0) return;
-	// Every scene draw is a mesh/amplification dispatch; without mesh shaders the
-	// targets keep their clear, same as an empty scene.
-	if (!RenderSystem::get().device().is_mesh_shader_supported()) return;
+	// The GPU-driven draws below are mesh/amplification dispatches. Without mesh shaders the GBuffer pass
+	// draws its meshes directly through a vertex stage; the other passes (depth, voxelization) have no
+	// such path and their targets keep their clear, same as an empty scene.
+	if (!RenderSystem::get().device().is_mesh_shader_supported())
+	{
+		if (gbuffer && mesh_render_context->render_type == RENDER_TYPE::PIXEL)
+			render_vertex_front_end(mesh_render_context, scene);
+		return;
+	}
 
 	commands_boxes->reserve(list, meshes_count);
 	visible_boxes->reserve(list, meshes_count);
@@ -535,3 +542,40 @@ bool mesh_renderer::add_object(Graphics::renderable* obj)
     return true;
 }
 
+
+
+void mesh_renderer::render_vertex_front_end(MeshRenderContext::ptr mesh_render_context, Scene::ptr scene)
+{
+	PROFILE(L"mesh_vertex_front_end");
+	PROFILE_GPU(L"mesh_vertex_front_end");
+
+	auto& graphics = mesh_render_context->list->get_graphics();
+
+	graphics.set(scene->compiledScene);
+	graphics.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::LIST);
+
+	for (auto* instance : scene->mesh_objects)
+		for (auto& part : instance->rendering)
+		{
+			auto* material = dynamic_cast<materials::universal_material*>(part.material);
+			if (!material)
+				continue;
+
+			auto pipeline = material->get_pipeline();
+			if (!pipeline || !pipeline->has_vertex_front_end() || !pipeline->is_built())
+				continue;
+
+			// Translucent materials are drawn by their own pass, not into the GBuffer.
+			if (pipeline->get_transparency_mode() == Meshes::TransparencyMode::Translucent)
+				continue;
+
+			pipeline->set_vertex_front_end(graphics);
+
+			// A direct draw reads this draw's tables from their slots (IndirectDraw == DRAW_ID_NONE).
+			graphics.set(material->compiled_material_info);
+			graphics.set(part.compiled_mesh_info);
+			graphics.set(part.mesh_instance_info);
+			graphics.set_index_buffer(part.index_buffer_view.get_index_buffer_view());
+			graphics.draw_indexed(part.draw_arguments.IndexCountPerInstance, 0, 0);
+		}
+}

@@ -158,6 +158,7 @@ void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 	tasks.emplace_back(PSOBase::create<PSOS::Shadows::PSSM::PSSMMask>(device, pso[PSO::PSSMMask]));
 	tasks.emplace_back(PSOBase::create<PSOS::Shadows::PSSM::PSSMApply>(device, pso[PSO::PSSMApply]));
 	tasks.emplace_back(PSOBase::create<PSOS::Meshes::GBufferDraw>(device, pso[PSO::GBufferDraw]));
+	tasks.emplace_back(PSOBase::create<PSOS::Meshes::GBufferDrawVS>(device, pso[PSO::GBufferDrawVS]));
 	tasks.emplace_back(PSOBase::create<PSOS::Meshes::DepthDraw>(device, pso[PSO::DepthDraw]));
 	tasks.emplace_back(PSOBase::create<PSOS::GI::Voxel::Voxelization>(device, pso[PSO::Voxelization]));
 	tasks.emplace_back(PSOBase::create<PSOS::Environment::Sky>(device, pso[PSO::Sky]));

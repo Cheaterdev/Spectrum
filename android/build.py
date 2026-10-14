@@ -70,7 +70,14 @@ TARGETS = {
         extra=["android/app/android_entry.cpp"],   # JNI_OnLoad -> Application singleton + logs
         root="Core",
         forced="Core/Defines.h",
-        deps=["rendersystem", "tests"],
+        deps=["rendersystem", "demo", "tests"],
+    ),
+    # The demo screen shared with the Windows `spectrum_tool demo` host (sources/Tools/Demo).
+    "demo": dict(
+        dirs=["Tools/Demo"],
+        root="Tools",
+        forced="Tools/Defines.h",
+        deps=["rendersystem"],
     ),
     "rendersystem": dict(
         dirs=["RenderSystem"],
@@ -105,7 +112,7 @@ EXCLUDE = {
     # compile, so the pipelines that name these passes build; only the bodies are missing.
     # Revisit by compiling these as `module FrameGraph;` implementation units.
     "RenderSystem/FrameGraph/PassDefaults.cpp",
-    "RenderSystem/Effects/FSR/FSR.cpp", "RenderSystem/Effects/Sky.cpp",
+    "RenderSystem/Effects/FSR/FSR.cpp",
     "RenderSystem/Effects/PostProcess/Bloom.cpp", "RenderSystem/Effects/PostProcess/Tonemap.cpp",
     "RenderSystem/Effects/DDGI/DDGIGraph.cpp", "RenderSystem/Effects/VoxelGI/VoxelGIGraph.cpp",
     "RenderSystem/Effects/VoxelGI/RTXCombine.cpp", "RenderSystem/Effects/VoxelGI/NRD_GBufferPack.cpp",
@@ -113,7 +120,6 @@ EXCLUDE = {
     "RenderSystem/Effects/VoxelGI/NRD_SIGMA_Execute.cpp", "RenderSystem/Effects/VoxelGI/NRD_REBLUR_Execute.cpp",
     "RenderSystem/Effects/VoxelGI/ReflectionRTX.cpp", "RenderSystem/Effects/VoxelGI/ShadowRTX.cpp",
     "RenderSystem/Effects/VoxelGI/IndirectRTX.cpp",
-    "RenderSystem/Scene/SceneSystem.cpp", "RenderSystem/Scene/PreSceneSystem.cpp",
     # plain files that include C headers textually after `import Core;` / editor-only rendering
     "RenderSystem/Mesh/MeshletGeneration.cpp", "RenderSystem/Renderer/StencilRenderer.cpp",
     # the DLSS passes call the SDK; the .ixx files only hold portable settings globals
@@ -583,6 +589,26 @@ PASS_MEMBER_SPLIT = {
         copy=re.compile(r"^static\s+uint32_t\s+ui_per_thread\([^)]*\)\s*\{", re.M),   # the definition, not the forward declaration
         out="GUI__UiPassMembers.cpp",
         prelude="using GUI::Renderer;   // the original sits in module GUI, where this is found unqualified"),
+    # Sky.cpp keeps SkyRender's constructor in Graphics:Sky; the generated-pass members it defines go to FrameGraph.
+    "RenderSystem/Effects/Sky.cpp": dict(
+        move=re.compile(r"^void\s+Pass(?:Setup)?Default<Passes::Environment::\w+>::\w+\(", re.M),
+        copy=re.compile(r"(?!)"),
+        out="Graphics__SkyPassMembers.cpp",
+        module_import="Graphics",
+        prelude="using namespace FrameGraph;\nusing namespace HAL;"),
+    # The scene passes: the GBuffer pass (which runs the mesh renderer) and the scene upload before it.
+    "RenderSystem/Scene/SceneSystem.cpp": dict(
+        move=re.compile(r"^void\s+PassDefault<Passes::Meshes::Scene>::render\(", re.M),
+        copy=re.compile(r"(?!)"),
+        out="Graphics__ScenePassMembers.cpp",
+        module_import="Graphics",
+        prelude="using namespace FrameGraph;"),
+    "RenderSystem/Scene/PreSceneSystem.cpp": dict(
+        move=re.compile(r"^void\s+PassDefault<Passes::Frame::PreScene>::(?:pre_setup|render)\(", re.M),
+        copy=re.compile(r"(?!)"),
+        out="Graphics__PreScenePassMembers.cpp",
+        module_import="Graphics",
+        prelude="using namespace FrameGraph;"),
 }
 
 
@@ -617,7 +643,7 @@ def split_pass_members(text, rule, gen_dir):
     header = text[: first_code.start()] if first_code else text
     imports = [f"import {n};" for n in re.findall(r"\bimport\s+([A-Za-z_][\w.]*)\s*;", header) if n != "FrameGraph"]
     out = gen_dir / rule["out"]
-    body = ("module FrameGraph;\nimport GUI;\n" + "\n".join(dict.fromkeys(imports)) + "\n\n"
+    body = (f"module FrameGraph;\nimport {rule.get('module_import', 'GUI')};\n" + "\n".join(dict.fromkeys(imports)) + "\n\n"
             + rule.get("prelude", "") + "\n\n"
             + "\n\n".join(copied + moved) + "\n")
     if not out.exists() or out.read_text(encoding="utf-8", errors="ignore") != body:

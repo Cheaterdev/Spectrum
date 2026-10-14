@@ -538,6 +538,7 @@ export import :Autogen.PSO.Utility.CopyTexture;
 export import :Autogen.PSO.Shadows.PSSM.PSSMMask;
 export import :Autogen.PSO.Shadows.PSSM.PSSMApply;
 export import :Autogen.PSO.Meshes.GBufferDraw;
+export import :Autogen.PSO.Meshes.GBufferDrawVS;
 export import :Autogen.PSO.Meshes.DepthDraw;
 export import :Autogen.PSO.GI.Voxel.Voxelization;
 export import :Autogen.PSO.Environment.Sky;

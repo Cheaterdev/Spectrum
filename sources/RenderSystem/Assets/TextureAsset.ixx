@@ -51,7 +51,7 @@ export{
 				texture = nullptr;
 
 			ar& NVP(texture);
-			 ar& NVP(name);
+			cereal::wide_serialize(ar, name);
 			
 			if (!texture)
 				texture = HAL::Texture::null;
