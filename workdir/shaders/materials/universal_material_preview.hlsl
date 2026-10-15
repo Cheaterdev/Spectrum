@@ -106,6 +106,11 @@ void CS(uint3 id : SV_DispatchThreadID)
         float3 hit_normal  = hit; // already unit length (unit sphere @ origin)
 
         pos = hit;
+
+        // Sphere frame: tangent along increasing u (azimuth), bitangent completing it.
+        float3 sphere_t = normalize(float3(-hit_normal.z, 0, hit_normal.x) + float3(1e-5, 0, 0));
+        mx_set_geometry(hit_normal, sphere_t, cross(hit_normal, sphere_t));
+
         tc  = float2(0.5 + atan2(hit_normal.z, hit_normal.x) / (2 * 3.14159265), 0.5 - asin(hit_normal.y) / 3.14159265);
 
         float3 light_dir = normalize(float3(0.5, 0.8, -0.6));

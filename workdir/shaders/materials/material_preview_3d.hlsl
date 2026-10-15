@@ -85,5 +85,6 @@ void PS_PREVIEW(vertex_output i)
     float  opacity     = 1;
     float  refraction  = 1, thickness = 0, transmission = 1, absorption_distance = 1;
 
+    mx_set_geometry(normalize(i.normal), normalize(i.tangent), normalize(i.binormal));
     COMPILED_FUNC(i.wpos, i.tc, color, metallic, roughness, normal, glow, opacity, refraction, thickness, transmission, absorption_distance, 0);
 }

@@ -70,6 +70,15 @@ float4 sample(uint itex, SamplerState s, float2 tc, float lod)
 
 void COMPILED_FUNC(in float3 a, in float2 b, out float4 c, out float d, out float e, out float4 f, out float4 g, out float h, out float ior, out float thickness, out float transmission, out float absorption_distance, float lod);
 
+// World-space shading frame for MaterialX geometry nodes (see mx_stdlib.hlsl).
+// Only valid in hit shaders: ObjectToWorld3x4() needs a hit.
+void SetMaterialXGeometry(mesh_vertex_input v)
+{
+	float3 n = normalize(mul(ObjectToWorld3x4(), float4(v.normal, 0)));
+	float3 t = normalize(mul(ObjectToWorld3x4(), float4(v.tangent.xyz, 0)));
+	mx_set_geometry(n, t, cross(n, t) * v.tangent.w);
+}
+
 
 // Evaluate the material at the current hit and return just what a shadow ray
 // needs: surface colour (tint) and opacity. Mirrors the setup in the color hit.
@@ -95,6 +104,7 @@ void ShadowSurface(in MyAttributes attr, out float4 color, out float opacity, ou
 	color = 1; opacity = 1;
 	float  metallic = 1, roughness = 1, refraction = 1, thickness = 0, transmission = 1, absorption_distance = 1;
 	float4 normal = 0, glow = 0;
+	SetMaterialXGeometry(t.v);
 	COMPILED_FUNC(t.v.pos, t.v.tc, color, metallic, roughness, normal, glow, opacity, refraction, thickness, transmission, absorption_distance, t.lod);
 	surface_transmission = transmission;
 }
@@ -220,6 +230,7 @@ void TranslucentClosestHitShader([raypayload] inout TranslucentPayload payload, 
 	float4 color = 1;
 	float metallic = 0, roughness = 0, opacity = 1, refraction = 1, thickness = 0, transmission = 1, absorption_distance = 1;
 	float4 normal = 0, glow = 0;
+	SetMaterialXGeometry(t.v);
 	COMPILED_FUNC(t.v.pos, t.v.tc, color, metallic, roughness, normal, glow, opacity, refraction, thickness, transmission, absorption_distance, t.lod);
 
 	// Inverse-transpose of the node's full local->world matrix (row-vector
@@ -289,6 +300,7 @@ void MyClosestHitShader(inout RayPayload payload, in MyAttributes attr)
 	t.lod -= log2(abs(dot(normalize(WorldRayDirection()), t.v.normal)));
 
 
+	SetMaterialXGeometry(t.v);
 	COMPILED_FUNC(t.v.pos, t.v.tc, color, metallic, roughness, normal, glow, opacity, refraction, thickness, transmission, absorption_distance, t.lod);
 
 	// Transparent-aware sun visibility (float3 transmittance instead of a bool).

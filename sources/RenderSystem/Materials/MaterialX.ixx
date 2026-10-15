@@ -48,10 +48,17 @@ class MaterialXLibrary : public Singleton<MaterialXLibrary>
 
     std::vector<MxNodeDef> defs;
     std::map<std::string, size_t> index;
+    std::filesystem::path library_root;
 
     MaterialXLibrary() = default;
 
 public:
+    // Reads a .mtlx file and registers one material asset per surface material
+    // in it (or per bare surface shader node when the file has no material
+    // nodes). Textures are registered as assets, resolved against the file's
+    // folder. Returns the number of materials created; problems are logged.
+    size_t import_file(const std::filesystem::path& file);
+
     // Loads <root>/libraries/stdlib and scans <hlsl_stdlib> for implemented
     // functions, then adds a node-picker entry for every implemented nodedef.
     // Returns the number of registered nodes (0 on failure, which is logged).
@@ -91,6 +98,10 @@ public:
     void on_add(::FlowGraph::graph* g) override;
 
     GUI::base::ptr create_editor_window() override;
+
+    // Sets the editable constant of a float-typed input (used by the .mtlx
+    // importer). False when the input doesn't exist or has no constant.
+    bool set_constant(const std::string& input, const std::vector<float>& values);
 
 private:
     SERIALIZE()

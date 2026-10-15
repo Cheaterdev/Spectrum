@@ -1731,6 +1731,11 @@ public:
 									}
 								});
 						};
+					file->add_item("Import MaterialX...")->on_click = [this](GUI::Elements::menu_list_element::ptr elem)
+						{
+							for (auto& path : Application::get().file_open("Choose a MaterialX file", "", "mtlx|*.mtlx|" "all|*.*|" "|"))
+								MaterialXLibrary::get().import_file(std::filesystem::path(path));
+						};
 					file->add_item("Save")->on_click = [this](GUI::Elements::menu_list_element::ptr elem)
 						{
 							if (!drawer) return;

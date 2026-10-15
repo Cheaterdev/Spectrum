@@ -13,6 +13,8 @@ module Graphics:Materials.MaterialX;
 
 import Core;
 import GUI;
+import :TextureAsset;
+import :Materials.UniversalMaterial;
 
 REGISTER_TYPE(MaterialXNode);
 CEREAL_REGISTER_POLYMORPHIC_RELATION(MaterialNode, MaterialXNode);
@@ -57,6 +59,31 @@ namespace
     // those stay at the zero default.
     bool is_uv_prop(const std::string& p) { return p == "UV0"; }
     bool is_position_prop(const std::string& p) { return p == "Pobject" || p == "Pworld"; }
+
+    bool is_geometry_category(const std::string& c) { return c == "normal" || c == "tangent" || c == "bitangent"; }
+
+    // Texture sampling isn't a plain function call (the texture is a bindless
+    // index and the shader supplies the sampler and lod), so these two nodes
+    // emit their own code in MaterialXNode::operator(). Their `file` input is
+    // a TEXTURE port fed by a TextureAssetNode, like SamplingNode's.
+    bool is_image_category(const std::string& c) { return c == "image" || c == "tiledimage"; }
+
+    // Shading-frame global (mx_stdlib.hlsl) behind a defaultgeomprop: all of
+    // N/T/B in any space resolve to the world-space frame. Anything else
+    // (Pview, ...) has no source yet and stays zero.
+    std::string geometry_global(const std::string& prop)
+    {
+        if (prop == "Nworld" || prop == "Nobject")
+            return "mx_geom_normal";
+
+        if (prop == "Tworld" || prop == "Tobject")
+            return "mx_geom_tangent";
+
+        if (prop == "Bworld" || prop == "Bobject")
+            return "mx_geom_bitangent";
+
+        return "float3(0.0, 0.0, 0.0)";
+    }
 
     std::string trim(const std::string& s)
     {
@@ -160,9 +187,30 @@ size_t MaterialXLibrary::register_nodes(const std::filesystem::path& root, const
         std::stringstream ss;
         ss << file.rdbuf();
         hlsl = ss.str();
+
+        // Implementations spill into generated files pulled in with #include
+        // "name" (relative to the stdlib file), which count as implemented too.
+        for (size_t pos = hlsl.find("#include \""); pos != std::string::npos; pos = hlsl.find("#include \"", pos + 1))
+        {
+            size_t begin = pos + 10;
+            size_t end = hlsl.find('"', begin);
+
+            if (end == std::string::npos)
+                break;
+
+            std::ifstream included(hlsl_stdlib.parent_path() / hlsl.substr(begin, end - begin), std::ios::binary);
+
+            if (!included)
+                continue;
+
+            std::stringstream inc;
+            inc << included.rdbuf();
+            hlsl += "\n" + inc.str();
+        }
     }
 
     auto implemented = scan_functions(hlsl);
+    library_root = root;
 
     try
     {
@@ -177,7 +225,24 @@ size_t MaterialXLibrary::register_nodes(const std::filesystem::path& root, const
             if (name.size() > 2 && name.compare(name.size() - 2, 2, "FA") == 0)
                 function += "_fa";
 
-            if (!implemented.count(function))
+            // A nodedef family whose members differ only in output type
+            // (worleynoise2d float/vector2/vector3) can't share one HLSL
+            // overload set, so it may name its variants mx_<category>_<type>.
+            const bool is_image = is_image_category(nd->getNodeString());
+
+            if (is_image)
+                function = "mx_image";
+            else if (!implemented.count(function))
+            {
+                auto outputs = nd->getActiveOutputs();
+
+                if (outputs.empty())
+                    continue;
+
+                function += "_" + outputs[0]->getType();
+            }
+
+            if (!is_image && !implemented.count(function))
                 continue;
 
             MxNodeDef def;
@@ -193,9 +258,36 @@ size_t MaterialXLibrary::register_nodes(const std::filesystem::path& root, const
                 MxPortDef port;
                 port.name = in->getName();
                 port.mx_type = in->getType();
+
+                // The geometry nodes' `space` (model/object/world) is a string,
+                // which the graph can't carry. They always answer in world
+                // space, so the input is simply not exposed.
+                if (port.mx_type == "string" && is_geometry_category(def.category))
+                    continue;
+
+                if (is_image)
+                {
+                    // Address modes, layers and frame ranges are strings the
+                    // graph can't carry; the engine's sampler decides wrapping.
+                    if (port.mx_type == "string" || port.name == "frameoffset")
+                        continue;
+
+                    if (port.mx_type == "filename")
+                    {
+                        port.type = ShaderParams::get().TEXTURE;
+                        def.inputs.push_back(port);
+                        continue;
+                    }
+                }
+
                 supported &= map_type(port.mx_type, port.type);
                 port.default_hlsl = supported ? default_literal(port.type, in->getValueString()) : "";
                 port.geomprop = in->getAttribute("defaultgeomprop");
+
+                // Frame vectors come from the shader's shading-frame globals
+                // (mx_set_geometry); an unconnected input reads them directly.
+                if (!port.geomprop.empty() && !is_uv_prop(port.geomprop) && !is_position_prop(port.geomprop))
+                    port.default_hlsl = geometry_global(port.geomprop);
 
                 if (supported && port.type.M == 1)
                 {
@@ -497,6 +589,7 @@ void MaterialXNode::operator()(MaterialContext* c)
     auto mat_graph = static_cast<MaterialFunction*>(owner);
 
     std::string args;
+    std::vector<shader_parameter> values;
 
     for (size_t i = 0; i < def->inputs.size(); i++)
     {
@@ -508,7 +601,54 @@ void MaterialXNode::operator()(MaterialContext* c)
             ? c->create_value(uniforms[i])
             : port->get<shader_parameter>();
 
-        args += (i ? ", " : "") + coerce(value, def->inputs[i].type);
+        values.push_back(value);
+
+        if (def->inputs[i].type != ShaderParams::get().TEXTURE)
+            args += (i ? ", " : "") + coerce(value, def->inputs[i].type);
+    }
+
+    if (is_image_category(def->category))
+    {
+        auto find = [&](const char* input_name)
+        {
+            for (size_t i = 0; i < def->inputs.size(); i++)
+                if (def->inputs[i].name == input_name)
+                    return (int)i;
+
+            return -1;
+        };
+
+        auto get = [&](const char* input_name, const ShaderParamType& type)
+        {
+            int i = find(input_name);
+            return i < 0 ? std::string() : coerce(values[i], type);
+        };
+
+        auto& out_type = def->outputs[0].type;
+        const int file = find("file");
+
+        // Nothing linked to `file` (the seeded value of an unconnected input
+        // is not an input): the MaterialX `default`, as if the image were missing.
+        if (file < 0 || !input_parametres[file]->has_input())
+        {
+            output_parametres[0]->put(mat_graph->add_value(out_type, get("default", out_type)));
+            return;
+        }
+
+        std::string uv = get("texcoord", ShaderParams::get().FLOAT2);
+
+        // tiledimage's nodegraph: ((uv * tiling - offset) / imagesize) * tilesize.
+        if (def->category == "tiledimage")
+            uv = "(((" + uv + " * " + get("uvtiling", ShaderParams::get().FLOAT2) + " - " + get("uvoffset", ShaderParams::get().FLOAT2)
+                + ") / " + get("realworldimagesize", ShaderParams::get().FLOAT2) + ") * " + get("realworldtilesize", ShaderParams::get().FLOAT2) + ")";
+
+        // Same call SamplingNode emits; `Sampler` and `lod` are the shader's own.
+        auto sampled = mat_graph->add_value(ShaderParams::get().FLOAT4,
+            "sample(" + values[file].name + ", Sampler, " + uv + ", lod)");
+
+        static const char* swizzle[] = { "", ".x", ".xy", ".xyz", "" };
+        output_parametres[0]->put(mat_graph->add_value(out_type, sampled.name + swizzle[out_type.N]));
+        return;
     }
 
     if (def->outputs.size() == 1)
@@ -532,4 +672,474 @@ void MaterialXNode::operator()(MaterialContext* c)
 
     for (size_t i = 0; i < outs.size(); i++)
         output_parametres[i]->put(outs[i]);
+}
+
+bool MaterialXNode::set_constant(const std::string& input, const std::vector<float>& values)
+{
+    auto* def = MaterialXLibrary::get().find(nodedef);
+
+    if (!def)
+        return false;
+
+    for (size_t i = 0; i < def->inputs.size() && i < uniforms.size(); i++)
+    {
+        if (def->inputs[i].name != input || !uniforms[i])
+            continue;
+
+        for (int c = 0; c < def->inputs[i].type.N && c < (int)values.size(); c++)
+            std::memcpy(&uniforms[i]->value.raw_data[c], &values[c], sizeof(float));
+
+        return true;
+    }
+
+    return false;
+}
+
+// ---- .mtlx import -----------------------------------------------------------
+
+namespace
+{
+    using OutPtr = ::FlowGraph::output::ptr;
+
+    // A surface-shader parameter: wired to another node's output, or a constant.
+    struct Channel
+    {
+        OutPtr src;
+        std::vector<float> value;
+    };
+
+    // Which parameter of each surface shader feeds which output of the
+    // material graph. The graph has one base color, metallic, roughness,
+    // glow, opacity and normal; everything else the shader models (sheen,
+    // coat, subsurface, transmission, ...) is dropped.
+    struct SurfaceMapping
+    {
+        const char* category;
+        const char* base_color;
+        const char* base_weight;      // multiplies base_color; "" = none
+        const char* metalness;
+        const char* roughness;
+        const char* emission_color;
+        const char* emission_weight;  // "" = none
+        const char* opacity;
+        const char* normal;
+    };
+
+    const SurfaceMapping surface_mappings[] =
+    {
+        { "standard_surface",  "base_color",   "base",        "metalness",      "specular_roughness", "emission_color", "emission",             "opacity",          "normal" },
+        { "open_pbr_surface",  "base_color",   "base_weight", "base_metalness", "specular_roughness", "emission_color", "emission_luminance",   "geometry_opacity", "geometry_normal" },
+        { "gltf_pbr",          "base_color",   "",            "metallic",       "roughness",          "emissive",       "emissive_strength",    "alpha",            "normal" },
+        { "UsdPreviewSurface", "diffuseColor", "",            "metallic",       "roughness",          "emissiveColor",  "",                     "opacity",          "normal" },
+    };
+
+    class MtlxImporter
+    {
+        MaterialGraph::ptr graph;
+        std::filesystem::path dir;
+        std::map<std::string, std::shared_ptr<MaterialXNode>> built;
+        std::map<std::string, TextureAsset::ptr> textures;
+        std::vector<std::pair<::FlowGraph::window::ptr, int>> placed;
+
+        void place(const ::FlowGraph::window::ptr& node, int depth)
+        {
+            graph->register_node(node);
+            placed.push_back({ node, depth });
+        }
+
+        // The graph auto-wires UV/position inputs when a node is added; an
+        // explicit connection from the file replaces that.
+        void unlink_auto(const ::FlowGraph::input::ptr& port)
+        {
+            graph->get_texcoord()->unlink(port);
+            graph->get_position()->unlink(port);
+        }
+
+        static std::string value_string(const MaterialX::InputPtr& in)
+        {
+            if (in->hasInterfaceName())
+                if (auto iface = in->getInterfaceInput())
+                    return iface->getResolvedValueString();
+
+            return in->getResolvedValueString();
+        }
+
+        OutPtr texture_source(const std::string& file, bool to_linear)
+        {
+            std::filesystem::path full = std::filesystem::path(file).is_absolute() ? std::filesystem::path(file) : dir / file;
+            auto& asset = textures[full.string()];
+
+            if (!asset)
+            {
+                auto* raw = new TextureAsset(full);
+                raw->try_register();
+                asset = raw->get_ptr<TextureAsset>();
+            }
+
+            auto node = std::make_shared<TextureAssetNode>(asset, to_linear);
+            place(node, 1);
+            return node->get_output(0);
+        }
+
+        OutPtr output_of(const std::shared_ptr<MaterialXNode>& node, const MxNodeDef& def, const std::string& name)
+        {
+            for (size_t i = 0; i < def.outputs.size(); i++)
+                if (name.empty() || def.outputs[i].name == name)
+                    return node->get_output((int)i);
+
+            return node->get_output(0);
+        }
+
+        OutPtr build(const MaterialX::NodePtr& node, const std::string& out_name, int depth)
+        {
+            auto nodedef = node->getNodeDef();
+            auto* def = nodedef ? MaterialXLibrary::get().find(nodedef->getName()) : nullptr;
+
+            if (!def)
+            {
+                Log::get() << Log::LEVEL_WARNING << "MaterialX import: node '" << node->getName() << "' ("
+                    << node->getCategory() << ") has no implementation here; its connections are left at defaults" << Log::endl;
+                return nullptr;
+            }
+
+            auto& mx = built[node->getNamePath()];
+
+            if (!mx)
+            {
+                mx = std::make_shared<MaterialXNode>(*def);
+                place(mx, depth);
+
+                for (size_t i = 0; i < def->inputs.size(); i++)
+                    if (auto in = node->getInput(def->inputs[i].name))
+                        connect(*mx, *def, i, in, depth + 1);
+            }
+
+            return output_of(mx, *def, out_name);
+        }
+
+        OutPtr source_of(const MaterialX::InputPtr& in, int depth)
+        {
+            if (in->hasInterfaceName())
+            {
+                auto iface = in->getInterfaceInput();
+                return iface ? source_of(iface, depth) : nullptr;
+            }
+
+            if (!in->hasNodeName() && !in->hasNodeGraphString())
+                return nullptr;
+
+            if (auto n = in->getConnectedNode())
+                return build(n, in->getOutputString(), depth);
+
+            if (auto o = in->getConnectedOutput())
+                if (auto n = o->getConnectedNode())
+                    return build(n, o->getOutputString(), depth);
+
+            return nullptr;
+        }
+
+        void connect(MaterialXNode& mx, const MxNodeDef& def, size_t i, const MaterialX::InputPtr& in, int depth)
+        {
+            auto port = mx.get_input((int)i);
+            auto& pd = def.inputs[i];
+
+            if (pd.type == ShaderParams::get().TEXTURE)
+            {
+                std::string file = value_string(in);
+
+                if (file.empty())
+                    return;
+
+                const bool color = def.outputs[0].mx_type == "color3" || def.outputs[0].mx_type == "color4";
+                texture_source(file, color)->link(port);
+                return;
+            }
+
+            if (auto src = source_of(in, depth))
+            {
+                unlink_auto(port);
+                src->link(port);
+                return;
+            }
+
+            std::string text = value_string(in);
+
+            if (text.empty())
+                return;
+
+            if (pd.type.M == 1)
+            {
+                mx.set_constant(pd.name, parse_floats(text));
+                return;
+            }
+
+            // int/bool inputs are baked into the shader text from the nodedef
+            // default, so a different value arrives as a constant node (the
+            // link casts float to int).
+            float v = 0;
+
+            try { v = text == "true" ? 1.0f : text == "false" ? 0.0f : std::stof(text); }
+            catch (const std::exception&) { return; }
+
+            auto constant = std::make_shared<ScalarNode>(v);
+            place(constant, depth);
+            constant->get_output(0)->link(port);
+        }
+
+        Channel channel(const MaterialX::NodePtr& shader, const char* name, int depth)
+        {
+            Channel res;
+
+            if (!*name)
+                return res;
+
+            if (auto in = shader->getInput(name))
+            {
+                if ((res.src = source_of(in, depth)))
+                    return res;
+
+                res.value = parse_floats(value_string(in));
+            }
+
+            if (res.value.empty())
+                if (auto nd = shader->getNodeDef())
+                    if (auto di = nd->getInput(name))
+                        res.value = parse_floats(di->getValueString());
+
+            return res;
+        }
+
+        static bool is_one(const Channel& c)
+        {
+            return !c.src && c.value.size() == 1 && std::abs(c.value[0] - 1.0f) < 1e-6f;
+        }
+
+        // color * weight, folded when both are constants and skipped when the
+        // weight is a constant 1.
+        Channel scale(const Channel& color, const Channel& weight, int depth)
+        {
+            if (is_one(weight) || (!weight.src && weight.value.empty()))
+                return color;
+
+            if (!color.src && !weight.src)
+            {
+                Channel res = color;
+
+                for (auto& v : res.value)
+                    v *= weight.value[0];
+
+                return res;
+            }
+
+            auto* def = MaterialXLibrary::get().find("ND_multiply_color3FA");
+
+            if (!def)
+                return color;
+
+            auto node = std::make_shared<MaterialXNode>(*def);
+            place(node, depth);
+            feed(*node, 0, "in1", color);
+            feed(*node, 1, "in2", weight);
+
+            Channel res;
+            res.src = node->get_output(0);
+            return res;
+        }
+
+        void feed(MaterialXNode& node, int index, const char* name, const Channel& c)
+        {
+            if (c.src)
+            {
+                auto port = node.get_input(index);
+                unlink_auto(port);
+                c.src->link(port);
+            }
+            else
+                node.set_constant(name, c.value);
+        }
+
+        void emit(const Channel& c, const OutPtr& target, int components)
+        {
+            if (c.src)
+            {
+                c.src->link(target);
+                return;
+            }
+
+            if (c.value.empty())
+                return;
+
+            if (components == 1)
+            {
+                auto node = std::make_shared<ScalarNode>(c.value[0]);
+                place(node, 0);
+                node->get_output(0)->link(target);
+                return;
+            }
+
+            float v[4] = { c.value[0], c.value[0], c.value[0], 1.0f };
+
+            if (c.value.size() >= 3)
+                for (int i = 0; i < 3; i++)
+                    v[i] = c.value[i];
+
+            if (c.value.size() >= 4)
+                v[3] = c.value[3];
+
+            auto node = std::make_shared<VectorNode>(vec4(v[0], v[1], v[2], v[3]));
+            place(node, 0);
+            node->get_output(0)->link(target);
+        }
+
+        static bool nonzero(const Channel& c)
+        {
+            if (c.src)
+                return true;
+
+            for (float v : c.value)
+                if (v != 0.0f)
+                    return true;
+
+            return false;
+        }
+
+    public:
+        MtlxImporter(MaterialGraph::ptr g, std::filesystem::path d) : graph(std::move(g)), dir(std::move(d)) {}
+
+        bool build_surface(const MaterialX::NodePtr& shader)
+        {
+            const SurfaceMapping* map = nullptr;
+
+            for (auto& m : surface_mappings)
+                if (shader->getCategory() == m.category)
+                    map = &m;
+
+            if (!map)
+            {
+                Log::get() << Log::LEVEL_WARNING << "MaterialX import: surface shader '" << shader->getCategory()
+                    << "' is not supported (standard_surface, open_pbr_surface, gltf_pbr, UsdPreviewSurface are)" << Log::endl;
+                return false;
+            }
+
+            const int d = 1;
+
+            emit(scale(channel(shader, map->base_color, d), channel(shader, map->base_weight, d), d), graph->get_base_color(), 4);
+            emit(channel(shader, map->metalness, d), graph->get_mettalic(), 1);
+            emit(channel(shader, map->roughness, d), graph->get_roughness(), 1);
+
+            auto emission = scale(channel(shader, map->emission_color, d), channel(shader, map->emission_weight, d), d);
+
+            if (nonzero(emission))
+                emit(emission, graph->get_glow(), 4);
+
+            auto opacity = channel(shader, map->opacity, d);
+
+            // Only wire opacity when it does something; an all-ones constant
+            // is the graph's default.
+            bool opaque = !opacity.src;
+
+            for (float v : opacity.value)
+                opaque &= v >= 0.999f;
+
+            if (!opaque)
+                emit(opacity, graph->get_opacity(), 1);
+
+            if (auto normal = shader->getInput(map->normal))
+            {
+                auto n = normal->getConnectedNode();
+
+                // The graph's normal output takes the tangent-space texel as
+                // stored; MaterialX's normalmap node decodes it, so the map
+                // goes straight to the output instead.
+                if (n && n->getCategory() == "normalmap")
+                {
+                    if (auto in = n->getInput("in"))
+                        if (auto src = source_of(in, d))
+                            src->link(graph->get_normals());
+                }
+                else if (n || normal->hasNodeGraphString())
+                    Log::get() << Log::LEVEL_WARNING << "MaterialX import: only normalmap nodes are supported on the normal input" << Log::endl;
+            }
+
+            return true;
+        }
+
+        // Columns by distance from the graph output, rows in creation order.
+        void layout()
+        {
+            int max_depth = 0;
+
+            for (auto& p : placed)
+                max_depth = std::max(max_depth, p.second);
+
+            std::map<int, int> rows;
+
+            for (auto& p : placed)
+                p.first->pos = vec2(40.0f + (max_depth - p.second) * 330.0f, 40.0f + rows[p.second]++ * 300.0f);
+        }
+    };
+}
+
+size_t MaterialXLibrary::import_file(const std::filesystem::path& file)
+{
+    struct Shader { std::string name; MaterialX::NodePtr node; };
+    std::vector<Shader> shaders;
+    MaterialX::DocumentPtr doc;
+
+    try
+    {
+        auto lib = MaterialX::createDocument();
+        MaterialX::FilePathVec folders;
+
+        for (const char* name : { "libraries/stdlib", "libraries/pbrlib", "libraries/bxdf" })
+            if (std::filesystem::exists(library_root / name))
+                folders.push_back(MaterialX::FilePath(name));
+
+        MaterialX::loadLibraries(folders, MaterialX::FileSearchPath(library_root.string()), lib);
+
+        doc = MaterialX::createDocument();
+        MaterialX::readFromXmlFile(doc, MaterialX::FilePath(file.string()), MaterialX::FileSearchPath(file.parent_path().string()));
+        doc->importLibrary(lib);
+
+        for (auto& m : doc->getMaterialNodes())
+            if (auto in = m->getInput("surfaceshader"))
+                if (auto shader = in->getConnectedNode())
+                    shaders.push_back({ m->getName(), shader });
+
+        if (shaders.empty())
+            for (auto& n : doc->getNodes())
+                if (n->getType() == "surfaceshader")
+                    shaders.push_back({ n->getName(), n });
+    }
+    catch (const std::exception& e)
+    {
+        Log::get() << Log::LEVEL_ERROR << "MaterialX import: cannot read " << file.string() << ": " << e.what() << Log::endl;
+        return 0;
+    }
+
+    if (shaders.empty())
+    {
+        Log::get() << Log::LEVEL_WARNING << "MaterialX import: " << file.string() << " has no surface material" << Log::endl;
+        return 0;
+    }
+
+    size_t count = 0;
+
+    for (auto& shader : shaders)
+    {
+        auto graph = std::make_shared<MaterialGraph>();
+        MtlxImporter importer(graph, file.parent_path());
+
+        if (!importer.build_surface(shader.node))
+            continue;
+
+        importer.layout();
+
+        auto* material = new materials::universal_material(graph);
+        material->register_new(std::wstring(shader.name.begin(), shader.name.end()));
+        count++;
+    }
+
+    Log::get() << Log::LEVEL_INFO << "MaterialX import: " << file.string() << " -> " << count << " material(s)" << Log::endl;
+    return count;
 }
