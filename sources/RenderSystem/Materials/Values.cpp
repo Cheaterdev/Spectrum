@@ -721,6 +721,18 @@ MaterialGraph::MaterialGraph()
 	i_thickness = register_output("thickness", ShaderParams::get().FLOAT1);
 	i_transmission = register_output("transmission", ShaderParams::get().FLOAT1);
 	i_absorption_distance = register_output("absorption distance", ShaderParams::get().FLOAT1);
+	i_coat = register_output("coat weight", ShaderParams::get().FLOAT1);
+	i_coat_roughness = register_output("coat roughness", ShaderParams::get().FLOAT1);
+	i_coat->default_value = shader_parameter("0.0", ShaderParams::get().FLOAT1);
+	i_coat_roughness->default_value = shader_parameter("0.1", ShaderParams::get().FLOAT1);
+	i_sheen = register_output("sheen weight", ShaderParams::get().FLOAT1);
+	i_sheen_roughness = register_output("sheen roughness", ShaderParams::get().FLOAT1);
+	i_sheen->default_value = shader_parameter("0.0", ShaderParams::get().FLOAT1);
+	i_sheen_roughness->default_value = shader_parameter("0.3", ShaderParams::get().FLOAT1);
+	i_anisotropy = register_output("anisotropy", ShaderParams::get().FLOAT1);
+	i_anisotropy_rotation = register_output("anisotropy rotation", ShaderParams::get().FLOAT1);
+	i_anisotropy->default_value = shader_parameter("0.0", ShaderParams::get().FLOAT1);
+	i_anisotropy_rotation->default_value = shader_parameter("0.0", ShaderParams::get().FLOAT1);
 
 	i_base_color->default_value = shader_parameter("float4(0,0,0,1)", ShaderParams::get().FLOAT4);
 	i_metallic->default_value = shader_parameter("0.0", ShaderParams::get().FLOAT1);
@@ -818,8 +830,108 @@ FlowGraph::output::ptr MaterialGraph::get_absorption_distance()
 	return i_absorption_distance;
 }
 
+FlowGraph::output::ptr MaterialGraph::get_coat()
+{
+	return i_coat;
+}
+
+FlowGraph::output::ptr MaterialGraph::get_coat_roughness()
+{
+	return i_coat_roughness;
+}
+
+FlowGraph::output::ptr MaterialGraph::get_sheen()
+{
+	return i_sheen;
+}
+
+FlowGraph::output::ptr MaterialGraph::get_sheen_roughness()
+{
+	return i_sheen_roughness;
+}
+
+FlowGraph::output::ptr MaterialGraph::get_anisotropy()
+{
+	return i_anisotropy;
+}
+
+FlowGraph::output::ptr MaterialGraph::get_anisotropy_rotation()
+{
+	return i_anisotropy_rotation;
+}
+
+void MaterialGraph::set_coat_outputs_enabled(bool enabled)
+{
+	i_coat->set_enabled(enabled);
+	i_coat_roughness->set_enabled(enabled);
+	i_sheen->set_enabled(enabled);
+	i_sheen_roughness->set_enabled(enabled);
+	i_anisotropy->set_enabled(enabled);
+	i_anisotropy_rotation->set_enabled(enabled);
+}
+
+// Ports are serialized with the graph, so a graph saved before the coat
+// outputs existed comes back without them. They go last in the COMPILED_FUNC
+// output list, so appending reproduces the order a new graph has.
+void MaterialGraph::restore_coat_outputs()
+{
+	// The constructor's own ports were dropped when the saved port list was
+	// loaded over them, so the members are stale until looked up again.
+	i_coat.reset();
+	i_coat_roughness.reset();
+	i_sheen.reset();
+	i_sheen_roughness.reset();
+	i_anisotropy.reset();
+	i_anisotropy_rotation.reset();
+
+	for (auto& out : output_parametres)
+	{
+		if (out->name == "coat weight")
+			i_coat = out;
+		else if (out->name == "coat roughness")
+			i_coat_roughness = out;
+		else if (out->name == "sheen weight")
+			i_sheen = out;
+		else if (out->name == "sheen roughness")
+			i_sheen_roughness = out;
+		else if (out->name == "anisotropy")
+			i_anisotropy = out;
+		else if (out->name == "anisotropy rotation")
+			i_anisotropy_rotation = out;
+	}
+
+	if (!i_coat)
+		i_coat = register_output("coat weight", ShaderParams::get().FLOAT1);
+
+	if (!i_coat_roughness)
+		i_coat_roughness = register_output("coat roughness", ShaderParams::get().FLOAT1);
+
+	if (!i_sheen)
+		i_sheen = register_output("sheen weight", ShaderParams::get().FLOAT1);
+
+	if (!i_sheen_roughness)
+		i_sheen_roughness = register_output("sheen roughness", ShaderParams::get().FLOAT1);
+
+	if (!i_anisotropy)
+		i_anisotropy = register_output("anisotropy", ShaderParams::get().FLOAT1);
+
+	if (!i_anisotropy_rotation)
+		i_anisotropy_rotation = register_output("anisotropy rotation", ShaderParams::get().FLOAT1);
+
+	i_coat->default_value = shader_parameter("0.0", ShaderParams::get().FLOAT1);
+	i_coat_roughness->default_value = shader_parameter("0.1", ShaderParams::get().FLOAT1);
+	i_sheen->default_value = shader_parameter("0.0", ShaderParams::get().FLOAT1);
+	i_sheen_roughness->default_value = shader_parameter("0.3", ShaderParams::get().FLOAT1);
+	i_anisotropy->default_value = shader_parameter("0.0", ShaderParams::get().FLOAT1);
+	i_anisotropy_rotation->default_value = shader_parameter("0.0", ShaderParams::get().FLOAT1);
+}
+
+// Toggled together with the coat outputs: both are "extra" outputs that every
+// full (non-tessellation) variant of COMPILED_FUNC takes and the tessellation
+// variant omits.
 void MaterialGraph::set_translucent_outputs_enabled(bool enabled)
 {
+	set_coat_outputs_enabled(enabled);
 	i_thickness->set_enabled(enabled);
 	i_transmission->set_enabled(enabled);
 	i_absorption_distance->set_enabled(enabled);

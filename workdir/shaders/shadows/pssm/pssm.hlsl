@@ -11,6 +11,7 @@ static const GBuffer gbuffer = GetPSSMLighting().GetGbuffer();
 
 
 #include "../../common/pbr.hlsl"
+#include "../../common/lobes.hlsl"
 #define SCALE 1
 #include "../../common/rect.hlsl"
 
@@ -266,7 +267,10 @@ EnvBRDF = 0;*/
 //float3 refl = CookTorrance_GGX_sample(light_dir, info,Fk);
 
 //return float4(info.pos, 1);
-return  float4(shadow * (saturate(NL) * info.albedo * (1 - info.metallic)), 1);
+float3 result = shadow * (saturate(NL) * info.albedo * (1 - info.metallic));
+result += material_sun_lobes(gbuffer.GetMaterial().SampleLevel(pointClampSampler, tc, 0), info.normal, info.view, light_dir, shadow,
+	lerp(0.04, info.albedo, info.metallic), max(MIN_ROUGHNESS, gbuffer.GetNormals().SampleLevel(pointClampSampler, tc, 0).w));
+return float4(result, 1);
 
 //return  float4(PBR(direct, reflection, info.albedo, info.normal, info.view, 0.2, info.roughness, packed_0.w), 1);
 }

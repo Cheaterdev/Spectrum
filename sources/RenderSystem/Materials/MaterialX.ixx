@@ -59,6 +59,10 @@ public:
     // folder. Returns the number of materials created; problems are logged.
     size_t import_file(const std::filesystem::path& file);
 
+    // The graph half of import_file: one named material graph per surface in
+    // the file, without creating assets for them.
+    std::vector<std::pair<std::string, MaterialGraph::ptr>> build_graphs(const std::filesystem::path& file);
+
     // Loads <root>/libraries/stdlib and scans <hlsl_stdlib> for implemented
     // functions, then adds a node-picker entry for every implemented nodedef.
     // Returns the number of registered nodes (0 on failure, which is logged).
@@ -102,6 +106,14 @@ public:
     // Sets the editable constant of a float-typed input (used by the .mtlx
     // importer). False when the input doesn't exist or has no constant.
     bool set_constant(const std::string& input, const std::vector<float>& values);
+
+    // Current constant of a float-typed input (empty if it has none).
+    std::vector<float> get_constant(const std::string& input) const;
+
+    const std::string& get_nodedef() const { return nodedef; }
+
+    // Null when the nodedef has no input of that name.
+    ::FlowGraph::input::ptr get_input_by_name(const std::string& input);
 
 private:
     SERIALIZE()

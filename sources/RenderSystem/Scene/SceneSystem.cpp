@@ -47,6 +47,7 @@ void PassDefault<Passes::Meshes::Scene>::render(
         rtv.GetSpecular() = gbuffer.specular.renderTarget;
         rtv.GetMotion()   = gbuffer.speed.renderTarget;
         rtv.GetObject_Id() = gbuffer.object_id.renderTarget;
+        rtv.GetMaterial() = gbuffer.material.renderTarget;
         rtv.GetDepth()    = gbuffer.depth.depthStencil;
         gbuffer.compiled  = rtv.compile(*command_list);
     }

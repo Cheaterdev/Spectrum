@@ -15,6 +15,7 @@ namespace Meshes
 	    float4 specular: SV_Target2;
 	    float2 motion: SV_Target3;
 	    uint object_id: SV_Target4;
+	    float4 material: SV_Target5;
 	};
 }
 using Meshes::GBuffer;

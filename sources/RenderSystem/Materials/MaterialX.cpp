@@ -695,6 +695,38 @@ bool MaterialXNode::set_constant(const std::string& input, const std::vector<flo
     return false;
 }
 
+std::vector<float> MaterialXNode::get_constant(const std::string& input) const
+{
+    auto* def = MaterialXLibrary::get().find(nodedef);
+    std::vector<float> res;
+
+    if (!def)
+        return res;
+
+    for (size_t i = 0; i < def->inputs.size() && i < uniforms.size(); i++)
+    {
+        if (def->inputs[i].name != input || !uniforms[i])
+            continue;
+
+        res.resize(def->inputs[i].type.N);
+        std::memcpy(res.data(), &uniforms[i]->value.raw_data[0], res.size() * sizeof(float));
+    }
+
+    return res;
+}
+
+::FlowGraph::input::ptr MaterialXNode::get_input_by_name(const std::string& input)
+{
+    auto* def = MaterialXLibrary::get().find(nodedef);
+
+    if (def)
+        for (size_t i = 0; i < def->inputs.size(); i++)
+            if (def->inputs[i].name == input)
+                return get_input((int)i);
+
+    return nullptr;
+}
+
 // ---- .mtlx import -----------------------------------------------------------
 
 namespace
@@ -723,14 +755,20 @@ namespace
         const char* emission_weight;  // "" = none
         const char* opacity;
         const char* normal;
+        const char* coat;
+        const char* coat_roughness;
+        const char* sheen;             // weight; gltf_pbr has only a colour, see build_surface
+        const char* sheen_roughness;
+        const char* anisotropy;        // strength 0..1; "" = none
+        const char* anisotropy_rotation; // in turns; "" = none
     };
 
     const SurfaceMapping surface_mappings[] =
     {
-        { "standard_surface",  "base_color",   "base",        "metalness",      "specular_roughness", "emission_color", "emission",             "opacity",          "normal" },
-        { "open_pbr_surface",  "base_color",   "base_weight", "base_metalness", "specular_roughness", "emission_color", "emission_luminance",   "geometry_opacity", "geometry_normal" },
-        { "gltf_pbr",          "base_color",   "",            "metallic",       "roughness",          "emissive",       "emissive_strength",    "alpha",            "normal" },
-        { "UsdPreviewSurface", "diffuseColor", "",            "metallic",       "roughness",          "emissiveColor",  "",                     "opacity",          "normal" },
+        { "standard_surface",  "base_color",   "base",        "metalness",      "specular_roughness", "emission_color", "emission",             "opacity",          "normal",          "coat",         "coat_roughness", "sheen",       "sheen_roughness", "specular_anisotropy", "specular_rotation" },
+        { "open_pbr_surface",  "base_color",   "base_weight", "base_metalness", "specular_roughness", "emission_color", "emission_luminance",   "geometry_opacity", "geometry_normal", "coat_weight",  "coat_roughness", "fuzz_weight", "fuzz_roughness", "specular_roughness_anisotropy", "" },
+        { "gltf_pbr",          "base_color",   "",            "metallic",       "roughness",          "emissive",       "emissive_strength",    "alpha",            "normal",          "clearcoat",    "clearcoat_roughness", "sheen_color", "sheen_roughness", "", "" },
+        { "UsdPreviewSurface", "diffuseColor", "",            "metallic",       "roughness",          "emissiveColor",  "",                     "opacity",          "normal",          "clearcoat",    "clearcoatRoughness", "",            "", "", "" },
     };
 
     class MtlxImporter
@@ -903,7 +941,9 @@ namespace
 
             if (res.value.empty())
                 if (auto nd = shader->getNodeDef())
-                    if (auto di = nd->getInput(name))
+                    // Active, not plain getInput: standard_surface's nodedef
+                    // inherits its inputs from a versioned parent nodedef.
+                    if (auto di = nd->getActiveInput(name))
                         res.value = parse_floats(di->getValueString());
 
             return res;
@@ -1032,6 +1072,50 @@ namespace
             if (nonzero(emission))
                 emit(emission, graph->get_glow(), 4);
 
+            // Clearcoat: only wired when the layer does something, since the
+            // shading model it selects costs a second specular lobe.
+            auto coat = channel(shader, map->coat, d);
+            const bool coated = nonzero(coat);
+
+            if (coated)
+            {
+                emit(coat, graph->get_coat(), 1);
+                emit(channel(shader, map->coat_roughness, d), graph->get_coat_roughness(), 1);
+            }
+
+            // Sheen: a material has one shading model, so a coat wins over it.
+            auto sheen = channel(shader, map->sheen, d);
+
+            const bool sheened = !coated && nonzero(sheen);
+
+            if (sheened)
+            {
+                // gltf_pbr's sheen is a colour with no separate weight: its
+                // strongest component stands in for one.
+                if (sheen.value.size() > 1)
+                    sheen.value = { *std::max_element(sheen.value.begin(), sheen.value.end()) };
+
+                emit(sheen, graph->get_sheen(), 1);
+                emit(channel(shader, map->sheen_roughness, d), graph->get_sheen_roughness(), 1);
+            }
+            else if (coated && nonzero(sheen))
+                Log::get() << Log::LEVEL_WARNING << "MaterialX import: material has both coat and sheen; only the coat is kept" << Log::endl;
+
+            // Anisotropy last: the lowest-priority shading model, so it is only
+            // used when neither a coat nor a sheen took the material's one slot.
+            auto anisotropy = channel(shader, map->anisotropy, d);
+
+            if (nonzero(anisotropy))
+            {
+                if (coated || sheened)
+                    Log::get() << Log::LEVEL_WARNING << "MaterialX import: material has anisotropy and a coat or sheen; anisotropy is dropped" << Log::endl;
+                else
+                {
+                    emit(anisotropy, graph->get_anisotropy(), 1);
+                    emit(channel(shader, map->anisotropy_rotation, d), graph->get_anisotropy_rotation(), 1);
+                }
+            }
+
             auto opacity = channel(shader, map->opacity, d);
 
             // Only wire opacity when it does something; an all-ones constant
@@ -1080,8 +1164,9 @@ namespace
     };
 }
 
-size_t MaterialXLibrary::import_file(const std::filesystem::path& file)
+std::vector<std::pair<std::string, MaterialGraph::ptr>> MaterialXLibrary::build_graphs(const std::filesystem::path& file)
 {
+    std::vector<std::pair<std::string, MaterialGraph::ptr>> result;
     struct Shader { std::string name; MaterialX::NodePtr node; };
     std::vector<Shader> shaders;
     MaterialX::DocumentPtr doc;
@@ -1114,16 +1199,14 @@ size_t MaterialXLibrary::import_file(const std::filesystem::path& file)
     catch (const std::exception& e)
     {
         Log::get() << Log::LEVEL_ERROR << "MaterialX import: cannot read " << file.string() << ": " << e.what() << Log::endl;
-        return 0;
+        return result;
     }
 
     if (shaders.empty())
     {
         Log::get() << Log::LEVEL_WARNING << "MaterialX import: " << file.string() << " has no surface material" << Log::endl;
-        return 0;
+        return result;
     }
-
-    size_t count = 0;
 
     for (auto& shader : shaders)
     {
@@ -1134,9 +1217,20 @@ size_t MaterialXLibrary::import_file(const std::filesystem::path& file)
             continue;
 
         importer.layout();
+        result.push_back({ shader.name, graph });
+    }
 
+    return result;
+}
+
+size_t MaterialXLibrary::import_file(const std::filesystem::path& file)
+{
+    size_t count = 0;
+
+    for (auto& [name, graph] : build_graphs(file))
+    {
         auto* material = new materials::universal_material(graph);
-        material->register_new(std::wstring(shader.name.begin(), shader.name.end()));
+        material->register_new(std::wstring(name.begin(), name.end()));
         count++;
     }
 

@@ -455,8 +455,22 @@ class MaterialGraph : public MaterialFunction
         FlowGraph::output::ptr i_thickness;
         FlowGraph::output::ptr i_transmission;
         FlowGraph::output::ptr i_absorption_distance;
+        // Clearcoat lobe (shading model CLEARCOAT, see common/shading_model.hlsl).
+        // Not serialized as members: graphs saved before these existed have no
+        // such ports, so after loading they are looked up by name and added when
+        // missing (restore_coat_outputs), which keeps the saved format unchanged.
+        FlowGraph::output::ptr i_coat;
+        FlowGraph::output::ptr i_coat_roughness;
+        // Sheen lobe (shading model SHEEN); same load-time restoration as the coat.
+        FlowGraph::output::ptr i_sheen;
+        FlowGraph::output::ptr i_sheen_roughness;
+        // Anisotropic specular (shading model ANISOTROPIC): strength, and the
+        // tangent's rotation about the normal in turns (0..1).
+        FlowGraph::output::ptr i_anisotropy;
+        FlowGraph::output::ptr i_anisotropy_rotation;
 
         void set_translucent_defaults();
+        void restore_coat_outputs();
 
     public:
         using ptr = s_ptr<MaterialGraph>;
@@ -492,7 +506,14 @@ class MaterialGraph : public MaterialFunction
         FlowGraph::output::ptr get_thickness();
         FlowGraph::output::ptr get_transmission();
         FlowGraph::output::ptr get_absorption_distance();
+        FlowGraph::output::ptr get_coat();
+        FlowGraph::output::ptr get_coat_roughness();
+        FlowGraph::output::ptr get_sheen();
+        FlowGraph::output::ptr get_sheen_roughness();
+        FlowGraph::output::ptr get_anisotropy();
+        FlowGraph::output::ptr get_anisotropy_rotation();
         void set_translucent_outputs_enabled(bool enabled);
+        void set_coat_outputs_enabled(bool enabled);
         virtual void start(MaterialContext* context);
     private:
         SERIALIZE()
@@ -524,6 +545,7 @@ class MaterialGraph : public MaterialFunction
             i_opacity->default_value = shader_parameter("1.0", ShaderParams::get().FLOAT1);
             i_refraction->default_value = shader_parameter("1.0", ShaderParams::get().FLOAT1);
             set_translucent_defaults();
+            IF_LOAD() restore_coat_outputs();
         }
 
 };
@@ -652,6 +674,7 @@ class VectorNode : public MaterialNode
         using ptr = s_ptr<VectorNode>;
 
         VectorNode(vec4 value);
+        vec4 get_value() const { return uniform->value.f4_value; }
              	static ptr create_default() {
 			return std::make_shared<VectorNode>(vec4(1,1,1,1));
 		}
@@ -678,6 +701,7 @@ class ScalarNode : public MaterialNode
         using ptr = s_ptr<ScalarNode>;
 
         ScalarNode(float value);
+        float get_value() const { return uniform->value.f_value; }
                	static ptr create_default() {
 			return std::make_shared<ScalarNode>(1.0f);
 		}

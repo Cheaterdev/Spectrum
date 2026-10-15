@@ -23,6 +23,8 @@
 #include "../autogen/VoxelScreen.h"
 #include "../autogen/VoxelInfo.h"
 #include "../nrd/3rdparty/NRD.hlsli"
+#include "../common/coat.hlsl"
+#include "../common/aniso.hlsl"
 
 
 #include "../autogen/VoxelOutput.h"
@@ -622,6 +624,61 @@ void MyRaygenShaderIndirectRTXHalfRes()
 	TraceIndirectDiffuse(half_gbuffer.GetDepth(), half_gbuffer.GetNormals(), voxel_output.GetNoise(), voxel_output.GetBlueNoise());
 }
 
+// Clearcoat reflection: for CLEARCOAT pixels, a second ray at the coat's own
+// (much lower) roughness, stored raw -- a near-mirror ray has little variance,
+// so it skips the denoiser the base lobe goes through and is simply added by
+// the combine passes (weighted by the coat's Fresnel there). Every other pixel
+// gets 0, which the combine passes also skip on the material model.
+void TraceCoatReflection(Texture2D<float> depth_tex, Texture2D<float4> normal_tex, Texture2D<float4> material_tex, RWTexture2D<float4> tex_coat, Texture2D<float2> blueNoiseTex)
+{
+	uint2 itc = DispatchRaysIndex().xy;
+	tex_coat[itc] = 0;
+
+	float raw_z = depth_tex[itc];
+	if (raw_z == 0)
+		return;
+
+	float4 material = material_tex[itc];
+	if (material_model(material) != SHADING_MODEL_CLEARCOAT)
+		return;
+
+	const FrameInfo frame = CreateFrameInfo();
+	const Raytracing raytracing = CreateRaytracing();
+
+	float2 tc = float2(itc + 0.5f) / DispatchRaysDimensions().xy;
+	float3 pos = depth_to_wpos(raw_z, tc, frame.GetCamera().GetInvViewProj());
+	float3 normal = normalize(normal_tex[itc].xyz * 2 - 1);
+	float3 view = -normalize(frame.GetCamera().GetPosition() - pos);
+
+	// Same convention as the base lobe: perceptual roughness, squared.
+	float roughness = pow(max(MIN_ROUGHNESS, material_params(material).y), 2);
+
+	// Different seed than the base ray's (same blue-noise texel), so the two
+	// rays of a pixel do not share a jitter.
+	float2 seed = frac(blueNoiseTex.Load(int3((itc + uint2(37, 91)) % 128, 0)) + 0.5);
+	float3 dir = SampleReflectionVector(view, normal, roughness, seed);
+
+	[raypayload]
+	RayPayload payload;
+	payload.color = float4(0, 0, 0, 0);
+	payload.albedo = 0;
+	payload.hit_normal = 0;
+	payload.recursion = 0;
+	payload.dist = 0;
+	payload.cone.angle = 0;
+	payload.cone.width = 0;
+	payload.use_vsm_shadow = 0;
+
+	RayDesc ray;
+	ray.Origin = pos;
+	ray.Direction = dir;
+	ray.TMin = 0.05;
+	ray.TMax = 10000.0;
+	ColorPass(raytracing.GetScene(), ray, RAY_FLAG_NONE, payload);
+
+	tex_coat[itc] = float4(payload.color.rgb, payload.dist);
+}
+
 // Shared body for MyRaygenShaderReflectionRTXOnly/MyRaygenShaderReflectionRTXHalfRes
 // (see voxel.prism's PassNode ReflectionRTX/ReflectionRTXHalf): pure DXR, one
 // ray per pixel, blue-noise-jittered direction (SampleReflectionVector --
@@ -631,7 +688,7 @@ void MyRaygenShaderIndirectRTXHalfRes()
 // [[project-nrd-integration]]). Parameterized on depth/normals/outputs so
 // full-res and half-res dispatches share the actual trace logic, same shape
 // as TraceIndirectDiffuse above.
-void TraceReflection(Texture2D<float> depth_tex, Texture2D<float4> normal_tex, RWTexture2D<float4> tex_noise, RWTexture2D<float4> tex_dir_pdf, Texture2D<float2> blueNoiseTex)
+void TraceReflection(Texture2D<float> depth_tex, Texture2D<float4> normal_tex, RWTexture2D<float4> tex_noise, RWTexture2D<float4> tex_dir_pdf, Texture2D<float2> blueNoiseTex, Texture2D<float4> material_tex, bool use_material)
 {
 	uint2 itc = DispatchRaysIndex().xy;
 	float2 tc = float2(itc + 0.5f) / DispatchRaysDimensions().xy;
@@ -661,6 +718,16 @@ void TraceReflection(Texture2D<float> depth_tex, Texture2D<float4> normal_tex, R
 	// signal DLSS-RR's own denoiser is designed to clean up.
 	float2 seed = blueNoiseTex.Load(int3(itc % 128, 0));
 	float3 dir = SampleReflectionVector(view, normal, roughness, seed);
+
+	// Anisotropic base specular: stretch the lobe along the material's tangent.
+	// The half-res pass has no material target and stays isotropic.
+	if (use_material)
+	{
+		float4 material = material_tex[itc];
+
+		if (material_model(material) == SHADING_MODEL_ANISOTROPIC)
+			dir = SampleAnisoReflectionVector(view, normal, aniso_decode_tangent(normal, material_params(material).y), roughness, material_params(material).x, seed);
+	}
 
 	[raypayload]
 	RayPayload payload;
@@ -759,6 +826,10 @@ void MyRaygenShaderReflectionRTXOnly()
 	const RWTexture2D<float4> tex_noise = voxel_output.GetNoise();
 	const RWTexture2D<float4> tex_dir_pdf = voxel_output.GetDirAndPdf();
 
+	// Independent of the base lobe's tile classification: a coated pixel needs
+	// its own ray even where the base reflection is reused from half res.
+	TraceCoatReflection(voxel_screen.GetGbuffer().GetDepth(), voxel_screen.GetGbuffer().GetNormals(), voxel_screen.GetGbuffer().GetMaterial(), voxel_output.GetCoat(), voxel_output.GetBlueNoise());
+
 	// Skip the fresh ray only when BOTH tile axes say Low -- a geometric
 	// edge makes the half-res buffer untrustworthy regardless of material,
 	// and a glossy+metallic surface needs real detail regardless of how
@@ -773,7 +844,7 @@ void MyRaygenShaderReflectionRTXOnly()
 		return;
 	}
 
-	TraceReflection(voxel_screen.GetGbuffer().GetDepth(), voxel_screen.GetGbuffer().GetNormals(), tex_noise, tex_dir_pdf, voxel_output.GetBlueNoise());
+	TraceReflection(voxel_screen.GetGbuffer().GetDepth(), voxel_screen.GetGbuffer().GetNormals(), tex_noise, tex_dir_pdf, voxel_output.GetBlueNoise(), voxel_screen.GetGbuffer().GetMaterial(), true);
 }
 
 // Always-on half-res base layer for ReflectionRTXHalf (see voxel.prism's
@@ -786,7 +857,7 @@ void MyRaygenShaderReflectionRTXHalfRes()
 	const VoxelOutput voxel_output = CreateVoxelOutput();
 	const IndirectRTXHalfGBuffer half_gbuffer = CreateIndirectRTXHalfGBuffer();
 
-	TraceReflection(half_gbuffer.GetDepth(), half_gbuffer.GetNormals(), voxel_output.GetNoise(), voxel_output.GetDirAndPdf(), voxel_output.GetBlueNoise());
+	TraceReflection(half_gbuffer.GetDepth(), half_gbuffer.GetNormals(), voxel_output.GetNoise(), voxel_output.GetDirAndPdf(), voxel_output.GetBlueNoise(), half_gbuffer.GetNormals(), false);
 }
 
 

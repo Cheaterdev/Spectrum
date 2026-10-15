@@ -417,6 +417,9 @@ namespace
 			put(data.GBuffer_Albedo,    albedo.data(),   4);
 			put(data.GBuffer_Normals,   normals.data(),  4);
 			put(data.GBuffer_Specular,  specular.data(), 4);
+			// All zero is what the material target holds for an uncoated surface
+			// (shading model STANDARD), so the zeroed specular buffer serves.
+			put(data.GBuffer_Material,  specular.data(), 4);
 			put(data.GBuffer_Speed,     speed.data(),    4);
 			put(data.GBuffer_DepthMips, depth.data(),    4);
 		}

@@ -333,6 +333,7 @@ namespace FrameGraphTests
 		[Always = CopyDest] [Size = FGTestState::size] [Format = R8G8B8A8_UNORM] Texture GBuffer_Albedo;
 		[Always = CopyDest] [Size = FGTestState::size] [Format = R8G8B8A8_UNORM] Texture GBuffer_Normals;
 		[Always = CopyDest] [Size = FGTestState::size] [Format = R8G8B8A8_UNORM] Texture GBuffer_Specular;
+		[Always = CopyDest] [Size = FGTestState::size] [Format = R8G8B8A8_UNORM] Texture GBuffer_Material;
 		[Always = CopyDest] [Size = FGTestState::size] [Format = R16G16_FLOAT] Texture GBuffer_Speed;
 		[Always = CopyDest] [Size = FGTestState::size] [Format = R32_TYPELESS] Texture GBuffer_DepthMips;
 		[Always = UnorderedAccess] [Size = FGTestState::size] [Format = R16G16B16A16_FLOAT] Texture ResultTexture;

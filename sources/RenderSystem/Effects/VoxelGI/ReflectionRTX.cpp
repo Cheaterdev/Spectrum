@@ -106,6 +106,7 @@ void PassDefault<Passes::Reflections::ReflectionRTX>::render(
 			Slots::GI::Voxel::VoxelOutput output;
 			output.GetNoise()     = noisy_output.rwTexture2D;
 			output.GetDirAndPdf() = dir_and_pdf.rwTexture2D;
+			output.GetCoat()      = data.RTXReflectionCoat->rwTexture2D;
 			output.GetBlueNoise() = data.BlueNoise->texture2D;
 			// See ReflectionRTXHalf's own comment on the same binding block.
 			{

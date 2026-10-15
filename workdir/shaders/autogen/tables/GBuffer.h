@@ -16,12 +16,14 @@ namespace Meshes
 		uint specular; // RenderTarget<float4>
 		uint motion; // RenderTarget<float2>
 		uint object_id; // RenderTarget<uint>
+		uint material; // RenderTarget<float4>
 		uint depth; // DepthStencil<float>
 		Texture2D<float4> GetAlbedo() { return ResourceDescriptorHeap[albedo]; }
 		Texture2D<float4> GetNormals() { return ResourceDescriptorHeap[normals]; }
 		Texture2D<float4> GetSpecular() { return ResourceDescriptorHeap[specular]; }
 		Texture2D<float2> GetMotion() { return ResourceDescriptorHeap[motion]; }
 		Texture2D<uint> GetObject_id() { return ResourceDescriptorHeap[object_id]; }
+		Texture2D<float4> GetMaterial() { return ResourceDescriptorHeap[material]; }
 		Texture2D<float> GetDepth() { return ResourceDescriptorHeap[depth]; }
 	};
 }

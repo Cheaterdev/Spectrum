@@ -30,6 +30,9 @@ namespace FrameGraphTests
 			Handlers::Texture GBuffer_Specular = ResourceID::GBuffer_Specular;
 
 
+			Handlers::Texture GBuffer_Material = ResourceID::GBuffer_Material;
+
+
 			Handlers::Texture GBuffer_Speed = ResourceID::GBuffer_Speed;
 
 
@@ -57,6 +60,7 @@ namespace FrameGraphTests
 				builder.create(data.GBuffer_Albedo, { ivec3(builder.graph->get_context<Table::FrameGraphTests::FGTestState>().size, 0), HAL::Format::R8G8B8A8_UNORM, 1, 1 }, FrameGraph::ResourceFlags::CopyDest);
 				builder.create(data.GBuffer_Normals, { ivec3(builder.graph->get_context<Table::FrameGraphTests::FGTestState>().size, 0), HAL::Format::R8G8B8A8_UNORM, 1, 1 }, FrameGraph::ResourceFlags::CopyDest);
 				builder.create(data.GBuffer_Specular, { ivec3(builder.graph->get_context<Table::FrameGraphTests::FGTestState>().size, 0), HAL::Format::R8G8B8A8_UNORM, 1, 1 }, FrameGraph::ResourceFlags::CopyDest);
+				builder.create(data.GBuffer_Material, { ivec3(builder.graph->get_context<Table::FrameGraphTests::FGTestState>().size, 0), HAL::Format::R8G8B8A8_UNORM, 1, 1 }, FrameGraph::ResourceFlags::CopyDest);
 				builder.create(data.GBuffer_Speed, { ivec3(builder.graph->get_context<Table::FrameGraphTests::FGTestState>().size, 0), HAL::Format::R16G16_FLOAT, 1, 1 }, FrameGraph::ResourceFlags::CopyDest);
 				builder.create(data.GBuffer_DepthMips, { ivec3(builder.graph->get_context<Table::FrameGraphTests::FGTestState>().size, 0), HAL::Format::R32_TYPELESS, 1, 1 }, FrameGraph::ResourceFlags::CopyDest);
 				builder.create(data.ResultTexture, { ivec3(builder.graph->get_context<Table::FrameGraphTests::FGTestState>().size, 0), HAL::Format::R16G16B16A16_FLOAT, 1, 1 }, FrameGraph::ResourceFlags::UnorderedAccess);
@@ -71,6 +75,7 @@ namespace FrameGraphTests
 				FrameGraph::ChainIndex GBuffer_Albedo = FrameGraph::ChainIndex::Unresolved;
 				FrameGraph::ChainIndex GBuffer_Normals = FrameGraph::ChainIndex::Unresolved;
 				FrameGraph::ChainIndex GBuffer_Specular = FrameGraph::ChainIndex::Unresolved;
+				FrameGraph::ChainIndex GBuffer_Material = FrameGraph::ChainIndex::Unresolved;
 				FrameGraph::ChainIndex GBuffer_Speed = FrameGraph::ChainIndex::Unresolved;
 				FrameGraph::ChainIndex GBuffer_DepthMips = FrameGraph::ChainIndex::Unresolved;
 				FrameGraph::ChainIndex ResultTexture = FrameGraph::ChainIndex::Unresolved;
@@ -81,6 +86,7 @@ namespace FrameGraphTests
 				cache.GBuffer_Albedo = FrameGraph::TaskBuilder::cache_slot(data.GBuffer_Albedo, ResourceID::GBuffer_Albedo);
 				cache.GBuffer_Normals = FrameGraph::TaskBuilder::cache_slot(data.GBuffer_Normals, ResourceID::GBuffer_Normals);
 				cache.GBuffer_Specular = FrameGraph::TaskBuilder::cache_slot(data.GBuffer_Specular, ResourceID::GBuffer_Specular);
+				cache.GBuffer_Material = FrameGraph::TaskBuilder::cache_slot(data.GBuffer_Material, ResourceID::GBuffer_Material);
 				cache.GBuffer_Speed = FrameGraph::TaskBuilder::cache_slot(data.GBuffer_Speed, ResourceID::GBuffer_Speed);
 				cache.GBuffer_DepthMips = FrameGraph::TaskBuilder::cache_slot(data.GBuffer_DepthMips, ResourceID::GBuffer_DepthMips);
 				cache.ResultTexture = FrameGraph::TaskBuilder::cache_slot(data.ResultTexture, ResourceID::ResultTexture);
@@ -98,6 +104,7 @@ namespace FrameGraphTests
 				builder.create_versioned(data.GBuffer_Albedo, cache.GBuffer_Albedo, { ivec3(builder.graph->get_context<Table::FrameGraphTests::FGTestState>().size, 0), HAL::Format::R8G8B8A8_UNORM, 1, 1 });
 				builder.create_versioned(data.GBuffer_Normals, cache.GBuffer_Normals, { ivec3(builder.graph->get_context<Table::FrameGraphTests::FGTestState>().size, 0), HAL::Format::R8G8B8A8_UNORM, 1, 1 });
 				builder.create_versioned(data.GBuffer_Specular, cache.GBuffer_Specular, { ivec3(builder.graph->get_context<Table::FrameGraphTests::FGTestState>().size, 0), HAL::Format::R8G8B8A8_UNORM, 1, 1 });
+				builder.create_versioned(data.GBuffer_Material, cache.GBuffer_Material, { ivec3(builder.graph->get_context<Table::FrameGraphTests::FGTestState>().size, 0), HAL::Format::R8G8B8A8_UNORM, 1, 1 });
 				builder.create_versioned(data.GBuffer_Speed, cache.GBuffer_Speed, { ivec3(builder.graph->get_context<Table::FrameGraphTests::FGTestState>().size, 0), HAL::Format::R16G16_FLOAT, 1, 1 });
 				builder.create_versioned(data.GBuffer_DepthMips, cache.GBuffer_DepthMips, { ivec3(builder.graph->get_context<Table::FrameGraphTests::FGTestState>().size, 0), HAL::Format::R32_TYPELESS, 1, 1 });
 				builder.create_versioned(data.ResultTexture, cache.ResultTexture, { ivec3(builder.graph->get_context<Table::FrameGraphTests::FGTestState>().size, 0), HAL::Format::R16G16B16A16_FLOAT, 1, 1 });
@@ -110,6 +117,7 @@ namespace FrameGraphTests
 				{ ResourceID::GBuffer_Albedo, true },
 				{ ResourceID::GBuffer_Normals, true },
 				{ ResourceID::GBuffer_Specular, true },
+				{ ResourceID::GBuffer_Material, true },
 				{ ResourceID::GBuffer_Speed, true },
 				{ ResourceID::GBuffer_DepthMips, true },
 				{ ResourceID::ResultTexture, true },

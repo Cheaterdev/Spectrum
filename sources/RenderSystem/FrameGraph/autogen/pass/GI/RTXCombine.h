@@ -45,6 +45,12 @@ namespace GI
 			Handlers::Texture RTXShadowNoise = ResourceID::RTXShadowNoise;
 
 
+			Handlers::Texture GBuffer_Material = ResourceID::GBuffer_Material;
+
+
+			Handlers::Texture RTXReflectionCoat = ResourceID::RTXReflectionCoat;
+
+
 			Handlers::Texture ResultTextureRTXNoise = ResourceID::ResultTextureRTXNoise;
 
 
@@ -72,6 +78,8 @@ namespace GI
 				builder.need(data.RTXReflectionNoise, FrameGraph::ResourceFlags::Read);
 				builder.need(data.RTXIndirectNoise, FrameGraph::ResourceFlags::Read);
 				builder.need(data.RTXShadowNoise, FrameGraph::ResourceFlags::Read);
+				builder.need(data.GBuffer_Material, FrameGraph::ResourceFlags::Read);
+				builder.need(data.RTXReflectionCoat, FrameGraph::ResourceFlags::Read);
 			}
 
 			// Resources this pass always creates with a fixed desc, generated from
@@ -106,6 +114,8 @@ namespace GI
 				FrameGraph::ChainIndex RTXReflectionNoise = FrameGraph::ChainIndex::Unresolved;
 				FrameGraph::ChainIndex RTXIndirectNoise = FrameGraph::ChainIndex::Unresolved;
 				FrameGraph::ChainIndex RTXShadowNoise = FrameGraph::ChainIndex::Unresolved;
+				FrameGraph::ChainIndex GBuffer_Material = FrameGraph::ChainIndex::Unresolved;
+				FrameGraph::ChainIndex RTXReflectionCoat = FrameGraph::ChainIndex::Unresolved;
 				FrameGraph::ChainIndex ResultTextureRTXNoise = FrameGraph::ChainIndex::Unresolved;
 			};
 
@@ -119,6 +129,8 @@ namespace GI
 				cache.RTXReflectionNoise = FrameGraph::TaskBuilder::cache_slot(data.RTXReflectionNoise, ResourceID::RTXReflectionNoise);
 				cache.RTXIndirectNoise = FrameGraph::TaskBuilder::cache_slot(data.RTXIndirectNoise, ResourceID::RTXIndirectNoise);
 				cache.RTXShadowNoise = FrameGraph::TaskBuilder::cache_slot(data.RTXShadowNoise, ResourceID::RTXShadowNoise);
+				cache.GBuffer_Material = FrameGraph::TaskBuilder::cache_slot(data.GBuffer_Material, ResourceID::GBuffer_Material);
+				cache.RTXReflectionCoat = FrameGraph::TaskBuilder::cache_slot(data.RTXReflectionCoat, ResourceID::RTXReflectionCoat);
 				cache.ResultTextureRTXNoise = FrameGraph::TaskBuilder::cache_slot(data.ResultTextureRTXNoise, ResourceID::ResultTextureRTXNoise);
 			}
 
@@ -139,6 +151,8 @@ namespace GI
 				builder.load(data.RTXReflectionNoise, ResourceID::RTXReflectionNoise, cache.RTXReflectionNoise);
 				builder.load(data.RTXIndirectNoise, ResourceID::RTXIndirectNoise, cache.RTXIndirectNoise);
 				builder.load(data.RTXShadowNoise, ResourceID::RTXShadowNoise, cache.RTXShadowNoise);
+				builder.load(data.GBuffer_Material, ResourceID::GBuffer_Material, cache.GBuffer_Material);
+				builder.load(data.RTXReflectionCoat, ResourceID::RTXReflectionCoat, cache.RTXReflectionCoat);
 				builder.create_versioned(data.ResultTextureRTXNoise, cache.ResultTextureRTXNoise, { ivec3(builder.graph->get_context<Table::Frame::ViewportContext>().frame_size, 0), HAL::Format::R16G16B16A16_FLOAT, 1, 1 });
 			}
 
@@ -154,6 +168,8 @@ namespace GI
 				{ ResourceID::RTXReflectionNoise, false },
 				{ ResourceID::RTXIndirectNoise, false },
 				{ ResourceID::RTXShadowNoise, false },
+				{ ResourceID::GBuffer_Material, false },
+				{ ResourceID::RTXReflectionCoat, false },
 				{ ResourceID::ResultTextureRTXNoise, true },
 			};
 			static constexpr uint resource_count = std::size(resource_accesses);

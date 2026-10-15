@@ -2,6 +2,7 @@
 
 #include "../autogen/FrameInfo.h"
 #include "../autogen/RTXCombine.h"
+#include "../common/lobes.hlsl"
 
 static const Camera camera = GetFrameInfo().GetCamera();
 static const GBuffer gbuffer = GetRTXCombine().GetGbuffer();
@@ -74,6 +75,11 @@ void CS(uint3 dispatchID : SV_DispatchThreadID)
 	float shadow = GetRTXCombine().GetShadow()[tc].r;
 	float3 direct = albedo.rgb * NdotL * shadow * (1 - metallic);
 
+	// Clearcoat (common/coat.hlsl): this pass replaces the VSM/PSSM result
+	// under DLSS-RR, so the coat's sun highlight has to be added here too.
+	float4 material = gbuffer.GetMaterial()[tc];
+	direct += material_sun_lobes(material, normal, -v, sun_dir, shadow, lerp(0.04, albedo.rgb, metallic), max(MIN_ROUGHNESS, gbuffer.GetNormals()[tc].w));
+
 	// Reflections: identical weighting to ReflectionCombine. Raw RTX trace
 	// output now (RGB=hit color, A=hit distance, not REBLUR-packed) -- NRD
 	// doesn't run under DLSS-RR any more, DLSS-RR does its own
@@ -94,5 +100,8 @@ void CS(uint3 dispatchID : SV_DispatchThreadID)
 	// this for free via MyClosestHitShader's own payload.color (see its
 	// comment) -- this is only needed here for direct visibility, since this
 	// pass reads the GBuffer rather than recomputing the material.
-	GetRTXCombine().GetTarget()[tc] = float4(direct + refl_color + gi_color + glow, 1);
+	// Coat reflection: its own near-mirror ray (ReflectionRTX's coat output).
+	float3 coat_refl = coat_reflection(material, normal, -v, GetRTXCombine().GetCoat()[tc].rgb);
+
+	GetRTXCombine().GetTarget()[tc] = float4(direct + refl_color + coat_refl + gi_color + glow, 1);
 }

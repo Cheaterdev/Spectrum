@@ -27,6 +27,7 @@ export namespace Table
 				HLSL::Texture2DArray<float2> ddgi_visibility;
 				HLSL::StructuredBuffer<uint> ddgi_residency;
 				HLSL::RWTexture2D<float4> noise;
+				HLSL::RWTexture2D<float4> coat;
 				HLSL::RWTexture2D<float4> DirAndPdf;
 				HLSL::RWTexture2D<float4> noiseRaw;
 				HLSL::RWTexture2D<float> shadow_noise;
@@ -37,6 +38,7 @@ export namespace Table
 				Table::GI::DDGI::DDGIInfo ddgi_cascade3;
 				Table::GI::DDGI::DDGIInfo ddgi_cascade4;
 				HLSL::RWTexture2D<float4>& GetNoise() { return noise; }
+				HLSL::RWTexture2D<float4>& GetCoat() { return coat; }
 				HLSL::RWTexture2D<float4>& GetDirAndPdf() { return DirAndPdf; }
 				HLSL::Texture2D<float2>& GetBlueNoise() { return blueNoise; }
 				HLSL::RWTexture2D<float4>& GetNoiseRaw() { return noiseRaw; }
@@ -59,6 +61,7 @@ export namespace Table
 					compiler.compile_auto(ddgi_visibility, "VoxelOutput::ddgi_visibility");
 					compiler.compile_auto(ddgi_residency, "VoxelOutput::ddgi_residency");
 					compiler.compile_auto(noise, "VoxelOutput::noise");
+					compiler.compile_auto(coat, "VoxelOutput::coat");
 					compiler.compile_auto(DirAndPdf, "VoxelOutput::DirAndPdf");
 					compiler.compile_auto(noiseRaw, "VoxelOutput::noiseRaw");
 					compiler.compile_auto(shadow_noise, "VoxelOutput::shadow_noise");
@@ -76,6 +79,7 @@ export namespace Table
 					uint ddgi_visibility; // Texture2DArray<float2>
 					uint ddgi_residency; // StructuredBuffer<uint>
 					uint noise; // RWTexture2D<float4>
+					uint coat; // RWTexture2D<float4>
 					uint DirAndPdf; // RWTexture2D<float4>
 					uint noiseRaw; // RWTexture2D<float4>
 					uint shadow_noise; // RWTexture2D<float>

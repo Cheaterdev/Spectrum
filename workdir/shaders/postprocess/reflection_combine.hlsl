@@ -4,6 +4,7 @@
 
 #include "../autogen/FrameInfo.h"
 #include "../autogen/ReflectionCombine.h"
+#include "../common/coat.hlsl"
 
 // REBLUR_BackEnd_UnpackRadianceAndNormHitDist, to decode NRD REBLUR_SPECULAR's
 // denoised reflection signal below (see [[project-nrd-integration]]).
@@ -80,6 +81,9 @@ void CS(
 	float3 reflection = REBLUR_BackEnd_UnpackRadianceAndNormHitDist(GetReflectionCombine().GetReflection()[dispatchID.xy]).rgb;
 
 	float3 color = get_PBR(albedo, reflection.xyz, normal, v, roughness, metallic);
+
+	// Clearcoat reflection (common/coat.hlsl), added undenoised.
+	color += coat_reflection(gbuffer.GetMaterial()[tc], normal, -v, GetReflectionCombine().GetCoat()[tc].rgb);
 //	output[index] = float4(lighting, 1);
 	GetReflectionCombine().GetTarget()[dispatchID.xy]+=float4(color,0);
  //

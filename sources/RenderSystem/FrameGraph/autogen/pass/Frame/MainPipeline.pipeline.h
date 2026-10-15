@@ -218,6 +218,7 @@ namespace Frame
 			L"GBuffer_Specular",
 			L"GBuffer_Speed",
 			L"GBuffer_ObjectID",
+			L"GBuffer_Material",
 			L"GBuffer_DepthMips",
 			L"GBuffer_Quality",
 			L"GBuffer_NormalsPrev",
@@ -256,6 +257,7 @@ namespace Frame
 			L"RTXReflectionDirPdfHalf",
 			L"RTXReflectionNoise",
 			L"RTXReflectionDirPdf",
+			L"RTXReflectionCoat",
 			L"RTXIndirectNoiseHalf",
 			L"RTXIndirectNoise",
 			L"DDGI_ProbeRayRadiance",
@@ -614,6 +616,19 @@ namespace Frame
 		static inline const FrameGraph::PrecompiledState GBuffer_ObjectID_c0_states[] = {
 			{ true, { GBuffer_ObjectID_c0_pass_refs + 0, 1 } },
 			{ false, { GBuffer_ObjectID_c0_pass_refs + 1, 1 } },
+		};
+		static inline const FrameGraph::PassRef GBuffer_Material_c0_pass_refs[] = {
+			{ PassID::Scene, 0 },
+			{ PassID::ReflectionRTX, 0 },
+			{ PassID::VSM_ShadowResolve, 0 },
+			{ PassID::VSM_Combine, 0 },
+			{ PassID::VSM_Unshadowed, 0 },
+			{ PassID::ReflCombine, 0 },
+			{ PassID::RTXCombine, 0 },
+		};
+		static inline const FrameGraph::PrecompiledState GBuffer_Material_c0_states[] = {
+			{ true, { GBuffer_Material_c0_pass_refs + 0, 1 } },
+			{ false, { GBuffer_Material_c0_pass_refs + 1, 6 } },
 		};
 		static inline const FrameGraph::PassRef GBuffer_DepthMips_c0_pass_refs[] = {
 			{ PassID::Scene, 0 },
@@ -1211,6 +1226,15 @@ namespace Frame
 		static inline const FrameGraph::PrecompiledState RTXReflectionDirPdf_c0_states[] = {
 			{ true, { RTXReflectionDirPdf_c0_pass_refs + 0, 1 } },
 		};
+		static inline const FrameGraph::PassRef RTXReflectionCoat_c0_pass_refs[] = {
+			{ PassID::ReflectionRTX, 0 },
+			{ PassID::ReflCombine, 0 },
+			{ PassID::RTXCombine, 0 },
+		};
+		static inline const FrameGraph::PrecompiledState RTXReflectionCoat_c0_states[] = {
+			{ true, { RTXReflectionCoat_c0_pass_refs + 0, 1 } },
+			{ false, { RTXReflectionCoat_c0_pass_refs + 1, 2 } },
+		};
 		static inline const FrameGraph::PassRef RTXIndirectNoiseHalf_c0_pass_refs[] = {
 			{ PassID::IndirectRTXHalf, 0 },
 			{ PassID::IndirectRTX, 0 },
@@ -1657,6 +1681,7 @@ namespace Frame
 			{ ResourceID::GBuffer_Specular, 0, GBuffer_Specular_c0_states },
 			{ ResourceID::GBuffer_Speed, 0, GBuffer_Speed_c0_states },
 			{ ResourceID::GBuffer_ObjectID, 0, GBuffer_ObjectID_c0_states },
+			{ ResourceID::GBuffer_Material, 0, GBuffer_Material_c0_states },
 			{ ResourceID::GBuffer_DepthMips, 0, GBuffer_DepthMips_c0_states },
 			{ ResourceID::GBuffer_Quality, 0, GBuffer_Quality_c0_states },
 			{ ResourceID::GBuffer_NormalsPrev, 0, GBuffer_NormalsPrev_c0_states },
@@ -1695,6 +1720,7 @@ namespace Frame
 			{ ResourceID::RTXReflectionDirPdfHalf, 0, RTXReflectionDirPdfHalf_c0_states },
 			{ ResourceID::RTXReflectionNoise, 0, RTXReflectionNoise_c0_states },
 			{ ResourceID::RTXReflectionDirPdf, 0, RTXReflectionDirPdf_c0_states },
+			{ ResourceID::RTXReflectionCoat, 0, RTXReflectionCoat_c0_states },
 			{ ResourceID::RTXIndirectNoiseHalf, 0, RTXIndirectNoiseHalf_c0_states },
 			{ ResourceID::RTXIndirectNoise, 0, RTXIndirectNoise_c0_states },
 			{ ResourceID::DDGI_ProbeRayRadiance, 0, DDGI_ProbeRayRadiance_c0_states },
@@ -2367,6 +2393,7 @@ namespace Frame
 		static inline const FrameGraph::PassRef ReflCombine_0_prev[] = {
 			{ PassID::NRD_IndirectCombine, 0 },
 			{ PassID::NRD_REBLUR_Execute, 0 },
+			{ PassID::ReflectionRTX, 0 },
 			{ PassID::ResultCreation, 0 },
 			{ PassID::Scene, 0 },
 			{ PassID::VSM_Combine, 0 },
