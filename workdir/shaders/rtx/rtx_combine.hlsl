@@ -79,7 +79,10 @@ void CS(uint3 dispatchID : SV_DispatchThreadID)
 	// Clearcoat (common/coat.hlsl): this pass replaces the VSM/PSSM result
 	// under DLSS-RR, so the coat's sun highlight has to be added here too.
 	float4 material = gbuffer.GetMaterial()[tc];
-	direct += material_sun_lobes(material, normal, -v, sun_dir, shadow, lerp(0.04, albedo.rgb, metallic), max(MIN_ROUGHNESS, gbuffer.GetNormals()[tc].w));
+	// The coat reflects part of the light before it reaches the base layer.
+	const float base_attenuation = coat_base_attenuation(material, normal, -v);
+	direct *= base_attenuation;
+	direct += material_sun_lobes(material, normal, -v, sun_dir, shadow, lerp(0.04, albedo.rgb, metallic), max(MIN_ROUGHNESS, gbuffer.GetNormals()[tc].w), albedo.rgb, metallic);
 
 	// Reflections: identical weighting to ReflectionCombine. Raw RTX trace
 	// output now (RGB=hit color, A=hit distance, not REBLUR-packed) -- NRD
@@ -87,14 +90,14 @@ void CS(uint3 dispatchID : SV_DispatchThreadID)
 	// reconstruction/denoising on this exact signal (see RTXCombine's own
 	// comment, voxel.prism).
 	float3 reflection = GetRTXCombine().GetReflection()[tc].rgb;
-	float3 refl_color = get_PBR(albedo.rgb, reflection, normal, v, roughness, metallic);
+	float3 refl_color = get_PBR(albedo.rgb, reflection, normal, v, roughness, metallic) * base_attenuation;
 
 	// Indirect GI: diffuse bounce light, weighted by the surface's own
 	// albedo (diffuse response) rather than the specular BRDF above, and
 	// rolled off by metallic (metals have ~no diffuse term). Same raw shape
 	// as reflection above.
 	float3 indirect = GetRTXCombine().GetIndirect()[tc].rgb;
-	float3 gi_color = albedo.rgb * indirect * (1 - metallic);
+	float3 gi_color = albedo.rgb * indirect * (1 - metallic) * base_attenuation;
 
 	// Self-emission: not shadowed, not weighted by any BRDF -- a glowing
 	// surface looks the same lit or unlit. Indirect GI/reflection rays get

@@ -473,6 +473,9 @@ class MaterialGraph : public MaterialFunction
         FlowGraph::output::ptr i_sss_weight;
         FlowGraph::output::ptr i_sss_radius;
         FlowGraph::output::ptr i_sss_scale;
+        // How far the sheen colour follows the base colour: 0 white, 1 tinted like it.
+        // Registered last so graphs saved before it existed gain it at the same position.
+        FlowGraph::output::ptr i_sheen_tint;
 
         void set_translucent_defaults();
         void restore_coat_outputs();
@@ -520,6 +523,7 @@ class MaterialGraph : public MaterialFunction
         FlowGraph::output::ptr get_subsurface_weight();
         FlowGraph::output::ptr get_subsurface_radius();
         FlowGraph::output::ptr get_subsurface_scale();
+        FlowGraph::output::ptr get_sheen_tint();
         void set_translucent_outputs_enabled(bool enabled);
         void set_coat_outputs_enabled(bool enabled);
         virtual void start(MaterialContext* context);

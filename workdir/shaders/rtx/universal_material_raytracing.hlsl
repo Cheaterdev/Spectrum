@@ -28,6 +28,7 @@
 #include "shadows/vsm/vsm_impl_resolve.hlsl"
 
 #include "common/common.hlsl"
+#include "common/lobes.hlsl"
 #include "materialx/mx_stdlib.hlsl"
 //#define REFRACTION
 #define Sampler linearSampler
@@ -68,7 +69,7 @@ float4 sample(uint itex, SamplerState s, float2 tc, float lod)
 }
 #endif 
 
-void COMPILED_FUNC(in float3 a, in float2 b, out float4 c, out float d, out float e, out float4 f, out float4 g, out float h, out float ior, out float thickness, out float transmission, out float absorption_distance, out float coat, out float coat_roughness, out float sheen, out float sheen_roughness, out float anisotropy, out float aniso_rotation, out float sss_weight, out float3 sss_radius, out float sss_scale, float lod);
+void COMPILED_FUNC(in float3 a, in float2 b, out float4 c, out float d, out float e, out float4 f, out float4 g, out float h, out float ior, out float thickness, out float transmission, out float absorption_distance, out float coat, out float coat_roughness, out float sheen, out float sheen_roughness, out float anisotropy, out float aniso_rotation, out float sss_weight, out float3 sss_radius, out float sss_scale, out float sheen_tint, float lod);
 
 // World-space shading frame for MaterialX geometry nodes (see mx_stdlib.hlsl).
 // Only valid in hit shaders: ObjectToWorld3x4() needs a hit.
@@ -77,6 +78,7 @@ void SetMaterialXGeometry(mesh_vertex_input v)
 	float3 n = normalize(mul(ObjectToWorld3x4(), float4(v.normal, 0)));
 	float3 t = normalize(mul(ObjectToWorld3x4(), float4(v.tangent.xyz, 0)));
 	mx_set_geometry(n, t, cross(n, t) * v.tangent.w);
+	mx_set_time(CreateFrameInfo().GetTime().y);
 }
 
 
@@ -102,10 +104,10 @@ void ShadowSurface(in MyAttributes attr, out float4 color, out float opacity, ou
 	t.v.pos = WorldRayOrigin() + WorldRayDirection() * RayTCurrent();
 
 	color = 1; opacity = 1;
-	float  metallic = 1, roughness = 1, refraction = 1, thickness = 0, transmission = 1, absorption_distance = 1, coat = 0, coat_roughness = 0.1, sheen = 0, sheen_roughness = 0.3, anisotropy = 0, aniso_rotation = 0, sss_weight = 0, sss_scale = 1; float3 sss_radius = float3(1, 1, 1);
+	float  metallic = 1, roughness = 1, refraction = 1, thickness = 0, transmission = 1, absorption_distance = 1, coat = 0, coat_roughness = 0.1, sheen = 0, sheen_roughness = 0.3, anisotropy = 0, aniso_rotation = 0, sss_weight = 0, sss_scale = 1, sheen_tint = 0; float3 sss_radius = float3(1, 1, 1);
 	float4 normal = 0, glow = 0;
 	SetMaterialXGeometry(t.v);
-	COMPILED_FUNC(t.v.pos, t.v.tc, color, metallic, roughness, normal, glow, opacity, refraction, thickness, transmission, absorption_distance, coat, coat_roughness, sheen, sheen_roughness, anisotropy, aniso_rotation, sss_weight, sss_radius, sss_scale, t.lod);
+	COMPILED_FUNC(t.v.pos, t.v.tc, color, metallic, roughness, normal, glow, opacity, refraction, thickness, transmission, absorption_distance, coat, coat_roughness, sheen, sheen_roughness, anisotropy, aniso_rotation, sss_weight, sss_radius, sss_scale, sheen_tint, t.lod);
 	surface_transmission = transmission;
 }
 
@@ -228,10 +230,10 @@ void TranslucentClosestHitShader([raypayload] inout TranslucentPayload payload, 
 	t.v.pos = WorldRayOrigin() + WorldRayDirection() * RayTCurrent();
 
 	float4 color = 1;
-	float metallic = 0, roughness = 0, opacity = 1, refraction = 1, thickness = 0, transmission = 1, absorption_distance = 1, coat = 0, coat_roughness = 0.1, sheen = 0, sheen_roughness = 0.3, anisotropy = 0, aniso_rotation = 0, sss_weight = 0, sss_scale = 1; float3 sss_radius = float3(1, 1, 1);
+	float metallic = 0, roughness = 0, opacity = 1, refraction = 1, thickness = 0, transmission = 1, absorption_distance = 1, coat = 0, coat_roughness = 0.1, sheen = 0, sheen_roughness = 0.3, anisotropy = 0, aniso_rotation = 0, sss_weight = 0, sss_scale = 1, sheen_tint = 0; float3 sss_radius = float3(1, 1, 1);
 	float4 normal = 0, glow = 0;
 	SetMaterialXGeometry(t.v);
-	COMPILED_FUNC(t.v.pos, t.v.tc, color, metallic, roughness, normal, glow, opacity, refraction, thickness, transmission, absorption_distance, coat, coat_roughness, sheen, sheen_roughness, anisotropy, aniso_rotation, sss_weight, sss_radius, sss_scale, t.lod);
+	COMPILED_FUNC(t.v.pos, t.v.tc, color, metallic, roughness, normal, glow, opacity, refraction, thickness, transmission, absorption_distance, coat, coat_roughness, sheen, sheen_roughness, anisotropy, aniso_rotation, sss_weight, sss_radius, sss_scale, sheen_tint, t.lod);
 
 	// Inverse-transpose of the node's full local->world matrix (row-vector
 	// multiply by the inverse), so non-uniform scale doesn't skew it either.
@@ -293,7 +295,7 @@ void MyClosestHitShader(inout RayPayload payload, in MyAttributes attr)
 	float4 normal = 0;
 	float4 glow = 0;
 	float opacity = 1;
-	float refraction = 1, thickness = 0, transmission = 1, absorption_distance = 1, coat = 0, coat_roughness = 0.1, sheen = 0, sheen_roughness = 0.3, anisotropy = 0, aniso_rotation = 0, sss_weight = 0, sss_scale = 1; float3 sss_radius = float3(1, 1, 1);
+	float refraction = 1, thickness = 0, transmission = 1, absorption_distance = 1, coat = 0, coat_roughness = 0.1, sheen = 0, sheen_roughness = 0.3, anisotropy = 0, aniso_rotation = 0, sss_weight = 0, sss_scale = 1, sheen_tint = 0; float3 sss_radius = float3(1, 1, 1);
 
 
 	t.lod += log2(abs(payload.cone.width + payload.cone.angle * RayTCurrent()));
@@ -301,7 +303,7 @@ void MyClosestHitShader(inout RayPayload payload, in MyAttributes attr)
 
 
 	SetMaterialXGeometry(t.v);
-	COMPILED_FUNC(t.v.pos, t.v.tc, color, metallic, roughness, normal, glow, opacity, refraction, thickness, transmission, absorption_distance, coat, coat_roughness, sheen, sheen_roughness, anisotropy, aniso_rotation, sss_weight, sss_radius, sss_scale, t.lod);
+	COMPILED_FUNC(t.v.pos, t.v.tc, color, metallic, roughness, normal, glow, opacity, refraction, thickness, transmission, absorption_distance, coat, coat_roughness, sheen, sheen_roughness, anisotropy, aniso_rotation, sss_weight, sss_radius, sss_scale, sheen_tint, t.lod);
 
 	// Transparent-aware sun visibility (float3 transmittance instead of a bool).
 	// Iterate the shadow ray through transparent occluders (advancing past each
@@ -355,7 +357,14 @@ void MyClosestHitShader(inout RayPayload payload, in MyAttributes attr)
 	// glowing surfaces at all: both just forward this payload.color through
 	// denoise + combine (rtx_combine.hlsl / reflection_combine.hlsl), which
 	// weight it as arriving radiance without caring where it came from.
-	payload.color = float4(color.rgb * NdotL * sun_vis * (1 - metallic) + glow.rgb, 1.0);
+	// A metal has no diffuse term, so (1 - metallic) alone left it black wherever a
+	// reflection or GI ray saw it. The sun highlight (GGX, F0 = base colour) is what
+	// a metal reflects of the sun; the rest of what it shows comes from its own
+	// reflection of the world, which a single bounce does not trace.
+	float3 hit_sun_specular = base_sun_specular(float4(0, 0, 0, 0), normalize(t.v.normal), -normalize(WorldRayDirection()),
+		normalize(frame.GetSunDir().xyz), 1.0, lerp(0.04, color.rgb, metallic), max(MIN_ROUGHNESS, roughness), metallic);
+
+	payload.color = float4(color.rgb * NdotL * sun_vis * (1 - metallic) + hit_sun_specular * sun_vis + glow.rgb, 1.0);
 	payload.dist  = RayTCurrent();
 	// DDGIProbeTrace's own feedback-term consumer -- see this payload
 	// field's own comment (raytracing.prism) for why these two exist.

@@ -424,6 +424,12 @@ namespace
 			put(data.GBuffer_DepthMips, depth.data(),    4);
 		}
 
+		// A metallic pixel also gets the base layer's GGX sun highlight
+		// (common/lobes.hlsl base_sun_specular), which depends on the camera and
+		// is not mirrored here: unshadowed() is its diffuse part only, a lower
+		// bound for those pixels.
+		bool metallic(int x, int y) const { return albedo[((size_t)y * w + x) * 4 + 3] > 0; }
+
 		// vsm.hlsl's unshadowed_result(): 0 on sky, else
 		// saturate(dot(N, L)) * albedo.rgb * (1 - albedo.a).
 		vec3 unshadowed(int x, int y, vec3 sun) const
@@ -1047,7 +1053,8 @@ export namespace Test
 				const float got[3] = { half_to_float_normal(px[0]), half_to_float_normal(px[1]), half_to_float_normal(px[2]) };
 				const float exp[3] = { want.x, want.y, want.z };
 				for (int c = 0; c < 3; ++c)
-					if (std::abs(got[c] - exp[c]) > 2e-3f + 2e-3f * exp[c])
+					if (gbuffer.metallic(x, y) ? got[c] < exp[c] - (2e-3f + 2e-3f * exp[c])
+					                          : std::abs(got[c] - exp[c]) > 2e-3f + 2e-3f * exp[c])
 						throw Test::TestFailure("pixel (" + std::to_string(x) + "," + std::to_string(y) + ") channel "
 							+ std::to_string(c) + " is " + std::to_string(got[c]) + ", expected " + std::to_string(exp[c]));
 			}

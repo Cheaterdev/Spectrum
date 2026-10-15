@@ -39,6 +39,18 @@ void mx_set_geometry(float3 normal, float3 tangent, float3 bitangent)
     mx_geom_bitangent = bitangent;
 }
 
+// Seconds since start, for the `time` and `frame` nodes. Set alongside the
+// frame; previews and the VSM depth pass keep 0 (a still image).
+static float mx_geom_time = 0;
+
+void mx_set_time(float seconds)
+{
+    mx_geom_time = seconds;
+}
+
+float mx_time(float fps)  { return mx_geom_time; }
+float mx_frame()          { return mx_geom_time * 24.0; }   // MaterialX frames are 24 fps by default
+
 // The geometry nodes take MaterialX's `space` string, which the graph has no
 // type for (see MaterialXLibrary), so they always return world space.
 float3 mx_normal()              { return mx_geom_normal; }
@@ -56,6 +68,31 @@ float3 mx_normalmap(float3 value, float2 normal_scale, float3 N, float3 T, float
 float3 mx_normalmap(float3 value, float normal_scale, float3 N, float3 T, float3 B)
 {
     return mx_normalmap(value, float2(normal_scale, normal_scale), N, T, B);
+}
+
+// ---- triplanar projection ---------------------------------------------------
+// MaterialX's NG_triplanarprojection, split into the two pieces the C++ side
+// needs around the texture samples (see MaterialXNode::operator()).
+
+float3 mx_triplanar_weights(float3 n, float blend)
+{
+    float3 w = abs(n);
+    w /= max(w.x + w.y + w.z, 1e-6);
+    w = pow(w, 1.0 / max(blend, 0.03));
+    return w / max(w.x + w.y + w.z, 1e-6);
+}
+
+// UV of the image projected along `axis` (0 = X, 1 = Y, 2 = Z); `up` is the
+// nodedef's upaxis, which only reorients the X-, Y- and Z-facing images.
+float2 mx_triplanar_uv(int axis, float3 p, int up)
+{
+    if (axis == 0)
+        return up < 2 ? float2(p.z, p.y) : float2(p.y, p.z);
+
+    if (axis == 1)
+        return up == 0 ? float2(p.z, p.x) : float2(p.x, p.z);
+
+    return up == 0 ? float2(-p.y, p.x) : float2(p.x, p.y);
 }
 
 // ---- math: binary arithmetic ------------------------------------------------

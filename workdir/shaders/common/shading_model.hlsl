@@ -8,7 +8,7 @@
 //
 //   STANDARD   -- rgb unused
 //   CLEARCOAT  -- r: coat weight, g: coat roughness, b: unused
-//   SHEEN      -- r: sheen weight, g: sheen roughness, b: unused
+//   SHEEN      -- r: sheen weight, g: sheen roughness, b: tint (0 white, 1 like the base colour)
 //   ANISOTROPIC-- r: anisotropy, g: tangent angle / pi in the normal's own frame
 //                 (see material_frame / aniso_encode_tangent), b: unused
 //   SUBSURFACE -- rgb: scatter radius per channel, sqrt-encoded (sss_encode_radius)
@@ -95,14 +95,14 @@ float3 sss_decode_radius(float3 encoded)
 // subsurface radius is weight * scale * radius, in scene units.
 float4 pack_material_from_graph(float coat, float coat_roughness, float sheen, float sheen_roughness,
                                 float anisotropy, float rotation,
-                                float sss_weight, float3 sss_radius, float sss_scale,
+                                float sss_weight, float3 sss_radius, float sss_scale, float sheen_tint,
                                 float3 N, float3 T)
 {
     if (coat > 0.001)
         return pack_material(SHADING_MODEL_CLEARCOAT, float3(coat, coat_roughness, 0.0));
 
     if (sheen > 0.001)
-        return pack_material(SHADING_MODEL_SHEEN, float3(sheen, sheen_roughness, 0.0));
+        return pack_material(SHADING_MODEL_SHEEN, float3(sheen, sheen_roughness, sheen_tint));
 
     if (anisotropy > 0.001)
     {
@@ -116,6 +116,15 @@ float4 pack_material_from_graph(float coat, float coat_roughness, float sheen, f
         return pack_material(SHADING_MODEL_SUBSURFACE, sss_encode_radius(sss_radius * (sss_scale * sss_weight)));
 
     return pack_material(SHADING_MODEL_STANDARD, 0.0);
+}
+
+// Without a sheen tint.
+float4 pack_material_from_graph(float coat, float coat_roughness, float sheen, float sheen_roughness,
+                                float anisotropy, float rotation,
+                                float sss_weight, float3 sss_radius, float sss_scale,
+                                float3 N, float3 T)
+{
+    return pack_material_from_graph(coat, coat_roughness, sheen, sheen_roughness, anisotropy, rotation, sss_weight, sss_radius, sss_scale, 0.0, N, T);
 }
 
 // Without subsurface -- for callers (and tests) that only deal in the other lobes.

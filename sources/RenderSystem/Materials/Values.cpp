@@ -739,6 +739,8 @@ MaterialGraph::MaterialGraph()
 	i_sss_weight->default_value = shader_parameter("0.0", ShaderParams::get().FLOAT1);
 	i_sss_radius->default_value = shader_parameter("float3(1,1,1)", ShaderParams::get().FLOAT3);
 	i_sss_scale->default_value = shader_parameter("1.0", ShaderParams::get().FLOAT1);
+	i_sheen_tint = register_output("sheen tint", ShaderParams::get().FLOAT1);
+	i_sheen_tint->default_value = shader_parameter("0.0", ShaderParams::get().FLOAT1);
 
 	i_base_color->default_value = shader_parameter("float4(0,0,0,1)", ShaderParams::get().FLOAT4);
 	i_metallic->default_value = shader_parameter("0.0", ShaderParams::get().FLOAT1);
@@ -881,6 +883,11 @@ FlowGraph::output::ptr MaterialGraph::get_subsurface_scale()
 	return i_sss_scale;
 }
 
+FlowGraph::output::ptr MaterialGraph::get_sheen_tint()
+{
+	return i_sheen_tint;
+}
+
 void MaterialGraph::set_coat_outputs_enabled(bool enabled)
 {
 	i_coat->set_enabled(enabled);
@@ -892,6 +899,7 @@ void MaterialGraph::set_coat_outputs_enabled(bool enabled)
 	i_sss_weight->set_enabled(enabled);
 	i_sss_radius->set_enabled(enabled);
 	i_sss_scale->set_enabled(enabled);
+	i_sheen_tint->set_enabled(enabled);
 }
 
 // Ports are serialized with the graph, so a graph saved before the coat
@@ -910,6 +918,7 @@ void MaterialGraph::restore_coat_outputs()
 	i_sss_weight.reset();
 	i_sss_radius.reset();
 	i_sss_scale.reset();
+	i_sheen_tint.reset();
 
 	for (auto& out : output_parametres)
 	{
@@ -931,6 +940,8 @@ void MaterialGraph::restore_coat_outputs()
 			i_sss_radius = out;
 		else if (out->name == "subsurface scale")
 			i_sss_scale = out;
+		else if (out->name == "sheen tint")
+			i_sheen_tint = out;
 	}
 
 	if (!i_coat)
@@ -960,6 +971,9 @@ void MaterialGraph::restore_coat_outputs()
 	if (!i_sss_scale)
 		i_sss_scale = register_output("subsurface scale", ShaderParams::get().FLOAT1);
 
+	if (!i_sheen_tint)
+		i_sheen_tint = register_output("sheen tint", ShaderParams::get().FLOAT1);
+
 	i_coat->default_value = shader_parameter("0.0", ShaderParams::get().FLOAT1);
 	i_coat_roughness->default_value = shader_parameter("0.1", ShaderParams::get().FLOAT1);
 	i_sheen->default_value = shader_parameter("0.0", ShaderParams::get().FLOAT1);
@@ -969,6 +983,7 @@ void MaterialGraph::restore_coat_outputs()
 	i_sss_weight->default_value = shader_parameter("0.0", ShaderParams::get().FLOAT1);
 	i_sss_radius->default_value = shader_parameter("float3(1,1,1)", ShaderParams::get().FLOAT3);
 	i_sss_scale->default_value = shader_parameter("1.0", ShaderParams::get().FLOAT1);
+	i_sheen_tint->default_value = shader_parameter("0.0", ShaderParams::get().FLOAT1);
 }
 
 // Toggled together with the coat outputs: both are "extra" outputs that every

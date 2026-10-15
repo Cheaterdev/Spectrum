@@ -244,7 +244,8 @@ float4 PS(float4 pos : SV_Position) : SV_Target
 
 		for (auto& def : MaterialXLibrary::get().get_all())
 		{
-			if (def.category == "image" || def.category == "tiledimage")
+			// Texture nodes emit their own sampling code, not a function call.
+			if (def.function == "mx_image")
 				continue;
 
 			std::string body, args;
@@ -364,6 +365,35 @@ float4 PS(float4 pos : SV_Position) : SV_Target
 	// alignment N = V = L with NL = NV = 1: D = 1/(pi a^2), V = 1/4, F = F0 =
 	// 0.04, and the lobe is scaled by pi like the rest of the direct term, so
 	// the result is 0.01 / a^2 -- exactly 100 for coat roughness 0.1 (a = 0.01).
+	// The `time` and `frame` nodes read the value the shader sets per frame
+	// (mx_set_time), and the triplanar helpers match MaterialX's nodegraph.
+	TEST(MaterialX.GPU, TimeAndTriplanar)
+	{
+		using mx_detail::Case;
+
+		mx_detail::check({
+			{ "time",  "time_probe()",  { 2, 0, 0, 0 } },
+			{ "frame", "frame_probe()", { 48, 0, 0, 0 } },
+
+			// Weights: normalised |n|, sharpened by 1/blend, renormalised.
+			{ "weights along x",   "mx_triplanar_weights(float3(1, 0, 0), 1.0f)", { 1, 0, 0, 0 } },
+			{ "weights diagonal",  "mx_triplanar_weights(normalize(float3(1, 1, 1)), 1.0f)", { 1.0f / 3, 1.0f / 3, 1.0f / 3, 0 }, 1e-4f },
+			{ "weights blend 1",   "mx_triplanar_weights(float3(0.75, 0.25, 0.0), 1.0f)", { 0.75f, 0.25f, 0, 0 }, 1e-4f },
+			{ "weights sharp",     "mx_triplanar_weights(float3(0.75, 0.25, 0.0), 0.03f)", { 1, 0, 0, 0 }, 1e-3f },
+
+			// UVs per projection axis and upaxis (NG_triplanarprojection's switches).
+			{ "uv x, z up", "mx_triplanar_uv(0, float3(1, 2, 3), 2)", { 2, 3, 0, 0 } },
+			{ "uv x, y up", "mx_triplanar_uv(0, float3(1, 2, 3), 1)", { 3, 2, 0, 0 } },
+			{ "uv y, z up", "mx_triplanar_uv(1, float3(1, 2, 3), 2)", { 1, 3, 0, 0 } },
+			{ "uv y, x up", "mx_triplanar_uv(1, float3(1, 2, 3), 0)", { 3, 1, 0, 0 } },
+			{ "uv z, z up", "mx_triplanar_uv(2, float3(1, 2, 3), 2)", { 1, 2, 0, 0 } },
+			{ "uv z, x up", "mx_triplanar_uv(2, float3(1, 2, 3), 0)", { -2, 1, 0, 0 } },
+		}, R"hlsl(
+float time_probe()  { mx_set_time(2.0); return mx_time(24.0); }
+float frame_probe() { mx_set_time(2.0); return mx_frame(); }
+)hlsl");
+	}
+
 	TEST(MaterialX.GPU, ClearcoatSunSpecular)
 	{
 		using mx_detail::Case;
@@ -431,6 +461,30 @@ float4 PS(float4 pos : SV_Position) : SV_Target
 			{ "aniso is directional", "float(aniso_sun_specular(pack_material(SHADING_MODEL_ANISOTROPIC, float3(0.8, 0.0, 0.0)), " + up + ", " + up + ", normalize(float3(0.3, 1, 0)), 1.0, float3(1, 1, 1), 0.4).x > aniso_sun_specular(pack_material(SHADING_MODEL_ANISOTROPIC, float3(0.8, 0.0, 0.0)), " + up + ", " + up + ", normalize(float3(0, 1, -0.3)), 1.0, float3(1, 1, 1), 0.4).x)", { 1, 0, 0, 0 } },
 			{ "aniso in shadow",     "aniso_sun_specular(pack_material(SHADING_MODEL_ANISOTROPIC, float3(0.5, 0.0, 0.0)), " + up + ", " + up + ", " + up + ", 0.0, float3(1, 1, 1), 0.5)", { 0, 0, 0, 0 } },
 			{ "aniso on standard",   "aniso_sun_specular(pack_material(SHADING_MODEL_STANDARD, 0.0), " + up + ", " + up + ", " + up + ", 1.0, float3(1, 1, 1), 0.5)", { 0, 0, 0, 0 } },
+
+			// The base layer sun highlight metals need (no diffuse, so otherwise no sun light).
+			// Mirror alignment, F0 = 1, roughness 0.5 (a = 0.25): 0.25 * F / a^2 = 4, as the
+			// anisotropic model's isotropic limit; scaled by metalness; not for anisotropic pixels.
+			{ "metal sun highlight",  "base_sun_specular(pack_material(SHADING_MODEL_STANDARD, 0.0), " + up + ", " + up + ", " + up + ", 1.0, float3(1, 1, 1), 0.5, 1.0)", { 4, 4, 4, 0 }, 1e-3f },
+			{ "half metal",           "base_sun_specular(pack_material(SHADING_MODEL_STANDARD, 0.0), " + up + ", " + up + ", " + up + ", 1.0, float3(1, 1, 1), 0.5, 0.5)", { 2, 2, 2, 0 }, 1e-3f },
+			{ "dielectric no highlight", "base_sun_specular(pack_material(SHADING_MODEL_STANDARD, 0.0), " + up + ", " + up + ", " + up + ", 1.0, float3(0.04, 0.04, 0.04), 0.5, 0.0)", { 0, 0, 0, 0 } },
+			{ "metal coloured by F0",  "base_sun_specular(pack_material(SHADING_MODEL_STANDARD, 0.0), " + up + ", " + up + ", " + up + ", 1.0, float3(1.0, 0.5, 0.25), 0.5, 1.0)", { 4, 2, 1, 0 }, 1e-3f },
+			{ "metal in shadow",       "base_sun_specular(pack_material(SHADING_MODEL_STANDARD, 0.0), " + up + ", " + up + ", " + up + ", 0.0, float3(1, 1, 1), 0.5, 1.0)", { 0, 0, 0, 0 } },
+			{ "metal light below horizon", "base_sun_specular(pack_material(SHADING_MODEL_STANDARD, 0.0), " + up + ", " + up + ", float3(0, -1, 0), 1.0, float3(1, 1, 1), 0.5, 1.0)", { 0, 0, 0, 0 } },
+			{ "aniso keeps its own",    "base_sun_specular(pack_material(SHADING_MODEL_ANISOTROPIC, float3(0.5, 0.0, 0.0)), " + up + ", " + up + ", " + up + ", 1.0, float3(1, 1, 1), 0.5, 1.0)", { 0, 0, 0, 0 } },
+			{ "lobes include the base highlight", "material_sun_lobes(pack_material(SHADING_MODEL_STANDARD, 0.0), " + up + ", " + up + ", " + up + ", 1.0, float3(1, 1, 1), 0.5, float3(1, 1, 1), 1.0)", { 4, 4, 4, 0 }, 1e-3f },
+
+			// A sheen tinted like the base colour scales the lobe by the colour normalised to
+			// its strongest channel; tint 0 leaves it white.
+			{ "sheen tinted",       "sheen_sun_specular(pack_material(SHADING_MODEL_SHEEN, float3(1.0, 0.5, 1.0)), " + up + ", " + up + ", float3(0.6, 0.8, 0), 1.0, float3(1.0, 0.5, 0.25))", { 0.006f, 0.003f, 0.0015f, 0 }, 1e-5f },
+			{ "sheen untinted",     "sheen_sun_specular(" + sheen + ", " + up + ", " + up + ", float3(0.6, 0.8, 0), 1.0, float3(1.0, 0.5, 0.25))", { 0.006f, 0.006f, 0.006f, 0 }, 1e-5f },
+			{ "graph sheen tint",   "material_params(pack_material_from_graph(0.0, 0.5, 0.9, 0.3, 0.0, 0.0, 0.0, float3(1, 1, 1), 1.0, 0.7, " + up + ", float3(1, 0, 0))).z", { 0.7f, 0, 0, 0 }, 1e-4f },
+			// The coat takes F of the light before the base layer sees it: 1 - weight * F.
+			{ "coat attenuation head-on", "coat_base_attenuation(" + coated + ", " + up + ", " + up + ")", { 0.96f, 0, 0, 0 }, 1e-4f },
+			{ "coat attenuation grazing", "coat_base_attenuation(" + coated + ", " + up + ", float3(1, 0, 0))", { 0.0f, 0, 0, 0 }, 1e-4f },
+			{ "coat attenuation half",    "coat_base_attenuation(pack_material(SHADING_MODEL_CLEARCOAT, float3(0.5, 0.1, 0.0)), " + up + ", " + up + ")", { 0.98f, 0, 0, 0 }, 1e-4f },
+			{ "no attenuation standard",  "coat_base_attenuation(pack_material(SHADING_MODEL_STANDARD, 0.0), " + up + ", " + up + ")", { 1, 0, 0, 0 } },
+			{ "no attenuation sheen",     "coat_base_attenuation(" + sheen + ", " + up + ", " + up + ")", { 1, 0, 0, 0 } },
 
 			// Sheen, N = up. Head-on view, light at (0.6, 0.8, 0): NH^2 = 0.9 so
 			// sin^2 = 0.1; a = 0.25 -> D = 6 * 0.1^2 / (2 pi), visibility 1/4,
@@ -843,6 +897,16 @@ float4 PS(float4 pos : SV_Position) : SV_Target
 		ASSERT_EQ(size_t(1), gltf.size());
 		ASSERT_EQ(std::string(), close({ source_as<ScalarNode>(gltf[0].second->get_sheen())->get_value() }, { 0.5f }));
 
+		// The sheen colour's saturation becomes the tint: white is untinted,
+		// a saturated colour follows the base colour. (0.5 - 0.1) / 0.5 = 0.8.
+		ASSERT_EQ(std::string(), close({ source_as<ScalarNode>(gltf[0].second->get_sheen_tint())->get_value() }, { 0.8f }));
+
+		auto white_sheen = build(surface("standard_surface",
+			R"(<input name="sheen" type="float" value="1.0" />
+			   <input name="sheen_color" type="color3" value="0.9, 0.9, 0.9" />)"));
+		ASSERT_EQ(size_t(1), white_sheen.size());
+		ASSERT_EQ(std::string(), close({ source_as<ScalarNode>(white_sheen[0].second->get_sheen_tint())->get_value() }, { 0.0f }));
+
 		auto both = build(surface("standard_surface",
 			R"(<input name="coat" type="float" value="1.0" />
 			   <input name="sheen" type="float" value="1.0" />)"));
@@ -878,6 +942,55 @@ float4 PS(float4 pos : SV_Position) : SV_Target
 		auto plain = build(surface("standard_surface", ""));
 		ASSERT_EQ(size_t(1), plain.size());
 		ASSERT_TRUE(source(plain[0].second->get_subsurface_weight()) == nullptr);
+	}
+
+	// subsurface_color is the diffuse colour of the scattering part: the base
+	// colour blends towards it by the subsurface weight.
+	TEST(MaterialX.GPU, SubsurfaceColor)
+	{
+		using namespace mx_import;
+
+		auto graphs = build(surface("standard_surface",
+			R"(<input name="base_color" type="color3" value="0.8, 0.5, 0.4" />
+			   <input name="subsurface" type="float" value="0.5" />
+			   <input name="subsurface_color" type="color3" value="0.2, 0.1, 0.0" />)"));
+		ASSERT_EQ(size_t(1), graphs.size());
+		ASSERT_EQ(std::string(), close(value_of(source_as<VectorNode>(graphs[0].second->get_base_color())), { 0.5f, 0.3f, 0.2f, 1.0f }));
+
+		// Left alone when another shading model took the slot (subsurface is dropped).
+		auto coated = build(surface("standard_surface",
+			R"(<input name="base_color" type="color3" value="0.8, 0.5, 0.4" />
+			   <input name="coat" type="float" value="1.0" />
+			   <input name="subsurface" type="float" value="1.0" />
+			   <input name="subsurface_color" type="color3" value="0.2, 0.1, 0.0" />)"));
+		ASSERT_EQ(size_t(1), coated.size());
+		ASSERT_EQ(std::string(), close(value_of(source_as<VectorNode>(coated[0].second->get_base_color())), { 0.8f, 0.5f, 0.4f, 1.0f }));
+	}
+
+	// triplanarprojection: three image files become three texture inputs, and its
+	// upaxis is an editable int constant.
+	TEST(MaterialX.GPU, TriplanarImport)
+	{
+		using namespace mx_import;
+
+		std::string icon = std::filesystem::absolute(to_path(L"resources/icon.jpg")).generic_string();
+		auto file = [&](const char* name) { return std::string("<input name=\"") + name + "\" type=\"filename\" value=\"" + icon + "\" />"; };
+
+		auto graphs = build(surface("standard_surface",
+			R"(<input name="base_color" type="color3" nodename="tri" />)",
+			"<triplanarprojection name=\"tri\" type=\"color3\">" + file("filex") + file("filey") + file("filez") +
+			"<input name=\"upaxis\" type=\"integer\" value=\"1\" /><input name=\"blend\" type=\"float\" value=\"0.5\" /></triplanarprojection>"));
+
+		ASSERT_EQ(size_t(1), graphs.size());
+		auto* tri = source_as<MaterialXNode>(graphs[0].second->get_base_color());
+		ASSERT_TRUE(tri != nullptr);
+		ASSERT_EQ(std::string("ND_triplanarprojection_color3"), tri->get_nodedef());
+
+		for (const char* name : { "filex", "filey", "filez" })
+			ASSERT_TRUE(source_as<TextureAssetNode>(tri->get_input_by_name(name)) != nullptr);
+
+		ASSERT_EQ(std::string(), close(tri->get_constant("upaxis"), { 1.0f }));
+		ASSERT_EQ(std::string(), close(tri->get_constant("blend"), { 0.5f }));
 	}
 
 	TEST(MaterialX.GPU, Anisotropy)
@@ -973,8 +1086,8 @@ float4 PS(float4 pos : SV_Position) : SV_Target
 		ASSERT_TRUE(source(checker->get_input_by_name("texcoord")) == graph_node);
 	}
 
-	// Integer inputs have no editable constant, so a non-default value arrives
-	// as a constant node.
+	// Integer and boolean inputs are float uniforms like the rest, so the
+	// importer sets them as constants on the node and they stay editable.
 	TEST(MaterialX.GPU, IntegerInput)
 	{
 		using namespace mx_import;
@@ -989,9 +1102,26 @@ float4 PS(float4 pos : SV_Position) : SV_Target
 		auto* fractal = source_as<MaterialXNode>(graphs[0].second->get_roughness());
 		ASSERT_TRUE(fractal != nullptr);
 
-		auto* octaves = source_as<ScalarNode>(fractal->get_input_by_name("octaves"));
-		ASSERT_TRUE(octaves != nullptr);
-		ASSERT_EQ(std::string(), close({ octaves->get_value() }, { 5.0f }));
+		ASSERT_TRUE(source(fractal->get_input_by_name("octaves")) == nullptr);
+		ASSERT_EQ(std::string(), close(fractal->get_constant("octaves"), { 5.0f }));
+
+		// An input the file leaves out keeps the nodedef default (3 octaves).
+		auto defaulted = build(surface("standard_surface",
+			R"(<input name="specular_roughness" type="float" nodename="fractal" />)",
+			R"(<fractal2d name="fractal" type="float" />)"));
+		ASSERT_EQ(size_t(1), defaulted.size());
+		auto* plain = source_as<MaterialXNode>(defaulted[0].second->get_roughness());
+		ASSERT_TRUE(plain != nullptr);
+		ASSERT_EQ(std::string(), close(plain->get_constant("octaves"), { 3.0f }));
+
+		// A boolean: range's doclamp defaults to false.
+		auto clamped = build(surface("standard_surface",
+			R"(<input name="specular_roughness" type="float" nodename="r" />)",
+			R"(<range name="r" type="float"><input name="doclamp" type="boolean" value="true" /></range>)"));
+		ASSERT_EQ(size_t(1), clamped.size());
+		auto* range = source_as<MaterialXNode>(clamped[0].second->get_roughness());
+		ASSERT_TRUE(range != nullptr);
+		ASSERT_EQ(std::string(), close(range->get_constant("doclamp"), { 1.0f }));
 	}
 
 	// Image files become texture assets feeding the image node's file port; a
@@ -1052,8 +1182,9 @@ float4 PS(float4 pos : SV_Position) : SV_Target
 		using namespace mx_import;
 
 		auto graphs = build(surface("standard_surface",
-			R"(<input name="specular_roughness" type="float" nodename="clock" />)",
-			R"(<time name="clock" type="float" />)"));
+			R"(<input name="specular_roughness" type="float" nodename="vertex_gray" />)",
+			// geomcolor: the mesh format has no vertex colours, so there is nothing to read.
+			R"(<geomcolor name="vertex_gray" type="float" />)"));
 
 		ASSERT_EQ(size_t(1), graphs.size());
 		auto* rough = source_as<ScalarNode>(graphs[0].second->get_roughness());

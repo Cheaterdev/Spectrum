@@ -26,7 +26,16 @@ float sheen_V_neubelt(float NL, float NV)
     return 1.0 / (4.0 * (NL + NV - NL * NV));
 }
 
-float3 sheen_sun_specular(float4 material, float3 N, float3 V, float3 L, float shadow)
+// The sheen colour: white, or the base colour normalised to its strongest
+// channel when the material asks for it (cloth whose sheen has the weave hue).
+float3 sheen_color(float4 material, float3 albedo)
+{
+    float tint = material_params(material).z;
+    float3 base = albedo / max(max(albedo.x, max(albedo.y, albedo.z)), 1e-3);
+    return lerp(1.0, base, tint);
+}
+
+float3 sheen_sun_specular(float4 material, float3 N, float3 V, float3 L, float shadow, float3 albedo)
 {
     if (material_model(material) != SHADING_MODEL_SHEEN)
         return 0;
@@ -43,7 +52,13 @@ float3 sheen_sun_specular(float4 material, float3 N, float3 V, float3 L, float s
 
     float NH = saturate(dot(N, normalize(V + L)));
 
-    return shadow * weight * sheen_D_charlie(NH, a) * sheen_V_neubelt(NL, NV) * NL * 3.14159265;
+    return sheen_color(material, albedo) * (shadow * weight * sheen_D_charlie(NH, a) * sheen_V_neubelt(NL, NV) * NL * 3.14159265);
+}
+
+// White sheen, for callers with no base colour to tint by.
+float3 sheen_sun_specular(float4 material, float3 N, float3 V, float3 L, float shadow)
+{
+    return sheen_sun_specular(material, N, V, L, shadow, 1.0);
 }
 
 #endif

@@ -101,9 +101,10 @@ float4 combine_result(float2 tc, uint2 pixel)
 
 	float2 EnvBRDF = GetBRDF(info.roughness, 0, 0.5 + 0.5 * NL) * GetBRDF(info.roughness, 0, 0.5 + 0.5 * NV);
 
-    float3 result = shadow * (NL * info.albedo * (1 - info.metallic));
-	result += material_sun_lobes(gbuffer.GetMaterial().SampleLevel(pointClampSampler, tc, 0), info.normal, info.view, light_dir, shadow,
-		lerp(0.04, info.albedo, info.metallic), max(MIN_ROUGHNESS, gbuffer.GetNormals().SampleLevel(pointClampSampler, tc, 0).w));
+	float4 material = gbuffer.GetMaterial().SampleLevel(pointClampSampler, tc, 0);
+    float3 result = shadow * (NL * info.albedo * (1 - info.metallic)) * coat_base_attenuation(material, info.normal, info.view);
+	result += material_sun_lobes(material, info.normal, info.view, light_dir, shadow,
+		lerp(0.04, info.albedo, info.metallic), max(MIN_ROUGHNESS, gbuffer.GetNormals().SampleLevel(pointClampSampler, tc, 0).w), info.albedo, info.metallic);
     return float4(result, 1);
 }
 
@@ -121,12 +122,14 @@ float4 unshadowed_result(float2 tc)
 	float3 result   = NL * packed_0.rgb * (1 - packed_0.w);
 
 	float4 material = gbuffer.GetMaterial().SampleLevel(pointClampSampler, tc, 0);
-	if (material_model(material) != SHADING_MODEL_STANDARD)
+	if (material_model(material) != SHADING_MODEL_STANDARD || packed_0.w > 0.001)
 	{
 		Camera camera = GetFrameInfo().GetCamera();
 		float3 wpos   = depth_to_wpos(raw_z, tc, camera.GetInvViewProj());
-		result += material_sun_lobes(material, normal, normalize(camera.GetPosition() - wpos), light_dir, 1.0,
-			lerp(0.04, packed_0.rgb, packed_0.w), max(MIN_ROUGHNESS, gbuffer.GetNormals().SampleLevel(pointClampSampler, tc, 0).w));
+		float3 view = normalize(camera.GetPosition() - wpos);
+		result *= coat_base_attenuation(material, normal, view);
+		result += material_sun_lobes(material, normal, view, light_dir, 1.0,
+			lerp(0.04, packed_0.rgb, packed_0.w), max(MIN_ROUGHNESS, gbuffer.GetNormals().SampleLevel(pointClampSampler, tc, 0).w), packed_0.rgb, packed_0.w);
 	}
 
 	return float4(result, 1);

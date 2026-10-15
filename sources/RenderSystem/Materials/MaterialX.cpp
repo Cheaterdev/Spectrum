@@ -66,7 +66,7 @@ namespace
     // index and the shader supplies the sampler and lod), so these two nodes
     // emit their own code in MaterialXNode::operator(). Their `file` input is
     // a TEXTURE port fed by a TextureAssetNode, like SamplingNode's.
-    bool is_image_category(const std::string& c) { return c == "image" || c == "tiledimage"; }
+    bool is_image_category(const std::string& c) { return c == "image" || c == "tiledimage" || c == "triplanarprojection"; }
 
     // Shading-frame global (mx_stdlib.hlsl) behind a defaultgeomprop: all of
     // N/T/B in any space resolve to the world-space frame. Anything else
@@ -289,6 +289,37 @@ size_t MaterialXLibrary::register_nodes(const std::filesystem::path& root, const
                 if (!port.geomprop.empty() && !is_uv_prop(port.geomprop) && !is_position_prop(port.geomprop))
                     port.default_hlsl = geometry_global(port.geomprop);
 
+                // int and bool inputs are editable constants too, held as floats.
+                if (supported && (port.type.M == 3 || port.type.M == 4))
+                {
+                    std::string text = in->getValueString();
+                    port.default_values = { text == "true" ? 1.0f : text == "false" ? 0.0f : (parse_floats(text).empty() ? 0.0f : parse_floats(text)[0]) };
+
+                    if (port.type.M == 3)
+                    {
+                        auto hi = parse_floats(in->getAttribute("uisoftmax"));
+                        port.soft_min = 0.0f;
+                        port.soft_max = hi.empty() ? std::max(8.0f, port.default_values[0] * 2) : hi[0];
+
+                        // enum="Distance,Solid" enumvalues="0,1"
+                        std::stringstream names(in->getAttribute("enum"));
+                        std::string item;
+
+                        while (std::getline(names, item, ','))
+                            port.enum_names.push_back(trim(item));
+
+                        port.enum_values = parse_floats(in->getAttribute("enumvalues"));
+
+                        if (port.enum_values.size() != port.enum_names.size())
+                        {
+                            port.enum_values.clear();
+
+                            for (size_t e = 0; e < port.enum_names.size(); e++)
+                                port.enum_values.push_back((float)e);
+                        }
+                    }
+                }
+
                 if (supported && port.type.M == 1)
                 {
                     port.default_values = parse_floats(in->getValueString());
@@ -391,21 +422,35 @@ MaterialXNode::MaterialXNode(const MxNodeDef& def) : nodedef(def.name)
     for (auto& out : def.outputs)
         register_output(out.name, out.type);
 
-    for (auto& in : def.inputs)
+    uniforms.assign(def.inputs.size(), nullptr);
+    ensure_uniforms();
+}
+
+void MaterialXNode::ensure_uniforms()
+{
+    auto* def = MaterialXLibrary::get().find(nodedef);
+
+    if (!def)
+        return;
+
+    uniforms.resize(def->inputs.size());
+
+    for (size_t i = 0; i < def->inputs.size(); i++)
     {
-        Uniform::ptr u;
+        auto& in = def->inputs[i];
 
-        if (in.type.M == 1 && in.geomprop.empty())
-        {
-            u = std::make_shared<Uniform>();
-            u->name = in.name;
-            u->type = in.type;
+        if (uniforms[i] || in.type.M == 2 || !in.geomprop.empty())
+            continue;
 
-            for (int c = 0; c < in.type.N && c < (int)in.default_values.size(); c++)
-                std::memcpy(&u->value.raw_data[c], &in.default_values[c], sizeof(float));
-        }
+        auto u = std::make_shared<Uniform>();
+        u->name = in.name;
+        // int and bool are stored as float and cast where used.
+        u->type = (in.type.M == 3 || in.type.M == 4) ? ShaderParams::get().FLOAT1 : in.type;
 
-        uniforms.push_back(u);
+        for (int c = 0; c < u->type.N && c < (int)in.default_values.size(); c++)
+            std::memcpy(&u->value.raw_data[c], &in.default_values[c], sizeof(float));
+
+        uniforms[i] = u;
     }
 }
 
@@ -511,6 +556,72 @@ GUI::base::ptr MaterialXNode::create_editor_window()
             continue;
         }
 
+        // bool: a checkbox. int: a drop-down when MaterialX lists an enum,
+        // otherwise a slider that snaps to whole numbers. Both edit the float
+        // uniform the value is stored in.
+        if (port.type.M == 4)
+        {
+            float current;
+            std::memcpy(&current, &uniform->value.raw_data[0], sizeof(float));
+
+            auto box = std::make_shared<GUI::Elements::check_box_text>();
+            box->docking = GUI::dock::TOP;
+            box->get_label()->text = port.name;
+            box->get_check()->set_checked(current != 0.0f);
+            box->on_check = [uniform](bool checked)
+            {
+                float v = checked ? 1.0f : 0.0f;
+                std::memcpy(&uniform->value.raw_data[0], &v, sizeof(float));
+                uniform->on_change(uniform.get());
+            };
+
+            panel->add_child(box);
+            any_slider = true;
+            continue;
+        }
+
+        if (port.type.M == 3 && !port.enum_names.empty())
+        {
+            float current;
+            std::memcpy(&current, &uniform->value.raw_data[0], sizeof(float));
+
+            auto row = std::make_shared<GUI::Elements::layouts::horizontal>();
+            row->docking = GUI::dock::TOP;
+            row->x_type  = GUI::pos_x_type::LEFT;
+
+            auto label = std::make_shared<GUI::Elements::label>();
+            label->text = port.name;
+            row->add_child(label);
+
+            auto combo = std::make_shared<GUI::Elements::combo_box>();
+
+            for (size_t e = 0; e < port.enum_names.size(); e++)
+            {
+                auto item = combo->add_item(port.enum_names[e]);
+                float value = port.enum_values[e];
+                item->on_select = [uniform, value]()
+                {
+                    std::memcpy(&uniform->value.raw_data[0], &value, sizeof(float));
+                    uniform->on_change(uniform.get());
+                };
+
+                if (value == current)
+                    combo->get_label()->text = port.enum_names[e];
+            }
+
+            // combo_box does not size itself to its items.
+            float widest = 0;
+            for (auto& n : port.enum_names)
+                widest = std::max(widest, Text::Engine::get().measure(n, { 16, Text::Weight::Light }).x);
+
+            combo->size = { widest + 35.0f, combo->size->y };
+            row->add_child(combo);
+
+            panel->add_child(row);
+            any_slider = true;
+            continue;
+        }
+
         for (int c = 0; c < port.type.N; c++)
         {
             float current;
@@ -537,8 +648,12 @@ GUI::base::ptr MaterialXNode::create_editor_window()
             slider->height_size = GUI::size_type::FIXED;
             slider->size        = { 0, 14 };
             slider->y_type      = GUI::pos_y_type::CENTER;
-            slider->on_change   = [uniform, c](float v)
+            const bool whole = port.type.M == 3;
+            slider->on_change   = [uniform, c, whole](float v)
             {
+                if (whole)
+                    v = std::round(v);
+
                 std::memcpy(&uniform->value.raw_data[c], &v, sizeof(float));
                 uniform->on_change(uniform.get());
             };
@@ -625,6 +740,43 @@ void MaterialXNode::operator()(MaterialContext* c)
         };
 
         auto& out_type = def->outputs[0].type;
+
+        // triplanarprojection: the same image sampled along each axis from the
+        // position, blended by the normal (MaterialX's NG_triplanarprojection).
+        if (def->category == "triplanarprojection")
+        {
+            static const char* swizzle[] = { "", ".x", ".xy", ".xyz", "" };
+            static const char* files[] = { "filex", "filey", "filez" };
+            static const char* axis_name[] = { "x", "y", "z" };
+
+            const auto position = get("position", ShaderParams::get().FLOAT3);
+            const auto up       = get("upaxis", ShaderParams::get().INT);
+            auto weights = mat_graph->add_value(ShaderParams::get().FLOAT3,
+                "mx_triplanar_weights(" + get("normal", ShaderParams::get().FLOAT3) + ", " + get("blend", ShaderParams::get().FLOAT1) + ")");
+
+            std::string sum;
+
+            for (int axis = 0; axis < 3; axis++)
+            {
+                const int slot = find(files[axis]);
+                std::string color;
+
+                if (slot >= 0 && input_parametres[slot]->has_input())
+                {
+                    auto sampled = mat_graph->add_value(ShaderParams::get().FLOAT4,
+                        "sample(" + values[slot].name + ", Sampler, mx_triplanar_uv(" + std::to_string(axis) + ", " + position + ", " + up + "), lod)");
+                    color = sampled.name + swizzle[out_type.N];
+                }
+                else
+                    color = get("default", out_type);
+
+                sum += (axis ? " + (" : "(") + color + ") * " + weights.name + "." + axis_name[axis];
+            }
+
+            output_parametres[0]->put(mat_graph->add_value(out_type, sum));
+            return;
+        }
+
         const int file = find("file");
 
         // Nothing linked to `file` (the seeded value of an unconnected input
@@ -759,19 +911,21 @@ namespace
         const char* coat_roughness;
         const char* sheen;             // weight; gltf_pbr has only a colour, see build_surface
         const char* sheen_roughness;
+        const char* sheen_color;       // colour whose saturation sets the sheen tint; "" = white
         const char* anisotropy;        // strength 0..1; "" = none
         const char* anisotropy_rotation; // in turns; "" = none
         const char* subsurface;        // weight
         const char* subsurface_radius; // colour: mean free path per channel
         const char* subsurface_scale;  // float multiplier on the radius
+        const char* subsurface_color;  // diffuse colour of the scattering part; "" = none
     };
 
     const SurfaceMapping surface_mappings[] =
     {
-        { "standard_surface",  "base_color",   "base",        "metalness",      "specular_roughness", "emission_color", "emission",             "opacity",          "normal",          "coat",         "coat_roughness", "sheen",       "sheen_roughness", "specular_anisotropy", "specular_rotation", "subsurface", "subsurface_radius", "subsurface_scale" },
-        { "open_pbr_surface",  "base_color",   "base_weight", "base_metalness", "specular_roughness", "emission_color", "emission_luminance",   "geometry_opacity", "geometry_normal", "coat_weight",  "coat_roughness", "fuzz_weight", "fuzz_roughness", "specular_roughness_anisotropy", "", "subsurface_weight", "subsurface_radius_scale", "subsurface_radius" },
-        { "gltf_pbr",          "base_color",   "",            "metallic",       "roughness",          "emissive",       "emissive_strength",    "alpha",            "normal",          "clearcoat",    "clearcoat_roughness", "sheen_color", "sheen_roughness", "", "", "", "", "" },
-        { "UsdPreviewSurface", "diffuseColor", "",            "metallic",       "roughness",          "emissiveColor",  "",                     "opacity",          "normal",          "clearcoat",    "clearcoatRoughness", "",            "", "", "", "", "", "" },
+        { "standard_surface",  "base_color",   "base",        "metalness",      "specular_roughness", "emission_color", "emission",             "opacity",          "normal",          "coat",         "coat_roughness", "sheen",       "sheen_roughness", "sheen_color", "specular_anisotropy", "specular_rotation", "subsurface", "subsurface_radius", "subsurface_scale", "subsurface_color" },
+        { "open_pbr_surface",  "base_color",   "base_weight", "base_metalness", "specular_roughness", "emission_color", "emission_luminance",   "geometry_opacity", "geometry_normal", "coat_weight",  "coat_roughness", "fuzz_weight", "fuzz_roughness", "fuzz_color", "specular_roughness_anisotropy", "", "subsurface_weight", "subsurface_radius_scale", "subsurface_radius", "subsurface_color" },
+        { "gltf_pbr",          "base_color",   "",            "metallic",       "roughness",          "emissive",       "emissive_strength",    "alpha",            "normal",          "clearcoat",    "clearcoat_roughness", "sheen_color", "sheen_roughness", "sheen_color", "", "", "", "", "", "" },
+        { "UsdPreviewSurface", "diffuseColor", "",            "metallic",       "roughness",          "emissiveColor",  "",                     "opacity",          "normal",          "clearcoat",    "clearcoatRoughness", "",            "", "", "", "", "", "", "", "" },
     };
 
     class MtlxImporter
@@ -914,17 +1068,13 @@ namespace
                 return;
             }
 
-            // int/bool inputs are baked into the shader text from the nodedef
-            // default, so a different value arrives as a constant node (the
-            // link casts float to int).
+            // int/bool: held as a float uniform like the rest.
             float v = 0;
 
             try { v = text == "true" ? 1.0f : text == "false" ? 0.0f : std::stof(text); }
             catch (const std::exception&) { return; }
 
-            auto constant = std::make_shared<ScalarNode>(v);
-            place(constant, depth);
-            constant->get_output(0)->link(port);
+            mx.set_constant(pd.name, { v });
         }
 
         Channel channel(const MaterialX::NodePtr& shader, const char* name, int depth)
@@ -983,6 +1133,37 @@ namespace
             place(node, depth);
             feed(*node, 0, "in1", color);
             feed(*node, 1, "in2", weight);
+
+            Channel res;
+            res.src = node->get_output(0);
+            return res;
+        }
+
+        // mix(a, b, weight): a where weight is 0, b where it is 1. Constants are
+        // folded; otherwise MaterialX's own mix node does it.
+        Channel lerp_color(const Channel& a, const Channel& b, const Channel& weight, int depth)
+        {
+            if (!a.src && !b.src && !weight.src && a.value.size() >= 3 && b.value.size() >= 3 && !weight.value.empty())
+            {
+                const float t = std::clamp(weight.value[0], 0.0f, 1.0f);
+                Channel res = a;
+
+                for (int i = 0; i < 3; i++)
+                    res.value[i] = a.value[i] + (b.value[i] - a.value[i]) * t;
+
+                return res;
+            }
+
+            auto* def = MaterialXLibrary::get().find("ND_mix_color3FA");
+
+            if (!def)
+                return a;
+
+            auto node = std::make_shared<MaterialXNode>(*def);
+            place(node, depth);
+            feed(*node, 0, "fg", b);
+            feed(*node, 1, "bg", a);
+            feed(*node, 2, "mix", weight);
 
             Channel res;
             res.src = node->get_output(0);
@@ -1066,7 +1247,7 @@ namespace
 
             const int d = 1;
 
-            emit(scale(channel(shader, map->base_color, d), channel(shader, map->base_weight, d), d), graph->get_base_color(), 4);
+            auto base_color = scale(channel(shader, map->base_color, d), channel(shader, map->base_weight, d), d);
             emit(channel(shader, map->metalness, d), graph->get_mettalic(), 1);
             emit(channel(shader, map->roughness, d), graph->get_roughness(), 1);
 
@@ -1100,6 +1281,20 @@ namespace
 
                 emit(sheen, graph->get_sheen(), 1);
                 emit(channel(shader, map->sheen_roughness, d), graph->get_sheen_roughness(), 1);
+
+                // The shading model has one byte for the sheen colour: how far it
+                // follows the base colour. A constant colour's saturation is that
+                // (white is untinted, a saturated colour is tinted like the base).
+                auto colour = channel(shader, map->sheen_color, d);
+
+                if (!colour.src && colour.value.size() >= 3)
+                {
+                    const float hi = *std::max_element(colour.value.begin(), colour.value.begin() + 3);
+                    const float lo = *std::min_element(colour.value.begin(), colour.value.begin() + 3);
+
+                    if (hi > 1e-4f)
+                        emit({ nullptr, { (hi - lo) / hi } }, graph->get_sheen_tint(), 1);
+                }
             }
             else if (coated && nonzero(sheen))
                 Log::get() << Log::LEVEL_WARNING << "MaterialX import: material has both coat and sheen; only the coat is kept" << Log::endl;
@@ -1136,8 +1331,16 @@ namespace
                     emit(subsurface, graph->get_subsurface_weight(), 1);
                     emit(channel(shader, map->subsurface_radius, d), graph->get_subsurface_radius(), 4);
                     emit(channel(shader, map->subsurface_scale, d), graph->get_subsurface_scale(), 1);
+
+                    // The scattering part has its own diffuse colour: blend the
+                    // base colour towards it by the subsurface weight (the weight
+                    // is clamped to 1, as in MaterialX).
+                    if (*map->subsurface_color)
+                        base_color = lerp_color(base_color, channel(shader, map->subsurface_color, d), subsurface, d);
                 }
             }
+
+            emit(base_color, graph->get_base_color(), 4);
 
             auto opacity = channel(shader, map->opacity, d);
 

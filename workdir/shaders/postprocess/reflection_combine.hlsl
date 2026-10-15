@@ -80,10 +80,11 @@ void CS(
 	// -- unpack before use.
 	float3 reflection = REBLUR_BackEnd_UnpackRadianceAndNormHitDist(GetReflectionCombine().GetReflection()[dispatchID.xy]).rgb;
 
-	float3 color = get_PBR(albedo, reflection.xyz, normal, v, roughness, metallic);
+	float4 material = gbuffer.GetMaterial()[tc];
+	float3 color = get_PBR(albedo, reflection.xyz, normal, v, roughness, metallic) * coat_base_attenuation(material, normal, -v);
 
 	// Clearcoat reflection (common/coat.hlsl), added undenoised.
-	color += coat_reflection(gbuffer.GetMaterial()[tc], normal, -v, GetReflectionCombine().GetCoat()[tc].rgb);
+	color += coat_reflection(material, normal, -v, GetReflectionCombine().GetCoat()[tc].rgb);
 //	output[index] = float4(lighting, 1);
 	GetReflectionCombine().GetTarget()[dispatchID.xy]+=float4(color,0);
  //

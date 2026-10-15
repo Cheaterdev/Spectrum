@@ -656,6 +656,7 @@ namespace Frame
 			{ PassID::VSM_ShadowResolve, 0 },
 			{ PassID::VSM_Combine, 0 },
 			{ PassID::VSM_Unshadowed, 0 },
+			{ PassID::NRD_IndirectCombine, 0 },
 			{ PassID::SSS_Classify, 0 },
 			{ PassID::SSS_BlurH, 0 },
 			{ PassID::SSS_BlurV, 0 },
@@ -666,7 +667,7 @@ namespace Frame
 		};
 		static inline const FrameGraph::PrecompiledState GBuffer_Material_c0_states[] = {
 			{ true, { GBuffer_Material_c0_pass_refs + 0, 1 } },
-			{ false, { GBuffer_Material_c0_pass_refs + 1, 11 } },
+			{ false, { GBuffer_Material_c0_pass_refs + 1, 12 } },
 		};
 		static inline const FrameGraph::PassRef GBuffer_DepthMips_c0_pass_refs[] = {
 			{ PassID::Scene, 0 },

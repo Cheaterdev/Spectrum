@@ -78,13 +78,15 @@ float4 vsm_resolve_combine(float3 albedo, float metallic, float3 normal, float s
 	// Clearcoat sun highlight (common/coat.hlsl). STANDARD pixels stop at the
 	// material read; only coated ones reconstruct the view vector.
 	float4 material = gbuffer.GetMaterial().SampleLevel(pointClampSampler, tc, 0);
-	if (material_model(material) != SHADING_MODEL_STANDARD)
+	if (material_model(material) != SHADING_MODEL_STANDARD || metallic > 0.001)
 	{
 		Camera camera = GetFrameInfo().GetCamera();
 		float  raw_z  = gbuffer.GetDepth().SampleLevel(pointClampSampler, tc, 0);
 		float3 wpos   = depth_to_wpos(raw_z, tc, camera.GetInvViewProj());
-		result += material_sun_lobes(material, normal, normalize(camera.GetPosition() - wpos), light_dir, shadow,
-			lerp(0.04, albedo, metallic), max(MIN_ROUGHNESS, gbuffer.GetNormals().SampleLevel(pointClampSampler, tc, 0).w));
+		float3 view = normalize(camera.GetPosition() - wpos);
+		result *= coat_base_attenuation(material, normal, view);
+		result += material_sun_lobes(material, normal, view, light_dir, shadow,
+			lerp(0.04, albedo, metallic), max(MIN_ROUGHNESS, gbuffer.GetNormals().SampleLevel(pointClampSampler, tc, 0).w), albedo, metallic);
 	}
 
 	return float4(result, 1);

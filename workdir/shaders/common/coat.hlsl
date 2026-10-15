@@ -43,6 +43,19 @@ float3 coat_reflection(float4 material, float3 N, float3 V, float3 radiance)
     return material_params(material).x * F * radiance;
 }
 
+// What reaches the base layer under a clearcoat: the coat reflects F of the
+// light on the way in. The way out is left out, at IOR 1.5 it is a few
+// percent. 1 for materials without a coat.
+float coat_base_attenuation(float4 material, float3 N, float3 V)
+{
+    if (material_model(material) != SHADING_MODEL_CLEARCOAT)
+        return 1.0;
+
+    float NV = saturate(dot(N, V));
+    float F = COAT_F0 + (1.0 - COAT_F0) * pow(1.0 - NV, 5.0);
+    return 1.0 - material_params(material).x * F;
+}
+
 float3 coat_sun_specular(float4 material, float3 N, float3 V, float3 L, float shadow)
 {
     if (material_model(material) != SHADING_MODEL_CLEARCOAT)

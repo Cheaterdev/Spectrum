@@ -23,6 +23,11 @@ struct MxPortDef
     // MaterialX "defaultgeomprop": what an unconnected input reads from the
     // mesh instead of a constant (UV0, Pobject, ...). Empty for plain values.
     std::string geomprop;
+
+    // int inputs with a MaterialX `enum` (names and the values they stand for);
+    // shown as a drop-down instead of a slider.
+    std::vector<std::string> enum_names;
+    std::vector<float> enum_values;
 };
 
 // One implemented MaterialX nodedef, in graph-ready form. MaterialX types
@@ -79,13 +84,19 @@ class MaterialXNode : public MaterialNode
 {
     std::string nodedef;
 
-    // One per input, null where the input has no editable constant: int/bool
-    // (baked into the shader text as the default literal) and inputs that read
-    // geometry. A uniform lives in MaterialCB, so editing it never recompiles
-    // the shader and materials with the same graph keep sharing a PSO.
+    // One per input, null where the input has no editable constant (inputs that
+    // read geometry, and textures). int and bool inputs are float uniforms too,
+    // cast where they are used. A uniform lives in MaterialCB, so editing it
+    // never recompiles the shader and materials with the same graph keep sharing
+    // a PSO.
     std::vector<Uniform::ptr> uniforms;
 
     MaterialXNode() = default;
+
+    // Creates the uniform of every editable input that lacks one: all of them for
+    // a fresh node, and the int/bool ones for a graph saved before those were
+    // uniforms (their slots load as null).
+    void ensure_uniforms();
 
 protected:
     void reset_for() override;
@@ -121,6 +132,7 @@ private:
         SAVE_PARENT(MaterialNode);
         ar& NVP(nodedef);
         ar& NVP(uniforms);
+        IF_LOAD() ensure_uniforms();
     }
 };
 
