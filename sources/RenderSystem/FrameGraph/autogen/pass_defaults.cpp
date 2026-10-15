@@ -542,7 +542,7 @@ FrameGraph::SetupResult PassDefault<Passes::Post::Upscale::FSR>::setup(
 FrameGraph::SetupResult PassDefault<Passes::Frame::ResultCreation>::setup(
 	Passes::Frame::ResultCreation::Context& data, FrameGraph::TaskBuilder& builder)
 {
-	return (false) ? FrameGraph::SetupResult::NeedsRender : FrameGraph::SetupResult::IgnoreRender;
+	return (true) ? FrameGraph::SetupResult::NeedsRender : FrameGraph::SetupResult::IgnoreRender;
 }
 
 
@@ -959,6 +959,15 @@ FrameGraph::SetupResult PassSetupDefault<Passes::Shadows::VSM::VSM_Combine>::set
 	Passes::Shadows::VSM::VSM_Combine::Context& data, FrameGraph::TaskBuilder& builder)
 {
 	if (!(builder.graph->get_context<Table::Shadows::VSM::VSMSelectors>().supported && !builder.graph->get_context<Table::Shadows::VSM::VSMSelectors>().use_vsm_penumbra && builder.graph->get_context<Table::Shadows::VSM::VSMSelectors>().shadow_source == ::Shadows::VSM::ShadowSource::VSM))
+		return FrameGraph::SetupResult::Disabled;
+	return FrameGraph::SetupResult::NeedsRender;
+}
+
+
+FrameGraph::SetupResult PassSetupDefault<Passes::Shadows::VSM::SkyAmbient>::setup(
+	Passes::Shadows::VSM::SkyAmbient::Context& data, FrameGraph::TaskBuilder& builder)
+{
+	if (!(builder.graph->get_context<Table::Shadows::VSM::VSMSelectors>().supported))
 		return FrameGraph::SetupResult::Disabled;
 	return FrameGraph::SetupResult::NeedsRender;
 }

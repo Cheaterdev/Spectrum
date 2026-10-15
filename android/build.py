@@ -6,7 +6,7 @@ wrapper uses, and AGDE has no module support at all. So: build header units
 first, scan the sources with clang-scan-deps (P1689), then emit a Ninja file
 with exact module/header-unit dependencies and let Ninja run it.
 
-    python android/build.py [--mode debug|retail] [--target core] [-k]
+    python android/build.py [--mode debug|profile|retail] [--target core] [-k]
 
 Needs only the Android SDK/NDK (auto-detected, or ANDROID_HOME /
 ANDROID_NDK_HOME) and the Ninja that ships with Visual Studio.
@@ -55,7 +55,8 @@ TARGETS = {
         forced="HAL/Defines.h",
         deps=["core"],
     ),
-    # The CPU-only tests (Core / math / serialization / threading / events / file system / profiling).
+    # The tests that run on the device: Core / math / serialization / threading / events / file system / profiling, and
+    # the compute GPU tests (Test.HAL.Compute).
     # Test files that need a desktop GPU or PNG goldens are in EXCLUDE. Their objects are linked straight
     # into libspectrum.so (not through an archive): each TEST() registers itself from a static
     # initializer, which an archive member nobody references would never run.
@@ -63,7 +64,7 @@ TARGETS = {
         dirs=["Test/TestFramework", "Test/Tests"],
         root="Test",
         forced="Test/Defines.h",
-        deps=["hal"],
+        deps=["hal", "rendersystem"],   # the GPU tests (Test.HAL.Compute) create the engine's device
     ),
     "app": dict(
         dirs=[],
@@ -113,7 +114,6 @@ EXCLUDE = {
     # Revisit by compiling these as `module FrameGraph;` implementation units.
     "RenderSystem/FrameGraph/PassDefaults.cpp",
     "RenderSystem/Effects/FSR/FSR.cpp",
-    "RenderSystem/Effects/PostProcess/Bloom.cpp", "RenderSystem/Effects/PostProcess/Tonemap.cpp",
     "RenderSystem/Effects/DDGI/DDGIGraph.cpp", "RenderSystem/Effects/VoxelGI/VoxelGIGraph.cpp",
     "RenderSystem/Effects/VoxelGI/RTXCombine.cpp", "RenderSystem/Effects/VoxelGI/NRD_GBufferPack.cpp",
     "RenderSystem/Effects/VoxelGI/NRD_ShadowCombine.cpp", "RenderSystem/Effects/VoxelGI/NRD_IndirectCombine.cpp",
@@ -235,6 +235,9 @@ def base_flags(mode):
     f += ["-DSPECTRUM_PLATFORM_ANDROID", "-DSPECTRUM_ENABLE_EXCEPTIONS", "-DHAL_BACKEND_VULKAN", "-DLEAK_TEST_ENABLE"]
     if mode == "debug":
         f += ["-O0", "-gline-tables-only", "-DDEV", "-DPROFILING"]
+    elif mode == "profile":
+        # What the PC's Profile configuration is: optimized, with the profiler on and none of the DEV checks.
+        f += ["-O2", "-gline-tables-only", "-DPROFILING", "-DNDEBUG"]
     else:
         f += ["-O2", "-DRETAIL", "-DNDEBUG"]
     return f
@@ -703,7 +706,11 @@ def refresh_unported_stubs(out, app_objs, libs, stubs_s):
         print(r.stderr[-2000:])
         sys.exit("probe link failed")
 
-    undefined = [l.split()[-1].split("@")[0] for l in run([nm, "-D", "-u", probe]).stdout.splitlines() if l.split()]
+    # Weak undefined symbols ('w'/'v') are left alone: they are legitimately null when nothing defines them. The
+    # compiler's thread_local init-function checks are exactly that (`if (&_ZTH...) _ZTH...()`); a stub there is a
+    # non-null address, the check passes, and the optimized code jumps into the stub's data.
+    undefined = [l.split()[-1].split("@")[0] for l in run([nm, "-D", "-u", probe]).stdout.splitlines()
+                 if l.split() and (len(l.split()) < 2 or l.split()[0] not in ("w", "v"))]
     # Only C++ symbols: the engine's own code. Plain C ones (vkCmdPipelineBarrier2, memfd_create, ...)
     # are newer than the NDK's API-29 link stubs but exist in the device's libraries, so they
     # resolve at load time; stubbing them would shadow the real functions.
@@ -734,7 +741,7 @@ def refresh_unported_stubs(out, app_objs, libs, stubs_s):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--mode", default="debug", choices=["debug", "retail"])
+    ap.add_argument("--mode", default="debug", choices=["debug", "profile", "retail"])
     ap.add_argument("--target", default="core", choices=list(TARGETS))
     ap.add_argument("-k", action="store_true", help="keep going after errors")
     ap.add_argument("--no-build", action="store_true", help="only generate build.ninja")

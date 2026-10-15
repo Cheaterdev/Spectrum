@@ -14,6 +14,8 @@ import GUI;
 namespace
 {
 	float g_density = 2.0f;
+	bool g_shadows = true;
+	bool g_ui_visible = true;
 
 	std::mutex g_ui_mutex;   // the touch thread reads g_ui while the render thread creates it
 	std::shared_ptr<GUI::user_interface> g_ui;
@@ -174,6 +176,8 @@ namespace
 	std::shared_ptr<sky_view> g_sky_view;
 	std::unique_ptr<first_person_camera> g_camera;
 	std::unique_ptr<SkyRender> g_sky_render;
+	std::unique_ptr<VSM> g_vsm;
+	std::unique_ptr<BlueNoise> g_blue_noise;
 	Scene::ptr g_scene;
 	main_renderer::ptr g_main_renderer;
 	std::unique_ptr<Pipelines::Environment::SkyViewPipeline> g_sky_pipeline;
@@ -233,9 +237,58 @@ namespace
 		g_camera->look_at(vec3(0, 1.0f, 6));
 		g_sky_pipeline = std::make_unique<Pipelines::Environment::SkyViewPipeline>();
 		g_sky_render = std::make_unique<SkyRender>(*g_sky_pipeline);
+		g_blue_noise = std::make_unique<BlueNoise>(*g_sky_pipeline);
 
-		// No shadow maps without sparse depth textures: the engine's own fallback lights the GBuffer with the sun
-		// alone (VSM::m_unshadowed_render, which needs the VSM object itself, so it is repeated here).
+		// Shadows: the engine's VSM with a resident atlas (no sparse textures) and a fixed sun, PCF filtered (the PCSS
+		// penumbra path runs too, behind use_vsm_penumbra).
+		// SkyAmbient adds the baked sky as the indirect light ray tracing and voxel GI would supply.
+		g_vsm = std::make_unique<VSM>(*g_sky_pipeline);
+		g_vsm->enabled = g_shadows;
+		g_vsm->use_vsm_penumbra = false;   // PCF by default: PCSS costs several times more on a phone ("VSM/PCSS penumbra=1" in demo.cfg turns it on)
+		g_vsm->set_position(float3(0.3f, 0.35f, 0.4f).normalize());
+
+		// Knobs for trying things on a device without a rebuild: "demo.cfg" in the working directory, one
+		// "Context/Variable=value" per line, naming a Variable<T> as the Properties panel does (bool and float take
+		// the number, an enum its index), e.g. "VSM/PCSS penumbra=0" or "Sync debug/Widen every barrier to ALL/ALL=1"
+		// -- the context is everything before the first '/'.
+		{
+			std::ifstream cfg("demo.cfg");
+			std::string line;
+			while (std::getline(cfg, line))
+			{
+				const auto eq = line.rfind('=');
+				const auto slash = line.find('/');
+				if (eq == std::string::npos || slash == std::string::npos || slash > eq)
+					continue;
+				const std::string context_name = line.substr(0, slash);
+				const std::string variable_name = line.substr(slash + 1, eq - slash - 1);
+				const std::string value = line.substr(eq + 1);
+
+				bool applied = false;
+				VariableContext::get().iterate([&](VariableContext* context)
+				{
+					const std::wstring wide = context->get_name();
+					if (std::string(wide.begin(), wide.end()) != context_name)
+						return true;
+					for (auto* variable : context->variables)
+					{
+						if (variable->get_name() != variable_name)
+							continue;
+						if (auto* flag = dynamic_cast<Variable<bool>*>(variable))
+							*flag = std::atoi(value.c_str()) != 0, applied = true;
+						else if (auto* number = dynamic_cast<Variable<float>*>(variable))
+							*number = std::strtof(value.c_str(), nullptr), applied = true;
+						else if (!variable->get_enum_names().empty())
+							variable->set_enum_index(std::atoi(value.c_str())), applied = true;
+					}
+					return true;
+				});
+				Log::get() << "demo.cfg: " << context_name << "/" << variable_name << " = " << value << (applied ? "" : "  (NOT FOUND)") << Log::endl;
+			}
+		}
+
+		// VSM switched off: the engine's own fallback lights the GBuffer with the sun alone (VSM::m_unshadowed_render,
+		// which needs the VSM object itself, so it is repeated here to bind the baked sky).
 		g_sky_pipeline->vSM_Unshadowed.render_func = [](Passes::Shadows::VSM::VSM_Unshadowed::Context& data, FrameGraph::FrameContext& context)
 		{
 			GBuffer gbuffer = GBufferViewDesc::actualize(data);
@@ -258,6 +311,7 @@ namespace
 
 		// The scene: the engine's own meshes (with their materials) in front of the camera.
 		g_scene = std::make_shared<Scene>();
+		g_vsm->attach_scene(g_scene);
 		g_main_renderer = std::make_shared<main_renderer>();
 		g_main_renderer->register_renderer(std::make_shared<mesh_renderer>());
 
@@ -279,6 +333,7 @@ namespace
 		// move handler marks the finger as handled, so the sky view only ever saw a second finger.
 		g_root->clickable = false;
 		g_root->scale = g_density;
+		g_root->visible = g_ui_visible;
 		ui->add_child(g_root);
 
 		g_window_el = std::make_shared<GUI::Elements::window>();
@@ -439,7 +494,7 @@ namespace
 
 			graph.get_context<TimeInfo>().time = dt;
 			graph.get_context<TimeInfo>().totalTime += dt;
-			graph.get_context<SkyInfo>().sunDir = float3(0.3f, 0.35f, 0.4f).normalize();
+			graph.get_context<SkyInfo>().sunDir = g_vsm->get_position();
 			graph.get_context<CameraInfo>().cam = g_camera.get();
 			{
 				auto& scene_info = graph.get_context<SceneInfo>();
@@ -454,6 +509,7 @@ namespace
 				viewport.upscale_size = ivec2((int)W, (int)H);
 			}
 
+			g_vsm->update_frame(graph);   // before any pass's setup
 			g_ui->create_graph(graph);
 			g_sky_pipeline->add_passes(graph);   // before the UI passes: they read its ResultTexture
 			g_sky_pipeline->run_pre_setups(graph);
@@ -469,7 +525,12 @@ namespace
 			});
 			// After every pass exists: per-resource state is sized from the pass count at creation.
 			graph.builder.pass_texture(FrameGraph::ResourceID::swapchain, ui_target, {}, FrameGraph::ResourceFlags::Required);
+			g_vsm->pass_data(graph.builder);
+			// Single-threaded page allocation for every clip level, before VSM_RenderPages records.
+			graph.add_slot_generator([](FrameGraph::Graph& graph) { g_vsm->plan_frame(graph); });
 			g_pipeline->run_pre_setups(graph);
+			tonemap_update_selectors(graph);
+			bloom_update_selectors(graph);
 			graph.setup();
 			graph.compile(frame);
 		}
@@ -520,6 +581,10 @@ export namespace demo
 	{
 		g_density = density;
 	}
+
+	// Before the first frame: VSM shadows on (default) or off, and the window/graphs drawn over the scene.
+	void set_shadows(bool enabled) { g_shadows = enabled; }
+	void set_ui_visible(bool visible) { g_ui_visible = visible; }
 
 	// The FP16 target the frame graph renders the screen into; a host recreates it whenever its swapchain does.
 	// Sampled by the final copy, hence ShaderResource next to RenderTarget.

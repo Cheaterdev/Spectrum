@@ -6,13 +6,29 @@
 // ============================================================================
 
 #include "../Frame/PreScene.h"
+#include "../Utility/BlueNoise.h"
+#include "../Shadows/VSM/VSM_GatherDispatch.h"
+#include "../Shadows/VSM/VSM_RenderPages.h"
 #include "../Meshes/Scene.h"
 #include "../Frame/ResultCreation.h"
 #include "../Environment/CubeSky.h"
 #include "../Environment/CubeMapDownsample.h"
 #include "../Environment/CubeMapEnviromentProcessor.h"
+#include "../Shadows/VSM/VSM_DepthAnalysis.h"
+#include "../Shadows/VSM/VSM_HiZRebuild.h"
+#include "../Shadows/VSM/VSM_BlockerClassify.h"
+#include "../Shadows/VSM/VSM_BlockerSearch.h"
+#include "../Shadows/VSM/VSM_ScreenSpaceShadow.h"
+#include "../Shadows/VSM/VSM_ShadowResolve.h"
+#include "../Shadows/VSM/Dev/VSM_DebugClassifyOverlay.h"
+#include "../Shadows/VSM/VSM_Combine.h"
 #include "../Shadows/VSM/VSM_Unshadowed.h"
+#include "../Shadows/VSM/SkyAmbient.h"
 #include "../Environment/Sky.h"
+#include "../Post/BloomBuild.h"
+#include "../Post/BloomProcess.h"
+#include "../Post/BloomComposite.h"
+#include "../Post/Tonemap.h"
 #include "../../pass_defaults.h"
 
 using namespace FrameGraph;
@@ -25,19 +41,47 @@ namespace Environment
 	{
 	public:
 
+		Passes::Utility::BlueNoise blueNoise;
+		Passes::Shadows::VSM::VSM_GatherDispatch vSM_GatherDispatch;
+		Passes::Shadows::VSM::VSM_RenderPages vSM_RenderPages;
 		Passes::Environment::CubeSky cubeSky;
+		Passes::Shadows::VSM::VSM_DepthAnalysis vSM_DepthAnalysis;
+		Passes::Shadows::VSM::VSM_HiZRebuild vSM_HiZRebuild;
+		Passes::Shadows::VSM::VSM_BlockerClassify vSM_BlockerClassify;
+		Passes::Shadows::VSM::VSM_BlockerSearch vSM_BlockerSearch;
+		Passes::Shadows::VSM::VSM_ScreenSpaceShadow vSM_ScreenSpaceShadow;
+		Passes::Shadows::VSM::VSM_ShadowResolve vSM_ShadowResolve;
+		Passes::Shadows::VSM::Dev::VSM_DebugClassifyOverlay vSM_DebugClassifyOverlay;
+		Passes::Shadows::VSM::VSM_Combine vSM_Combine;
 		Passes::Shadows::VSM::VSM_Unshadowed vSM_Unshadowed;
+		Passes::Shadows::VSM::SkyAmbient skyAmbient;
 		Passes::Environment::Sky sky;
 
 		static inline const wchar_t* const pass_names[] = {
 			Passes::Frame::PreScene::Name.ptr,
+			Passes::Utility::BlueNoise::Name.ptr,
+			Passes::Shadows::VSM::VSM_GatherDispatch::Name.ptr,
+			Passes::Shadows::VSM::VSM_RenderPages::Name.ptr,
 			Passes::Meshes::Scene::Name.ptr,
 			Passes::Frame::ResultCreation::Name.ptr,
 			Passes::Environment::CubeSky::Name.ptr,
 			Passes::Environment::CubeMapDownsample::Name.ptr,
 			Passes::Environment::CubeMapEnviromentProcessor::Name.ptr,
+			Passes::Shadows::VSM::VSM_DepthAnalysis::Name.ptr,
+			Passes::Shadows::VSM::VSM_HiZRebuild::Name.ptr,
+			Passes::Shadows::VSM::VSM_BlockerClassify::Name.ptr,
+			Passes::Shadows::VSM::VSM_BlockerSearch::Name.ptr,
+			Passes::Shadows::VSM::VSM_ScreenSpaceShadow::Name.ptr,
+			Passes::Shadows::VSM::VSM_ShadowResolve::Name.ptr,
+			Passes::Shadows::VSM::Dev::VSM_DebugClassifyOverlay::Name.ptr,
+			Passes::Shadows::VSM::VSM_Combine::Name.ptr,
 			Passes::Shadows::VSM::VSM_Unshadowed::Name.ptr,
+			Passes::Shadows::VSM::SkyAmbient::Name.ptr,
 			Passes::Environment::Sky::Name.ptr,
+			Passes::Post::BloomBuild::Name.ptr,
+			Passes::Post::BloomProcess::Name.ptr,
+			Passes::Post::BloomComposite::Name.ptr,
+			Passes::Post::Tonemap::Name.ptr,
 		};
 		static constexpr uint32_t pass_count = std::size(pass_names);
 
@@ -48,6 +92,13 @@ namespace Environment
 
 		static inline const wchar_t* const resource_names[] = {
 			L"scene",
+			L"BlueNoise",
+			L"VSM_LevelDispatchInfo",
+			L"VSM_DispatchCommands",
+			L"VSM_Atlas",
+			L"VSM_PageTable",
+			L"VSM_PageCameras",
+			L"VSM_PageHiZ",
 			L"GBuffer_Albedo",
 			L"GBuffer_Normals",
 			L"GBuffer_Depth",
@@ -64,6 +115,30 @@ namespace Environment
 			L"sky_cubemap",
 			L"sky_cubemap_filtered",
 			L"sky_cubemap_filtered_diffuse",
+			L"VSM_DepthAnalysisResult",
+			L"VSM_DirtySlots",
+			L"VSM_LitTiles",
+			L"VSM_DarkTiles",
+			L"VSM_SearchTiles",
+			L"VSM_BlockerSearchResult",
+			L"VSM_ConfirmedLitTiles",
+			L"VSM_BlurTiles",
+			L"VSM_AmbiguousMask",
+			L"VSM_ContactShadow",
+			L"VSM_PCSS_ShadowNoise",
+			L"ShadowMask",
+			L"ExposureState",
+			L"BloomCurrent",
+			L"BloomTAA",
+			L"BloomTAAHistory",
+			L"BloomDown",
+			L"BloomUp",
+			L"FlareGhosts",
+			L"FlareStreakA",
+			L"FlareStreakB",
+			L"FlareStreaks",
+			L"ResultTextureNew",
+			L"ExposureHistogram",
 		};
 		static constexpr uint32_t resource_count = std::size(resource_names);
 
@@ -76,51 +151,158 @@ namespace Environment
 		// a span into that resource's own <id>_pass_refs[].
 		static inline const FrameGraph::PassRef scene_c0_pass_refs[] = {
 			{ PassID::PreScene, 0 },
+			{ PassID::VSM_GatherDispatch, 0 },
+			{ PassID::VSM_RenderPages, 0 },
 			{ PassID::Scene, 0 },
+			{ PassID::VSM_ShadowResolve, 0 },
 		};
 		static inline const FrameGraph::PrecompiledState scene_c0_states[] = {
 			{ true, { scene_c0_pass_refs + 0, 1 } },
-			{ false, { scene_c0_pass_refs + 1, 1 } },
+			{ false, { scene_c0_pass_refs + 1, 4 } },
+		};
+		static inline const FrameGraph::PassRef BlueNoise_c0_pass_refs[] = {
+			{ PassID::BlueNoise, 0 },
+			{ PassID::VSM_BlockerSearch, 0 },
+			{ PassID::VSM_ShadowResolve, 0 },
+			{ PassID::VSM_Combine, 0 },
+		};
+		static inline const FrameGraph::PrecompiledState BlueNoise_c0_states[] = {
+			{ true, { BlueNoise_c0_pass_refs + 0, 1 } },
+			{ false, { BlueNoise_c0_pass_refs + 1, 3 } },
+		};
+		static inline const FrameGraph::PassRef VSM_LevelDispatchInfo_c0_pass_refs[] = {
+			{ PassID::VSM_GatherDispatch, 0 },
+			{ PassID::VSM_RenderPages, 0 },
+		};
+		static inline const FrameGraph::PrecompiledState VSM_LevelDispatchInfo_c0_states[] = {
+			{ true, { VSM_LevelDispatchInfo_c0_pass_refs + 0, 1 } },
+			{ false, { VSM_LevelDispatchInfo_c0_pass_refs + 1, 1 } },
+		};
+		static inline const FrameGraph::PassRef VSM_DispatchCommands_c0_pass_refs[] = {
+			{ PassID::VSM_GatherDispatch, 0 },
+			{ PassID::VSM_RenderPages, 0 },
+		};
+		static inline const FrameGraph::PrecompiledState VSM_DispatchCommands_c0_states[] = {
+			{ true, { VSM_DispatchCommands_c0_pass_refs + 0, 1 } },
+			{ false, { VSM_DispatchCommands_c0_pass_refs + 1, 1 } },
+		};
+		static inline const FrameGraph::PassRef VSM_Atlas_c0_pass_refs[] = {
+			{ PassID::VSM_RenderPages, 0 },
+			{ PassID::VSM_HiZRebuild, 0 },
+			{ PassID::VSM_BlockerSearch, 0 },
+			{ PassID::VSM_ShadowResolve, 0 },
+			{ PassID::VSM_Combine, 0 },
+		};
+		static inline const FrameGraph::PrecompiledState VSM_Atlas_c0_states[] = {
+			{ true, { VSM_Atlas_c0_pass_refs + 0, 1 } },
+			{ false, { VSM_Atlas_c0_pass_refs + 1, 4 } },
+		};
+		static inline const FrameGraph::PassRef VSM_PageTable_c0_pass_refs[] = {
+			{ PassID::VSM_RenderPages, 0 },
+			{ PassID::VSM_BlockerClassify, 0 },
+			{ PassID::VSM_BlockerSearch, 0 },
+			{ PassID::VSM_ShadowResolve, 0 },
+			{ PassID::VSM_Combine, 0 },
+		};
+		static inline const FrameGraph::PrecompiledState VSM_PageTable_c0_states[] = {
+			{ true, { VSM_PageTable_c0_pass_refs + 0, 1 } },
+			{ false, { VSM_PageTable_c0_pass_refs + 1, 4 } },
+		};
+		static inline const FrameGraph::PassRef VSM_PageCameras_c0_pass_refs[] = {
+			{ PassID::VSM_RenderPages, 0 },
+			{ PassID::VSM_BlockerClassify, 0 },
+			{ PassID::VSM_BlockerSearch, 0 },
+			{ PassID::VSM_ShadowResolve, 0 },
+			{ PassID::VSM_Combine, 0 },
+		};
+		static inline const FrameGraph::PrecompiledState VSM_PageCameras_c0_states[] = {
+			{ true, { VSM_PageCameras_c0_pass_refs + 0, 1 } },
+			{ false, { VSM_PageCameras_c0_pass_refs + 1, 4 } },
+		};
+		static inline const FrameGraph::PassRef VSM_PageHiZ_c0_pass_refs[] = {
+			{ PassID::VSM_RenderPages, 0 },
+			{ PassID::VSM_HiZRebuild, 0 },
+			{ PassID::VSM_BlockerClassify, 0 },
+			{ PassID::VSM_BlockerSearch, 0 },
+		};
+		static inline const FrameGraph::PrecompiledState VSM_PageHiZ_c0_states[] = {
+			{ true, { VSM_PageHiZ_c0_pass_refs + 0, 1 } },
+			{ true, { VSM_PageHiZ_c0_pass_refs + 1, 1 } },
+			{ false, { VSM_PageHiZ_c0_pass_refs + 2, 2 } },
 		};
 		static inline const FrameGraph::PassRef GBuffer_Albedo_c0_pass_refs[] = {
 			{ PassID::Scene, 0 },
+			{ PassID::VSM_DepthAnalysis, 0 },
+			{ PassID::VSM_BlockerClassify, 0 },
+			{ PassID::VSM_BlockerSearch, 0 },
+			{ PassID::VSM_ScreenSpaceShadow, 0 },
+			{ PassID::VSM_ShadowResolve, 0 },
+			{ PassID::VSM_DebugClassifyOverlay, 0 },
+			{ PassID::VSM_Combine, 0 },
 			{ PassID::VSM_Unshadowed, 0 },
+			{ PassID::SkyAmbient, 0 },
 		};
 		static inline const FrameGraph::PrecompiledState GBuffer_Albedo_c0_states[] = {
 			{ true, { GBuffer_Albedo_c0_pass_refs + 0, 1 } },
-			{ false, { GBuffer_Albedo_c0_pass_refs + 1, 1 } },
+			{ false, { GBuffer_Albedo_c0_pass_refs + 1, 9 } },
 		};
 		static inline const FrameGraph::PassRef GBuffer_Normals_c0_pass_refs[] = {
 			{ PassID::Scene, 0 },
+			{ PassID::VSM_DepthAnalysis, 0 },
+			{ PassID::VSM_BlockerClassify, 0 },
+			{ PassID::VSM_BlockerSearch, 0 },
+			{ PassID::VSM_ScreenSpaceShadow, 0 },
+			{ PassID::VSM_ShadowResolve, 0 },
+			{ PassID::VSM_DebugClassifyOverlay, 0 },
+			{ PassID::VSM_Combine, 0 },
 			{ PassID::VSM_Unshadowed, 0 },
+			{ PassID::SkyAmbient, 0 },
 		};
 		static inline const FrameGraph::PrecompiledState GBuffer_Normals_c0_states[] = {
 			{ true, { GBuffer_Normals_c0_pass_refs + 0, 1 } },
-			{ false, { GBuffer_Normals_c0_pass_refs + 1, 1 } },
+			{ false, { GBuffer_Normals_c0_pass_refs + 1, 9 } },
 		};
 		static inline const FrameGraph::PassRef GBuffer_Depth_c0_pass_refs[] = {
 			{ PassID::Scene, 0 },
 			{ PassID::Sky, 0 },
+			{ PassID::BloomBuild, 0 },
 		};
 		static inline const FrameGraph::PrecompiledState GBuffer_Depth_c0_states[] = {
 			{ true, { GBuffer_Depth_c0_pass_refs + 0, 1 } },
-			{ false, { GBuffer_Depth_c0_pass_refs + 1, 1 } },
+			{ false, { GBuffer_Depth_c0_pass_refs + 1, 2 } },
 		};
 		static inline const FrameGraph::PassRef GBuffer_Specular_c0_pass_refs[] = {
 			{ PassID::Scene, 0 },
+			{ PassID::VSM_DepthAnalysis, 0 },
+			{ PassID::VSM_BlockerClassify, 0 },
+			{ PassID::VSM_BlockerSearch, 0 },
+			{ PassID::VSM_ScreenSpaceShadow, 0 },
+			{ PassID::VSM_ShadowResolve, 0 },
+			{ PassID::VSM_DebugClassifyOverlay, 0 },
+			{ PassID::VSM_Combine, 0 },
 			{ PassID::VSM_Unshadowed, 0 },
+			{ PassID::SkyAmbient, 0 },
 		};
 		static inline const FrameGraph::PrecompiledState GBuffer_Specular_c0_states[] = {
 			{ true, { GBuffer_Specular_c0_pass_refs + 0, 1 } },
-			{ false, { GBuffer_Specular_c0_pass_refs + 1, 1 } },
+			{ false, { GBuffer_Specular_c0_pass_refs + 1, 9 } },
 		};
 		static inline const FrameGraph::PassRef GBuffer_Speed_c0_pass_refs[] = {
 			{ PassID::Scene, 0 },
+			{ PassID::VSM_DepthAnalysis, 0 },
+			{ PassID::VSM_BlockerClassify, 0 },
+			{ PassID::VSM_BlockerSearch, 0 },
+			{ PassID::VSM_ScreenSpaceShadow, 0 },
+			{ PassID::VSM_ShadowResolve, 0 },
+			{ PassID::VSM_DebugClassifyOverlay, 0 },
+			{ PassID::VSM_Combine, 0 },
 			{ PassID::VSM_Unshadowed, 0 },
+			{ PassID::SkyAmbient, 0 },
+			{ PassID::BloomBuild, 0 },
 		};
 		static inline const FrameGraph::PrecompiledState GBuffer_Speed_c0_states[] = {
 			{ true, { GBuffer_Speed_c0_pass_refs + 0, 1 } },
-			{ false, { GBuffer_Speed_c0_pass_refs + 1, 1 } },
+			{ false, { GBuffer_Speed_c0_pass_refs + 1, 10 } },
 		};
 		static inline const FrameGraph::PassRef GBuffer_ObjectID_c0_pass_refs[] = {
 			{ PassID::Scene, 0 },
@@ -130,11 +312,19 @@ namespace Environment
 		};
 		static inline const FrameGraph::PassRef GBuffer_DepthMips_c0_pass_refs[] = {
 			{ PassID::Scene, 0 },
+			{ PassID::VSM_DepthAnalysis, 0 },
+			{ PassID::VSM_BlockerClassify, 0 },
+			{ PassID::VSM_BlockerSearch, 0 },
+			{ PassID::VSM_ScreenSpaceShadow, 0 },
+			{ PassID::VSM_ShadowResolve, 0 },
+			{ PassID::VSM_DebugClassifyOverlay, 0 },
+			{ PassID::VSM_Combine, 0 },
 			{ PassID::VSM_Unshadowed, 0 },
+			{ PassID::SkyAmbient, 0 },
 		};
 		static inline const FrameGraph::PrecompiledState GBuffer_DepthMips_c0_states[] = {
 			{ true, { GBuffer_DepthMips_c0_pass_refs + 0, 1 } },
-			{ false, { GBuffer_DepthMips_c0_pass_refs + 1, 1 } },
+			{ false, { GBuffer_DepthMips_c0_pass_refs + 1, 9 } },
 		};
 		static inline const FrameGraph::PassRef GBuffer_Quality_c0_pass_refs[] = {
 			{ PassID::Scene, 0 },
@@ -168,13 +358,24 @@ namespace Environment
 		};
 		static inline const FrameGraph::PassRef ResultTexture_c0_pass_refs[] = {
 			{ PassID::ResultCreation, 0 },
+			{ PassID::VSM_ShadowResolve, 0 },
+			{ PassID::VSM_DebugClassifyOverlay, 0 },
+			{ PassID::VSM_Combine, 0 },
 			{ PassID::VSM_Unshadowed, 0 },
+			{ PassID::SkyAmbient, 0 },
 			{ PassID::Sky, 0 },
+			{ PassID::BloomBuild, 0 },
+			{ PassID::BloomComposite, 0 },
 		};
 		static inline const FrameGraph::PrecompiledState ResultTexture_c0_states[] = {
 			{ true, { ResultTexture_c0_pass_refs + 0, 1 } },
 			{ true, { ResultTexture_c0_pass_refs + 1, 1 } },
 			{ true, { ResultTexture_c0_pass_refs + 2, 1 } },
+			{ true, { ResultTexture_c0_pass_refs + 3, 1 } },
+			{ true, { ResultTexture_c0_pass_refs + 4, 1 } },
+			{ true, { ResultTexture_c0_pass_refs + 5, 1 } },
+			{ true, { ResultTexture_c0_pass_refs + 6, 1 } },
+			{ false, { ResultTexture_c0_pass_refs + 7, 2 } },
 		};
 		static inline const FrameGraph::PassRef sky_cubemap_c0_pass_refs[] = {
 			{ PassID::CubeSky, 0 },
@@ -190,11 +391,12 @@ namespace Environment
 			{ PassID::CubeMapDownsample, 0 },
 			{ PassID::CubeMapEnviromentProcessor, 0 },
 			{ PassID::VSM_Unshadowed, 0 },
+			{ PassID::SkyAmbient, 0 },
 		};
 		static inline const FrameGraph::PrecompiledState sky_cubemap_filtered_c0_states[] = {
 			{ false, { sky_cubemap_filtered_c0_pass_refs + 0, 1 } },
 			{ true, { sky_cubemap_filtered_c0_pass_refs + 1, 1 } },
-			{ false, { sky_cubemap_filtered_c0_pass_refs + 2, 1 } },
+			{ false, { sky_cubemap_filtered_c0_pass_refs + 2, 2 } },
 		};
 		static inline const FrameGraph::PassRef sky_cubemap_filtered_diffuse_c0_pass_refs[] = {
 			{ PassID::CubeMapDownsample, 0 },
@@ -204,8 +406,194 @@ namespace Environment
 			{ false, { sky_cubemap_filtered_diffuse_c0_pass_refs + 0, 1 } },
 			{ true, { sky_cubemap_filtered_diffuse_c0_pass_refs + 1, 1 } },
 		};
+		static inline const FrameGraph::PassRef VSM_DepthAnalysisResult_c0_pass_refs[] = {
+			{ PassID::VSM_DepthAnalysis, 0 },
+		};
+		static inline const FrameGraph::PrecompiledState VSM_DepthAnalysisResult_c0_states[] = {
+			{ true, { VSM_DepthAnalysisResult_c0_pass_refs + 0, 1 } },
+		};
+		static inline const FrameGraph::PassRef VSM_DirtySlots_c0_pass_refs[] = {
+			{ PassID::VSM_HiZRebuild, 0 },
+		};
+		static inline const FrameGraph::PrecompiledState VSM_DirtySlots_c0_states[] = {
+			{ true, { VSM_DirtySlots_c0_pass_refs + 0, 1 } },
+		};
+		static inline const FrameGraph::PassRef VSM_LitTiles_c0_pass_refs[] = {
+			{ PassID::VSM_BlockerClassify, 0 },
+			{ PassID::VSM_ShadowResolve, 0 },
+			{ PassID::VSM_DebugClassifyOverlay, 0 },
+		};
+		static inline const FrameGraph::PrecompiledState VSM_LitTiles_c0_states[] = {
+			{ true, { VSM_LitTiles_c0_pass_refs + 0, 1 } },
+			{ false, { VSM_LitTiles_c0_pass_refs + 1, 2 } },
+		};
+		static inline const FrameGraph::PassRef VSM_DarkTiles_c0_pass_refs[] = {
+			{ PassID::VSM_BlockerClassify, 0 },
+			{ PassID::VSM_ShadowResolve, 0 },
+			{ PassID::VSM_DebugClassifyOverlay, 0 },
+		};
+		static inline const FrameGraph::PrecompiledState VSM_DarkTiles_c0_states[] = {
+			{ true, { VSM_DarkTiles_c0_pass_refs + 0, 1 } },
+			{ false, { VSM_DarkTiles_c0_pass_refs + 1, 2 } },
+		};
+		static inline const FrameGraph::PassRef VSM_SearchTiles_c0_pass_refs[] = {
+			{ PassID::VSM_BlockerClassify, 0 },
+			{ PassID::VSM_BlockerSearch, 0 },
+		};
+		static inline const FrameGraph::PrecompiledState VSM_SearchTiles_c0_states[] = {
+			{ true, { VSM_SearchTiles_c0_pass_refs + 0, 1 } },
+			{ false, { VSM_SearchTiles_c0_pass_refs + 1, 1 } },
+		};
+		static inline const FrameGraph::PassRef VSM_BlockerSearchResult_c0_pass_refs[] = {
+			{ PassID::VSM_BlockerSearch, 0 },
+			{ PassID::VSM_ShadowResolve, 0 },
+			{ PassID::VSM_DebugClassifyOverlay, 0 },
+		};
+		static inline const FrameGraph::PrecompiledState VSM_BlockerSearchResult_c0_states[] = {
+			{ true, { VSM_BlockerSearchResult_c0_pass_refs + 0, 1 } },
+			{ false, { VSM_BlockerSearchResult_c0_pass_refs + 1, 2 } },
+		};
+		static inline const FrameGraph::PassRef VSM_ConfirmedLitTiles_c0_pass_refs[] = {
+			{ PassID::VSM_BlockerSearch, 0 },
+			{ PassID::VSM_ShadowResolve, 0 },
+			{ PassID::VSM_DebugClassifyOverlay, 0 },
+		};
+		static inline const FrameGraph::PrecompiledState VSM_ConfirmedLitTiles_c0_states[] = {
+			{ true, { VSM_ConfirmedLitTiles_c0_pass_refs + 0, 1 } },
+			{ false, { VSM_ConfirmedLitTiles_c0_pass_refs + 1, 2 } },
+		};
+		static inline const FrameGraph::PassRef VSM_BlurTiles_c0_pass_refs[] = {
+			{ PassID::VSM_BlockerSearch, 0 },
+			{ PassID::VSM_ShadowResolve, 0 },
+			{ PassID::VSM_DebugClassifyOverlay, 0 },
+		};
+		static inline const FrameGraph::PrecompiledState VSM_BlurTiles_c0_states[] = {
+			{ true, { VSM_BlurTiles_c0_pass_refs + 0, 1 } },
+			{ false, { VSM_BlurTiles_c0_pass_refs + 1, 2 } },
+		};
+		static inline const FrameGraph::PassRef VSM_AmbiguousMask_c0_pass_refs[] = {
+			{ PassID::VSM_BlockerSearch, 0 },
+			{ PassID::VSM_ScreenSpaceShadow, 0 },
+		};
+		static inline const FrameGraph::PrecompiledState VSM_AmbiguousMask_c0_states[] = {
+			{ true, { VSM_AmbiguousMask_c0_pass_refs + 0, 1 } },
+			{ false, { VSM_AmbiguousMask_c0_pass_refs + 1, 1 } },
+		};
+		static inline const FrameGraph::PassRef VSM_ContactShadow_c0_pass_refs[] = {
+			{ PassID::VSM_ScreenSpaceShadow, 0 },
+			{ PassID::VSM_ShadowResolve, 0 },
+			{ PassID::VSM_DebugClassifyOverlay, 0 },
+		};
+		static inline const FrameGraph::PrecompiledState VSM_ContactShadow_c0_states[] = {
+			{ true, { VSM_ContactShadow_c0_pass_refs + 0, 1 } },
+			{ false, { VSM_ContactShadow_c0_pass_refs + 1, 2 } },
+		};
+		static inline const FrameGraph::PassRef VSM_PCSS_ShadowNoise_c0_pass_refs[] = {
+			{ PassID::VSM_ShadowResolve, 0 },
+		};
+		static inline const FrameGraph::PrecompiledState VSM_PCSS_ShadowNoise_c0_states[] = {
+			{ true, { VSM_PCSS_ShadowNoise_c0_pass_refs + 0, 1 } },
+		};
+		static inline const FrameGraph::PassRef ShadowMask_c0_pass_refs[] = {
+			{ PassID::VSM_DebugClassifyOverlay, 0 },
+			{ PassID::VSM_Combine, 0 },
+		};
+		static inline const FrameGraph::PrecompiledState ShadowMask_c0_states[] = {
+			{ false, { ShadowMask_c0_pass_refs + 0, 2 } },
+		};
+		static inline const FrameGraph::PassRef ExposureState_c0_pass_refs[] = {
+			{ PassID::BloomBuild, 0 },
+			{ PassID::Tonemap, 0 },
+		};
+		static inline const FrameGraph::PrecompiledState ExposureState_c0_states[] = {
+			{ true, { ExposureState_c0_pass_refs + 0, 1 } },
+			{ true, { ExposureState_c0_pass_refs + 1, 1 } },
+		};
+		static inline const FrameGraph::PassRef BloomCurrent_c0_pass_refs[] = {
+			{ PassID::BloomBuild, 0 },
+		};
+		static inline const FrameGraph::PrecompiledState BloomCurrent_c0_states[] = {
+			{ true, { BloomCurrent_c0_pass_refs + 0, 1 } },
+		};
+		static inline const FrameGraph::PassRef BloomTAA_c0_pass_refs[] = {
+			{ PassID::BloomBuild, 0 },
+			{ PassID::BloomProcess, 0 },
+		};
+		static inline const FrameGraph::PrecompiledState BloomTAA_c0_states[] = {
+			{ true, { BloomTAA_c0_pass_refs + 0, 1 } },
+			{ false, { BloomTAA_c0_pass_refs + 1, 1 } },
+		};
+		static inline const FrameGraph::PassRef BloomTAAHistory_c0_pass_refs[] = {
+			{ PassID::BloomBuild, 0 },
+		};
+		static inline const FrameGraph::PrecompiledState BloomTAAHistory_c0_states[] = {
+			{ true, { BloomTAAHistory_c0_pass_refs + 0, 1 } },
+		};
+		static inline const FrameGraph::PassRef BloomDown_c0_pass_refs[] = {
+			{ PassID::BloomProcess, 0 },
+		};
+		static inline const FrameGraph::PrecompiledState BloomDown_c0_states[] = {
+			{ true, { BloomDown_c0_pass_refs + 0, 1 } },
+		};
+		static inline const FrameGraph::PassRef BloomUp_c0_pass_refs[] = {
+			{ PassID::BloomProcess, 0 },
+			{ PassID::BloomComposite, 0 },
+		};
+		static inline const FrameGraph::PrecompiledState BloomUp_c0_states[] = {
+			{ true, { BloomUp_c0_pass_refs + 0, 1 } },
+			{ false, { BloomUp_c0_pass_refs + 1, 1 } },
+		};
+		static inline const FrameGraph::PassRef FlareGhosts_c0_pass_refs[] = {
+			{ PassID::BloomProcess, 0 },
+			{ PassID::BloomComposite, 0 },
+		};
+		static inline const FrameGraph::PrecompiledState FlareGhosts_c0_states[] = {
+			{ true, { FlareGhosts_c0_pass_refs + 0, 1 } },
+			{ false, { FlareGhosts_c0_pass_refs + 1, 1 } },
+		};
+		static inline const FrameGraph::PassRef FlareStreakA_c0_pass_refs[] = {
+			{ PassID::BloomProcess, 0 },
+		};
+		static inline const FrameGraph::PrecompiledState FlareStreakA_c0_states[] = {
+			{ true, { FlareStreakA_c0_pass_refs + 0, 1 } },
+		};
+		static inline const FrameGraph::PassRef FlareStreakB_c0_pass_refs[] = {
+			{ PassID::BloomProcess, 0 },
+		};
+		static inline const FrameGraph::PrecompiledState FlareStreakB_c0_states[] = {
+			{ true, { FlareStreakB_c0_pass_refs + 0, 1 } },
+		};
+		static inline const FrameGraph::PassRef FlareStreaks_c0_pass_refs[] = {
+			{ PassID::BloomProcess, 0 },
+			{ PassID::BloomComposite, 0 },
+		};
+		static inline const FrameGraph::PrecompiledState FlareStreaks_c0_states[] = {
+			{ true, { FlareStreaks_c0_pass_refs + 0, 1 } },
+			{ false, { FlareStreaks_c0_pass_refs + 1, 1 } },
+		};
+		static inline const FrameGraph::PassRef ResultTexture_c1_pass_refs[] = {
+			{ PassID::BloomComposite, 0 },
+			{ PassID::Tonemap, 0 },
+		};
+		static inline const FrameGraph::PrecompiledState ResultTexture_c1_states[] = {
+			{ true, { ResultTexture_c1_pass_refs + 0, 1 } },
+			{ true, { ResultTexture_c1_pass_refs + 1, 1 } },
+		};
+		static inline const FrameGraph::PassRef ExposureHistogram_c0_pass_refs[] = {
+			{ PassID::Tonemap, 0 },
+		};
+		static inline const FrameGraph::PrecompiledState ExposureHistogram_c0_states[] = {
+			{ true, { ExposureHistogram_c0_pass_refs + 0, 1 } },
+		};
 		static inline const FrameGraph::PrecompiledResourceInfo resource_infos[] = {
 			{ ResourceID::scene, 0, scene_c0_states },
+			{ ResourceID::BlueNoise, 0, BlueNoise_c0_states },
+			{ ResourceID::VSM_LevelDispatchInfo, 0, VSM_LevelDispatchInfo_c0_states },
+			{ ResourceID::VSM_DispatchCommands, 0, VSM_DispatchCommands_c0_states },
+			{ ResourceID::VSM_Atlas, 0, VSM_Atlas_c0_states },
+			{ ResourceID::VSM_PageTable, 0, VSM_PageTable_c0_states },
+			{ ResourceID::VSM_PageCameras, 0, VSM_PageCameras_c0_states },
+			{ ResourceID::VSM_PageHiZ, 0, VSM_PageHiZ_c0_states },
 			{ ResourceID::GBuffer_Albedo, 0, GBuffer_Albedo_c0_states },
 			{ ResourceID::GBuffer_Normals, 0, GBuffer_Normals_c0_states },
 			{ ResourceID::GBuffer_Depth, 0, GBuffer_Depth_c0_states },
@@ -222,10 +610,41 @@ namespace Environment
 			{ ResourceID::sky_cubemap, 0, sky_cubemap_c0_states },
 			{ ResourceID::sky_cubemap_filtered, 0, sky_cubemap_filtered_c0_states },
 			{ ResourceID::sky_cubemap_filtered_diffuse, 0, sky_cubemap_filtered_diffuse_c0_states },
+			{ ResourceID::VSM_DepthAnalysisResult, 0, VSM_DepthAnalysisResult_c0_states },
+			{ ResourceID::VSM_DirtySlots, 0, VSM_DirtySlots_c0_states },
+			{ ResourceID::VSM_LitTiles, 0, VSM_LitTiles_c0_states },
+			{ ResourceID::VSM_DarkTiles, 0, VSM_DarkTiles_c0_states },
+			{ ResourceID::VSM_SearchTiles, 0, VSM_SearchTiles_c0_states },
+			{ ResourceID::VSM_BlockerSearchResult, 0, VSM_BlockerSearchResult_c0_states },
+			{ ResourceID::VSM_ConfirmedLitTiles, 0, VSM_ConfirmedLitTiles_c0_states },
+			{ ResourceID::VSM_BlurTiles, 0, VSM_BlurTiles_c0_states },
+			{ ResourceID::VSM_AmbiguousMask, 0, VSM_AmbiguousMask_c0_states },
+			{ ResourceID::VSM_ContactShadow, 0, VSM_ContactShadow_c0_states },
+			{ ResourceID::VSM_PCSS_ShadowNoise, 0, VSM_PCSS_ShadowNoise_c0_states },
+			{ ResourceID::ShadowMask, 0, ShadowMask_c0_states },
+			{ ResourceID::ExposureState, 0, ExposureState_c0_states },
+			{ ResourceID::BloomCurrent, 0, BloomCurrent_c0_states },
+			{ ResourceID::BloomTAA, 0, BloomTAA_c0_states },
+			{ ResourceID::BloomTAAHistory, 0, BloomTAAHistory_c0_states },
+			{ ResourceID::BloomDown, 0, BloomDown_c0_states },
+			{ ResourceID::BloomUp, 0, BloomUp_c0_states },
+			{ ResourceID::FlareGhosts, 0, FlareGhosts_c0_states },
+			{ ResourceID::FlareStreakA, 0, FlareStreakA_c0_states },
+			{ ResourceID::FlareStreakB, 0, FlareStreakB_c0_states },
+			{ ResourceID::FlareStreaks, 0, FlareStreaks_c0_states },
+			{ ResourceID::ResultTexture, 1, ResultTexture_c1_states },
+			{ ResourceID::ExposureHistogram, 0, ExposureHistogram_c0_states },
 		};
 		static constexpr uint32_t resource_info_count = std::size(resource_infos);
 		// Precomputed pass instances with queue type and prev-pass dependency edges
 		// (static resolve_dependencies). Each pass owns its <pass>_<idx>_prev[] refs.
+		static inline const FrameGraph::PassRef VSM_GatherDispatch_0_prev[] = {
+			{ PassID::PreScene, 0 },
+		};
+		static inline const FrameGraph::PassRef VSM_RenderPages_0_prev[] = {
+			{ PassID::PreScene, 0 },
+			{ PassID::VSM_GatherDispatch, 0 },
+		};
 		static inline const FrameGraph::PassRef Scene_0_prev[] = {
 			{ PassID::PreScene, 0 },
 		};
@@ -236,26 +655,142 @@ namespace Environment
 			{ PassID::CubeMapDownsample, 0 },
 			{ PassID::CubeSky, 0 },
 		};
+		static inline const FrameGraph::PassRef VSM_DepthAnalysis_0_prev[] = {
+			{ PassID::Scene, 0 },
+		};
+		static inline const FrameGraph::PassRef VSM_HiZRebuild_0_prev[] = {
+			{ PassID::VSM_RenderPages, 0 },
+		};
+		static inline const FrameGraph::PassRef VSM_BlockerClassify_0_prev[] = {
+			{ PassID::Scene, 0 },
+			{ PassID::VSM_HiZRebuild, 0 },
+			{ PassID::VSM_RenderPages, 0 },
+		};
+		static inline const FrameGraph::PassRef VSM_BlockerSearch_0_prev[] = {
+			{ PassID::BlueNoise, 0 },
+			{ PassID::Scene, 0 },
+			{ PassID::VSM_BlockerClassify, 0 },
+			{ PassID::VSM_HiZRebuild, 0 },
+			{ PassID::VSM_RenderPages, 0 },
+		};
+		static inline const FrameGraph::PassRef VSM_ScreenSpaceShadow_0_prev[] = {
+			{ PassID::Scene, 0 },
+			{ PassID::VSM_BlockerSearch, 0 },
+		};
+		static inline const FrameGraph::PassRef VSM_ShadowResolve_0_prev[] = {
+			{ PassID::BlueNoise, 0 },
+			{ PassID::PreScene, 0 },
+			{ PassID::ResultCreation, 0 },
+			{ PassID::Scene, 0 },
+			{ PassID::VSM_BlockerClassify, 0 },
+			{ PassID::VSM_BlockerSearch, 0 },
+			{ PassID::VSM_RenderPages, 0 },
+			{ PassID::VSM_ScreenSpaceShadow, 0 },
+		};
+		static inline const FrameGraph::PassRef VSM_DebugClassifyOverlay_0_prev[] = {
+			{ PassID::ResultCreation, 0 },
+			{ PassID::Scene, 0 },
+			{ PassID::VSM_BlockerClassify, 0 },
+			{ PassID::VSM_BlockerSearch, 0 },
+			{ PassID::VSM_ScreenSpaceShadow, 0 },
+			{ PassID::VSM_ShadowResolve, 0 },
+		};
+		static inline const FrameGraph::PassRef VSM_Combine_0_prev[] = {
+			{ PassID::BlueNoise, 0 },
+			{ PassID::ResultCreation, 0 },
+			{ PassID::Scene, 0 },
+			{ PassID::VSM_DebugClassifyOverlay, 0 },
+			{ PassID::VSM_RenderPages, 0 },
+			{ PassID::VSM_ShadowResolve, 0 },
+		};
 		static inline const FrameGraph::PassRef VSM_Unshadowed_0_prev[] = {
 			{ PassID::CubeMapDownsample, 0 },
 			{ PassID::CubeMapEnviromentProcessor, 0 },
 			{ PassID::ResultCreation, 0 },
 			{ PassID::Scene, 0 },
+			{ PassID::VSM_Combine, 0 },
+			{ PassID::VSM_DebugClassifyOverlay, 0 },
+			{ PassID::VSM_ShadowResolve, 0 },
+		};
+		static inline const FrameGraph::PassRef SkyAmbient_0_prev[] = {
+			{ PassID::CubeMapDownsample, 0 },
+			{ PassID::CubeMapEnviromentProcessor, 0 },
+			{ PassID::ResultCreation, 0 },
+			{ PassID::Scene, 0 },
+			{ PassID::VSM_Combine, 0 },
+			{ PassID::VSM_DebugClassifyOverlay, 0 },
+			{ PassID::VSM_ShadowResolve, 0 },
+			{ PassID::VSM_Unshadowed, 0 },
 		};
 		static inline const FrameGraph::PassRef Sky_0_prev[] = {
 			{ PassID::ResultCreation, 0 },
 			{ PassID::Scene, 0 },
+			{ PassID::SkyAmbient, 0 },
+			{ PassID::VSM_Combine, 0 },
+			{ PassID::VSM_DebugClassifyOverlay, 0 },
+			{ PassID::VSM_ShadowResolve, 0 },
+			{ PassID::VSM_Unshadowed, 0 },
+		};
+		static inline const FrameGraph::PassRef BloomBuild_0_prev[] = {
+			{ PassID::ResultCreation, 0 },
+			{ PassID::Scene, 0 },
+			{ PassID::Sky, 0 },
+			{ PassID::SkyAmbient, 0 },
+			{ PassID::VSM_Combine, 0 },
+			{ PassID::VSM_DebugClassifyOverlay, 0 },
+			{ PassID::VSM_ShadowResolve, 0 },
+			{ PassID::VSM_Unshadowed, 0 },
+		};
+		static inline const FrameGraph::PassRef BloomProcess_0_prev[] = {
+			{ PassID::BloomBuild, 0 },
+		};
+		static inline const FrameGraph::PassRef BloomComposite_0_prev[] = {
+			{ PassID::BloomBuild, 0 },
+			{ PassID::BloomProcess, 0 },
+			{ PassID::ResultCreation, 0 },
+			{ PassID::Sky, 0 },
+			{ PassID::SkyAmbient, 0 },
+			{ PassID::VSM_Combine, 0 },
+			{ PassID::VSM_DebugClassifyOverlay, 0 },
+			{ PassID::VSM_ShadowResolve, 0 },
+			{ PassID::VSM_Unshadowed, 0 },
+		};
+		static inline const FrameGraph::PassRef Tonemap_0_prev[] = {
+			{ PassID::BloomBuild, 0 },
+			{ PassID::BloomComposite, 0 },
+			{ PassID::ResultCreation, 0 },
+			{ PassID::Sky, 0 },
+			{ PassID::SkyAmbient, 0 },
+			{ PassID::VSM_Combine, 0 },
+			{ PassID::VSM_DebugClassifyOverlay, 0 },
+			{ PassID::VSM_ShadowResolve, 0 },
 			{ PassID::VSM_Unshadowed, 0 },
 		};
 		static inline const FrameGraph::PrecompiledPass precompiled_passes[] = {
 			{ PassID::PreScene, 0, false, {} },
+			{ PassID::BlueNoise, 0, false, {} },
+			{ PassID::VSM_GatherDispatch, 0, false, VSM_GatherDispatch_0_prev },
+			{ PassID::VSM_RenderPages, 0, false, VSM_RenderPages_0_prev },
 			{ PassID::Scene, 0, false, Scene_0_prev },
 			{ PassID::ResultCreation, 0, false, {} },
 			{ PassID::CubeSky, 0, false, {} },
 			{ PassID::CubeMapDownsample, 0, false, CubeMapDownsample_0_prev },
 			{ PassID::CubeMapEnviromentProcessor, 0, false, CubeMapEnviromentProcessor_0_prev },
+			{ PassID::VSM_DepthAnalysis, 0, false, VSM_DepthAnalysis_0_prev },
+			{ PassID::VSM_HiZRebuild, 0, false, VSM_HiZRebuild_0_prev },
+			{ PassID::VSM_BlockerClassify, 0, false, VSM_BlockerClassify_0_prev },
+			{ PassID::VSM_BlockerSearch, 0, false, VSM_BlockerSearch_0_prev },
+			{ PassID::VSM_ScreenSpaceShadow, 0, false, VSM_ScreenSpaceShadow_0_prev },
+			{ PassID::VSM_ShadowResolve, 0, false, VSM_ShadowResolve_0_prev },
+			{ PassID::VSM_DebugClassifyOverlay, 0, false, VSM_DebugClassifyOverlay_0_prev },
+			{ PassID::VSM_Combine, 0, false, VSM_Combine_0_prev },
 			{ PassID::VSM_Unshadowed, 0, false, VSM_Unshadowed_0_prev },
+			{ PassID::SkyAmbient, 0, false, SkyAmbient_0_prev },
 			{ PassID::Sky, 0, false, Sky_0_prev },
+			{ PassID::BloomBuild, 0, false, BloomBuild_0_prev },
+			{ PassID::BloomProcess, 0, false, BloomProcess_0_prev },
+			{ PassID::BloomComposite, 0, false, BloomComposite_0_prev },
+			{ PassID::Tonemap, 0, false, Tonemap_0_prev },
 		};
 		static constexpr uint32_t precompiled_pass_count = std::size(precompiled_passes);
 
@@ -291,6 +826,18 @@ namespace Environment
 			graph.set_pipeline(this);
 
 			graph.add_library_pass<Passes::Frame::PreScene>(PassDefault<Passes::Frame::PreScene>::setup, PassDefault<Passes::Frame::PreScene>::render, (PassDefault<Passes::Frame::PreScene>::flags & ~FrameGraph::PassFlags::Compute));
+			// Setup is generated (PassSetupDefault<T>, pass_defaults.h); the owner
+			// only supplies render_func, so that is what gates registration.
+			if (blueNoise.render_func)
+				graph.add_library_pass<Passes::Utility::BlueNoise>(PassSetupDefault<Passes::Utility::BlueNoise>::setup, blueNoise.render_func, (blueNoise.flags & ~FrameGraph::PassFlags::Compute));
+			// Setup is generated (PassSetupDefault<T>, pass_defaults.h); the owner
+			// only supplies render_func, so that is what gates registration.
+			if (vSM_GatherDispatch.render_func)
+				graph.add_library_pass<Passes::Shadows::VSM::VSM_GatherDispatch>(PassSetupDefault<Passes::Shadows::VSM::VSM_GatherDispatch>::setup, vSM_GatherDispatch.render_func, (vSM_GatherDispatch.flags & ~FrameGraph::PassFlags::Compute));
+			// Setup is generated (PassSetupDefault<T>, pass_defaults.h); the owner
+			// only supplies render_func, so that is what gates registration.
+			if (vSM_RenderPages.render_func)
+				graph.add_library_pass<Passes::Shadows::VSM::VSM_RenderPages>(PassSetupDefault<Passes::Shadows::VSM::VSM_RenderPages>::setup, vSM_RenderPages.render_func, (vSM_RenderPages.flags & ~FrameGraph::PassFlags::Compute));
 			graph.add_library_pass<Passes::Meshes::Scene>(PassDefault<Passes::Meshes::Scene>::setup, PassDefault<Passes::Meshes::Scene>::render, (PassDefault<Passes::Meshes::Scene>::flags & ~FrameGraph::PassFlags::Compute));
 			graph.add_library_pass<Passes::Frame::ResultCreation>(PassDefault<Passes::Frame::ResultCreation>::setup, PassDefault<Passes::Frame::ResultCreation>::render, (PassDefault<Passes::Frame::ResultCreation>::flags & ~FrameGraph::PassFlags::Compute));
 			// Setup is generated (PassSetupDefault<T>, pass_defaults.h); the owner
@@ -301,12 +848,52 @@ namespace Environment
 			graph.add_library_pass<Passes::Environment::CubeMapEnviromentProcessor>(PassDefault<Passes::Environment::CubeMapEnviromentProcessor>::setup, PassDefault<Passes::Environment::CubeMapEnviromentProcessor>::render, (PassDefault<Passes::Environment::CubeMapEnviromentProcessor>::flags & ~FrameGraph::PassFlags::Compute));
 			// Setup is generated (PassSetupDefault<T>, pass_defaults.h); the owner
 			// only supplies render_func, so that is what gates registration.
+			if (vSM_DepthAnalysis.render_func)
+				graph.add_library_pass<Passes::Shadows::VSM::VSM_DepthAnalysis>(PassSetupDefault<Passes::Shadows::VSM::VSM_DepthAnalysis>::setup, vSM_DepthAnalysis.render_func, (vSM_DepthAnalysis.flags & ~FrameGraph::PassFlags::Compute));
+			// Setup is generated (PassSetupDefault<T>, pass_defaults.h); the owner
+			// only supplies render_func, so that is what gates registration.
+			if (vSM_HiZRebuild.render_func)
+				graph.add_library_pass<Passes::Shadows::VSM::VSM_HiZRebuild>(PassSetupDefault<Passes::Shadows::VSM::VSM_HiZRebuild>::setup, vSM_HiZRebuild.render_func, (vSM_HiZRebuild.flags & ~FrameGraph::PassFlags::Compute));
+			// Setup is generated (PassSetupDefault<T>, pass_defaults.h); the owner
+			// only supplies render_func, so that is what gates registration.
+			if (vSM_BlockerClassify.render_func)
+				graph.add_library_pass<Passes::Shadows::VSM::VSM_BlockerClassify>(PassSetupDefault<Passes::Shadows::VSM::VSM_BlockerClassify>::setup, vSM_BlockerClassify.render_func, (vSM_BlockerClassify.flags & ~FrameGraph::PassFlags::Compute));
+			// Setup is generated (PassSetupDefault<T>, pass_defaults.h); the owner
+			// only supplies render_func, so that is what gates registration.
+			if (vSM_BlockerSearch.render_func)
+				graph.add_library_pass<Passes::Shadows::VSM::VSM_BlockerSearch>(PassSetupDefault<Passes::Shadows::VSM::VSM_BlockerSearch>::setup, vSM_BlockerSearch.render_func, (vSM_BlockerSearch.flags & ~FrameGraph::PassFlags::Compute));
+			// Setup is generated (PassSetupDefault<T>, pass_defaults.h); the owner
+			// only supplies render_func, so that is what gates registration.
+			if (vSM_ScreenSpaceShadow.render_func)
+				graph.add_library_pass<Passes::Shadows::VSM::VSM_ScreenSpaceShadow>(PassSetupDefault<Passes::Shadows::VSM::VSM_ScreenSpaceShadow>::setup, vSM_ScreenSpaceShadow.render_func, (vSM_ScreenSpaceShadow.flags & ~FrameGraph::PassFlags::Compute));
+			// Setup is generated (PassSetupDefault<T>, pass_defaults.h); the owner
+			// only supplies render_func, so that is what gates registration.
+			if (vSM_ShadowResolve.render_func)
+				graph.add_library_pass<Passes::Shadows::VSM::VSM_ShadowResolve>(PassSetupDefault<Passes::Shadows::VSM::VSM_ShadowResolve>::setup, vSM_ShadowResolve.render_func, (vSM_ShadowResolve.flags & ~FrameGraph::PassFlags::Compute));
+			// Setup is generated (PassSetupDefault<T>, pass_defaults.h); the owner
+			// only supplies render_func, so that is what gates registration.
+			if (vSM_DebugClassifyOverlay.render_func)
+				graph.add_library_pass<Passes::Shadows::VSM::Dev::VSM_DebugClassifyOverlay>(PassSetupDefault<Passes::Shadows::VSM::Dev::VSM_DebugClassifyOverlay>::setup, vSM_DebugClassifyOverlay.render_func, (vSM_DebugClassifyOverlay.flags & ~FrameGraph::PassFlags::Compute));
+			// Setup is generated (PassSetupDefault<T>, pass_defaults.h); the owner
+			// only supplies render_func, so that is what gates registration.
+			if (vSM_Combine.render_func)
+				graph.add_library_pass<Passes::Shadows::VSM::VSM_Combine>(PassSetupDefault<Passes::Shadows::VSM::VSM_Combine>::setup, vSM_Combine.render_func, (vSM_Combine.flags & ~FrameGraph::PassFlags::Compute));
+			// Setup is generated (PassSetupDefault<T>, pass_defaults.h); the owner
+			// only supplies render_func, so that is what gates registration.
 			if (vSM_Unshadowed.render_func)
 				graph.add_library_pass<Passes::Shadows::VSM::VSM_Unshadowed>(PassSetupDefault<Passes::Shadows::VSM::VSM_Unshadowed>::setup, vSM_Unshadowed.render_func, (vSM_Unshadowed.flags & ~FrameGraph::PassFlags::Compute));
 			// Setup is generated (PassSetupDefault<T>, pass_defaults.h); the owner
 			// only supplies render_func, so that is what gates registration.
+			if (skyAmbient.render_func)
+				graph.add_library_pass<Passes::Shadows::VSM::SkyAmbient>(PassSetupDefault<Passes::Shadows::VSM::SkyAmbient>::setup, skyAmbient.render_func, (skyAmbient.flags & ~FrameGraph::PassFlags::Compute));
+			// Setup is generated (PassSetupDefault<T>, pass_defaults.h); the owner
+			// only supplies render_func, so that is what gates registration.
 			if (sky.render_func)
 				graph.add_library_pass<Passes::Environment::Sky>(PassSetupDefault<Passes::Environment::Sky>::setup, sky.render_func, (sky.flags & ~FrameGraph::PassFlags::Compute));
+			graph.add_library_pass<Passes::Post::BloomBuild>(PassDefault<Passes::Post::BloomBuild>::setup, PassDefault<Passes::Post::BloomBuild>::render, (PassDefault<Passes::Post::BloomBuild>::flags & ~FrameGraph::PassFlags::Compute));
+			graph.add_library_pass<Passes::Post::BloomProcess>(PassDefault<Passes::Post::BloomProcess>::setup, PassDefault<Passes::Post::BloomProcess>::render, (PassDefault<Passes::Post::BloomProcess>::flags & ~FrameGraph::PassFlags::Compute));
+			graph.add_library_pass<Passes::Post::BloomComposite>(PassDefault<Passes::Post::BloomComposite>::setup, PassDefault<Passes::Post::BloomComposite>::render, (PassDefault<Passes::Post::BloomComposite>::flags & ~FrameGraph::PassFlags::Compute));
+			graph.add_library_pass<Passes::Post::Tonemap>(PassDefault<Passes::Post::Tonemap>::setup, PassDefault<Passes::Post::Tonemap>::render, (PassDefault<Passes::Post::Tonemap>::flags & ~FrameGraph::PassFlags::Compute));
 		}
 	};
 }

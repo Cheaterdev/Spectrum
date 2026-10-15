@@ -1,0 +1,21 @@
+# Shaders for the GPU tests (sources/Test/Tests/Test.HAL.Compute.ixx).
+namespace Tests
+{
+	[Bind = DefaultLayout::Instance0]
+	struct TestAppendData
+	{
+		AppendStructuredBuffer<uint2> items;
+		RWStructuredBuffer<uint> plain;
+		# One element, bumped with a plain atomic add: atomics through the ordinary buffer binding, for comparison with Append's counter.
+		RWStructuredBuffer<uint> atomic_counter;
+		uint count;
+	}
+
+	ComputePSO AppendCounter
+	{
+		root = DefaultLayout;
+
+		[EntryPoint = CS]
+		compute = "test/append_counter.hlsl";
+	}
+}

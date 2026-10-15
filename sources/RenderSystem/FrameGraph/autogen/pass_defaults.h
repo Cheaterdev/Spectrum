@@ -1558,6 +1558,17 @@ struct PassSetupDefault<Passes::Shadows::VSM::VSM_Combine>
 
 
 template<>
+struct PassSetupDefault<Passes::Shadows::VSM::SkyAmbient>
+{
+	static constexpr bool enabled = true;
+
+	// Generated from this pass's [RunAlways]/[SetupCondition]/
+	// [RenderCondition]; defined in autogen/pass_defaults.cpp.
+	static FrameGraph::SetupResult setup(Passes::Shadows::VSM::SkyAmbient::Context& data, FrameGraph::TaskBuilder& builder);
+};
+
+
+template<>
 struct PassSetupDefault<Passes::Shadows::VSM::VSM_Unshadowed>
 {
 	static constexpr bool enabled = true;

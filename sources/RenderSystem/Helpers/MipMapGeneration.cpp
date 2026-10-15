@@ -55,8 +55,11 @@ void MipMapGenerator::generate_cube(HAL::ComputeContext& compute_context, HAL::C
 				);
 		}
 
-		uint32_t AdditionalMips;
-		_BitScanForward((unsigned long*)&AdditionalMips, DstWidth | DstHeight);
+		// `unsigned long` is what the intrinsic writes; it is 8 bytes on Android, so a cast pointer to a uint32_t
+		// would overrun the variable (and corrupt its neighbors once optimized).
+		unsigned long AdditionalMipsScan = 0;
+		_BitScanForward(&AdditionalMipsScan, DstWidth | DstHeight);
+		const uint32_t AdditionalMips = (uint32_t)AdditionalMipsScan;
 		uint32_t NumMips = 1 + (AdditionalMips > 3 ? 3 : AdditionalMips);
 
 		if (TopMip + NumMips > maps)
@@ -116,8 +119,11 @@ void MipMapGenerator::generate(HAL::ComputeContext& compute_context, HAL::Textur
 				| PSOS::Utility::MipMapping::Gamma.Use(view.get_desc().as_texture().Format.is_srgb())
 				);
 		}
-		uint32_t AdditionalMips;
-		_BitScanForward((unsigned long*)&AdditionalMips, DstWidth | DstHeight);
+		// `unsigned long` is what the intrinsic writes; it is 8 bytes on Android, so a cast pointer to a uint32_t
+		// would overrun the variable (and corrupt its neighbors once optimized).
+		unsigned long AdditionalMipsScan = 0;
+		_BitScanForward(&AdditionalMipsScan, DstWidth | DstHeight);
+		const uint32_t AdditionalMips = (uint32_t)AdditionalMipsScan;
 		uint32_t NumMips = 1 + (AdditionalMips > 3 ? 3 : AdditionalMips);
 
 		if (TopMip + NumMips > maps)

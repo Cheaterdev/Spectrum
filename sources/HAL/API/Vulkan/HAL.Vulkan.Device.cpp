@@ -836,6 +836,12 @@ namespace HAL
                          uint64_t(L.maxPerStageUpdateAfterBindResources) / 5,
                          uint64_t(L.maxUpdateAfterBindDescriptorsInAllPools) / 2 })
                     cap = std::min(cap, limit);
+                // Adreno: the Append/Consume counters are binding 2, behind the mutable resource array at binding 0.
+                // At 524288 entries that array is large enough that binding 2 is out of the driver's reach: every
+                // counter reads as unbound, so atomics return 0 and nothing counts (VSM's tile lists stayed empty).
+                // 262144 works; both found with Core.Compute::AppendCounter.
+                if (p.name.find("Adreno") != std::string::npos)
+                    cap = std::min<uint64_t>(cap, 65536 * 4);
                 resource_heap_capacity = static_cast<uint32_t>(cap);
                 sampler_heap_capacity  = static_cast<uint32_t>(std::min<uint64_t>({ REQUESTED_SAMPLERS,
                     L.maxDescriptorSetUpdateAfterBindSamplers - NUM_INLINE_SMP,

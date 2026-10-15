@@ -11,7 +11,7 @@ import RenderSystem;
 import GUI;
 import Demo;
 
-// spectrum_tool demo [--full] [--density N] [--size WxH]
+// spectrum_tool demo [--full] [--density N] [--size WxH] [--no-shadows] [--no-ui] [--shot FILE [--frames N]]
 //
 // The Android demo screen (sources/Tools/Demo) in a window on this PC: same UI tree, same scene passes, same
 // camera, mouse in place of touch (left-drag looks, wheel changes speed). By default the device is held to
@@ -201,6 +201,8 @@ namespace
 int command_demo(const CommandArgs& args)
 {
 	bool phone_profile = true;
+	bool shadows = true;
+	bool ui_visible = true;
 	float density = 2.6f;
 	int width = 540, height = 1200;
 	std::string shot_path;
@@ -210,6 +212,10 @@ int command_demo(const CommandArgs& args)
 	{
 		if (args[i] == "--full")
 			phone_profile = false;
+		else if (args[i] == "--no-shadows")
+			shadows = false;
+		else if (args[i] == "--no-ui")
+			ui_visible = false;
 		else if (args[i] == "--shot" && i + 1 < args.size())
 			shot_path = args[++i];
 		else if (args[i] == "--frames" && i + 1 < args.size())
@@ -243,6 +249,8 @@ int command_demo(const CommandArgs& args)
 	}
 
 	demo::set_density(density);
+	demo::set_shadows(shadows);
+	demo::set_ui_visible(ui_visible);
 
 	std::shared_ptr<HAL::SwapChain> swap;
 	std::shared_ptr<HAL::TextureResource> target;

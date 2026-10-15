@@ -49,6 +49,7 @@ void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 	tasks.emplace_back(PSOBase::create<PSOS::FrameGraphTests::FGTAppendTiles>(device, pso[PSO::FGTAppendTiles]));
 	tasks.emplace_back(PSOBase::create<PSOS::Post::Upscale::FSR>(device, pso[PSO::FSR]));
 	tasks.emplace_back(PSOBase::create<PSOS::Post::Upscale::RCAS>(device, pso[PSO::RCAS]));
+	tasks.emplace_back(PSOBase::create<PSOS::Tests::AppendCounter>(device, pso[PSO::AppendCounter]));
 	tasks.emplace_back(PSOBase::create<PSOS::Post::LensFlareGhosts>(device, pso[PSO::LensFlareGhosts]));
 	tasks.emplace_back(PSOBase::create<PSOS::Post::LensFlareStreak>(device, pso[PSO::LensFlareStreak]));
 	tasks.emplace_back(PSOBase::create<PSOS::Meshes::GatherPipeline>(device, pso[PSO::GatherPipeline]));
@@ -142,6 +143,7 @@ void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 	tasks.emplace_back(PSOBase::create<PSOS::Shadows::VSM::VSMGatherDispatch>(device, pso[PSO::VSMGatherDispatch]));
 	tasks.emplace_back(PSOBase::create<PSOS::Shadows::VSM::VSMGatherDispatchMaterial>(device, pso[PSO::VSMGatherDispatchMaterial]));
 	tasks.emplace_back(PSOBase::create<PSOS::Shadows::VSM::VSMScreenSpaceShadow>(device, pso[PSO::VSMScreenSpaceShadow]));
+	tasks.emplace_back(PSOBase::create<PSOS::Shadows::VSM::SkyAmbient>(device, pso[PSO::SkyAmbient]));
 	tasks.emplace_back(PSOBase::create<PSOS::Shadows::VSM::VSMDepthAnalysis>(device, pso[PSO::VSMDepthAnalysis]));
 
 
@@ -176,6 +178,7 @@ void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 	tasks.emplace_back(PSOBase::create<PSOS::Dev::StatGraphLines>(device, pso[PSO::StatGraphLines]));
 	tasks.emplace_back(PSOBase::create<PSOS::GI::Voxel::Dev::VoxelDebug>(device, pso[PSO::VoxelDebug]));
 	tasks.emplace_back(PSOBase::create<PSOS::Shadows::VSM::VSMDepthDraw>(device, pso[PSO::VSMDepthDraw]));
+	tasks.emplace_back(PSOBase::create<PSOS::Shadows::VSM::VSMDepthDrawVS>(device, pso[PSO::VSMDepthDrawVS]));
 	tasks.emplace_back(PSOBase::create<PSOS::Shadows::VSM::VSMDepthDrawConservative>(device, pso[PSO::VSMDepthDrawConservative]));
 	tasks.emplace_back(PSOBase::create<PSOS::Shadows::VSM::VSMDepthDrawMaterial>(device, pso[PSO::VSMDepthDrawMaterial]));
 

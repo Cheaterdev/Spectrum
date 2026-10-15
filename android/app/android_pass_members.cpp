@@ -7,5 +7,10 @@ using namespace FrameGraph;
 // passes of UIPipeline need it to link. It draws nothing there either.
 void PassDefault<Passes::Dev::Profiler>::render(Passes::Dev::Profiler::Context&, FrameGraph::FrameContext&) {}
 
-// ResultCreation only exists to create ResultTexture (its setup is generated); it never renders.
-void PassDefault<Passes::Frame::ResultCreation>::render(Passes::Frame::ResultCreation::Context&, FrameGraph::FrameContext&) {}
+// ResultCreation creates ResultTexture (its setup is generated) and clears it, as in PassDefaults.cpp.
+void PassDefault<Passes::Frame::ResultCreation>::render(Passes::Frame::ResultCreation::Context& data, FrameGraph::FrameContext& context)
+{
+	RT::Frame::SingleColor rt;
+	rt.GetColor() = data.ResultTexture->renderTarget;
+	context.get_list()->get_graphics().set_rtv(rt, HAL::RTOptions::Default | HAL::RTOptions::ClearColor);
+}

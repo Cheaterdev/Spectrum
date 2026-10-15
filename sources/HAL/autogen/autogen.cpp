@@ -40,6 +40,7 @@ std::optional<SlotID> get_slot(std::string_view slot_name)
 	if(slot_name == "FGTSamplerProbe") return SlotID::FGTSamplerProbe;
 	if(slot_name == "FGTAppendTiles") return SlotID::FGTAppendTiles;
 	if(slot_name == "FSR") return SlotID::FSR;
+	if(slot_name == "TestAppendData") return SlotID::TestAppendData;
 	if(slot_name == "LensFlareGhosts") return SlotID::LensFlareGhosts;
 	if(slot_name == "LensFlareStreak") return SlotID::LensFlareStreak;
 	if(slot_name == "MaterialInfo") return SlotID::MaterialInfo;
@@ -166,6 +167,7 @@ std::optional<SlotID> get_slot(std::string_view slot_name)
 	if(slot_name == "VSMGatherDispatchData") return SlotID::VSMGatherDispatchData;
 	if(slot_name == "VSMGatherDispatchMaterialData") return SlotID::VSMGatherDispatchMaterialData;
 	if(slot_name == "VSMScreenSpaceShadowParams") return SlotID::VSMScreenSpaceShadowParams;
+	if(slot_name == "SkyAmbientData") return SlotID::SkyAmbientData;
 	if(slot_name == "VSMDepthAnalysis") return SlotID::VSMDepthAnalysis;
 	if(slot_name == "WorkGraphTest") return SlotID::WorkGraphTest;
 	if(slot_name == "WorkGR_ClassifyPixels_NodeEmulation") return SlotID::WorkGR_ClassifyPixels_NodeEmulation;
@@ -237,6 +239,8 @@ uint get_table_index(SlotID id)
 	if(id == SlotID::FGTAppendTiles) return Slots::FrameGraphTests::FGTAppendTiles::Slot::ID;
 
 	if(id == SlotID::FSR) return Slots::Post::Upscale::FSR::Slot::ID;
+
+	if(id == SlotID::TestAppendData) return Slots::Tests::TestAppendData::Slot::ID;
 
 	if(id == SlotID::LensFlareGhosts) return Slots::Post::LensFlareGhosts::Slot::ID;
 
@@ -490,6 +494,8 @@ uint get_table_index(SlotID id)
 
 	if(id == SlotID::VSMScreenSpaceShadowParams) return Slots::Shadows::VSM::VSMScreenSpaceShadowParams::Slot::ID;
 
+	if(id == SlotID::SkyAmbientData) return Slots::Shadows::VSM::SkyAmbientData::Slot::ID;
+
 	if(id == SlotID::VSMDepthAnalysis) return Slots::Shadows::VSM::VSMDepthAnalysis::Slot::ID;
 
 	if(id == SlotID::WorkGraphTest) return Slots::Dev::WorkGraphTest::Slot::ID;
@@ -533,6 +539,7 @@ std::string get_slot_name(SlotID id)
 	if(id == SlotID::FGTSamplerProbe) return "FGTSamplerProbe";
 	if(id == SlotID::FGTAppendTiles) return "FGTAppendTiles";
 	if(id == SlotID::FSR) return "FSR";
+	if(id == SlotID::TestAppendData) return "TestAppendData";
 	if(id == SlotID::LensFlareGhosts) return "LensFlareGhosts";
 	if(id == SlotID::LensFlareStreak) return "LensFlareStreak";
 	if(id == SlotID::MaterialInfo) return "MaterialInfo";
@@ -659,6 +666,7 @@ std::string get_slot_name(SlotID id)
 	if(id == SlotID::VSMGatherDispatchData) return "VSMGatherDispatchData";
 	if(id == SlotID::VSMGatherDispatchMaterialData) return "VSMGatherDispatchMaterialData";
 	if(id == SlotID::VSMScreenSpaceShadowParams) return "VSMScreenSpaceShadowParams";
+	if(id == SlotID::SkyAmbientData) return "SkyAmbientData";
 	if(id == SlotID::VSMDepthAnalysis) return "VSMDepthAnalysis";
 	if(id == SlotID::WorkGraphTest) return "WorkGraphTest";
 	if(id == SlotID::WorkGR_ClassifyPixels_NodeEmulation) return "WorkGR_ClassifyPixels_NodeEmulation";

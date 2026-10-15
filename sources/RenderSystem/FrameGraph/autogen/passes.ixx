@@ -133,6 +133,7 @@ export import "../defines.h";
 #include "pass/Shadows/VSM/VSM_ScreenSpaceShadow.h"
 #include "pass/Shadows/VSM/VSM_ShadowResolve.h"
 #include "pass/Shadows/VSM/VSM_Combine.h"
+#include "pass/Shadows/VSM/SkyAmbient.h"
 #include "pass/Shadows/VSM/VSM_Unshadowed.h"
 #include "pass/Shadows/VSM/Dev/VSM_DebugClassifyOverlay.h"
 #include "pass/Shadows/VSM/VSM_DepthAnalysis.h"
@@ -757,6 +758,13 @@ export namespace Passes
 		namespace VSM
 		{
 			using ::Passes::Shadows::VSM::VSM_Combine;
+		}
+	}
+	namespace Shadows
+	{
+		namespace VSM
+		{
+			using ::Passes::Shadows::VSM::SkyAmbient;
 		}
 	}
 	namespace Shadows

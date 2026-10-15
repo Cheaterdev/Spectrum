@@ -8,6 +8,7 @@ import Test.Events;
 import Test.FileSystem;
 import Test.Profiling;
 import Test.HAL;
+import Test.HAL.Compute;
 import Test.HAL.SubresRangeMap;
 import Test.RenderSystem.FrameGraph;
 import Test.SceneParity;

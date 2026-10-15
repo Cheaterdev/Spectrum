@@ -129,6 +129,8 @@ namespace HAL
 		Log::get() << "Raytracing: " << (rtx ? "on" : "off") << ", ray queries: " << (ray_query ? "on" : "off") << ", mesh shaders: " << (mesh_shader ? "on" : "off")
 			<< ", tiled 3D textures: " << (tiled_3d ? "on" : "off")
 			<< ", tiled depth textures: " << (tiled_depth ? "on" : "off") << Log::endl;
+		Log::get() << "Storage buffer offset alignment: " << get_properties().min_storage_buffer_offset_alignment
+			<< ", counter prefix for an 8-byte element: " << counter_prefix(8) << Log::endl;
 
 		heap_factory = std::make_unique<HeapFactory>(*this);
 		descriptor_heap_factory = std::make_unique<DescriptorHeapFactory>(*this);

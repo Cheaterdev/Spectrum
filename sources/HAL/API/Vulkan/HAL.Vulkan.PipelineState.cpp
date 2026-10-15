@@ -406,7 +406,11 @@ namespace HAL
         if (vk_dev == VK_NULL_HANDLE) return;
 
         const auto& blob = desc.shader->get_blob();
-        if (blob.empty() || blob.size() % 4 != 0) return;
+        if (blob.empty() || blob.size() % 4 != 0)
+        {
+            Log::get() << Log::LEVEL_ERROR << "compute pipeline '" << desc.name << "': no usable shader blob (" << blob.size() << " bytes)" << Log::endl;
+            return;
+        }
 
         // Use the entry point name from compilation (-E flag), e.g. "CS".
         const auto& ep = desc.shader->blob.entry_point;
@@ -417,8 +421,12 @@ namespace HAL
         module_ci.pCode    = reinterpret_cast<const uint32_t*>(blob.data());
 
         VkShaderModule cs_module = VK_NULL_HANDLE;
-        vkCreateShaderModule(vk_dev, &module_ci, nullptr, &cs_module);
-        if (cs_module == VK_NULL_HANDLE) return;
+        const VkResult module_result = vkCreateShaderModule(vk_dev, &module_ci, nullptr, &cs_module);
+        if (cs_module == VK_NULL_HANDLE)
+        {
+            Log::get() << Log::LEVEL_ERROR << "vkCreateShaderModule failed for compute pipeline '" << desc.name << "' code=" << (int)module_result << Log::endl;
+            return;
+        }
 
         VkComputePipelineCreateInfo cp_ci{ VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO };
         cp_ci.stage.sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -428,7 +436,9 @@ namespace HAL
         cp_ci.layout       = api_dev.get_pipeline_layout();
 
         VkPipeline pipeline = VK_NULL_HANDLE;
-        vkCreateComputePipelines(vk_dev, VK_NULL_HANDLE, 1, &cp_ci, nullptr, &pipeline);
+        const VkResult pipeline_result = vkCreateComputePipelines(vk_dev, VK_NULL_HANDLE, 1, &cp_ci, nullptr, &pipeline);
+        if (pipeline_result != VK_SUCCESS)
+            Log::get() << Log::LEVEL_ERROR << "vkCreateComputePipelines failed for '" << desc.name << "' code=" << (int)pipeline_result << Log::endl;
         tracked_info->vk_pipeline = pipeline;
         tracked_info->vk_device   = vk_dev;
 

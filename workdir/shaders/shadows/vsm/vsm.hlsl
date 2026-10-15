@@ -11,6 +11,7 @@
 static const GBuffer gbuffer = GetVSMLighting().GetGbuffer();
 
 #include "../../common/pbr.hlsl"
+#include "../../common/sky_indirect.hlsl"
 // Only the resolve half of VSM_impl.hlsl's old contents (get_shadow_vsm,
 // vsm_pcf_shadow, debug helpers) -- see VSM_impl_search.hlsl's own top
 // comment for why this is split from VSM_BlockerSearch.hlsl's own include.
@@ -131,14 +132,8 @@ float4 unshadowed_result(float2 tc)
 	float3 diffuse_color = albedo * (1 - metallic);
 	float3 f0 = lerp(float3(0.04, 0.04, 0.04), albedo, metallic);
 
-	const float sky_mips = 6;   // sky_cubemap_filtered has 7
-	float3 ambient = GetFrameInfo().GetSky().SampleLevel(linearClampSampler, normal, sky_mips).rgb;
-	float3 reflection = GetFrameInfo().GetSky().SampleLevel(linearClampSampler, reflect(-view, normal), roughness * sky_mips).rgb;
-	float2 env_brdf = GetFrameInfo().GetBrdf().SampleLevel(linearClampSampler, float3(roughness, metallic, NV), 0);
-
 	float3 color = NL * diffuse_color
-	             + ambient * diffuse_color
-	             + reflection * (f0 * env_brdf.x + env_brdf.y);
+	             + sky_indirect_light(GetFrameInfo().GetSky(), albedo, metallic, normal, view, roughness);
 	return float4(color, 1);
 }
 

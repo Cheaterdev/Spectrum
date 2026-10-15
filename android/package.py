@@ -51,7 +51,7 @@ def run(cmd, **kw):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--mode", default="debug", choices=["debug", "retail"])
+    ap.add_argument("--mode", default="debug", choices=["debug", "profile", "retail"])
     ap.add_argument("--install", action="store_true")
     args = ap.parse_args()
 

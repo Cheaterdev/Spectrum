@@ -139,6 +139,7 @@ export
 		Library::VSM_ScreenSpaceShadow VSM_ScreenSpaceShadow;
 		Library::VSM_ShadowResolve VSM_ShadowResolve;
 		Library::VSM_Combine VSM_Combine;
+		Library::SkyAmbient SkyAmbient;
 		Library::VSM_Unshadowed VSM_Unshadowed;
 		Library::VSM_DebugClassifyOverlay VSM_DebugClassifyOverlay;
 		Library::VSM_DepthAnalysis VSM_DepthAnalysis;

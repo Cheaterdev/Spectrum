@@ -83,11 +83,15 @@ struct ShadowsFlowNode : FlowGraph::GraphNode<WGContext>
 };
 
 // ── ResultCreation -----------------------------------------------------------
-// setup() is fully generated (helpers.prism's [RenderCondition = `false`]) --
-// this pass exists purely to keep swapchain graph-tracked, never renders.
+// setup() is fully generated (helpers.prism). Clears the freshly created ResultTexture: its memory is reused, so a
+// pixel no lighting pass writes would otherwise show last frame's image.
 
-void PassDefault<Passes::Frame::ResultCreation>::render(
-	Passes::Frame::ResultCreation::Context&, FrameGraph::FrameContext&) {}
+void PassDefault<Passes::Frame::ResultCreation>::render(Passes::Frame::ResultCreation::Context& data, FrameGraph::FrameContext& context)
+{
+	RT::Frame::SingleColor rt;
+	rt.GetColor() = data.ResultTexture->renderTarget;
+	context.get_list()->get_graphics().set_rtv(rt, HAL::RTOptions::Default | HAL::RTOptions::ClearColor);
+}
 
 
 // ---- Profiler ---------------------------------------------------------------
