@@ -7,6 +7,9 @@
 // shadow below (see [[project-nrd-integration]]) -- self-contained, same as
 // nrd_indirect_combine.hlsl's own #include of this file.
 #include "3rdparty/NRD.hlsli"
+#include "../common/lobes.hlsl"
+#include "../common/coat.hlsl"
+#include "../common/shading_model.hlsl"
 
 static const GBuffer gbuffer = GetNRD_ShadowCombineParams().GetGbuffer();
 
@@ -40,5 +43,21 @@ void CS(uint3 dispatchID : SV_DispatchThreadID)
 	float3 light_dir = normalize(GetFrameInfo().GetSunDir().xyz);
 	float  NL = saturate(dot(normal, light_dir));
 
-	GetNRD_ShadowCombineParams().GetTarget()[tc] = float4(shadow * (NL * albedo.rgb * (1 - metallic)), 1);
+	float3 result = shadow * (NL * albedo.rgb * (1 - metallic));
+
+	// Same coat/sheen/aniso/metal sun lobes as vsm_resolve_combine; without them
+	// this source would drop every non-STANDARD material's highlight.
+	float4 material = gbuffer.GetMaterial()[tc];
+	if (material_model(material) != SHADING_MODEL_STANDARD || metallic > 0.001)
+	{
+		float2 itc = (float2(tc) + 0.5) / dims;
+		Camera camera = GetFrameInfo().GetCamera();
+		float3 wpos = depth_to_wpos(raw_z, itc, camera.GetInvViewProj());
+		float3 view = normalize(camera.GetPosition() - wpos);
+		result *= coat_base_attenuation(material, normal, view);
+		result += material_sun_lobes(material, normal, view, light_dir, shadow,
+			lerp(0.04, albedo.rgb, metallic), max(MIN_ROUGHNESS, gbuffer.GetNormals()[tc].w), albedo.rgb, metallic);
+	}
+
+	GetNRD_ShadowCombineParams().GetTarget()[tc] = float4(result, 1);
 }

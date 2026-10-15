@@ -35,6 +35,32 @@ float3 sheen_color(float4 material, float3 albedo)
     return lerp(1.0, base, tint);
 }
 
+// Directional albedo of the sheen lobe, E(NV) = integral of f_s * NL over the
+// hemisphere: how much of a uniform ambient radiance the lobe reflects toward V.
+// There is no closed form for the Charlie lobe, so it is integrated with a fixed
+// set of 32 evenly spread directions (uniform in cos theta, golden-angle in phi).
+// Smooth enough for a lobe this broad; used only for ambient light.
+float sheen_directional_albedo(float NV, float a)
+{
+    const int N = 32;
+    float sin_v = sqrt(max(1.0 - NV * NV, 0.0));
+    float3 V = float3(sin_v, 0.0, NV);
+    float sum = 0.0;
+
+    [unroll]
+    for (int i = 0; i < N; i++)
+    {
+        float z = (i + 0.5) / N;
+        float r = sqrt(1.0 - z * z);
+        float phi = i * 2.39996323;
+        float3 L = float3(r * cos(phi), r * sin(phi), z);
+        float NH = normalize(V + L).z;
+        sum += sheen_D_charlie(NH, a) * sheen_V_neubelt(z, NV) * z;
+    }
+
+    return sum * (2.0 * 3.14159265 / N);
+}
+
 float3 sheen_sun_specular(float4 material, float3 N, float3 V, float3 L, float shadow, float3 albedo)
 {
     if (material_model(material) != SHADING_MODEL_SHEEN)
@@ -59,6 +85,20 @@ float3 sheen_sun_specular(float4 material, float3 N, float3 V, float3 L, float s
 float3 sheen_sun_specular(float4 material, float3 N, float3 V, float3 L, float shadow)
 {
     return sheen_sun_specular(material, N, V, L, shadow, 1.0);
+}
+
+// The sheen's share of indirect light: the lobe's directional albedo times the
+// ambient radiance (`indirect`, the same quantity a diffuse surface multiplies by
+// its albedo). Brightens the rim of cloth in shade, where only GI reaches it.
+float3 sheen_indirect(float4 material, float3 N, float3 V, float3 albedo, float3 indirect)
+{
+    if (material_model(material) != SHADING_MODEL_SHEEN)
+        return 0;
+
+    float a = max(material_params(material).y * material_params(material).y, 0.02);
+    float NV = max(dot(N, V), 1e-4);
+
+    return sheen_color(material, albedo) * (material_params(material).x * sheen_directional_albedo(NV, a)) * indirect;
 }
 
 #endif

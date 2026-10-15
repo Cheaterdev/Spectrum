@@ -3,6 +3,7 @@
 #include "../autogen/FrameInfo.h"
 #include "../autogen/NRD_IndirectCombineParams.h"
 #include "../common/coat.hlsl"
+#include "../common/sheen.hlsl"
 
 // REBLUR_BackEnd_UnpackRadianceAndNormHitDist, to decode the REBLUR-denoised
 // indirect signal below (see [[project-nrd-integration]]) -- self-contained,
@@ -50,8 +51,12 @@ void CS(uint3 dispatchID : SV_DispatchThreadID)
 	float NoV = dot(normal, v);
 	// (1 - metallic): a metal has no diffuse for bounce light to light, as in
 	// rtx_combine.hlsl's identical term.
+	float4 material = gbuffer.GetMaterial()[tc];
 	float3 color = albedo.rgb * IntegrateBRDF(roughness, metallic, -NoV).x * indirect * (1 - metallic)
-		* coat_base_attenuation(gbuffer.GetMaterial()[tc], normal, -v);
+		* coat_base_attenuation(material, normal, -v);
+
+	// Cloth: the sheen lobe's own share of the ambient light (common/sheen.hlsl).
+	color += sheen_indirect(material, normal, -v, albedo.rgb, indirect);
 
 	GetNRD_IndirectCombineParams().GetTarget()[tc] += float4(color, 1);
 }

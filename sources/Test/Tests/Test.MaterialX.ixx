@@ -479,6 +479,12 @@ float frame_probe() { mx_set_time(2.0); return mx_frame(); }
 			{ "sheen tinted",       "sheen_sun_specular(pack_material(SHADING_MODEL_SHEEN, float3(1.0, 0.5, 1.0)), " + up + ", " + up + ", float3(0.6, 0.8, 0), 1.0, float3(1.0, 0.5, 0.25))", { 0.006f, 0.003f, 0.0015f, 0 }, 1e-5f },
 			{ "sheen untinted",     "sheen_sun_specular(" + sheen + ", " + up + ", " + up + ", float3(0.6, 0.8, 0), 1.0, float3(1.0, 0.5, 0.25))", { 0.006f, 0.006f, 0.006f, 0 }, 1e-5f },
 			{ "graph sheen tint",   "material_params(pack_material_from_graph(0.0, 0.5, 0.9, 0.3, 0.0, 0.0, 0.0, float3(1, 1, 1), 1.0, 0.7, " + up + ", float3(1, 0, 0))).z", { 0.7f, 0, 0, 0 }, 1e-4f },
+			// Ambient sheen scales linearly with weight and with the ambient radiance, is
+			// zero for other models, and stays a fraction of the incoming light (albedo < 1).
+			{ "sheen ambient half weight", "sheen_indirect(pack_material(SHADING_MODEL_SHEEN, float3(0.5, 0.5, 0.0)), " + up + ", " + up + ", 1.0, 1.0) / sheen_indirect(" + sheen + ", " + up + ", " + up + ", 1.0, 1.0)", { 0.5f, 0.5f, 0.5f, 0 }, 1e-4f },
+			{ "sheen ambient radiance",    "sheen_indirect(" + sheen + ", " + up + ", " + up + ", 1.0, 3.0) / sheen_indirect(" + sheen + ", " + up + ", " + up + ", 1.0, 1.0)", { 3, 3, 3, 0 }, 1e-4f },
+			{ "sheen ambient other model", "sheen_indirect(" + coated + ", " + up + ", " + up + ", 1.0, 1.0)", { 0, 0, 0, 0 } },
+			{ "sheen ambient bounded",     "float3(sheen_directional_albedo(1.0, 0.25) > 0 && sheen_directional_albedo(1.0, 0.25) < 1, sheen_directional_albedo(0.2, 0.25) > 0 && sheen_directional_albedo(0.2, 0.25) < 1, 0)", { 1, 1, 0, 0 } },
 			// The coat takes F of the light before the base layer sees it: 1 - weight * F.
 			{ "coat attenuation head-on", "coat_base_attenuation(" + coated + ", " + up + ", " + up + ")", { 0.96f, 0, 0, 0 }, 1e-4f },
 			{ "coat attenuation grazing", "coat_base_attenuation(" + coated + ", " + up + ", float3(1, 0, 0))", { 0.0f, 0, 0, 0 }, 1e-4f },

@@ -97,7 +97,8 @@ void CS(uint3 dispatchID : SV_DispatchThreadID)
 	// rolled off by metallic (metals have ~no diffuse term). Same raw shape
 	// as reflection above.
 	float3 indirect = GetRTXCombine().GetIndirect()[tc].rgb;
-	float3 gi_color = albedo.rgb * indirect * (1 - metallic) * base_attenuation;
+	float3 gi_color = albedo.rgb * indirect * (1 - metallic) * base_attenuation
+		+ sheen_indirect(material, normal, -v, albedo.rgb, indirect);
 
 	// Self-emission: not shadowed, not weighted by any BRDF -- a glowing
 	// surface looks the same lit or unlit. Indirect GI/reflection rays get

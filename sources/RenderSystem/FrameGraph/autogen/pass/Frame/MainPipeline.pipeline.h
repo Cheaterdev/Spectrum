@@ -665,10 +665,11 @@ namespace Frame
 			{ PassID::RTXCombine, 0 },
 			{ PassID::SSSRR_BlurH, 0 },
 			{ PassID::SSSRR_BlurV, 0 },
+			{ PassID::NRD_ShadowCombine, 0 },
 		};
 		static inline const FrameGraph::PrecompiledState GBuffer_Material_c0_states[] = {
 			{ true, { GBuffer_Material_c0_pass_refs + 0, 1 } },
-			{ false, { GBuffer_Material_c0_pass_refs + 1, 13 } },
+			{ false, { GBuffer_Material_c0_pass_refs + 1, 14 } },
 		};
 		static inline const FrameGraph::PassRef GBuffer_DepthMips_c0_pass_refs[] = {
 			{ PassID::Scene, 0 },
