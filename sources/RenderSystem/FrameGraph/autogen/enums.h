@@ -109,6 +109,11 @@ export
 		Library::CubeMapDownsample CubeMapDownsample;
 		Library::CubeMapEnviromentProcessor CubeMapEnviromentProcessor;
 		Library::SMAA SMAA;
+		Library::SSS_Classify SSS_Classify;
+		Library::SSS_BlurH SSS_BlurH;
+		Library::SSS_BlurV SSS_BlurV;
+		Library::SSSRR_BlurH SSSRR_BlurH;
+		Library::SSSRR_BlurV SSSRR_BlurV;
 		Library::stencil_renderer stencil_renderer;
 		Library::Tonemap Tonemap;
 		Library::UI_PreDraw UI_PreDraw;

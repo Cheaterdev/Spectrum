@@ -103,6 +103,11 @@ export import "../defines.h";
 #include "pass/Environment/CubeMapDownsample.h"
 #include "pass/Environment/CubeMapEnviromentProcessor.h"
 #include "pass/Post/AA/SMAA.h"
+#include "pass/Subsurface/SSS_Classify.h"
+#include "pass/Subsurface/SSS_BlurH.h"
+#include "pass/Subsurface/SSS_BlurV.h"
+#include "pass/Subsurface/SSSRR_BlurH.h"
+#include "pass/Subsurface/SSSRR_BlurV.h"
 #include "pass/Editor/stencil_renderer.h"
 #include "pass/Post/Tonemap.h"
 #include "pass/UI/UI_PreDraw.h"
@@ -586,6 +591,26 @@ export namespace Passes
 		{
 			using ::Passes::Post::AA::SMAA;
 		}
+	}
+	namespace Subsurface
+	{
+		using ::Passes::Subsurface::SSS_Classify;
+	}
+	namespace Subsurface
+	{
+		using ::Passes::Subsurface::SSS_BlurH;
+	}
+	namespace Subsurface
+	{
+		using ::Passes::Subsurface::SSS_BlurV;
+	}
+	namespace Subsurface
+	{
+		using ::Passes::Subsurface::SSSRR_BlurH;
+	}
+	namespace Subsurface
+	{
+		using ::Passes::Subsurface::SSSRR_BlurV;
 	}
 	namespace Editor
 	{

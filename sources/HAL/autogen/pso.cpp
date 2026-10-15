@@ -103,6 +103,9 @@ void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 	tasks.emplace_back(PSOBase::create<PSOS::Post::AA::EdgeDetectCompute>(device, pso[PSO::EdgeDetectCompute]));
 	tasks.emplace_back(PSOBase::create<PSOS::Post::AA::BlendWeightCompute>(device, pso[PSO::BlendWeightCompute]));
 	tasks.emplace_back(PSOBase::create<PSOS::Post::AA::BlendingCompute>(device, pso[PSO::BlendingCompute]));
+	tasks.emplace_back(PSOBase::create<PSOS::Subsurface::SSSClassify>(device, pso[PSO::SSSClassify]));
+	tasks.emplace_back(PSOBase::create<PSOS::Subsurface::SSSBlurH>(device, pso[PSO::SSSBlurH]));
+	tasks.emplace_back(PSOBase::create<PSOS::Subsurface::SSSBlurV>(device, pso[PSO::SSSBlurV]));
 	tasks.emplace_back(PSOBase::create<PSOS::Shadows::Screen::SS_Shadow>(device, pso[PSO::SS_Shadow]));
 	tasks.emplace_back(PSOBase::create<PSOS::Post::TonemapHistogramClear>(device, pso[PSO::TonemapHistogramClear]));
 	tasks.emplace_back(PSOBase::create<PSOS::Post::TonemapHistogramBuild>(device, pso[PSO::TonemapHistogramBuild]));

@@ -3,6 +3,7 @@
 #include "../autogen/FrameInfo.h"
 #include "../autogen/RTXCombine.h"
 #include "../common/lobes.hlsl"
+#include "../common/shading_model.hlsl"
 
 static const Camera camera = GetFrameInfo().GetCamera();
 static const GBuffer gbuffer = GetRTXCombine().GetGbuffer();
@@ -102,6 +103,16 @@ void CS(uint3 dispatchID : SV_DispatchThreadID)
 	// pass reads the GBuffer rather than recomputing the material.
 	// Coat reflection: its own near-mirror ray (ReflectionRTX's coat output).
 	float3 coat_refl = coat_reflection(material, normal, -v, GetRTXCombine().GetCoat()[tc].rgb);
+
+	// SUBSURFACE pixels: only the diffuse part goes to the target, where the
+	// subsurface blur (sss.prism) works on it; the specular part is parked for
+	// that pass to add back afterwards, so reflections are not blurred.
+	if (material_model(material) == SHADING_MODEL_SUBSURFACE)
+	{
+		GetRTXCombine().GetTarget()[tc] = float4(direct + gi_color, 1);
+		GetRTXCombine().GetSpecular_out()[tc] = float4(refl_color + coat_refl + glow, 0);
+		return;
+	}
 
 	GetRTXCombine().GetTarget()[tc] = float4(direct + refl_color + coat_refl + gi_color + glow, 1);
 }

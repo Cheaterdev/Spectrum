@@ -54,6 +54,9 @@ namespace GI
 			Handlers::Texture ResultTextureRTXNoise = ResourceID::ResultTextureRTXNoise;
 
 
+			Handlers::Texture RTXCombineSpecular = ResourceID::RTXCombineSpecular;
+
+
 			// Resources this pass always needs whenever it runs, generated from
 			// each field's own [Always=X] annotation (further gated by [Optional=X]
 			// when present -- a raw bool expression, e.g. builder.exists(...) or a
@@ -98,6 +101,7 @@ namespace GI
 			static void create_always(Context& data, FrameGraph::TaskBuilder& builder)
 			{
 				builder.create(data.ResultTextureRTXNoise, { ivec3(builder.graph->get_context<Table::Frame::ViewportContext>().frame_size, 0), HAL::Format::R16G16B16A16_FLOAT, 1, 1 }, FrameGraph::ResourceFlags::UnorderedAccess);
+				builder.create(data.RTXCombineSpecular, { ivec3(builder.graph->get_context<Table::Frame::ViewportContext>().frame_size, 0), HAL::Format::R16G16B16A16_FLOAT, 1, 1 }, FrameGraph::ResourceFlags::UnorderedAccess);
 			}
 			// Which chain link each handler field resolved to, one named slot per
 			// field. Filled from a live frame's finished Context and applied on a
@@ -117,6 +121,7 @@ namespace GI
 				FrameGraph::ChainIndex GBuffer_Material = FrameGraph::ChainIndex::Unresolved;
 				FrameGraph::ChainIndex RTXReflectionCoat = FrameGraph::ChainIndex::Unresolved;
 				FrameGraph::ChainIndex ResultTextureRTXNoise = FrameGraph::ChainIndex::Unresolved;
+				FrameGraph::ChainIndex RTXCombineSpecular = FrameGraph::ChainIndex::Unresolved;
 			};
 
 			static void save_to_cache([[maybe_unused]] const Context& data, [[maybe_unused]] Cache& cache)
@@ -132,6 +137,7 @@ namespace GI
 				cache.GBuffer_Material = FrameGraph::TaskBuilder::cache_slot(data.GBuffer_Material, ResourceID::GBuffer_Material);
 				cache.RTXReflectionCoat = FrameGraph::TaskBuilder::cache_slot(data.RTXReflectionCoat, ResourceID::RTXReflectionCoat);
 				cache.ResultTextureRTXNoise = FrameGraph::TaskBuilder::cache_slot(data.ResultTextureRTXNoise, ResourceID::ResultTextureRTXNoise);
+				cache.RTXCombineSpecular = FrameGraph::TaskBuilder::cache_slot(data.RTXCombineSpecular, ResourceID::RTXCombineSpecular);
 			}
 
 			// Replay counterpart of create_always/need_always. A field this pass
@@ -154,6 +160,7 @@ namespace GI
 				builder.load(data.GBuffer_Material, ResourceID::GBuffer_Material, cache.GBuffer_Material);
 				builder.load(data.RTXReflectionCoat, ResourceID::RTXReflectionCoat, cache.RTXReflectionCoat);
 				builder.create_versioned(data.ResultTextureRTXNoise, cache.ResultTextureRTXNoise, { ivec3(builder.graph->get_context<Table::Frame::ViewportContext>().frame_size, 0), HAL::Format::R16G16B16A16_FLOAT, 1, 1 });
+				builder.create_versioned(data.RTXCombineSpecular, cache.RTXCombineSpecular, { ivec3(builder.graph->get_context<Table::Frame::ViewportContext>().frame_size, 0), HAL::Format::R16G16B16A16_FLOAT, 1, 1 });
 			}
 
 			// Resources this pass touches, in declaration order, each paired with
@@ -171,6 +178,7 @@ namespace GI
 				{ ResourceID::GBuffer_Material, false },
 				{ ResourceID::RTXReflectionCoat, false },
 				{ ResourceID::ResultTextureRTXNoise, true },
+				{ ResourceID::RTXCombineSpecular, true },
 			};
 			static constexpr uint resource_count = std::size(resource_accesses);
 		};

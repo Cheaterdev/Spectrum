@@ -21,21 +21,15 @@ import Graphics;
 // script is workdir/materialx/noise_reference.py; its output is what the noise
 // tables below hold.
 
-SETUP_CATEGORY(MaterialX.Nodes, []() {
+// One GPU category for the node and importer tests: creating and resetting the
+// graphics system twice in a row (one category each) crashed intermittently
+// when the second create followed the first reset.
+SETUP_CATEGORY(MaterialX.GPU, []() {
 	if (!GraphicsSystem::create())
-		Test::TestRegistry::Instance().SkipCategory("MaterialX.Nodes", "no suitable GPU device found");
+		Test::TestRegistry::Instance().SkipCategory("MaterialX.GPU", "no suitable GPU device found");
 });
 
-TEARDOWN_CATEGORY(MaterialX.Nodes, []() {
-	GraphicsSystem::reset();
-});
-
-SETUP_CATEGORY(MaterialX.Import, []() {
-	if (!GraphicsSystem::create())
-		Test::TestRegistry::Instance().SkipCategory("MaterialX.Import", "no suitable GPU device found");
-});
-
-TEARDOWN_CATEGORY(MaterialX.Import, []() {
+TEARDOWN_CATEGORY(MaterialX.GPU, []() {
 	GraphicsSystem::reset();
 });
 
@@ -290,7 +284,7 @@ float4 PS(float4 pos : SV_Position) : SV_Target
 
 	// Arithmetic, compositing and color nodes against values that follow from
 	// their definitions.
-	TEST(MaterialX.Nodes, MathAndColor)
+	TEST(MaterialX.GPU, MathAndColor)
 	{
 		using mx_detail::Case;
 
@@ -333,7 +327,7 @@ float4 PS(float4 pos : SV_Position) : SV_Target
 
 	// Noise against the independent Python port: lattice points, golden values
 	// and the relations between nodes (one-octave fractal is plain noise).
-	TEST(MaterialX.Nodes, Noise)
+	TEST(MaterialX.GPU, Noise)
 	{
 		using mx_detail::Case;
 
@@ -370,7 +364,7 @@ float4 PS(float4 pos : SV_Position) : SV_Target
 	// alignment N = V = L with NL = NV = 1: D = 1/(pi a^2), V = 1/4, F = F0 =
 	// 0.04, and the lobe is scaled by pi like the rest of the direct term, so
 	// the result is 0.01 / a^2 -- exactly 100 for coat roughness 0.1 (a = 0.01).
-	TEST(MaterialX.Nodes, ClearcoatSunSpecular)
+	TEST(MaterialX.GPU, ClearcoatSunSpecular)
 	{
 		using mx_detail::Case;
 
@@ -411,6 +405,14 @@ float4 PS(float4 pos : SV_Position) : SV_Target
 			{ "graph coat beats sheen", "float(material_model(pack_material_from_graph(0.8, 0.5, 0.9, 0.3, 0.0, 0.0, float3(0, 1, 0), float3(1, 0, 0))))", { 1, 0, 0, 0 } },
 			{ "graph sheen",        "float(material_model(pack_material_from_graph(0.0, 0.5, 0.9, 0.3, 0.0, 0.0, float3(0, 1, 0), float3(1, 0, 0))))", { 2, 0, 0, 0 } },
 
+			// Subsurface: lowest priority, radius = weight * scale * radius, sqrt-encoded.
+			{ "graph subsurface",    "float(material_model(pack_material_from_graph(0.0, 0.5, 0.0, 0.3, 0.0, 0.0, 1.0, float3(1, 1, 1), 1.0, " + up + ", float3(1, 0, 0))))", { 4, 0, 0, 0 } },
+			{ "aniso beats subsurface", "float(material_model(pack_material_from_graph(0.0, 0.5, 0.0, 0.3, 0.6, 0.0, 1.0, float3(1, 1, 1), 1.0, " + up + ", float3(1, 0, 0))))", { 3, 0, 0, 0 } },
+			{ "subsurface radius",   "sss_decode_radius(material_params(pack_material_from_graph(0.0, 0.5, 0.0, 0.3, 0.0, 0.0, 1.0, float3(0.1, 0.4, 1.6), 1.0, " + up + ", float3(1, 0, 0))))", { 0.1f, 0.4f, 1.6f, 0 }, 1e-4f },
+			{ "subsurface scaled",   "sss_decode_radius(material_params(pack_material_from_graph(0.0, 0.5, 0.0, 0.3, 0.0, 0.0, 0.5, float3(1, 1, 1), 2.0, " + up + ", float3(1, 0, 0))))", { 1, 1, 1, 0 }, 1e-4f },
+			// An 8-bit target keeps small radii to a few percent thanks to the sqrt encoding.
+			{ "subsurface 8-bit",    "sss_decode_radius(round(sss_encode_radius(float3(0.01, 0.05, 0.5)) * 255.0) / 255.0)", { 0.0104f, 0.0498f, 0.4980f, 0 }, 2e-3f },
+
 			// Anisotropy: one shading model, ranked below coat and sheen.
 			{ "graph anisotropy",    "float(material_model(pack_material_from_graph(0.0, 0.5, 0.0, 0.3, 0.6, 0.0, " + up + ", float3(1, 0, 0))))", { 3, 0, 0, 0 } },
 			{ "sheen beats aniso",   "float(material_model(pack_material_from_graph(0.0, 0.5, 0.9, 0.3, 0.6, 0.0, " + up + ", float3(1, 0, 0))))", { 2, 0, 0, 0 } },
@@ -446,8 +448,237 @@ float4 PS(float4 pos : SV_Position) : SV_Target
 		}, lobes);
 	}
 
+	// The subsurface blur passes (sss.prism) on a synthetic G-buffer: the lit
+	// target is blurred along x then y for SUBSURFACE pixels only. A uniform
+	// region must come back unchanged (the kernel is normalised), a step must
+	// smooth into a monotonic ramp that stays within the input range, and
+	// other pixels must not be touched at all.
+	TEST(MaterialX.GPU, SubsurfaceBlur)
+	{
+		auto& device = RenderSystem::get().device();
+		constexpr uint W = 128, H = 128;
+		const auto rw = HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess;
+
+		auto make = [&](HAL::Format format, HAL::ResFlags flags)
+		{
+			return std::make_shared<HAL::TextureResource>(device,
+				HAL::ResourceDesc::Tex2D(format, { W, H }, 1, 1, flags), HAL::HeapType::DEFAULT);
+		};
+
+		auto albedo_tex   = make(HAL::Format::R8G8B8A8_UNORM, HAL::ResFlags::ShaderResource);
+		auto normals_tex  = make(HAL::Format::R8G8B8A8_UNORM, HAL::ResFlags::ShaderResource);
+		auto material_tex = make(HAL::Format::R8G8B8A8_UNORM, HAL::ResFlags::ShaderResource);
+		auto depth_tex    = make(HAL::Format::R32_FLOAT, HAL::ResFlags::ShaderResource);
+		auto result_tex   = make(HAL::Format::R32G32B32A32_FLOAT, rw);
+		auto temp_tex     = make(HAL::Format::R32G32B32A32_FLOAT, rw);
+
+		// Rows 0-7: a step (lit on the left half). Rows 70-77: uniformly lit. Rows
+		// 20-29 and 100-109: not subsurface, with a marker value that must
+		// survive. The groups are further apart than the widest kernel reaches
+		// (48 px), so they cannot blur into each other vertically; taps are 3 px
+		// apart, so a thin separator row would simply be hopped over.
+		std::vector<uint8_t> albedo(W * H * 4), normals(W * H * 4), material(W * H * 4);
+		std::vector<float> depth(W * H, 0.5f), result(W * H * 4);
+
+		for (uint y = 0; y < H; y++)
+			for (uint x = 0; x < W; x++)
+			{
+				const size_t i = (size_t)y * W + x;
+				const bool step_rows = y < 8;
+				const bool sss = step_rows || (y >= 70 && y < 78);
+				const float lit = step_rows ? (x < W / 2 ? 1.0f : 0.0f) : 1.0f;
+
+				albedo[i * 4 + 0] = albedo[i * 4 + 1] = albedo[i * 4 + 2] = 128;
+				albedo[i * 4 + 3] = 0;
+				normals[i * 4 + 0] = normals[i * 4 + 1] = 128;
+				normals[i * 4 + 2] = 255;
+				normals[i * 4 + 3] = 128;
+
+				// SUBSURFACE = 4 in alpha, radius at the encoding's maximum.
+				material[i * 4 + 0] = material[i * 4 + 1] = material[i * 4 + 2] = sss ? 255 : 0;
+				material[i * 4 + 3] = sss ? 4 : 0;
+
+				const float v = sss ? lit : 7.0f;
+				result[i * 4 + 0] = result[i * 4 + 1] = result[i * 4 + 2] = v;
+				result[i * 4 + 3] = 1.0f;
+			}
+
+		{
+			auto upload = device.get_upload_list();
+			auto put = [&](HAL::TextureResource* tex, const void* src, uint bytes_per_pixel)
+			{
+				upload->get_copy().update_texture(tex, ivec3(0, 0, 0), ivec3(W, H, 1), 0,
+					reinterpret_cast<const char*>(src), W * bytes_per_pixel);
+			};
+			put(albedo_tex.get(),   albedo.data(),   4);
+			put(normals_tex.get(),  normals.data(),  4);
+			put(material_tex.get(), material.data(), 4);
+			put(depth_tex.get(),    depth.data(),    4);
+			put(result_tex.get(),   result.data(),   16);
+			upload->execute_and_wait();
+		}
+
+		camera cam;
+		cam.set_projection_params(Math::pi / 4, float(W) / H, 0.1f, 100.0f);
+		cam.update();
+
+		auto& queue = device.get_queue(HAL::CommandListType::DIRECT);
+
+		// The blur is dispatched indirectly over the 16x16 tiles SSSClassify lists,
+		// with the list's GPU counter copied into the dispatch arguments, as the
+		// frame graph passes do (sss.prism).
+		HAL::StructuredBufferView<uint2> tile_list(device, (W / 16) * (H / 16), HAL::counterType::SELF,
+			HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess);
+		HAL::StructuredBufferView<DispatchArguments> tile_args(device, 1);
+		{
+			DispatchArguments init{ 0, 1, 1 };
+			auto upload = device.get_upload_list();
+			upload->get_copy().update(tile_args, 0, std::span{ &init, 1 });
+			upload->execute_and_wait();
+		}
+
+		auto bind_gbuffer = [&](Slots::Subsurface::SSSBlurParams& params, HAL::Texture2DView& albedo_view, HAL::Texture2DView& normals_view,
+			HAL::Texture2DView& material_view, HAL::Texture2DView& depth_view)
+		{
+			params.GetGbuffer().GetAlbedo()   = albedo_view.texture2D;
+			params.GetGbuffer().GetNormals()  = normals_view.texture2D;
+			params.GetGbuffer().GetMaterial() = material_view.texture2D;
+			// The table has no [Auto] for these; the blur never samples them.
+			params.GetGbuffer().GetSpecular() = albedo_view.texture2D;
+			params.GetGbuffer().GetMotion()   = albedo_view.texture2D;
+			params.GetGbuffer().GetDepth()    = depth_view.texture2D;
+		};
+
+		// read_counter delivers its value from another thread, possibly after
+		// execute_and_wait returns, so it is waited for explicitly.
+		std::atomic<int> tile_count{ -1 };
+
+		{
+			auto list = queue->get_free_list();
+			list->begin(L"SubsurfaceClassify");
+
+			HAL::Texture2DView albedo_view(albedo_tex, *list);
+			HAL::Texture2DView normals_view(normals_tex, *list);
+			HAL::Texture2DView material_view(material_tex, *list);
+			HAL::Texture2DView depth_view(depth_tex, *list);
+
+			auto& compute = list->get_compute();
+			compute.set_signature(Layouts::DefaultLayout);
+
+			Slots::Subsurface::SSSClassifyParams params;
+			params.GetGbuffer().GetAlbedo()   = albedo_view.texture2D;
+			params.GetGbuffer().GetNormals()  = normals_view.texture2D;
+			params.GetGbuffer().GetMaterial() = material_view.texture2D;
+			params.GetGbuffer().GetSpecular() = albedo_view.texture2D;
+			params.GetGbuffer().GetMotion()   = albedo_view.texture2D;
+			params.GetGbuffer().GetDepth()    = depth_view.texture2D;
+			compute.set(params);
+
+			Slots::Subsurface::SSSTilesAppend tiles;
+			tiles.GetTiles() = tile_list.appendStructuredBuffer;
+			compute.set(tiles);
+
+			compute.clear_counter(tile_list);
+			compute.set_pipeline<PSOS::Subsurface::SSSClassify>();
+			compute.dispatch(ivec2{ int(W), int(H) }, ivec2{ 16, 16 });
+			list->get_copy().copy_buffer(tile_args.resource.get(), 0, tile_list.get_counter_buffer().get(), tile_list.get_counter_offset(), 4);
+			list->get_copy().read_counter(tile_list, [&](uint count) { tile_count = int(count); });
+			list->execute_and_wait();
+		}
+
+		// Only tiles holding subsurface pixels are listed: rows 0-7 touch tile row
+		// 0 and rows 70-77 touch tile row 4, eight tile columns each.
+		for (int waited = 0; tile_count.load() < 0 && waited < 500; waited++)
+			std::this_thread::sleep_for(std::chrono::milliseconds(10));
+
+		ASSERT_EQ(16, tile_count.load());
+
+		// One command list per pass: the second reads what the first wrote.
+		auto run = [&](bool vertical, std::shared_ptr<HAL::TextureResource> source_tex, std::shared_ptr<HAL::TextureResource> target_tex)
+		{
+			auto list = queue->get_free_list();
+			list->begin(L"SubsurfaceBlur");
+
+			HAL::Texture2DView albedo_view(albedo_tex, *list);
+			HAL::Texture2DView normals_view(normals_tex, *list);
+			HAL::Texture2DView material_view(material_tex, *list);
+			HAL::Texture2DView depth_view(depth_tex, *list);
+			HAL::Texture2DView source_view(source_tex, *list);
+			HAL::Texture2DView target_view(target_tex, *list);
+
+			auto& compute = list->get_compute();
+			compute.set_signature(Layouts::DefaultLayout);
+
+			{
+				Slots::Frame::FrameInfo frameInfo;
+				frameInfo.GetCamera() = cam.camera_cb.current;
+				frameInfo.GetBrdf()           = EngineAssets::brdf.get_asset()->get_texture()->texture_3d().texture3D;
+				frameInfo.GetBestFitNormals() = EngineAssets::best_fit_normals.get_asset()->get_texture()->texture_2d().texture2D;
+				compute.set(frameInfo);
+			}
+
+			if (vertical)
+				compute.set_pipeline<PSOS::Subsurface::SSSBlurV>();
+			else
+				compute.set_pipeline<PSOS::Subsurface::SSSBlurH>();
+
+			Slots::Subsurface::SSSBlurParams params;
+			bind_gbuffer(params, albedo_view, normals_view, material_view, depth_view);
+			params.GetSource() = source_view.texture2D;
+			params.GetTarget() = target_view.rwTexture2D;
+			compute.set(params);
+
+			Slots::Subsurface::SSSTilesRead tiles;
+			tiles.GetTiles() = tile_list.structuredBuffer;
+			compute.set(tiles);
+
+			compute.exec_indirect(tile_args, 1);
+			list->execute_and_wait();
+		};
+
+		run(false, result_tex, temp_tex);
+		run(true, temp_tex, result_tex);
+
+		auto data = readback_texture(result_tex.get());
+		auto& mip = data->array[0]->mips[0];
+		auto at = [&](uint x, uint y) { return reinterpret_cast<const float*>(mip->data.data() + (size_t)y * mip->width_stride)[x * 4]; };
+
+		// Uniform rows come back as they went in.
+		std::string failures;
+		for (uint x = 0; x < W; x++)
+			if (std::abs(at(x, 72) - 1.0f) > 1e-3f)
+				failures += "uniform row x=" + std::to_string(x) + " is " + std::to_string(at(x, 72)) + "\n";
+
+		// The step: bounded, monotonic, genuinely smoothed, and symmetric about the edge.
+		for (uint x = 0; x < W; x++)
+		{
+			const float v = at(x, 4);
+
+			if (v < -1e-3f || v > 1.0f + 1e-3f)
+				failures += "step out of range at x=" + std::to_string(x) + ": " + std::to_string(v) + "\n";
+
+			// Taps sit 3 px apart, so a hard edge leaves ~1% ripple; more than that is a bug.
+			if (x > 0 && v > at(x - 1, 4) + 0.02f)
+				failures += "step not monotonic at x=" + std::to_string(x) + "\n";
+		}
+
+		if (!(at(W / 2 - 1, 4) < 0.99f && at(W / 2, 4) > 0.01f))
+			failures += "step was not blurred: " + std::to_string(at(W / 2 - 1, 4)) + " / " + std::to_string(at(W / 2, 4)) + "\n";
+
+		if (std::abs(at(W / 2 - 1, 4) + at(W / 2, 4) - 1.0f) > 0.08f)
+			failures += "step not symmetric about the edge: " + std::to_string(at(W / 2 - 1, 4)) + " + " + std::to_string(at(W / 2, 4)) + "\n";
+
+		// Non-subsurface pixels are left alone.
+		for (uint y : { 20u, 25u, 29u, 100u, 105u, 109u })
+			for (uint x = 0; x < W; x++)
+				if (at(x, y) != 7.0f)
+					failures += "non-subsurface pixel changed at " + std::to_string(x) + "," + std::to_string(y) + "\n";
+
+		ASSERT_EQ(std::string(), failures);
+	}
+
 	// The importer reads a .mtlx file and registers a material asset for it.
-	TEST(MaterialX.Import, SampleFile)
+	TEST(MaterialX.GPU, SampleFile)
 	{
 		mx_detail::ensure_library();
 
@@ -531,7 +762,7 @@ float4 PS(float4 pos : SV_Position) : SV_Target
 		}
 	}
 
-	TEST(MaterialX.Import, StandardSurfaceConstants)
+	TEST(MaterialX.GPU, StandardSurfaceConstants)
 	{
 		using namespace mx_import;
 
@@ -554,14 +785,14 @@ float4 PS(float4 pos : SV_Position) : SV_Target
 
 	// Parameters the file leaves out take the shader's own defaults, which
 	// standard_surface inherits from a versioned parent nodedef.
-	TEST(MaterialX.Import, ShaderDefaults)
+	TEST(MaterialX.GPU, ShaderDefaults)
 	{
 		using namespace mx_import;
 
 		check_constants(build(surface("standard_surface", "")), { 0.8f, 0.8f, 0.8f, 1.0f }, 0.0f, 0.2f);
 	}
 
-	TEST(MaterialX.Import, EmissionAndOpacity)
+	TEST(MaterialX.GPU, EmissionAndOpacity)
 	{
 		using namespace mx_import;
 
@@ -583,7 +814,7 @@ float4 PS(float4 pos : SV_Position) : SV_Target
 
 	// Coat and sheen map to the graph's lobe outputs; a material gets one shading
 	// model, so the coat wins when both are set.
-	TEST(MaterialX.Import, CoatAndSheen)
+	TEST(MaterialX.GPU, CoatAndSheen)
 	{
 		using namespace mx_import;
 
@@ -620,7 +851,36 @@ float4 PS(float4 pos : SV_Position) : SV_Target
 		ASSERT_TRUE(source(both[0].second->get_sheen()) == nullptr);
 	}
 
-	TEST(MaterialX.Import, Anisotropy)
+	TEST(MaterialX.GPU, Subsurface)
+	{
+		using namespace mx_import;
+
+		auto skin = build(surface("standard_surface",
+			R"(<input name="subsurface" type="float" value="1.0" />
+			   <input name="subsurface_radius" type="color3" value="1.0, 0.35, 0.2" />
+			   <input name="subsurface_scale" type="float" value="0.05" />)"));
+		ASSERT_EQ(size_t(1), skin.size());
+		auto& g = skin[0].second;
+		ASSERT_EQ(std::string(), close({ source_as<ScalarNode>(g->get_subsurface_weight())->get_value() }, { 1.0f }));
+		ASSERT_EQ(std::string(), close({ source_as<ScalarNode>(g->get_subsurface_scale())->get_value() }, { 0.05f }));
+		auto v = source_as<VectorNode>(g->get_subsurface_radius())->get_value();
+		ASSERT_EQ(std::string(), close({ v.x, v.y, v.z }, { 1.0f, 0.35f, 0.2f }));
+
+		// Lowest priority of the shading models.
+		auto anisotropic = build(surface("standard_surface",
+			R"(<input name="specular_anisotropy" type="float" value="0.7" />
+			   <input name="subsurface" type="float" value="1.0" />)"));
+		ASSERT_EQ(size_t(1), anisotropic.size());
+		ASSERT_TRUE(source(anisotropic[0].second->get_anisotropy()) != nullptr);
+		ASSERT_TRUE(source(anisotropic[0].second->get_subsurface_weight()) == nullptr);
+
+		// No subsurface weight, nothing wired.
+		auto plain = build(surface("standard_surface", ""));
+		ASSERT_EQ(size_t(1), plain.size());
+		ASSERT_TRUE(source(plain[0].second->get_subsurface_weight()) == nullptr);
+	}
+
+	TEST(MaterialX.GPU, Anisotropy)
 	{
 		using namespace mx_import;
 
@@ -647,7 +907,7 @@ float4 PS(float4 pos : SV_Position) : SV_Target
 	}
 
 	// Each supported surface shader maps its own parameter names.
-	TEST(MaterialX.Import, OtherSurfaceShaders)
+	TEST(MaterialX.GPU, OtherSurfaceShaders)
 	{
 		using namespace mx_import;
 
@@ -674,7 +934,7 @@ float4 PS(float4 pos : SV_Position) : SV_Target
 	// Connected inputs become nodes: their constants carry over, their
 	// connections are rebuilt, and unconnected UV inputs still read the
 	// graph's texcoord.
-	TEST(MaterialX.Import, ConnectedNodes)
+	TEST(MaterialX.GPU, ConnectedNodes)
 	{
 		using namespace mx_import;
 
@@ -715,7 +975,7 @@ float4 PS(float4 pos : SV_Position) : SV_Target
 
 	// Integer inputs have no editable constant, so a non-default value arrives
 	// as a constant node.
-	TEST(MaterialX.Import, IntegerInput)
+	TEST(MaterialX.GPU, IntegerInput)
 	{
 		using namespace mx_import;
 
@@ -737,7 +997,7 @@ float4 PS(float4 pos : SV_Position) : SV_Target
 	// Image files become texture assets feeding the image node's file port; a
 	// normalmap node is bypassed so the texel reaches the graph's normal output
 	// as stored.
-	TEST(MaterialX.Import, TexturesAndNormalMap)
+	TEST(MaterialX.GPU, TexturesAndNormalMap)
 	{
 		using namespace mx_import;
 
@@ -764,7 +1024,7 @@ float4 PS(float4 pos : SV_Position) : SV_Target
 		ASSERT_TRUE(source_as<TextureAssetNode>(normal->get_input_by_name("file")) != nullptr);
 	}
 
-	TEST(MaterialX.Import, MultipleMaterialsAndRejects)
+	TEST(MaterialX.GPU, MultipleMaterialsAndRejects)
 	{
 		using namespace mx_import;
 
@@ -787,7 +1047,7 @@ float4 PS(float4 pos : SV_Position) : SV_Target
 
 	// A node the library can't build leaves the input at the shader's default
 	// instead of failing the import.
-	TEST(MaterialX.Import, UnsupportedNodeFallsBack)
+	TEST(MaterialX.GPU, UnsupportedNodeFallsBack)
 	{
 		using namespace mx_import;
 

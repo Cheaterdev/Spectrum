@@ -702,6 +702,49 @@ FrameGraph::SetupResult PassSetupDefault<Passes::Post::AA::SMAA>::setup(
 }
 
 
+FrameGraph::SetupResult PassDefault<Passes::Subsurface::SSS_Classify>::setup(
+	Passes::Subsurface::SSS_Classify::Context& data, FrameGraph::TaskBuilder& builder)
+{
+	return FrameGraph::SetupResult::NeedsRender;
+}
+
+
+FrameGraph::SetupResult PassDefault<Passes::Subsurface::SSS_BlurH>::setup(
+	Passes::Subsurface::SSS_BlurH::Context& data, FrameGraph::TaskBuilder& builder)
+{
+	if (!(builder.graph->get_context<Table::Post::Upscale::UpscalerSelectors>().upscaler_type != ::Post::Upscale::UpscalerType::DLSSRR))
+		return FrameGraph::SetupResult::Disabled;
+	return FrameGraph::SetupResult::NeedsRender;
+}
+
+
+FrameGraph::SetupResult PassDefault<Passes::Subsurface::SSS_BlurV>::setup(
+	Passes::Subsurface::SSS_BlurV::Context& data, FrameGraph::TaskBuilder& builder)
+{
+	if (!(builder.graph->get_context<Table::Post::Upscale::UpscalerSelectors>().upscaler_type != ::Post::Upscale::UpscalerType::DLSSRR))
+		return FrameGraph::SetupResult::Disabled;
+	return FrameGraph::SetupResult::NeedsRender;
+}
+
+
+FrameGraph::SetupResult PassDefault<Passes::Subsurface::SSSRR_BlurH>::setup(
+	Passes::Subsurface::SSSRR_BlurH::Context& data, FrameGraph::TaskBuilder& builder)
+{
+	if (!(builder.graph->get_context<Table::Post::Upscale::UpscalerSelectors>().upscaler_type == ::Post::Upscale::UpscalerType::DLSSRR))
+		return FrameGraph::SetupResult::Disabled;
+	return FrameGraph::SetupResult::NeedsRender;
+}
+
+
+FrameGraph::SetupResult PassDefault<Passes::Subsurface::SSSRR_BlurV>::setup(
+	Passes::Subsurface::SSSRR_BlurV::Context& data, FrameGraph::TaskBuilder& builder)
+{
+	if (!(builder.graph->get_context<Table::Post::Upscale::UpscalerSelectors>().upscaler_type == ::Post::Upscale::UpscalerType::DLSSRR))
+		return FrameGraph::SetupResult::Disabled;
+	return FrameGraph::SetupResult::NeedsRender;
+}
+
+
 FrameGraph::SetupResult PassSetupDefault<Passes::Editor::stencil_renderer>::setup(
 	Passes::Editor::stencil_renderer::Context& data, FrameGraph::TaskBuilder& builder)
 {

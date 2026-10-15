@@ -761,14 +761,17 @@ namespace
         const char* sheen_roughness;
         const char* anisotropy;        // strength 0..1; "" = none
         const char* anisotropy_rotation; // in turns; "" = none
+        const char* subsurface;        // weight
+        const char* subsurface_radius; // colour: mean free path per channel
+        const char* subsurface_scale;  // float multiplier on the radius
     };
 
     const SurfaceMapping surface_mappings[] =
     {
-        { "standard_surface",  "base_color",   "base",        "metalness",      "specular_roughness", "emission_color", "emission",             "opacity",          "normal",          "coat",         "coat_roughness", "sheen",       "sheen_roughness", "specular_anisotropy", "specular_rotation" },
-        { "open_pbr_surface",  "base_color",   "base_weight", "base_metalness", "specular_roughness", "emission_color", "emission_luminance",   "geometry_opacity", "geometry_normal", "coat_weight",  "coat_roughness", "fuzz_weight", "fuzz_roughness", "specular_roughness_anisotropy", "" },
-        { "gltf_pbr",          "base_color",   "",            "metallic",       "roughness",          "emissive",       "emissive_strength",    "alpha",            "normal",          "clearcoat",    "clearcoat_roughness", "sheen_color", "sheen_roughness", "", "" },
-        { "UsdPreviewSurface", "diffuseColor", "",            "metallic",       "roughness",          "emissiveColor",  "",                     "opacity",          "normal",          "clearcoat",    "clearcoatRoughness", "",            "", "", "" },
+        { "standard_surface",  "base_color",   "base",        "metalness",      "specular_roughness", "emission_color", "emission",             "opacity",          "normal",          "coat",         "coat_roughness", "sheen",       "sheen_roughness", "specular_anisotropy", "specular_rotation", "subsurface", "subsurface_radius", "subsurface_scale" },
+        { "open_pbr_surface",  "base_color",   "base_weight", "base_metalness", "specular_roughness", "emission_color", "emission_luminance",   "geometry_opacity", "geometry_normal", "coat_weight",  "coat_roughness", "fuzz_weight", "fuzz_roughness", "specular_roughness_anisotropy", "", "subsurface_weight", "subsurface_radius_scale", "subsurface_radius" },
+        { "gltf_pbr",          "base_color",   "",            "metallic",       "roughness",          "emissive",       "emissive_strength",    "alpha",            "normal",          "clearcoat",    "clearcoat_roughness", "sheen_color", "sheen_roughness", "", "", "", "", "" },
+        { "UsdPreviewSurface", "diffuseColor", "",            "metallic",       "roughness",          "emissiveColor",  "",                     "opacity",          "normal",          "clearcoat",    "clearcoatRoughness", "",            "", "", "", "", "", "" },
     };
 
     class MtlxImporter
@@ -1103,6 +1106,7 @@ namespace
 
             // Anisotropy last: the lowest-priority shading model, so it is only
             // used when neither a coat nor a sheen took the material's one slot.
+            bool anisotropic = false;
             auto anisotropy = channel(shader, map->anisotropy, d);
 
             if (nonzero(anisotropy))
@@ -1113,6 +1117,25 @@ namespace
                 {
                     emit(anisotropy, graph->get_anisotropy(), 1);
                     emit(channel(shader, map->anisotropy_rotation, d), graph->get_anisotropy_rotation(), 1);
+                    anisotropic = true;
+                }
+            }
+
+            // Subsurface: lowest priority of the shading models. The weight,
+            // radius colour and radius scale are separate outputs; the shader
+            // packs weight * scale * radius. subsurface_color is not applied --
+            // the base colour is what gets blurred.
+            auto subsurface = channel(shader, map->subsurface, d);
+
+            if (nonzero(subsurface))
+            {
+                if (coated || sheened || anisotropic)
+                    Log::get() << Log::LEVEL_WARNING << "MaterialX import: material has subsurface and another shading model; subsurface is dropped" << Log::endl;
+                else
+                {
+                    emit(subsurface, graph->get_subsurface_weight(), 1);
+                    emit(channel(shader, map->subsurface_radius, d), graph->get_subsurface_radius(), 4);
+                    emit(channel(shader, map->subsurface_scale, d), graph->get_subsurface_scale(), 1);
                 }
             }
 

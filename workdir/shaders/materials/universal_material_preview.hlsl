@@ -51,7 +51,7 @@ float4 tile_sample(Texture2D<float4> tex, SamplerState s, float2 tc, Texture2D<f
 
 #define sample(tex, s, tc, lod) get_texture(tex).SampleLevel(s, tc, lod);
 
-void COMPILED_FUNC(in float3 a, in float2 b, out float4 c, out float d, out float e, out float4 f, out float4 g, out float h, out float ior, out float thickness, out float transmission, out float absorption_distance, out float coat, out float coat_roughness, out float sheen, out float sheen_roughness, out float anisotropy, out float aniso_rotation, float lod);
+void COMPILED_FUNC(in float3 a, in float2 b, out float4 c, out float d, out float e, out float4 f, out float4 g, out float h, out float ior, out float thickness, out float transmission, out float absorption_distance, out float coat, out float coat_roughness, out float sheen, out float sheen_roughness, out float anisotropy, out float aniso_rotation, out float sss_weight, out float3 sss_radius, out float sss_scale, float lod);
 
 [numthreads(8, 8, 1)]
 void CS(uint3 id : SV_DispatchThreadID)
@@ -124,7 +124,7 @@ void CS(uint3 id : SV_DispatchThreadID)
     float4 normal      = 0;
     float4 glow        = 0;
     float  opacity     = 1;
-    float  refraction  = 1, thickness = 0, transmission = 1, absorption_distance = 1, coat = 0, coat_roughness = 0.1, sheen = 0, sheen_roughness = 0.3, anisotropy = 0, aniso_rotation = 0;
+    float  refraction  = 1, thickness = 0, transmission = 1, absorption_distance = 1, coat = 0, coat_roughness = 0.1, sheen = 0, sheen_roughness = 0.3, anisotropy = 0, aniso_rotation = 0, sss_weight = 0, sss_scale = 1; float3 sss_radius = float3(1, 1, 1);
 
-    COMPILED_FUNC(pos, tc, color, metallic, roughness, normal, glow, opacity, refraction, thickness, transmission, absorption_distance, coat, coat_roughness, sheen, sheen_roughness, anisotropy, aniso_rotation, 0);
+    COMPILED_FUNC(pos, tc, color, metallic, roughness, normal, glow, opacity, refraction, thickness, transmission, absorption_distance, coat, coat_roughness, sheen, sheen_roughness, anisotropy, aniso_rotation, sss_weight, sss_radius, sss_scale, 0);
 }

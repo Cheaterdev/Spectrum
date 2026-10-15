@@ -468,6 +468,11 @@ class MaterialGraph : public MaterialFunction
         // tangent's rotation about the normal in turns (0..1).
         FlowGraph::output::ptr i_anisotropy;
         FlowGraph::output::ptr i_anisotropy_rotation;
+        // Subsurface scattering (shading model SUBSURFACE): weight, the per-channel
+        // mean free path and a scale on it, in scene units.
+        FlowGraph::output::ptr i_sss_weight;
+        FlowGraph::output::ptr i_sss_radius;
+        FlowGraph::output::ptr i_sss_scale;
 
         void set_translucent_defaults();
         void restore_coat_outputs();
@@ -512,6 +517,9 @@ class MaterialGraph : public MaterialFunction
         FlowGraph::output::ptr get_sheen_roughness();
         FlowGraph::output::ptr get_anisotropy();
         FlowGraph::output::ptr get_anisotropy_rotation();
+        FlowGraph::output::ptr get_subsurface_weight();
+        FlowGraph::output::ptr get_subsurface_radius();
+        FlowGraph::output::ptr get_subsurface_scale();
         void set_translucent_outputs_enabled(bool enabled);
         void set_coat_outputs_enabled(bool enabled);
         virtual void start(MaterialContext* context);

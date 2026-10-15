@@ -11,6 +11,7 @@
 //   SHEEN      -- r: sheen weight, g: sheen roughness, b: unused
 //   ANISOTROPIC-- r: anisotropy, g: tangent angle / pi in the normal's own frame
 //                 (see material_frame / aniso_encode_tangent), b: unused
+//   SUBSURFACE -- rgb: scatter radius per channel, sqrt-encoded (sss_encode_radius)
 //
 // A material has one model, not a combination: that is what keeps this at four
 // bytes per pixel.
@@ -19,6 +20,11 @@
 #define SHADING_MODEL_CLEARCOAT 1
 #define SHADING_MODEL_SHEEN     2
 #define SHADING_MODEL_ANISOTROPIC 3
+#define SHADING_MODEL_SUBSURFACE  4
+
+// Scatter radius is stored as sqrt(radius / SSS_MAX_RADIUS): 8 bits linear would
+// resolve nothing below 1/255 of the maximum, and skin-like radii are small.
+#define SSS_MAX_RADIUS 4.0
 
 float4 pack_material(uint model, float3 params)
 {
@@ -72,12 +78,25 @@ float3 aniso_decode_tangent(float3 N, float encoded)
     return cos(phi) * U + sin(phi) * B;
 }
 
+float3 sss_encode_radius(float3 radius)
+{
+    return sqrt(saturate(radius / SSS_MAX_RADIUS));
+}
+
+float3 sss_decode_radius(float3 encoded)
+{
+    return encoded * encoded * SSS_MAX_RADIUS;
+}
+
 // What the material graph's extra outputs select. A lobe that is effectively
-// off stays STANDARD so lighting skips it. One model per material: coat wins
-// over sheen, sheen over anisotropy. `rotation` is the tangent's turn about N
-// in turns; N and T are the shading normal and the mesh tangent.
+// off stays STANDARD so lighting skips it. One model per material, in priority
+// order: coat, sheen, anisotropy, subsurface. `rotation` is the tangent's turn
+// about N in turns; N and T are the shading normal and the mesh tangent; the
+// subsurface radius is weight * scale * radius, in scene units.
 float4 pack_material_from_graph(float coat, float coat_roughness, float sheen, float sheen_roughness,
-                                float anisotropy, float rotation, float3 N, float3 T)
+                                float anisotropy, float rotation,
+                                float sss_weight, float3 sss_radius, float sss_scale,
+                                float3 N, float3 T)
 {
     if (coat > 0.001)
         return pack_material(SHADING_MODEL_CLEARCOAT, float3(coat, coat_roughness, 0.0));
@@ -93,7 +112,17 @@ float4 pack_material_from_graph(float coat, float coat_roughness, float sheen, f
         return pack_material(SHADING_MODEL_ANISOTROPIC, float3(anisotropy, aniso_encode_tangent(N, T), 0.0));
     }
 
+    if (sss_weight > 0.001)
+        return pack_material(SHADING_MODEL_SUBSURFACE, sss_encode_radius(sss_radius * (sss_scale * sss_weight)));
+
     return pack_material(SHADING_MODEL_STANDARD, 0.0);
+}
+
+// Without subsurface -- for callers (and tests) that only deal in the other lobes.
+float4 pack_material_from_graph(float coat, float coat_roughness, float sheen, float sheen_roughness,
+                                float anisotropy, float rotation, float3 N, float3 T)
+{
+    return pack_material_from_graph(coat, coat_roughness, sheen, sheen_roughness, anisotropy, rotation, 0.0, 1.0, 1.0, N, T);
 }
 
 #endif

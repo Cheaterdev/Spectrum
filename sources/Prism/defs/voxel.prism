@@ -387,6 +387,9 @@ namespace GI
 		GBuffer gbuffer;
 		Texture2D<float4> reflection;
 		Texture2D<float4> coat;
+		# SUBSURFACE pixels only: the specular part, parked for the SSS blur to add
+		# back after it has blurred the diffuse part (see sss.prism).
+		RWTexture2D<float4> specular_out;
 		Texture2D<float4> indirect;
 		Texture2D<float4> shadow;
 
@@ -784,6 +787,7 @@ namespace GI
 		[Always = Read] Texture RTXReflectionCoat;
 
 		[Always = UnorderedAccess] [Size = ViewportContext::frame_size] [Format = R16G16B16A16_FLOAT] Texture ResultTextureRTXNoise;
+		[Always = UnorderedAccess] [Size = ViewportContext::frame_size] [Format = R16G16B16A16_FLOAT] Texture RTXCombineSpecular;
 	}
 
 	namespace Voxel

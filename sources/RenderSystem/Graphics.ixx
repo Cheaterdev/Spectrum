@@ -67,6 +67,7 @@ export import :NRD_SIGMA_Execute;
 export import :NRD_IndirectCombine;
 export import :NRD_ShadowCombine;
 export import :RTXCombine;
+export import :SSS;
 export import :BlueNoise;
 export import :SceneFrameRenderer;
 

@@ -45,8 +45,13 @@
 #include "../Shadows/VSM/Dev/VSM_DebugClassifyOverlay.h"
 #include "../Denoise/NRD/NRD_REBLUR_Execute.h"
 #include "../Denoise/NRD/NRD_IndirectCombine.h"
+#include "../Subsurface/SSS_Classify.h"
+#include "../Subsurface/SSS_BlurH.h"
+#include "../Subsurface/SSS_BlurV.h"
 #include "../Reflections/ReflCombine.h"
 #include "../GI/RTXCombine.h"
+#include "../Subsurface/SSSRR_BlurH.h"
+#include "../Subsurface/SSSRR_BlurV.h"
 #include "../Denoise/NRD/NRD_SIGMA_Execute.h"
 #include "../Denoise/NRD/NRD_ShadowCombine.h"
 #include "../GI/DDGI/Dev/DDGIDebug.h"
@@ -169,8 +174,13 @@ namespace Frame
 			Passes::Shadows::VSM::Dev::VSM_DebugClassifyOverlay::Name.ptr,
 			Passes::Denoise::NRD::NRD_REBLUR_Execute::Name.ptr,
 			Passes::Denoise::NRD::NRD_IndirectCombine::Name.ptr,
+			Passes::Subsurface::SSS_Classify::Name.ptr,
+			Passes::Subsurface::SSS_BlurH::Name.ptr,
+			Passes::Subsurface::SSS_BlurV::Name.ptr,
 			Passes::Reflections::ReflCombine::Name.ptr,
 			Passes::GI::RTXCombine::Name.ptr,
+			Passes::Subsurface::SSSRR_BlurH::Name.ptr,
+			Passes::Subsurface::SSSRR_BlurV::Name.ptr,
 			Passes::Denoise::NRD::NRD_SIGMA_Execute::Name.ptr,
 			Passes::Denoise::NRD::NRD_ShadowCombine::Name.ptr,
 			Passes::GI::DDGI::Dev::DDGIDebug::Name.ptr,
@@ -285,7 +295,10 @@ namespace Frame
 			L"RTXIndirectDenoised",
 			L"RTXIndirectDenoisedPreview",
 			L"RTXReflectionDenoised",
+			L"SSSTiles",
+			L"SSSTemp",
 			L"ResultTextureRTXNoise",
+			L"RTXCombineSpecular",
 			L"VSM_ShadowDenoised",
 			L"ResultTextureNew",
 			L"ExposureState",
@@ -497,15 +510,20 @@ namespace Frame
 			{ PassID::VSM_Unshadowed, 0 },
 			{ PassID::VSM_DebugClassifyOverlay, 0 },
 			{ PassID::NRD_IndirectCombine, 0 },
+			{ PassID::SSS_Classify, 0 },
+			{ PassID::SSS_BlurH, 0 },
+			{ PassID::SSS_BlurV, 0 },
 			{ PassID::ReflCombine, 0 },
 			{ PassID::RTXCombine, 0 },
+			{ PassID::SSSRR_BlurH, 0 },
+			{ PassID::SSSRR_BlurV, 0 },
 			{ PassID::NRD_ShadowCombine, 0 },
 			{ PassID::UpscalingDLSSRR, 0 },
 			{ PassID::VoxelDebug, 0 },
 		};
 		static inline const FrameGraph::PrecompiledState GBuffer_Albedo_c0_states[] = {
 			{ true, { GBuffer_Albedo_c0_pass_refs + 0, 1 } },
-			{ false, { GBuffer_Albedo_c0_pass_refs + 1, 23 } },
+			{ false, { GBuffer_Albedo_c0_pass_refs + 1, 28 } },
 		};
 		static inline const FrameGraph::PassRef GBuffer_Normals_c0_pass_refs[] = {
 			{ PassID::Scene, 0 },
@@ -528,14 +546,19 @@ namespace Frame
 			{ PassID::VSM_Unshadowed, 0 },
 			{ PassID::VSM_DebugClassifyOverlay, 0 },
 			{ PassID::NRD_IndirectCombine, 0 },
+			{ PassID::SSS_Classify, 0 },
+			{ PassID::SSS_BlurH, 0 },
+			{ PassID::SSS_BlurV, 0 },
 			{ PassID::ReflCombine, 0 },
 			{ PassID::RTXCombine, 0 },
+			{ PassID::SSSRR_BlurH, 0 },
+			{ PassID::SSSRR_BlurV, 0 },
 			{ PassID::NRD_ShadowCombine, 0 },
 			{ PassID::VoxelDebug, 0 },
 		};
 		static inline const FrameGraph::PrecompiledState GBuffer_Normals_c0_states[] = {
 			{ true, { GBuffer_Normals_c0_pass_refs + 0, 1 } },
-			{ false, { GBuffer_Normals_c0_pass_refs + 1, 23 } },
+			{ false, { GBuffer_Normals_c0_pass_refs + 1, 28 } },
 		};
 		static inline const FrameGraph::PassRef GBuffer_Depth_c0_pass_refs[] = {
 			{ PassID::Scene, 0 },
@@ -569,14 +592,19 @@ namespace Frame
 			{ PassID::VSM_Unshadowed, 0 },
 			{ PassID::VSM_DebugClassifyOverlay, 0 },
 			{ PassID::NRD_IndirectCombine, 0 },
+			{ PassID::SSS_Classify, 0 },
+			{ PassID::SSS_BlurH, 0 },
+			{ PassID::SSS_BlurV, 0 },
 			{ PassID::ReflCombine, 0 },
 			{ PassID::RTXCombine, 0 },
+			{ PassID::SSSRR_BlurH, 0 },
+			{ PassID::SSSRR_BlurV, 0 },
 			{ PassID::NRD_ShadowCombine, 0 },
 			{ PassID::VoxelDebug, 0 },
 		};
 		static inline const FrameGraph::PrecompiledState GBuffer_Specular_c0_states[] = {
 			{ true, { GBuffer_Specular_c0_pass_refs + 0, 1 } },
-			{ false, { GBuffer_Specular_c0_pass_refs + 1, 21 } },
+			{ false, { GBuffer_Specular_c0_pass_refs + 1, 26 } },
 		};
 		static inline const FrameGraph::PassRef GBuffer_Speed_c0_pass_refs[] = {
 			{ PassID::Scene, 0 },
@@ -597,8 +625,13 @@ namespace Frame
 			{ PassID::VSM_Unshadowed, 0 },
 			{ PassID::VSM_DebugClassifyOverlay, 0 },
 			{ PassID::NRD_IndirectCombine, 0 },
+			{ PassID::SSS_Classify, 0 },
+			{ PassID::SSS_BlurH, 0 },
+			{ PassID::SSS_BlurV, 0 },
 			{ PassID::ReflCombine, 0 },
 			{ PassID::RTXCombine, 0 },
+			{ PassID::SSSRR_BlurH, 0 },
+			{ PassID::SSSRR_BlurV, 0 },
 			{ PassID::NRD_ShadowCombine, 0 },
 			{ PassID::BloomBuild, 0 },
 			{ PassID::UpscalingDLSS, 0 },
@@ -607,7 +640,7 @@ namespace Frame
 		};
 		static inline const FrameGraph::PrecompiledState GBuffer_Speed_c0_states[] = {
 			{ true, { GBuffer_Speed_c0_pass_refs + 0, 1 } },
-			{ false, { GBuffer_Speed_c0_pass_refs + 1, 24 } },
+			{ false, { GBuffer_Speed_c0_pass_refs + 1, 29 } },
 		};
 		static inline const FrameGraph::PassRef GBuffer_ObjectID_c0_pass_refs[] = {
 			{ PassID::Scene, 0 },
@@ -623,12 +656,17 @@ namespace Frame
 			{ PassID::VSM_ShadowResolve, 0 },
 			{ PassID::VSM_Combine, 0 },
 			{ PassID::VSM_Unshadowed, 0 },
+			{ PassID::SSS_Classify, 0 },
+			{ PassID::SSS_BlurH, 0 },
+			{ PassID::SSS_BlurV, 0 },
 			{ PassID::ReflCombine, 0 },
 			{ PassID::RTXCombine, 0 },
+			{ PassID::SSSRR_BlurH, 0 },
+			{ PassID::SSSRR_BlurV, 0 },
 		};
 		static inline const FrameGraph::PrecompiledState GBuffer_Material_c0_states[] = {
 			{ true, { GBuffer_Material_c0_pass_refs + 0, 1 } },
-			{ false, { GBuffer_Material_c0_pass_refs + 1, 6 } },
+			{ false, { GBuffer_Material_c0_pass_refs + 1, 11 } },
 		};
 		static inline const FrameGraph::PassRef GBuffer_DepthMips_c0_pass_refs[] = {
 			{ PassID::Scene, 0 },
@@ -650,15 +688,20 @@ namespace Frame
 			{ PassID::VSM_Unshadowed, 0 },
 			{ PassID::VSM_DebugClassifyOverlay, 0 },
 			{ PassID::NRD_IndirectCombine, 0 },
+			{ PassID::SSS_Classify, 0 },
+			{ PassID::SSS_BlurH, 0 },
+			{ PassID::SSS_BlurV, 0 },
 			{ PassID::ReflCombine, 0 },
 			{ PassID::RTXCombine, 0 },
+			{ PassID::SSSRR_BlurH, 0 },
+			{ PassID::SSSRR_BlurV, 0 },
 			{ PassID::NRD_ShadowCombine, 0 },
 			{ PassID::DDGIDebug, 0 },
 			{ PassID::VoxelDebug, 0 },
 		};
 		static inline const FrameGraph::PrecompiledState GBuffer_DepthMips_c0_states[] = {
 			{ true, { GBuffer_DepthMips_c0_pass_refs + 0, 1 } },
-			{ false, { GBuffer_DepthMips_c0_pass_refs + 1, 23 } },
+			{ false, { GBuffer_DepthMips_c0_pass_refs + 1, 28 } },
 		};
 		static inline const FrameGraph::PassRef GBuffer_Quality_c0_pass_refs[] = {
 			{ PassID::Scene, 0 },
@@ -756,6 +799,8 @@ namespace Frame
 			{ PassID::VSM_Unshadowed, 0 },
 			{ PassID::VSM_DebugClassifyOverlay, 0 },
 			{ PassID::NRD_IndirectCombine, 0 },
+			{ PassID::SSS_BlurH, 0 },
+			{ PassID::SSS_BlurV, 0 },
 			{ PassID::ReflCombine, 0 },
 			{ PassID::NRD_ShadowCombine, 0 },
 			{ PassID::DDGIDebug, 0 },
@@ -769,11 +814,13 @@ namespace Frame
 			{ true, { ResultTexture_c0_pass_refs + 3, 1 } },
 			{ true, { ResultTexture_c0_pass_refs + 4, 1 } },
 			{ true, { ResultTexture_c0_pass_refs + 5, 1 } },
-			{ true, { ResultTexture_c0_pass_refs + 6, 1 } },
+			{ false, { ResultTexture_c0_pass_refs + 6, 1 } },
 			{ true, { ResultTexture_c0_pass_refs + 7, 1 } },
 			{ true, { ResultTexture_c0_pass_refs + 8, 1 } },
 			{ true, { ResultTexture_c0_pass_refs + 9, 1 } },
-			{ false, { ResultTexture_c0_pass_refs + 10, 1 } },
+			{ true, { ResultTexture_c0_pass_refs + 10, 1 } },
+			{ true, { ResultTexture_c0_pass_refs + 11, 1 } },
+			{ false, { ResultTexture_c0_pass_refs + 12, 1 } },
 		};
 		static inline const FrameGraph::PassRef GBuffer_TempColor_c0_pass_refs[] = {
 			{ PassID::GBufferDownsampler, 0 },
@@ -1464,13 +1511,48 @@ namespace Frame
 			{ true, { RTXReflectionDenoised_c0_pass_refs + 0, 1 } },
 			{ false, { RTXReflectionDenoised_c0_pass_refs + 1, 1 } },
 		};
+		static inline const FrameGraph::PassRef SSSTiles_c0_pass_refs[] = {
+			{ PassID::SSS_Classify, 0 },
+			{ PassID::SSS_BlurH, 0 },
+			{ PassID::SSS_BlurV, 0 },
+			{ PassID::SSSRR_BlurH, 0 },
+			{ PassID::SSSRR_BlurV, 0 },
+		};
+		static inline const FrameGraph::PrecompiledState SSSTiles_c0_states[] = {
+			{ true, { SSSTiles_c0_pass_refs + 0, 1 } },
+			{ false, { SSSTiles_c0_pass_refs + 1, 4 } },
+		};
+		static inline const FrameGraph::PassRef SSSTemp_c0_pass_refs[] = {
+			{ PassID::SSS_BlurH, 0 },
+			{ PassID::SSS_BlurV, 0 },
+			{ PassID::SSSRR_BlurH, 0 },
+			{ PassID::SSSRR_BlurV, 0 },
+		};
+		static inline const FrameGraph::PrecompiledState SSSTemp_c0_states[] = {
+			{ true, { SSSTemp_c0_pass_refs + 0, 1 } },
+			{ false, { SSSTemp_c0_pass_refs + 1, 1 } },
+			{ true, { SSSTemp_c0_pass_refs + 2, 1 } },
+			{ false, { SSSTemp_c0_pass_refs + 3, 1 } },
+		};
 		static inline const FrameGraph::PassRef ResultTextureRTXNoise_c0_pass_refs[] = {
 			{ PassID::RTXCombine, 0 },
+			{ PassID::SSSRR_BlurH, 0 },
+			{ PassID::SSSRR_BlurV, 0 },
 			{ PassID::UpscalingDLSSRR, 0 },
 		};
 		static inline const FrameGraph::PrecompiledState ResultTextureRTXNoise_c0_states[] = {
 			{ true, { ResultTextureRTXNoise_c0_pass_refs + 0, 1 } },
 			{ false, { ResultTextureRTXNoise_c0_pass_refs + 1, 1 } },
+			{ true, { ResultTextureRTXNoise_c0_pass_refs + 2, 1 } },
+			{ false, { ResultTextureRTXNoise_c0_pass_refs + 3, 1 } },
+		};
+		static inline const FrameGraph::PassRef RTXCombineSpecular_c0_pass_refs[] = {
+			{ PassID::RTXCombine, 0 },
+			{ PassID::SSSRR_BlurV, 0 },
+		};
+		static inline const FrameGraph::PrecompiledState RTXCombineSpecular_c0_states[] = {
+			{ true, { RTXCombineSpecular_c0_pass_refs + 0, 1 } },
+			{ false, { RTXCombineSpecular_c0_pass_refs + 1, 1 } },
 		};
 		static inline const FrameGraph::PassRef VSM_ShadowDenoised_c0_pass_refs[] = {
 			{ PassID::NRD_SIGMA_Execute, 0 },
@@ -1748,7 +1830,10 @@ namespace Frame
 			{ ResourceID::RTXIndirectDenoised, 0, RTXIndirectDenoised_c0_states },
 			{ ResourceID::RTXIndirectDenoisedPreview, 0, RTXIndirectDenoisedPreview_c0_states },
 			{ ResourceID::RTXReflectionDenoised, 0, RTXReflectionDenoised_c0_states },
+			{ ResourceID::SSSTiles, 0, SSSTiles_c0_states },
+			{ ResourceID::SSSTemp, 0, SSSTemp_c0_states },
 			{ ResourceID::ResultTextureRTXNoise, 0, ResultTextureRTXNoise_c0_states },
+			{ ResourceID::RTXCombineSpecular, 0, RTXCombineSpecular_c0_states },
 			{ ResourceID::VSM_ShadowDenoised, 0, VSM_ShadowDenoised_c0_states },
 			{ ResourceID::ResultTexture, 1, ResultTexture_c1_states },
 			{ ResourceID::ExposureState, 0, ExposureState_c0_states },
@@ -2390,11 +2475,37 @@ namespace Frame
 			{ PassID::VSM_ShadowResolve, 0 },
 			{ PassID::VSM_Unshadowed, 0 },
 		};
+		static inline const FrameGraph::PassRef SSS_Classify_0_prev[] = {
+			{ PassID::Scene, 0 },
+		};
+		static inline const FrameGraph::PassRef SSS_BlurH_0_prev[] = {
+			{ PassID::NRD_IndirectCombine, 0 },
+			{ PassID::ResultCreation, 0 },
+			{ PassID::SSS_Classify, 0 },
+			{ PassID::Scene, 0 },
+			{ PassID::VSM_Combine, 0 },
+			{ PassID::VSM_DebugClassifyOverlay, 0 },
+			{ PassID::VSM_ShadowResolve, 0 },
+			{ PassID::VSM_Unshadowed, 0 },
+		};
+		static inline const FrameGraph::PassRef SSS_BlurV_0_prev[] = {
+			{ PassID::NRD_IndirectCombine, 0 },
+			{ PassID::ResultCreation, 0 },
+			{ PassID::SSS_BlurH, 0 },
+			{ PassID::SSS_Classify, 0 },
+			{ PassID::Scene, 0 },
+			{ PassID::VSM_Combine, 0 },
+			{ PassID::VSM_DebugClassifyOverlay, 0 },
+			{ PassID::VSM_ShadowResolve, 0 },
+			{ PassID::VSM_Unshadowed, 0 },
+		};
 		static inline const FrameGraph::PassRef ReflCombine_0_prev[] = {
 			{ PassID::NRD_IndirectCombine, 0 },
 			{ PassID::NRD_REBLUR_Execute, 0 },
 			{ PassID::ReflectionRTX, 0 },
 			{ PassID::ResultCreation, 0 },
+			{ PassID::SSS_BlurH, 0 },
+			{ PassID::SSS_BlurV, 0 },
 			{ PassID::Scene, 0 },
 			{ PassID::VSM_Combine, 0 },
 			{ PassID::VSM_DebugClassifyOverlay, 0 },
@@ -2407,6 +2518,21 @@ namespace Frame
 			{ PassID::Scene, 0 },
 			{ PassID::ShadowRTX, 0 },
 		};
+		static inline const FrameGraph::PassRef SSSRR_BlurH_0_prev[] = {
+			{ PassID::RTXCombine, 0 },
+			{ PassID::SSS_BlurH, 0 },
+			{ PassID::SSS_BlurV, 0 },
+			{ PassID::SSS_Classify, 0 },
+			{ PassID::Scene, 0 },
+		};
+		static inline const FrameGraph::PassRef SSSRR_BlurV_0_prev[] = {
+			{ PassID::RTXCombine, 0 },
+			{ PassID::SSSRR_BlurH, 0 },
+			{ PassID::SSS_BlurH, 0 },
+			{ PassID::SSS_BlurV, 0 },
+			{ PassID::SSS_Classify, 0 },
+			{ PassID::Scene, 0 },
+		};
 		static inline const FrameGraph::PassRef NRD_SIGMA_Execute_0_prev[] = {
 			{ PassID::NRD_GBufferPack, 0 },
 			{ PassID::ShadowRTX, 0 },
@@ -2417,6 +2543,8 @@ namespace Frame
 			{ PassID::NRD_SIGMA_Execute, 0 },
 			{ PassID::ReflCombine, 0 },
 			{ PassID::ResultCreation, 0 },
+			{ PassID::SSS_BlurH, 0 },
+			{ PassID::SSS_BlurV, 0 },
 			{ PassID::Scene, 0 },
 			{ PassID::VSM_Combine, 0 },
 			{ PassID::VSM_DebugClassifyOverlay, 0 },
@@ -2452,6 +2580,8 @@ namespace Frame
 			{ PassID::ReflectionRTX, 0 },
 			{ PassID::ReflectionRTXHalf, 0 },
 			{ PassID::ResultCreation, 0 },
+			{ PassID::SSS_BlurH, 0 },
+			{ PassID::SSS_BlurV, 0 },
 			{ PassID::Scene, 0 },
 			{ PassID::VSM_Combine, 0 },
 			{ PassID::VSM_DebugClassifyOverlay, 0 },
@@ -2464,6 +2594,8 @@ namespace Frame
 			{ PassID::NRD_ShadowCombine, 0 },
 			{ PassID::ReflCombine, 0 },
 			{ PassID::ResultCreation, 0 },
+			{ PassID::SSS_BlurH, 0 },
+			{ PassID::SSS_BlurV, 0 },
 			{ PassID::Scene, 0 },
 			{ PassID::VSM_Combine, 0 },
 			{ PassID::VSM_DebugClassifyOverlay, 0 },
@@ -2479,6 +2611,8 @@ namespace Frame
 			{ PassID::PreScene, 0 },
 			{ PassID::ReflCombine, 0 },
 			{ PassID::ResultCreation, 0 },
+			{ PassID::SSS_BlurH, 0 },
+			{ PassID::SSS_BlurV, 0 },
 			{ PassID::Scene, 0 },
 			{ PassID::Sky, 0 },
 			{ PassID::VSM_Combine, 0 },
@@ -2492,6 +2626,8 @@ namespace Frame
 			{ PassID::NRD_ShadowCombine, 0 },
 			{ PassID::ReflCombine, 0 },
 			{ PassID::ResultCreation, 0 },
+			{ PassID::SSS_BlurH, 0 },
+			{ PassID::SSS_BlurV, 0 },
 			{ PassID::Scene, 0 },
 			{ PassID::Sky, 0 },
 			{ PassID::TranslucentRTX, 0 },
@@ -2510,6 +2646,8 @@ namespace Frame
 			{ PassID::NRD_ShadowCombine, 0 },
 			{ PassID::ReflCombine, 0 },
 			{ PassID::ResultCreation, 0 },
+			{ PassID::SSS_BlurH, 0 },
+			{ PassID::SSS_BlurV, 0 },
 			{ PassID::Sky, 0 },
 			{ PassID::TranslucentRTX, 0 },
 			{ PassID::VSM_Combine, 0 },
@@ -2525,6 +2663,8 @@ namespace Frame
 			{ PassID::ReflCombine, 0 },
 			{ PassID::ResultCreation, 0 },
 			{ PassID::SMAA, 0 },
+			{ PassID::SSS_BlurH, 0 },
+			{ PassID::SSS_BlurV, 0 },
 			{ PassID::Sky, 0 },
 			{ PassID::TranslucentRTX, 0 },
 			{ PassID::VSM_Combine, 0 },
@@ -2541,6 +2681,8 @@ namespace Frame
 			{ PassID::ReflCombine, 0 },
 			{ PassID::ResultCreation, 0 },
 			{ PassID::SMAA, 0 },
+			{ PassID::SSS_BlurH, 0 },
+			{ PassID::SSS_BlurV, 0 },
 			{ PassID::Scene, 0 },
 			{ PassID::Sky, 0 },
 			{ PassID::TranslucentRTX, 0 },
@@ -2561,6 +2703,10 @@ namespace Frame
 			{ PassID::ReflectionRTX, 0 },
 			{ PassID::ResultCreation, 0 },
 			{ PassID::SMAA, 0 },
+			{ PassID::SSSRR_BlurH, 0 },
+			{ PassID::SSSRR_BlurV, 0 },
+			{ PassID::SSS_BlurH, 0 },
+			{ PassID::SSS_BlurV, 0 },
 			{ PassID::Scene, 0 },
 			{ PassID::Sky, 0 },
 			{ PassID::TranslucentRTX, 0 },
@@ -2580,6 +2726,8 @@ namespace Frame
 			{ PassID::ReflCombine, 0 },
 			{ PassID::ResultCreation, 0 },
 			{ PassID::SMAA, 0 },
+			{ PassID::SSS_BlurH, 0 },
+			{ PassID::SSS_BlurV, 0 },
 			{ PassID::Sky, 0 },
 			{ PassID::TranslucentRTX, 0 },
 			{ PassID::UpscalingDLSS, 0 },
@@ -2600,6 +2748,8 @@ namespace Frame
 			{ PassID::ReflCombine, 0 },
 			{ PassID::ResultCreation, 0 },
 			{ PassID::SMAA, 0 },
+			{ PassID::SSS_BlurH, 0 },
+			{ PassID::SSS_BlurV, 0 },
 			{ PassID::Sky, 0 },
 			{ PassID::TranslucentRTX, 0 },
 			{ PassID::UpscalingDLSS, 0 },
@@ -2620,6 +2770,8 @@ namespace Frame
 			{ PassID::ReflCombine, 0 },
 			{ PassID::ResultCreation, 0 },
 			{ PassID::SMAA, 0 },
+			{ PassID::SSS_BlurH, 0 },
+			{ PassID::SSS_BlurV, 0 },
 			{ PassID::Sky, 0 },
 			{ PassID::TranslucentRTX, 0 },
 			{ PassID::UpscalingDLSS, 0 },
@@ -2640,6 +2792,8 @@ namespace Frame
 			{ PassID::ReflCombine, 0 },
 			{ PassID::ResultCreation, 0 },
 			{ PassID::SMAA, 0 },
+			{ PassID::SSS_BlurH, 0 },
+			{ PassID::SSS_BlurV, 0 },
 			{ PassID::Scene, 0 },
 			{ PassID::Sky, 0 },
 			{ PassID::Tonemap, 0 },
@@ -2725,8 +2879,13 @@ namespace Frame
 			{ PassID::VSM_DebugClassifyOverlay, 0, true, VSM_DebugClassifyOverlay_0_prev },
 			{ PassID::NRD_REBLUR_Execute, 0, false, NRD_REBLUR_Execute_0_prev },
 			{ PassID::NRD_IndirectCombine, 0, true, NRD_IndirectCombine_0_prev },
+			{ PassID::SSS_Classify, 0, true, SSS_Classify_0_prev },
+			{ PassID::SSS_BlurH, 0, true, SSS_BlurH_0_prev },
+			{ PassID::SSS_BlurV, 0, true, SSS_BlurV_0_prev },
 			{ PassID::ReflCombine, 0, true, ReflCombine_0_prev },
 			{ PassID::RTXCombine, 0, true, RTXCombine_0_prev },
+			{ PassID::SSSRR_BlurH, 0, true, SSSRR_BlurH_0_prev },
+			{ PassID::SSSRR_BlurV, 0, true, SSSRR_BlurV_0_prev },
 			{ PassID::NRD_SIGMA_Execute, 0, false, NRD_SIGMA_Execute_0_prev },
 			{ PassID::NRD_ShadowCombine, 0, true, NRD_ShadowCombine_0_prev },
 			{ PassID::DDGIDebug, 0, false, DDGIDebug_0_prev },
@@ -2888,11 +3047,16 @@ namespace Frame
 				graph.add_library_pass<Passes::Shadows::VSM::Dev::VSM_DebugClassifyOverlay>(PassSetupDefault<Passes::Shadows::VSM::Dev::VSM_DebugClassifyOverlay>::setup, vSM_DebugClassifyOverlay.render_func, (vSM_DebugClassifyOverlay.flags));
 			graph.add_library_pass<Passes::Denoise::NRD::NRD_REBLUR_Execute>(PassDefault<Passes::Denoise::NRD::NRD_REBLUR_Execute>::setup, PassDefault<Passes::Denoise::NRD::NRD_REBLUR_Execute>::render, (PassDefault<Passes::Denoise::NRD::NRD_REBLUR_Execute>::flags));
 			graph.add_library_pass<Passes::Denoise::NRD::NRD_IndirectCombine>(PassDefault<Passes::Denoise::NRD::NRD_IndirectCombine>::setup, PassDefault<Passes::Denoise::NRD::NRD_IndirectCombine>::render, (PassDefault<Passes::Denoise::NRD::NRD_IndirectCombine>::flags));
+			graph.add_library_pass<Passes::Subsurface::SSS_Classify>(PassDefault<Passes::Subsurface::SSS_Classify>::setup, PassDefault<Passes::Subsurface::SSS_Classify>::render, (PassDefault<Passes::Subsurface::SSS_Classify>::flags));
+			graph.add_library_pass<Passes::Subsurface::SSS_BlurH>(PassDefault<Passes::Subsurface::SSS_BlurH>::setup, PassDefault<Passes::Subsurface::SSS_BlurH>::render, (PassDefault<Passes::Subsurface::SSS_BlurH>::flags));
+			graph.add_library_pass<Passes::Subsurface::SSS_BlurV>(PassDefault<Passes::Subsurface::SSS_BlurV>::setup, PassDefault<Passes::Subsurface::SSS_BlurV>::render, (PassDefault<Passes::Subsurface::SSS_BlurV>::flags));
 			// Setup is generated (PassSetupDefault<T>, pass_defaults.h); the owner
 			// only supplies render_func, so that is what gates registration.
 			if (reflCombine.render_func)
 				graph.add_library_pass<Passes::Reflections::ReflCombine>(PassSetupDefault<Passes::Reflections::ReflCombine>::setup, reflCombine.render_func, (reflCombine.flags));
 			graph.add_library_pass<Passes::GI::RTXCombine>(PassDefault<Passes::GI::RTXCombine>::setup, PassDefault<Passes::GI::RTXCombine>::render, (PassDefault<Passes::GI::RTXCombine>::flags));
+			graph.add_library_pass<Passes::Subsurface::SSSRR_BlurH>(PassDefault<Passes::Subsurface::SSSRR_BlurH>::setup, PassDefault<Passes::Subsurface::SSSRR_BlurH>::render, (PassDefault<Passes::Subsurface::SSSRR_BlurH>::flags));
+			graph.add_library_pass<Passes::Subsurface::SSSRR_BlurV>(PassDefault<Passes::Subsurface::SSSRR_BlurV>::setup, PassDefault<Passes::Subsurface::SSSRR_BlurV>::render, (PassDefault<Passes::Subsurface::SSSRR_BlurV>::flags));
 			graph.add_library_pass<Passes::Denoise::NRD::NRD_SIGMA_Execute>(PassDefault<Passes::Denoise::NRD::NRD_SIGMA_Execute>::setup, PassDefault<Passes::Denoise::NRD::NRD_SIGMA_Execute>::render, (PassDefault<Passes::Denoise::NRD::NRD_SIGMA_Execute>::flags));
 			graph.add_library_pass<Passes::Denoise::NRD::NRD_ShadowCombine>(PassDefault<Passes::Denoise::NRD::NRD_ShadowCombine>::setup, PassDefault<Passes::Denoise::NRD::NRD_ShadowCombine>::render, (PassDefault<Passes::Denoise::NRD::NRD_ShadowCombine>::flags));
 			graph.add_library_pass<Passes::GI::DDGI::Dev::DDGIDebug>(PassDefault<Passes::GI::DDGI::Dev::DDGIDebug>::setup, PassDefault<Passes::GI::DDGI::Dev::DDGIDebug>::render, (PassDefault<Passes::GI::DDGI::Dev::DDGIDebug>::flags & ~FrameGraph::PassFlags::Compute));

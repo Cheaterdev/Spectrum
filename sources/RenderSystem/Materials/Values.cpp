@@ -733,6 +733,12 @@ MaterialGraph::MaterialGraph()
 	i_anisotropy_rotation = register_output("anisotropy rotation", ShaderParams::get().FLOAT1);
 	i_anisotropy->default_value = shader_parameter("0.0", ShaderParams::get().FLOAT1);
 	i_anisotropy_rotation->default_value = shader_parameter("0.0", ShaderParams::get().FLOAT1);
+	i_sss_weight = register_output("subsurface weight", ShaderParams::get().FLOAT1);
+	i_sss_radius = register_output("subsurface radius", ShaderParams::get().FLOAT3);
+	i_sss_scale = register_output("subsurface scale", ShaderParams::get().FLOAT1);
+	i_sss_weight->default_value = shader_parameter("0.0", ShaderParams::get().FLOAT1);
+	i_sss_radius->default_value = shader_parameter("float3(1,1,1)", ShaderParams::get().FLOAT3);
+	i_sss_scale->default_value = shader_parameter("1.0", ShaderParams::get().FLOAT1);
 
 	i_base_color->default_value = shader_parameter("float4(0,0,0,1)", ShaderParams::get().FLOAT4);
 	i_metallic->default_value = shader_parameter("0.0", ShaderParams::get().FLOAT1);
@@ -860,6 +866,21 @@ FlowGraph::output::ptr MaterialGraph::get_anisotropy_rotation()
 	return i_anisotropy_rotation;
 }
 
+FlowGraph::output::ptr MaterialGraph::get_subsurface_weight()
+{
+	return i_sss_weight;
+}
+
+FlowGraph::output::ptr MaterialGraph::get_subsurface_radius()
+{
+	return i_sss_radius;
+}
+
+FlowGraph::output::ptr MaterialGraph::get_subsurface_scale()
+{
+	return i_sss_scale;
+}
+
 void MaterialGraph::set_coat_outputs_enabled(bool enabled)
 {
 	i_coat->set_enabled(enabled);
@@ -868,6 +889,9 @@ void MaterialGraph::set_coat_outputs_enabled(bool enabled)
 	i_sheen_roughness->set_enabled(enabled);
 	i_anisotropy->set_enabled(enabled);
 	i_anisotropy_rotation->set_enabled(enabled);
+	i_sss_weight->set_enabled(enabled);
+	i_sss_radius->set_enabled(enabled);
+	i_sss_scale->set_enabled(enabled);
 }
 
 // Ports are serialized with the graph, so a graph saved before the coat
@@ -883,6 +907,9 @@ void MaterialGraph::restore_coat_outputs()
 	i_sheen_roughness.reset();
 	i_anisotropy.reset();
 	i_anisotropy_rotation.reset();
+	i_sss_weight.reset();
+	i_sss_radius.reset();
+	i_sss_scale.reset();
 
 	for (auto& out : output_parametres)
 	{
@@ -898,6 +925,12 @@ void MaterialGraph::restore_coat_outputs()
 			i_anisotropy = out;
 		else if (out->name == "anisotropy rotation")
 			i_anisotropy_rotation = out;
+		else if (out->name == "subsurface weight")
+			i_sss_weight = out;
+		else if (out->name == "subsurface radius")
+			i_sss_radius = out;
+		else if (out->name == "subsurface scale")
+			i_sss_scale = out;
 	}
 
 	if (!i_coat)
@@ -918,12 +951,24 @@ void MaterialGraph::restore_coat_outputs()
 	if (!i_anisotropy_rotation)
 		i_anisotropy_rotation = register_output("anisotropy rotation", ShaderParams::get().FLOAT1);
 
+	if (!i_sss_weight)
+		i_sss_weight = register_output("subsurface weight", ShaderParams::get().FLOAT1);
+
+	if (!i_sss_radius)
+		i_sss_radius = register_output("subsurface radius", ShaderParams::get().FLOAT3);
+
+	if (!i_sss_scale)
+		i_sss_scale = register_output("subsurface scale", ShaderParams::get().FLOAT1);
+
 	i_coat->default_value = shader_parameter("0.0", ShaderParams::get().FLOAT1);
 	i_coat_roughness->default_value = shader_parameter("0.1", ShaderParams::get().FLOAT1);
 	i_sheen->default_value = shader_parameter("0.0", ShaderParams::get().FLOAT1);
 	i_sheen_roughness->default_value = shader_parameter("0.3", ShaderParams::get().FLOAT1);
 	i_anisotropy->default_value = shader_parameter("0.0", ShaderParams::get().FLOAT1);
 	i_anisotropy_rotation->default_value = shader_parameter("0.0", ShaderParams::get().FLOAT1);
+	i_sss_weight->default_value = shader_parameter("0.0", ShaderParams::get().FLOAT1);
+	i_sss_radius->default_value = shader_parameter("float3(1,1,1)", ShaderParams::get().FLOAT3);
+	i_sss_scale->default_value = shader_parameter("1.0", ShaderParams::get().FLOAT1);
 }
 
 // Toggled together with the coat outputs: both are "extra" outputs that every
