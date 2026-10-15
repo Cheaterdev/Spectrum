@@ -944,6 +944,150 @@ float frame_probe() { mx_set_time(2.0); return mx_frame(); }
 		ASSERT_TRUE(source(plain[0].second->get_subsurface_weight()) == nullptr);
 	}
 
+	// GBufferDownsampler's roughness verdict decides which tiles trace their own
+	// full-res reflection ray instead of copying the (isotropic) half-res one. A tile
+	// holding an anisotropic pixel has to trace regardless of roughness and
+	// metalness; the existing "glossy and metallic" rule still applies.
+	TEST(MaterialX.GPU, TileClassifyAnisotropic)
+	{
+		auto& device = RenderSystem::get().device();
+		constexpr uint W = 64, H = 64, T = W / 8;
+		const auto rw = HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess;
+
+		auto make = [&](HAL::Format format, uint w, uint h, HAL::ResFlags flags)
+		{
+			return std::make_shared<HAL::TextureResource>(device,
+				HAL::ResourceDesc::Tex2D(format, { w, h }, 1, 1, flags), HAL::HeapType::DEFAULT);
+		};
+
+		auto albedo_tex   = make(HAL::Format::R8G8B8A8_UNORM, W, H, HAL::ResFlags::ShaderResource);
+		auto normals_tex  = make(HAL::Format::R8G8B8A8_UNORM, W, H, HAL::ResFlags::ShaderResource);
+		auto material_tex = make(HAL::Format::R8G8B8A8_UNORM, W, H, HAL::ResFlags::ShaderResource);
+		auto depth_tex    = make(HAL::Format::R32_FLOAT, W, H, HAL::ResFlags::ShaderResource);
+		auto half_depth   = make(HAL::Format::R32_FLOAT, W / 2, H / 2, rw);
+		auto half_normals = make(HAL::Format::R8G8B8A8_UNORM, W / 2, H / 2, rw);
+		auto tile_mask    = make(HAL::Format::R8_UINT, W, H, rw);
+		auto tile_flags   = make(HAL::Format::R8_UINT, T, T, rw);
+		auto rough_flags  = make(HAL::Format::R8_UINT, T, T, rw);
+
+		// A flat, rough, dielectric scene: nothing qualifies by itself.
+		std::vector<uint8_t> albedo(W * H * 4, 0), normals(W * H * 4, 0), material(W * H * 4, 0);
+		std::vector<float> depth(W * H, 0.5f);
+
+		for (uint i = 0; i < W * H; i++)
+		{
+			normals[i * 4 + 0] = normals[i * 4 + 1] = 128;
+			normals[i * 4 + 2] = 255;
+			normals[i * 4 + 3] = 230;   // roughness 0.9: above the 0.5 threshold
+		}
+
+		auto pixel = [&](uint x, uint y) { return (size_t)(y * W + x) * 4; };
+
+		// Tile (2, 3): one anisotropic pixel, nothing else special.
+		material[pixel(20, 25) + 3] = 3;
+		// Tile (5, 5): glossy and metallic -- the pre-existing rule, as a control.
+		for (uint y = 40; y < 48; y++)
+			for (uint x = 40; x < 48; x++)
+			{
+				albedo[pixel(x, y) + 3]  = 255;
+				normals[pixel(x, y) + 3] = 25;   // roughness 0.1
+			}
+		// Tile (6, 1): metallic but rough, and tile (1, 6): glossy but dielectric --
+		// each satisfies only half of the rule, so neither qualifies.
+		for (uint y = 8; y < 16; y++)
+			for (uint x = 48; x < 56; x++)
+				albedo[pixel(x, y) + 3] = 255;
+		for (uint y = 48; y < 56; y++)
+			for (uint x = 8; x < 16; x++)
+				normals[pixel(x, y) + 3] = 25;
+
+		{
+			auto upload = device.get_upload_list();
+			auto put = [&](HAL::TextureResource* tex, const void* src, uint w, uint h, uint bytes_per_pixel)
+			{
+				upload->get_copy().update_texture(tex, ivec3(0, 0, 0), ivec3(w, h, 1), 0,
+					reinterpret_cast<const char*>(src), w * bytes_per_pixel);
+			};
+			put(albedo_tex.get(),   albedo.data(),   W, H, 4);
+			put(normals_tex.get(),  normals.data(),  W, H, 4);
+			put(material_tex.get(), material.data(), W, H, 4);
+			put(depth_tex.get(),    depth.data(),    W, H, 4);
+			upload->execute_and_wait();
+		}
+
+		const auto counted = HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess;
+		const uint tiles = T * T;
+		HAL::StructuredBufferView<uint2> hi(device, tiles, HAL::counterType::SELF, counted);
+		HAL::StructuredBufferView<uint2> low(device, tiles, HAL::counterType::SELF, counted);
+		HAL::StructuredBufferView<uint2> rough_hi(device, tiles, HAL::counterType::SELF, counted);
+		HAL::StructuredBufferView<uint2> rough_low(device, tiles, HAL::counterType::SELF, counted);
+
+		{
+			auto& queue = device.get_queue(HAL::CommandListType::DIRECT);
+			auto  list  = queue->get_free_list();
+			list->begin(L"TileClassify");
+
+			HAL::Texture2DView albedo_view(albedo_tex, *list);
+			HAL::Texture2DView normals_view(normals_tex, *list);
+			HAL::Texture2DView material_view(material_tex, *list);
+			HAL::Texture2DView depth_view(depth_tex, *list);
+			HAL::Texture2DView half_depth_view(half_depth, *list);
+			HAL::Texture2DView half_normals_view(half_normals, *list);
+			HAL::Texture2DView mask_view(tile_mask, *list);
+			HAL::Texture2DView flags_view(tile_flags, *list);
+			HAL::Texture2DView rough_flags_view(rough_flags, *list);
+
+			auto& compute = list->get_compute();
+			compute.set_signature(Layouts::DefaultLayout);
+
+			Slots::Meshes::TileClassifyData params;
+			params.GetGbuffer().GetAlbedo()   = albedo_view.texture2D;
+			params.GetGbuffer().GetNormals()  = normals_view.texture2D;
+			params.GetGbuffer().GetMaterial() = material_view.texture2D;
+			params.GetGbuffer().GetSpecular() = albedo_view.texture2D;
+			params.GetGbuffer().GetMotion()   = albedo_view.texture2D;
+			params.GetGbuffer().GetDepth()    = depth_view.texture2D;
+			params.GetHalf_depth()   = half_depth_view.rwTexture2D;
+			params.GetHalf_normals() = half_normals_view.rwTexture2D;
+			params.GetTile_hi()      = hi.appendStructuredBuffer;
+			params.GetTile_low()     = low.appendStructuredBuffer;
+			params.GetTile_mask()    = mask_view.rwTexture2D;
+			params.GetTile_flags()   = flags_view.rwTexture2D;
+			params.GetTile_roughness_hi()    = rough_hi.appendStructuredBuffer;
+			params.GetTile_roughness_low()   = rough_low.appendStructuredBuffer;
+			params.GetTile_roughness_flags() = rough_flags_view.rwTexture2D;
+			params.GetRoughness_threshold()  = 0.5f;
+			params.GetMetallic_threshold()   = 0.05f;
+			compute.set(params);
+
+			compute.clear_counter(hi);
+			compute.clear_counter(low);
+			compute.clear_counter(rough_hi);
+			compute.clear_counter(rough_low);
+			compute.set_pipeline<PSOS::Meshes::GBufferDownsample>();
+			compute.dispatch(ivec2{ int(W), int(H) }, ivec2{ 8, 8 });
+			list->execute_and_wait();
+		}
+
+		auto data = readback_texture(rough_flags.get());
+		auto& mip = data->array[0]->mips[0];
+		auto flag = [&](uint x, uint y) { return int(mip->data[(size_t)y * mip->width_stride + x]); };
+
+		std::string failures;
+
+		for (uint y = 0; y < T; y++)
+			for (uint x = 0; x < T; x++)
+			{
+				const int expected = (x == 2 && y == 3) || (x == 5 && y == 5) ? 1 : 0;
+
+				if (flag(x, y) != expected)
+					failures += "tile (" + std::to_string(x) + "," + std::to_string(y) + ") is " + std::to_string(flag(x, y))
+						+ ", expected " + std::to_string(expected) + "\n";
+			}
+
+		ASSERT_EQ(std::string(), failures);
+	}
+
 	// subsurface_color is the diffuse colour of the scattering part: the base
 	// colour blends towards it by the subsurface weight.
 	TEST(MaterialX.GPU, SubsurfaceColor)

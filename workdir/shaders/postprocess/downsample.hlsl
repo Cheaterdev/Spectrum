@@ -19,6 +19,10 @@
 static const TileClassifyData params = GetTileClassifyData();
 static const GBuffer gbuffer = params.GetGbuffer();
 
+// Included for material_model(): anisotropic pixels force their tile to a full-res
+// specular trace (see the roughness verdict below).
+#include "../common/shading_model.hlsl"
+
 // Tile classified Hi if the spread between the tile's 16 block
 // representatives' raw depth exceeds this. Per-pixel mask (inside Hi tiles
 // only, in principle) uses a tighter threshold since it is judging a single
@@ -32,6 +36,8 @@ groupshared float  g_metallic[64];
 groupshared float  g_blockDepth[16];
 groupshared float  g_blockRoughness[16];
 groupshared float  g_blockMetallic[16];
+// Set when any pixel of the tile has the ANISOTROPIC shading model.
+groupshared uint   g_anisotropic;
 
 [numthreads(8, 8, 1)]
 void CS(
@@ -45,6 +51,9 @@ void CS(
 
     uint2 pix = min(dispatchID.xy, dims - 1);
 
+    if (groupIndex == 0)
+        g_anisotropic = 0;
+
     float  depth      = gbuffer.GetDepth()[pix];
     float4 normal_raw = gbuffer.GetNormals()[pix];
     // .w = metallic (universal_material.hlsl: result.albedo = float4(albedo.rgb, metallic)).
@@ -55,6 +64,14 @@ void CS(
     g_metallic[groupIndex] = metallic;
 
     GroupMemoryBarrierWithGroupSync();
+
+    // The half-res reflection the Low tiles copy is isotropic (that pass has no
+    // material target), so a tile holding anisotropic pixels has to trace its own
+    // full-res rays, where the stretched lobe is sampled -- whatever its roughness.
+    // After the barrier so the clear above is visible to every thread; the barrier
+    // below orders these writes before the leader's read.
+    if (depth != 0 && material_model(gbuffer.GetMaterial()[pix]) == SHADING_MODEL_ANISOTROPIC)
+        InterlockedOr(g_anisotropic, 1);
 
     // One leader thread per 2x2 block (16 per 8x8 tile) picks the closest
     // real sample and writes the half-res output + this block's entry in
@@ -131,8 +148,8 @@ void CS(
         // some pixel is both glossy enough to show detail AND metallic
         // enough for that detail to survive the downstream multiply (see
         // TileClassifyData's own comment, pssm.prism).
-        uint roughness_hi = (min_roughness < params.GetRoughness_threshold() &&
-                              max_metallic  > params.GetMetallic_threshold()) ? 1 : 0;
+        uint roughness_hi = ((min_roughness < params.GetRoughness_threshold() &&
+                               max_metallic  > params.GetMetallic_threshold()) || g_anisotropic != 0) ? 1 : 0;
         if (roughness_hi)
             params.GetTile_roughness_hi().Append(groupID.xy);
         else

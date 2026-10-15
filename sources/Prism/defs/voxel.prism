@@ -453,6 +453,7 @@ namespace Meshes
 		# actually reads it).
 		[Always = Read] Texture GBuffer_Albedo;
 		[Always = Read] Texture GBuffer_Normals;
+		[Always = Read] Texture GBuffer_Material;
 		[Always = Read] Texture GBuffer_Specular;
 		[Always = Read] Texture GBuffer_Speed;
 		[Always = None] Texture GBuffer_DepthMips;
