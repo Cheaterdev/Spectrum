@@ -75,34 +75,95 @@ namespace GUI
             rgb_label->height_size = size_type::FIXED;
             add_child(rgb_label);
 
-            float default_h = std::max(4 * (SLIDER_HEIGHT + SLIDER_GAP) - SLIDER_GAP, PREVIEW_SIZE)
-                            + LABEL_GAP + LABEL_HEIGHT;
             width_size  = size_type::FIXED;
             height_size = size_type::FIXED;
-            size = {300, default_h};
+            size = {300, 0};
 
-            float w          = size->x;
-            float slider_x   = PREVIEW_SIZE + 8.0f;
-            float slider_w   = w - slider_x - 4.0f;
-            float row_stride = SLIDER_HEIGHT + SLIDER_GAP;
+            relayout();
+        }
 
-            preview->pos = {0, 0};
+        void color_picker::set_channels(color_channels value)
+        {
+            channels = value;
+            relayout();
+            update_display();
+        }
 
-            float_slider* sliders[4] = {slider_r.get(), slider_g.get(), slider_b.get(), slider_a.get()};
+        void color_picker::set_display(color_display value)
+        {
+            display = value;
+            relayout();
+        }
+
+        // Positions are absolute, so everything is recomputed from the two
+        // flag sets: sliders stack from the top for each enabled channel, the
+        // swatch sits to their left when shown, and the read-out labels go on
+        // one row underneath. The picker's height follows its content.
+        void color_picker::relayout()
+        {
+            const bool show_preview = check(display & color_display::Preview);
+            const bool show_hex     = check(display & color_display::Hex);
+            const bool show_rgb     = check(display & color_display::Rgb);
+
+            float_slider* sliders[4]   = {slider_r.get(), slider_g.get(), slider_b.get(), slider_a.get()};
+            const color_channels bits[4] = {color_channels::R, color_channels::G, color_channels::B, color_channels::A};
+
+            const float w          = size->x;
+            const float slider_x   = show_preview ? PREVIEW_SIZE + 8.0f : 0.0f;
+            const float slider_w   = w - slider_x - 4.0f;
+            const float row_stride = SLIDER_HEIGHT + SLIDER_GAP;
+
+            int rows = 0;
+
             for (int i = 0; i < 4; i++)
             {
-                sliders[i]->pos  = {slider_x, i * row_stride};
+                bool enabled = check(channels & bits[i]);
+                sliders[i]->visible = enabled;
+
+                if (!enabled)
+                    continue;
+
+                sliders[i]->pos  = {slider_x, rows * row_stride};
                 sliders[i]->size = {slider_w, SLIDER_HEIGHT};
+                rows++;
             }
 
-            float label_y = PREVIEW_SIZE + LABEL_GAP;
-            float label_w = w / 2.0f - 4.0f;
+            preview->visible = show_preview;
+            preview->pos     = {0, 0};
 
-            hex_label->pos  = {0, label_y};
-            hex_label->size = {label_w, LABEL_HEIGHT};
+            float content_h = rows ? rows * row_stride - SLIDER_GAP : 0.0f;
 
-            rgb_label->pos  = {label_w + 8.0f, label_y};
-            rgb_label->size = {w - label_w - 8.0f, LABEL_HEIGHT};
+            if (show_preview)
+                content_h = std::max(content_h, PREVIEW_SIZE);
+
+            hex_label->visible = show_hex;
+            rgb_label->visible = show_rgb;
+
+            float height = content_h;
+
+            if (show_hex || show_rgb)
+            {
+                float label_y = content_h > 0 ? content_h + LABEL_GAP : 0.0f;
+                height = label_y + LABEL_HEIGHT;
+
+                if (show_hex && show_rgb)
+                {
+                    float label_w = w / 2.0f - 4.0f;
+
+                    hex_label->pos  = {0, label_y};
+                    hex_label->size = {label_w, LABEL_HEIGHT};
+                    rgb_label->pos  = {label_w + 8.0f, label_y};
+                    rgb_label->size = {w - label_w - 8.0f, LABEL_HEIGHT};
+                }
+                else
+                {
+                    auto* only = show_hex ? hex_label.get() : rgb_label.get();
+                    only->pos  = {0, label_y};
+                    only->size = {w, LABEL_HEIGHT};
+                }
+            }
+
+            size = {w, height};
         }
 
         float4 color_picker::get_color() const
@@ -164,13 +225,36 @@ namespace GUI
             int gi = static_cast<int>(current_color.y * 255.0f + 0.5f);
             int bi = static_cast<int>(current_color.z * 255.0f + 0.5f);
 
+            int ai = static_cast<int>(current_color.w * 255.0f + 0.5f);
+            const bool alpha = check(channels & color_channels::A);
+
             char hex[16];
-            snprintf(hex, sizeof(hex), "#%02X%02X%02X", ri, gi, bi);
+
+            if (alpha)
+                snprintf(hex, sizeof(hex), "#%02X%02X%02X%02X", ri, gi, bi, ai);
+            else
+                snprintf(hex, sizeof(hex), "#%02X%02X%02X", ri, gi, bi);
+
             hex_label->text = hex;
 
-            char rgb[32];
-            snprintf(rgb, sizeof(rgb), "rgb(%d %d %d)", ri, gi, bi);
-            rgb_label->text = rgb;
+            // Only the enabled channels, named by their letters: "rgb(26 26 26)",
+            // "rgba(26 26 26 255)", "rg(26 26)".
+            std::string names;
+            std::string values;
+            const int component[4] = {ri, gi, bi, ai};
+            const char letters[4]  = {'r', 'g', 'b', 'a'};
+            const color_channels bits[4] = {color_channels::R, color_channels::G, color_channels::B, color_channels::A};
+
+            for (int i = 0; i < 4; i++)
+            {
+                if (!check(channels & bits[i]))
+                    continue;
+
+                names += letters[i];
+                values += (values.empty() ? "" : " ") + std::to_string(component[i]);
+            }
+
+            rgb_label->text = names + "(" + values + ")";
         }
 
     } // namespace Elements

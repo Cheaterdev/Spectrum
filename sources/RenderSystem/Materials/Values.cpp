@@ -458,7 +458,16 @@ void MaterialFunction::on_finish()
 	{
 		if (!output_parametres[i]->enabled) continue;
 
-		add_function(f_output_names[o++] + " = " + output_parametres[i]->get<shader_parameter>().name);
+		// A linked value can be a different numeric width/kind than the port
+		// (links between numeric types are allowed, see ShaderParamType::
+		// can_cast) -- convert to the port's own type, which is what the
+		// `out` parameter was declared with in generate_output().
+		auto value = output_parametres[i]->get<shader_parameter>();
+
+		if (auto* dst = dynamic_cast<ShaderParamType*>(output_parametres[i]->type.get()))
+			value.name = coerce(value, *dst);
+
+		add_function(f_output_names[o++] + " = " + value.name);
 	};
 
 	for (unsigned int i = 0; i < outputs.size(); i++)
@@ -743,6 +752,11 @@ MaterialGraph::~MaterialGraph()
 FlowGraph::input::ptr MaterialGraph::get_texcoord()
 {
 	return texcoord;
+}
+
+FlowGraph::input::ptr MaterialGraph::get_position()
+{
+	return position;
 }
 
 FlowGraph::output::ptr MaterialGraph::get_base_color()
@@ -1171,6 +1185,13 @@ GUI::base::ptr TextureAssetNode::create_editor_window()
 	return back;
 }
 
+// M=1 is a float scalar/vector, M=3/4 are INT/BOOL; M=2 (TEXTURE) is not
+// numeric and never converts.
+static bool is_numeric_type(const ShaderParamType& t)
+{
+	return t.M == 1 || t.M == 3 || t.M == 4;
+}
+
 bool ShaderParamType::can_cast(parameter_type* other)
 {
 	VectorType* vtype = dynamic_cast<VectorType*>(other);
@@ -1183,8 +1204,51 @@ bool ShaderParamType::can_cast(parameter_type* other)
 	if (N == -1 || type->N == -1)
 		return M == type->M;
 
-	bool res = M == type->M && N == type->N;
-	return res;
+	if (M == type->M && N == type->N)
+		return true;
+
+	// Any numeric type links to any other; the width/kind mismatch is
+	// resolved by coerce() where the value is consumed (MaterialXNode inputs
+	// and MaterialFunction's output assignment).
+	return is_numeric_type(*this) && is_numeric_type(*type);
+}
+
+std::string coerce(const shader_parameter& src, const ShaderParamType& dst)
+{
+	const auto& s = src.type;
+
+	if (s.M == dst.M && s.N == dst.N)
+		return src.name;
+
+	if (!is_numeric_type(s) || !is_numeric_type(dst))
+		return src.name;
+
+	const std::string& n = src.name;
+	const bool src_scalar = s.M != 1 || s.N == 1;
+
+	// Scalar destinations (float, int, bool): take .x of a vector, then cast.
+	if (dst.M != 1 || dst.N == 1)
+	{
+		std::string x = (s.M == 1 && s.N > 1) ? "(" + n + ").x" : n;
+		return "((" + dst.name + ")(" + x + "))";
+	}
+
+	// Float vector destinations.
+	if (src_scalar)
+		return "((" + dst.name + ")(" + (s.M == 1 ? n : "(float)(" + n + ")") + "))";
+
+	if (s.N > dst.N)
+	{
+		static const char* swizzle[] = { "", ".x", ".xy", ".xyz", ".xyzw" };
+		return "(" + n + ")" + swizzle[dst.N];
+	}
+
+	// s.N < dst.N, both vectors (2->3, 2->4, 3->4): pad with 0, w gets 1.
+	std::string pad;
+	for (int i = s.N; i < dst.N; i++)
+		pad += (i == 3 ? ", 1" : ", 0");
+
+	return dst.name + "(" + n + pad + ")";
 }
 REGISTER_TYPE(MaterialContext);
 

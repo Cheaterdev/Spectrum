@@ -17,6 +17,7 @@
 #include "gbuffer/mesh_shader.hlsl"
 
 #include "autogen/MaterialPreviewInfo.h"
+#include "materialx/mx_stdlib.hlsl"
 
 #define Sampler linearSampler
 

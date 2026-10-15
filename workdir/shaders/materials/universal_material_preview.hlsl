@@ -11,6 +11,7 @@
 // expects to find in scope (named exactly as MaterialGraph::start wires
 // them for the pixel path).
 #include "autogen/MaterialPreviewInfo.h"
+#include "materialx/mx_stdlib.hlsl"
 
 #define Sampler linearSampler
 

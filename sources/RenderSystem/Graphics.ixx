@@ -36,6 +36,7 @@ export import :AssetExplorer;
 
 
 export import :Materials.Values;
+export import :Materials.MaterialX;
 export import :Materials.UniversalMaterial;
 export import :Materials.PreviewSession;
 export import :Materials.ShaderMaterial;

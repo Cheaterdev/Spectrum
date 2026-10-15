@@ -1,4 +1,5 @@
 #include "common/common.hlsl"
+#include "materialx/mx_stdlib.hlsl"
 
 #include "autogen/FrameInfo.h"
 #define DRAW_DATA_MATERIAL

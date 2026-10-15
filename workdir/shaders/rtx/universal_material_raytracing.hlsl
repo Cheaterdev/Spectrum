@@ -28,6 +28,7 @@
 #include "shadows/vsm/vsm_impl_resolve.hlsl"
 
 #include "common/common.hlsl"
+#include "materialx/mx_stdlib.hlsl"
 //#define REFRACTION
 #define Sampler linearSampler
 #define GetMaterialInfo CreateMaterialInfo

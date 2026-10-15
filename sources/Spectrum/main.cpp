@@ -2348,6 +2348,8 @@ int APIENTRY WinMain(_In_ HINSTANCE hinst,
 			return nullptr;
 		});
 
+	MaterialXLibrary::get().register_nodes(to_path("materialx"), to_path("shaders/materialx/mx_stdlib.hlsl"));
+
 	auto result_code = 0;
 	SetupDebug();
 

@@ -91,7 +91,18 @@ struct ShaderParams:public Singleton<ShaderParams>
     // (all M=1) or VectorType::can_cast's M==1 check, so the GUI won't let
     // it link to a plain float/vector port.
     const ShaderParamType TEXTURE = ShaderParamType(2,1,"uint");
+    // MaterialX integer/boolean. Distinct M values (not M=1) so operator==
+    // and uniform packing never confuse them with FLOAT1, which shares N=1.
+    const ShaderParamType INT  = ShaderParamType(3,1,"int");
+    const ShaderParamType BOOL = ShaderParamType(4,1,"bool");
 };
+
+// Converts `src` to an HLSL expression of type `dst`: splats a scalar,
+// truncates with a swizzle, extends with 0/1 (w=1 for a 4th component, 0
+// for the rest), and casts between float/int/bool. Same-type values pass
+// through unchanged. Only numeric types (M=1 float, INT, BOOL) convert;
+// anything else (TEXTURE) is returned as-is.
+std::string coerce(const shader_parameter& src, const ShaderParamType& dst);
 template <class T, class N>
 class TemplatedParameter: public T
 {
@@ -465,6 +476,7 @@ class MaterialGraph : public MaterialFunction
         virtual ~MaterialGraph();
         virtual GUI::base::ptr create_editor_window() override;
         FlowGraph::input::ptr get_texcoord();
+        FlowGraph::input::ptr get_position();
 
         FlowGraph::output::ptr get_base_color();
 
