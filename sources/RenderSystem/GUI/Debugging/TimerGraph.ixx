@@ -103,6 +103,7 @@ export namespace GUI
 				void build();
 				void rebuild_display();
 				void resized() override;
+				float  pinch_ratio = 1.0f;
 				bool ended = true;
 				bool need_start = false;
 
@@ -116,6 +117,7 @@ export namespace GUI
 
 				void zoom_to_selection(float x0, float x1);
 				void zoom_reset();
+				void on_pinch(vec2 center, float ratio, bool ended) override;
 
 				void on_cpu_start(TimedBlock* block) override;
 				void on_cpu_end(TimedBlock* block)   override;

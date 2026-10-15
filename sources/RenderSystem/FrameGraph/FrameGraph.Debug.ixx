@@ -94,6 +94,11 @@ public:
 export class FrameGraphDebug
 {
 public:
+	// Phone layout: the details dock is hidden until something is selected, then covers the timeline
+	// (with a back button), and one finger pans it. Set before create_debug_layout.
+	static inline bool compact = false;
+	static inline float ui_scale = 1.0f;   // multiplies the timeline's fixed sizes; host it in a layout-scale-1 parent
+
 	static GUI::base::ptr  create_debug_layout(FrameGraph::Graph& graph);
 	static GUI::base::ptr  create_timeline_layout(FrameGraph::Graph& graph);
 };

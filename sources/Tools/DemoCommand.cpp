@@ -11,7 +11,7 @@ import RenderSystem;
 import GUI;
 import Demo;
 
-// spectrum_tool demo [--full] [--density N] [--size WxH] [--no-shadows] [--no-ui] [--shot FILE [--frames N]]
+// spectrum_tool demo [--full] [--density N] [--size WxH] [--no-shadows] [--no-ui] [--tab N] [--touch FRAME,down|move|up,X,Y ...] [--shot FILE [--frames N]]
 //
 // The Android demo screen (sources/Tools/Demo) in a window on this PC: same UI tree, same scene passes, same
 // camera, mouse in place of touch (left-drag looks, wheel changes speed). By default the device is held to
@@ -54,13 +54,10 @@ namespace
 
 	void send_touch(int flags, int id, vec2 pos)
 	{
-		if (auto ui = demo::ui())
-		{
-			GUI::touch_event event;
-			event.flags = flags;
-			event.touches.push_back({ id, pos.x, pos.y });
-			ui->on_touch_event(event);
-		}
+		GUI::touch_event event;
+		event.flags = flags;
+		event.touches.push_back({ id, pos.x, pos.y });
+		demo::post_input([event](GUI::user_interface& ui) { ui.on_touch_event(event); });
 	}
 
 	void lift_second_finger()
@@ -107,8 +104,9 @@ namespace
 		{
 			POINT p = { GET_X_LPARAM(lparam), GET_Y_LPARAM(lparam) };
 			ScreenToClient(hwnd, &p);
-			if (auto ui = demo::ui())
-				ui->mouse_wheel_event_internal(mouse_wheel::VERTICAL, (float)GET_WHEEL_DELTA_WPARAM(wparam) / WHEEL_DELTA, vec2((float)p.x, (float)p.y));
+			const float delta = (float)GET_WHEEL_DELTA_WPARAM(wparam) / WHEEL_DELTA;
+			const vec2 at((float)p.x, (float)p.y);
+			demo::post_input([delta, at](GUI::user_interface& ui) { ui.mouse_wheel_event_internal(mouse_wheel::VERTICAL, delta, at); });
 			return 0;
 		}
 
@@ -203,6 +201,9 @@ int command_demo(const CommandArgs& args)
 	bool phone_profile = true;
 	bool shadows = true;
 	bool ui_visible = true;
+	int tab = 0;
+	struct ScriptedTouch { int frame; int flags; vec2 pos; bool two; vec2 pos2; };
+	std::vector<ScriptedTouch> touches;
 	float density = 2.6f;
 	int width = 540, height = 1200;
 	std::string shot_path;
@@ -216,6 +217,24 @@ int command_demo(const CommandArgs& args)
 			shadows = false;
 		else if (args[i] == "--no-ui")
 			ui_visible = false;
+		else if (args[i] == "--tab" && i + 1 < args.size())
+			tab = std::stoi(args[++i]);
+		else if (args[i] == "--touch" && i + 1 < args.size())
+		{
+			// "frame,down|move|up,x,y": a finger event at that frame, in window pixels (tests the touch UI without a phone)
+			char kind[8] = {};
+			int frame = 0;
+			float x = 0, y = 0, x2 = 0, y2 = 0;
+			// an optional ",x2,y2" adds a second finger (id 1) to the same event, for pinch tests
+			const int n = std::sscanf(args[++i].c_str(), "%d,%7[a-z],%f,%f,%f,%f", &frame, kind, &x, &y, &x2, &y2);
+			if (n != 4 && n != 6)
+			{
+				std::printf("demo: bad --touch '%s'\n", args[i].c_str());
+				return 1;
+			}
+			const std::string k = kind;
+			touches.push_back({ frame, k == "down" ? GUI::touch_event::DOWN : k == "up" ? GUI::touch_event::UP : GUI::touch_event::MOVE, vec2(x, y), n == 6, vec2(x2, y2) });
+		}
 		else if (args[i] == "--shot" && i + 1 < args.size())
 			shot_path = args[++i];
 		else if (args[i] == "--frames" && i + 1 < args.size())
@@ -251,6 +270,7 @@ int command_demo(const CommandArgs& args)
 	demo::set_density(density);
 	demo::set_shadows(shadows);
 	demo::set_ui_visible(ui_visible);
+	demo::set_start_tab(tab);
 
 	std::shared_ptr<HAL::SwapChain> swap;
 	std::shared_ptr<HAL::TextureResource> target;
@@ -293,6 +313,17 @@ int command_demo(const CommandArgs& args)
 			swap.reset();
 			make_surface();
 		}
+
+		for (auto& t : touches)
+			if (t.frame == frame)
+			{
+				GUI::touch_event event;
+				event.flags = t.flags;
+				event.touches.push_back({ 0, t.pos.x, t.pos.y });
+				if (t.two)
+					event.touches.push_back({ 1, t.pos2.x, t.pos2.y });
+				demo::post_input([event](GUI::user_interface& ui) { ui.on_touch_event(event); });
+			}
 
 		demo::draw_frame(device, *swap, target, frame++);
 

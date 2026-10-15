@@ -431,8 +431,7 @@ extern "C"
 		}
 		event.flags = flags;
 
-		if (auto ui = demo::ui())
-			ui->on_touch_event(event);
+		demo::post_input([event](GUI::user_interface& ui) { ui.on_touch_event(event); });
 	}
 
 	// MainActivity.nativeSetGeneration(generation): called on every surface change / destroy.

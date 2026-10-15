@@ -61,7 +61,7 @@ class mover : public GUI::base
             if (dragging)
             {
                 speed = pos - prev_pos;
-                owner->moving(speed);
+                owner->moving(speed / owner->result_scale);
                 prev_pos = pos;
             }
 
@@ -74,6 +74,102 @@ class mover : public GUI::base
 
             return true;
         };
+
+        // Touch: one finger drags the content and, on release, flings it; two fingers pan and pinch.
+        // Fingers that never leave the slop radius stay taps for the elements below.
+        std::map<int, vec2> poses;
+        bool touch_dragging = false;
+        bool pinching = false;
+        float pinch_prev = 0;
+        vec2 pinch_center;
+        vec2 velocity;
+        std::chrono::steady_clock::time_point last_move;
+
+        virtual bool on_touch_action(mouse_action action, GUI::touch& t) override
+        {
+            if (action == mouse_action::DOWN)
+            {
+                poses[t.id] = t.pos;
+                owner->speed = { 0, 0 };
+                owner->fling_velocity = { 0, 0 };
+                velocity = { 0, 0 };
+                return false;
+            }
+
+            poses.erase(t.id);
+            pinch_prev = 0;
+
+            if (poses.empty())
+            {
+                if (pinching)
+                    owner->on_pinch(pinch_center, 1.0f, true);
+
+                if (touch_dragging && !pinching && (std::chrono::steady_clock::now() - last_move) < std::chrono::milliseconds(80))
+                    owner->fling_velocity = velocity * 0.4f;
+
+                touch_dragging = false;
+                pinching = false;
+            }
+
+            return false;
+        }
+
+        virtual void on_touch_move(std::vector<GUI::touch*>& e) override
+        {
+            const float scale = result_scale;
+            auto now = std::chrono::steady_clock::now();
+
+            if (e.size() >= 2)
+            {
+                vec2 a = e[0]->pos, b = e[1]->pos;
+                vec2 center = (a + b) * 0.5f;
+                float dist = (a - b).length();
+
+                if (pinch_prev > 0)
+                {
+                    owner->moving((center - pinch_center) / scale);
+                    if (dist > 1.0f)
+                        owner->on_pinch(center, dist / pinch_prev, false);
+                }
+
+                pinch_prev = dist;
+                pinch_center = center;
+                pinching = touch_dragging = true;
+
+                for (auto t : e)
+                {
+                    poses[t->id] = t->pos;
+                    t->catched = true;
+                }
+                return;
+            }
+
+            auto t = e[0];
+
+            if (!touch_dragging)
+            {
+                if ((t->pos - poses[t->id]).length() > 8 * scale)
+                {
+                    touch_dragging = true;
+                    poses[t->id] = t->pos;
+                    last_move = now;
+                    t->catched = true;
+                }
+                return;
+            }
+
+            vec2 delta = (t->pos - poses[t->id]) / scale;
+            poses[t->id] = t->pos;
+            t->catched = true;
+
+            float dt = std::chrono::duration<float>(now - last_move).count();
+            last_move = now;
+
+            owner->moving(delta);
+
+            if (dt > 1e-4f)
+                velocity = velocity * 0.6f + (delta / dt) * 0.4f;
+        }
         virtual bool on_mouse_action(mouse_action action, mouse_button button, vec2 pos) override
         {
             if (button == mouse_button::RIGHT)
@@ -187,6 +283,12 @@ bool GUI::Elements::scroll_container::on_wheel(mouse_wheel type, float value, ve
 void GUI::Elements::scroll_container::think(float dt)
 {
     base::think(dt);
+    if (fling_velocity.length() > 8.0f)
+    {
+        moving(fling_velocity * dt);
+        fling_velocity *= std::exp(-14 * dt);
+    }
+
     if (speed.length() > 0.3f)
     {
         moving(100 * speed * dt);

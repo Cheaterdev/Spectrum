@@ -10,14 +10,21 @@ import RenderSystem;
 import Graphics;
 import FrameGraph;
 import GUI;
+import FrameGraphDebug;
 
 namespace
 {
 	float g_density = 2.0f;
 	bool g_shadows = true;
 	bool g_ui_visible = true;
+	int g_start_tab = 0;
 
 	std::mutex g_ui_mutex;   // the touch thread reads g_ui while the render thread creates it
+
+	// Input the host receives on its platform thread, applied to the widget tree inside the frame: the tree is
+	// built and changed on one thread (tapping a page's row creates widgets), never from two at once.
+	std::mutex g_input_mutex;
+	std::vector<std::function<void(GUI::user_interface&)>> g_input;
 	std::shared_ptr<GUI::user_interface> g_ui;
 
 	std::shared_ptr<GUI::user_interface> current_ui()
@@ -173,6 +180,10 @@ namespace
 		}
 	};
 
+	std::unique_ptr<FrameGraph::Graph> g_graph;
+	std::unique_ptr<Pipelines::UI::UIPipeline> g_pipeline;
+	GUI::Elements::tab_control::ptr g_tabs;   // the screen's pages: Game, Frame debugger, Profiler, Properties, Log
+	GUI::base::ptr g_game_page;
 	std::shared_ptr<sky_view> g_sky_view;
 	std::unique_ptr<first_person_camera> g_camera;
 	std::unique_ptr<SkyRender> g_sky_render;
@@ -228,9 +239,15 @@ namespace
 		ui->get_clipboard = [] { return std::wstring(); };
 		ui->set_clipboard = [](std::wstring_view) {};
 
-		g_sky_view = std::make_shared<sky_view>();   // first child: drawn behind the window and graphs
+		// The frame graph lives from here on: the frame debugger page is built over it.
+		if (!g_graph)
+		{
+			g_graph = std::make_unique<FrameGraph::Graph>();
+			g_pipeline = std::make_unique<Pipelines::UI::UIPipeline>();
+		}
+
+		g_sky_view = std::make_shared<sky_view>();   // first child of the Game page: drawn behind the window and graphs
 		g_sky_view->density = g_density;
-		ui->add_child(g_sky_view);
 
 		g_camera = std::make_unique<first_person_camera>();
 		g_camera->position = vec3(0, 1.7f, 0);
@@ -336,9 +353,77 @@ namespace
 		g_root->visible = g_ui_visible;
 		ui->add_child(g_root);
 
+		// The pages, as the desktop app has them: the game view, the frame debugger (every resource of the graph),
+		// the profiler timeline, the Properties tree and the log.
+		g_tabs = std::make_shared<GUI::Elements::tab_control>();
+		g_tabs->docking = GUI::dock::FILL;
+		g_root->add_child(g_tabs);
+
+		g_game_page = std::make_shared<GUI::base>();
+		g_game_page->docking = GUI::dock::FILL;
+		g_game_page->clickable = false;   // empty parts of the page fall through to the scene's touch controls
+		g_sky_view->docking = GUI::dock::FILL;
+		g_game_page->add_child(g_sky_view);
+		std::vector<GUI::Elements::tab_button::ptr> tab_buttons;
+		tab_buttons.push_back(g_tabs->add_page("Game", g_game_page));
+
+		FrameGraphDebug::compact = true;
+		FrameGraphDebug::ui_scale = g_density;
+		// The timeline's drawing code assumes a layout scale of 1: undo the root's density scale for it.
+		auto frame_debugger = std::make_shared<GUI::base>();
+		frame_debugger->docking = GUI::dock::FILL;
+		frame_debugger->scale = 1.0f / g_density;
+		frame_debugger->add_child(FrameGraphDebug::create_debug_layout(*g_graph));
+		tab_buttons.push_back(g_tabs->add_page("Frame debugger", frame_debugger));
+		tab_buttons.push_back(g_tabs->add_page("Profiler", std::make_shared<GUI::Elements::Debug::TimeGraph>()));
+
+		{
+			// Master-detail: a phone is too narrow for the tree and the property table side by side.
+			auto page = std::make_shared<GUI::base>();
+			auto folders = std::make_shared<GUI::Elements::tree<VariableContext>>();
+			folders->docking = GUI::dock::FILL;
+			page->add_child(folders);
+			// The detail view is built per selection: a scroll_container that becomes visible after its
+			// first layout pass never gets its children laid out (filled stays 0x0).
+			folders->on_select = [page, folders](VariableContext* elem)
+			{
+				auto detail = std::make_shared<GUI::base>();
+				detail->docking = GUI::dock::FILL;
+				auto back = std::make_shared<GUI::Elements::button>();
+				back->docking = GUI::dock::TOP;
+				back->height_size = GUI::size_type::FIXED;
+				back->size = { 0, 48 };
+				back->get_label()->text = "< Back";
+				back->get_label()->font_size = 18.0f;
+				back->get_label()->magnet_text = FW1_CENTER | FW1_VCENTER | FW1_NOWORDWRAP;
+				auto table = std::make_shared<GUI::Elements::scroll_container>();
+				table->contents->size = { 20, 0 };
+				table->contents->width_size = GUI::size_type::MATCH_PARENT;
+				table->contents->height_size = GUI::size_type::MATCH_CHILDREN;
+				for (auto v : elem->variables)
+					table->add_child(GUI::Elements::create_property(*v));
+				detail->add_child(back);
+				detail->add_child(table);
+				back->on_click = [page, folders, detail](GUI::Elements::button::ptr)
+				{
+					page->remove_child(detail);
+					folders->visible = true;
+				};
+				folders->visible = false;
+				page->add_child(detail);
+			};
+			folders->init(&VariableContext::get());
+			tab_buttons.push_back(g_tabs->add_page("Properties", page));
+		}
+		tab_buttons.push_back(g_tabs->add_page("Log", std::make_shared<GUI::Elements::Debug::OutputWindow>()));
+		g_tabs->set_strip_height(48.0f);   // a finger-sized tab bar
+		for (auto& tab : tab_buttons)
+			tab->set_closable(false);   // a closed page could not be reopened here
+		g_tabs->show_page(tab_buttons[std::clamp<size_t>((size_t)std::max(g_start_tab, 0), 0, tab_buttons.size() - 1)]);
+
 		g_window_el = std::make_shared<GUI::Elements::window>();
 		g_window_el->set_title("Spectrum \xE2\x80\x94 Android");
-		g_root->add_child(g_window_el);
+		g_game_page->add_child(g_window_el);
 
 		static const char* const names[3] = { "Play", "Options", "Quit" };
 		for (int i = 0; i < 3; ++i)
@@ -376,11 +461,18 @@ namespace
 			g->fill_color = { color.x, color.y, color.z, 0.3f };
 			g->docking = GUI::dock::NONE;
 			g->width_size = GUI::size_type::FIXED;
-			g_root->add_child(g);
+			g_game_page->add_child(g);
 			return g;
 		};
 		g_graph_ms = make_graph("Frame time", "ms", 5.0f, { 0.30f, 0.85f, 0.30f, 1.0f });
 		g_graph_fps = make_graph("FPS", "", 20.0f, { 0.35f, 0.65f, 1.0f, 1.0f });
+
+		// The widget showcase over the scene (window, buttons, progress bar, frame graphs) is not needed
+		// for now; the elements stay built so it can be re-enabled by flipping this.
+		constexpr bool show_scene_overlay = false;
+		g_window_el->visible = show_scene_overlay;
+		g_graph_ms->visible = show_scene_overlay;
+		g_graph_fps->visible = show_scene_overlay;
 
 		std::lock_guard<std::mutex> lock(g_ui_mutex);
 		g_ui = ui;
@@ -397,8 +489,6 @@ namespace
 		const float inner_w = panel_w - 40.0f;   // the window's 20dp margin sits outside its pos/size
 
 		g_ui->size = vec2(W, H);
-		g_sky_view->pos = vec2(0, 0);
-		g_sky_view->size = vec2(W, H);
 		g_root->size = vec2(W, H);   // the root is sized in pixels, only its children are in dp
 		g_window_el->pos = vec2(panel_x + 20.0f, panel_y + 20.0f);
 		g_window_el->size = vec2(inner_w, panel_h - 40.0f);
@@ -424,9 +514,6 @@ namespace
 
 	// Touch arrives as one nativeTouchPoint per finger and a nativeTouchFlush(flags) that ends the message.
 
-	std::unique_ptr<FrameGraph::Graph> g_graph;
-	std::unique_ptr<Pipelines::UI::UIPipeline> g_pipeline;
-
 	// One UI frame through the FrameGraph, as the desktop app does it: the widget tree is walked into
 	// the UI context (create_graph), UIPipeline's UI_PreDraw / UI_Render passes are added, and the graph
 	// draws into ui_target in place of the swapchain. That target is FP16 because the UI PSOs write
@@ -436,11 +523,6 @@ namespace
 		swap.wait_for_free();
 		ensure_ui();
 
-		if (!g_graph)
-		{
-			g_graph = std::make_unique<FrameGraph::Graph>();
-			g_pipeline = std::make_unique<Pipelines::UI::UIPipeline>();
-		}
 		auto& graph = *g_graph;
 
 		auto target = swap.get_current_frame();
@@ -454,6 +536,18 @@ namespace
 
 		{
 			PROFILE(L"demo_ui_update");
+			THREAD_SCOPE(GUI);
+
+			{
+				std::vector<std::function<void(GUI::user_interface&)>> pending;
+				{
+					std::lock_guard<std::mutex> lock(g_input_mutex);
+					pending.swap(g_input);
+				}
+				for (auto& input : pending)
+					input(*g_ui);
+			}
+
 			if (g_laid_out_for != ivec2((int)dims.x, (int)dims.y))
 			{
 				layout_ui(W, H);
@@ -472,6 +566,7 @@ namespace
 
 		{
 			PROFILE(L"demo_graph_build");
+			Profiler::get().on_frame(frame);   // what the Profiler page shows
 			graph.start_new_frame();
 			graph.get_context<TimeInfo>().frame = frame;
 
@@ -585,6 +680,14 @@ export namespace demo
 	// Before the first frame: VSM shadows on (default) or off, and the window/graphs drawn over the scene.
 	void set_shadows(bool enabled) { g_shadows = enabled; }
 	void set_ui_visible(bool visible) { g_ui_visible = visible; }
+
+	// Input for the widget tree, from any thread: it is applied at the start of the next frame, on the GUI thread.
+	void post_input(std::function<void(GUI::user_interface&)> input)
+	{
+		std::lock_guard<std::mutex> lock(g_input_mutex);
+		g_input.push_back(std::move(input));
+	}
+	void set_start_tab(int tab) { g_start_tab = tab; }   // 0 Game, 1 Frame debugger, 2 Profiler, 3 Properties, 4 Log
 
 	// The FP16 target the frame graph renders the screen into; a host recreates it whenever its swapchain does.
 	// Sampled by the final copy, hence ShaderResource next to RenderTarget.

@@ -16,21 +16,30 @@ class FrameGraphTimelineCanvas : public dock_base
     // -----------------------------------------------------------------------
     //  Layout constants
     // -----------------------------------------------------------------------
-    static constexpr float LABEL_W    = 162.0f;
-    static constexpr float LANE_H     = 40.0f;
+    // The drawing code mixes pixel bounds with these constants, so it only works with the canvas at
+    // a layout scale of 1. A phone hosts it in a 1/density wrapper and sets FrameGraphDebug::ui_scale
+    // to the density so everything still comes out finger-sized; apply_ui_scale() scales them once.
+    static inline float LABEL_W    = 162.0f;
+    static inline float LANE_H     = 40.0f;
     static constexpr int   LANE_N     = int(magic_enum::enum_count<HAL::CommandListType>());
     static constexpr float LANE_COUNT = float(LANE_N);
 
     // One lane per queue, ordered by the CommandListType enum, so the lane
     // index IS the enum value.
-    static constexpr float lane_off(HAL::CommandListType q) { return float(uint(q)) * LANE_H; }
-    static constexpr float ROW_H      = 74.0f;
-    static constexpr float COL_W_BASE = 140.0f;
-    static constexpr float PASS_H     = 32.0f;
-    static constexpr float CELL_H     = 64.0f;
-    static constexpr float PAD        = 3.0f;
-    static constexpr float LABEL_FONT = 10.0f;
-    static constexpr float ICON_W     = 18.0f;  // resource-type icon size in left column
+    static float lane_off(HAL::CommandListType q) { return float(uint(q)) * LANE_H; }
+    static inline float ROW_H      = 74.0f;
+    static inline float COL_W_BASE = 140.0f;
+    static inline float PASS_H     = 32.0f;
+    static inline float CELL_H     = 64.0f;
+    static inline float PAD        = 3.0f;
+    static inline float LABEL_FONT = 10.0f;
+    static inline float ICON_W     = 18.0f;  // resource-type icon size in left column
+
+    static void apply_ui_scale(float k)
+    {
+        LABEL_W *= k; LANE_H *= k; ROW_H *= k; COL_W_BASE *= k; PASS_H *= k;
+        CELL_H *= k; PAD *= k; LABEL_FONT *= k; ICON_W *= k;
+    }
 
     // -----------------------------------------------------------------------
     //  Data model
@@ -125,7 +134,7 @@ class FrameGraphTimelineCanvas : public dock_base
             clickable             = true;
             vert->visible         = false;
             hor->visible          = false;
-            over_filled->visible  = false;
+            over_filled->visible  = FrameGraphDebug::compact;   // the mover gives touch drag and fling; mouse uses the right-drag below
             contents->width_size  = GUI::size_type::FIXED;
             contents->height_size = GUI::size_type::FIXED;
         }
@@ -653,14 +662,15 @@ class FrameGraphTimelineCanvas : public dock_base
                 auto lbl         = std::make_shared<label>();
                 lbl->text        = text;
                 lbl->color       = color;
-                lbl->font_size   = 11.0f;
+                const float k    = FrameGraphDebug::ui_scale;
+                lbl->font_size   = 11.0f * k;
                 lbl->docking     = GUI::dock::NONE;
                 lbl->width_size  = GUI::size_type::MATCH_PARENT;
                 lbl->height_size = GUI::size_type::FIXED;
-                lbl->size        = { 0.0f, 20.0f };
-                lbl->pos         = { 8.0f, y };
+                lbl->size        = { 0.0f, 20.0f * k };
+                lbl->pos         = { 8.0f * k, y };
                 scr->contents->add_child(lbl);
-                y += 20.0f;
+                y += 20.0f * k;
             };
 
             add_row("Pass:   " + to_str(info.name));
@@ -800,14 +810,15 @@ class FrameGraphTimelineCanvas : public dock_base
                 auto lbl         = std::make_shared<clickable_label>();
                 lbl->text        = text;
                 lbl->color       = color;
-                lbl->font_size   = 11.0f;
+                const float k    = FrameGraphDebug::ui_scale;
+                lbl->font_size   = 11.0f * k;
                 lbl->docking     = GUI::dock::NONE;
                 lbl->width_size  = GUI::size_type::MATCH_PARENT;
                 lbl->height_size = GUI::size_type::FIXED;
-                lbl->size        = { 0.0f, 18.0f };
-                lbl->pos         = { 8.0f + indent, y };
+                lbl->size        = { 0.0f, 18.0f * k };
+                lbl->pos         = { (8.0f + indent) * k, y };
                 scr->contents->add_child(lbl);
-                y += 18.0f;
+                y += 18.0f * k;
                 return lbl;
             };
 
@@ -1181,6 +1192,43 @@ class FrameGraphTimelineCanvas : public dock_base
     minimap_overlay::ptr     m_minimap;
     GUI::base::ptr           m_preview_panel;
     GUI::base::ptr           m_barriers_panel;
+    dock_base::ptr           m_right_dock;
+    tab_button::ptr          m_preview_tab;
+
+    // Replaces the details panels' content; either may be null to leave that panel alone.
+    // In compact mode the dock is hidden otherwise, so this also opens it, with a back row on top.
+    void set_details(GUI::base::ptr preview, GUI::base::ptr barriers)
+    {
+        auto fill = [this](GUI::base::ptr panel, GUI::base::ptr content)
+        {
+            if (!content) return;
+            panel->remove_all();
+            if (FrameGraphDebug::compact)
+            {
+                auto back         = std::make_shared<clickable_label>();
+                back->text        = "< Back";
+                back->font_size   = 18.0f * FrameGraphDebug::ui_scale;
+                back->docking     = GUI::dock::TOP;
+                back->width_size  = GUI::size_type::MATCH_PARENT;
+                back->height_size = GUI::size_type::FIXED;
+                back->size        = { 0.0f, 48.0f * FrameGraphDebug::ui_scale };
+                back->color       = { 0.9f, 0.9f, 0.95f, 1.0f };
+                back->on_click    = [this]() { m_right_dock->visible = false; };
+                panel->add_child(back);
+            }
+            panel->add_child(content);
+        };
+
+        fill(m_preview_panel, preview);
+        fill(m_barriers_panel, barriers);
+
+        if (FrameGraphDebug::compact)
+        {
+            m_right_dock->size    = { std::max(200.0f, get_render_bounds().w / std::max(result_scale, 0.01f)), 0.0f };
+            m_right_dock->visible = true;
+            m_right_dock->get_tabs()->show_page(m_preview_tab);
+        }
+    }
 
     // -----------------------------------------------------------------------
     //  Labels / images
@@ -1373,6 +1421,14 @@ public:
         width_size  = GUI::size_type::MATCH_PARENT;
         height_size = GUI::size_type::MATCH_PARENT;
 
+        if (FrameGraphDebug::ui_scale != 1.0f)
+        {
+            static bool scaled = false;   // the constants are shared statics
+            if (!scaled)
+                apply_ui_scale(FrameGraphDebug::ui_scale);
+            scaled = true;
+        }
+
         m_scroll = std::make_shared<content_scroll>(*this);
 
         // Grid canvas — first child inside contents (labels/images render on top).
@@ -1406,19 +1462,30 @@ public:
 
         // Right dock on this (dock_base) — permanent preview panel.
         auto right_dock  = get_dock(GUI::dock::RIGHT);
+        m_right_dock     = right_dock;
         right_dock->size = { 400.0f, 0.0f };
+        right_dock->visible = !FrameGraphDebug::compact;
 
         m_preview_panel              = std::make_shared<GUI::base>();
         m_preview_panel->docking     = GUI::dock::FILL;
         m_preview_panel->width_size  = GUI::size_type::MATCH_PARENT;
         m_preview_panel->height_size = GUI::size_type::MATCH_PARENT;
-        right_dock->get_tabs()->add_page("Preview", m_preview_panel);
+        m_preview_tab = right_dock->get_tabs()->add_page("Preview", m_preview_panel);
 
         m_barriers_panel              = std::make_shared<GUI::base>();
         m_barriers_panel->docking     = GUI::dock::FILL;
         m_barriers_panel->width_size  = GUI::size_type::MATCH_PARENT;
         m_barriers_panel->height_size = GUI::size_type::MATCH_PARENT;
-        right_dock->get_tabs()->add_page("Transitions", m_barriers_panel);
+        auto barriers_tab = right_dock->get_tabs()->add_page("Transitions", m_barriers_panel);
+
+        if (FrameGraphDebug::compact)
+        {
+            // Finger-sized tabs that cannot be closed (a closed page could not be reopened).
+            right_dock->get_tabs()->set_strip_height(48.0f * FrameGraphDebug::ui_scale);
+            m_preview_tab->set_closable(false);
+            barriers_tab->set_closable(false);
+            right_dock->get_tabs()->show_page(m_preview_tab);
+        }
 
         graph.on_compile.register_handler(this,
             [this](const FrameGraph::Graph& cg) { rebuild(cg); });
@@ -1913,12 +1980,8 @@ private:
                     for (auto& p : *passes_ptr)
                         if (p.call_id == src_cid) { pass_name_str = to_str(p.name); break; }
 
-                    m_preview_panel->remove_all();
-                    m_preview_panel->add_child(
-                        std::make_shared<ResourcePreviewContent>(alloc, src_cid, pass_name_str));
-
-                    m_barriers_panel->remove_all();
-                    m_barriers_panel->add_child(
+                    set_details(
+                        std::make_shared<ResourcePreviewContent>(alloc, src_cid, pass_name_str),
                         std::make_shared<ResourceBarrierContent>(m_resources[ri], m_passes, cid));
                 };
 
@@ -2128,9 +2191,7 @@ private:
                 for (auto& [type, dep_id] : captured.cross_queue_deps)
                     m_sel_wait_call_ids.push_back(dep_id);
 
-                m_preview_panel->remove_all();
-                m_preview_panel->add_child(
-                    std::make_shared<PassInfoContent>(captured, m_passes));
+                set_details(std::make_shared<PassInfoContent>(captured, m_passes), nullptr);
             };
 
             m_pass_labels.push_back({ lbl, btn, pass.call_id, pass.queue });
