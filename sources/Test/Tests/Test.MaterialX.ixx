@@ -950,6 +950,32 @@ float frame_probe() { mx_set_time(2.0); return mx_frame(); }
 		ASSERT_TRUE(source(plain[0].second->get_subsurface_weight()) == nullptr);
 	}
 
+	// A shader input wired to a <nodegraph> output (nodegraph="g" output="out"), the
+	// way most exported materials are written, builds the graph's nodes instead of
+	// being dropped: the inputs end up driven, not at constant defaults.
+	TEST(MaterialX.GPU, NodeGraphInputs)
+	{
+		using namespace mx_import;
+
+		auto graphs = build(surface("standard_surface",
+			R"(<input name="base_color" type="color3" nodegraph="paint" output="paint_out" />
+			   <input name="specular_roughness" type="float" nodegraph="paint" output="rough_out" />)",
+			R"(<nodegraph name="paint">
+			     <constant name="tint" type="color3"><input name="value" type="color3" value="0.2, 0.4, 0.6" /></constant>
+			     <multiply name="scaled" type="float"><input name="in1" type="float" value="0.5" /><input name="in2" type="float" value="0.5" /></multiply>
+			     <output name="paint_out" type="color3" nodename="tint" />
+			     <output name="rough_out" type="float" nodename="scaled" />
+			   </nodegraph>)"));
+
+		ASSERT_EQ(size_t(1), graphs.size());
+		auto& g = graphs[0].second;
+
+		ASSERT_TRUE(source(g->get_base_color()) != nullptr);
+		ASSERT_TRUE(dynamic_cast<VectorNode*>(source(g->get_base_color())) == nullptr);
+		ASSERT_TRUE(source(g->get_roughness()) != nullptr);
+		ASSERT_TRUE(dynamic_cast<ScalarNode*>(source(g->get_roughness())) == nullptr);
+	}
+
 	// GBufferDownsampler's roughness verdict decides which tiles trace their own
 	// full-res reflection ray instead of copying the (isotropic) half-res one. A tile
 	// holding an anisotropic pixel has to trace regardless of roughness and
@@ -1332,13 +1358,29 @@ float frame_probe() { mx_set_time(2.0); return mx_frame(); }
 		using namespace mx_import;
 
 		auto graphs = build(surface("standard_surface",
-			R"(<input name="specular_roughness" type="float" nodename="vertex_gray" />)",
-			// geomcolor: the mesh format has no vertex colours, so there is nothing to read.
-			R"(<geomcolor name="vertex_gray" type="float" />)"));
+			R"(<input name="base_color" type="color3" nodename="hexed" />)",
+			// hextiledimage: no implementation yet.
+			R"(<hextiledimage name="hexed" type="color3" />)"));
 
 		ASSERT_EQ(size_t(1), graphs.size());
-		auto* rough = source_as<ScalarNode>(graphs[0].second->get_roughness());
-		ASSERT_TRUE(rough != nullptr);
-		ASSERT_EQ(std::string(), close({ rough->get_value() }, { 0.2f }));
+		auto* base = source_as<VectorNode>(graphs[0].second->get_base_color());
+		ASSERT_TRUE(base != nullptr);
+		ASSERT_EQ(std::string(), close(value_of(base), { 0.8f, 0.8f, 0.8f, 1.0f }));
+	}
+
+	// geomcolor has no vertex colours to read, so it is white: a graph that
+	// multiplies by it still builds, driven rather than left at defaults.
+	TEST(MaterialX.GPU, GeomColorIsWhite)
+	{
+		using namespace mx_import;
+
+		auto graphs = build(surface("standard_surface",
+			R"(<input name="base_color" type="color3" nodename="vertex" />)",
+			R"(<geomcolor name="vertex" type="color3" />)"));
+
+		ASSERT_EQ(size_t(1), graphs.size());
+		auto* src = source(graphs[0].second->get_base_color());
+		ASSERT_TRUE(src != nullptr);
+		ASSERT_TRUE(dynamic_cast<VectorNode*>(src) == nullptr);
 	}
 }

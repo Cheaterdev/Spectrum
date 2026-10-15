@@ -1235,6 +1235,17 @@ struct PassSetupDefault<Passes::FrameGraphTests::FGT_ProduceGBuffer>
 
 
 template<>
+struct PassSetupDefault<Passes::FrameGraphTests::FGT_ProduceShadow>
+{
+	static constexpr bool enabled = true;
+
+	// Generated from this pass's [RunAlways]/[SetupCondition]/
+	// [RenderCondition]; defined in autogen/pass_defaults.cpp.
+	static FrameGraph::SetupResult setup(Passes::FrameGraphTests::FGT_ProduceShadow::Context& data, FrameGraph::TaskBuilder& builder);
+};
+
+
+template<>
 struct PassSetupDefault<Passes::FrameGraphTests::FGT_AppendTiles>
 {
 	static constexpr bool enabled = true;

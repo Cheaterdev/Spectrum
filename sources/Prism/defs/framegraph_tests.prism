@@ -339,6 +339,13 @@ namespace FrameGraphTests
 		[Always = UnorderedAccess] [Size = FGTestState::size] [Format = R16G16B16A16_FLOAT] Texture ResultTexture;
 	}
 
+	# SIGMA-packed shadow as NRD_ShadowCombine reads it (uploaded by the test).
+	[RunAlways]
+	PassNode FGT_ProduceShadow
+	{
+		[Always = CopyDest] [Size = FGTestState::size] [Format = R8_UNORM] Texture VSM_ShadowDenoised;
+	}
+
 	# ---- pipelines, one per scenario --------------------------------------------
 
 	Pipeline FGT_GraphicsPipeline
@@ -477,6 +484,16 @@ namespace FrameGraphTests
 	{
 		FGT_ProduceGBuffer;
 		[Async] VSM_Unshadowed;
+		FGT_CopyResultToSink;
+	}
+
+	# NRD_ShadowCombine over the same synthetic GBuffer, to compare against
+	# FGT_VSMUnshadowedPipeline: with a fully lit shadow both must light alike.
+	Pipeline FGT_NRDShadowCombinePipeline
+	{
+		FGT_ProduceGBuffer;
+		FGT_ProduceShadow;
+		NRD_ShadowCombine;
 		FGT_CopyResultToSink;
 	}
 

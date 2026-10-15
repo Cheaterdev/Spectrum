@@ -379,12 +379,12 @@ namespace
 	struct SyntheticGBuffer
 	{
 		int w, h;
-		std::vector<uint8_t>  albedo, normals, specular;   // RGBA8
+		std::vector<uint8_t>  albedo, normals, specular, material;   // RGBA8; material zero = STANDARD
 		std::vector<uint16_t> speed;                       // RG16F, zero
 		std::vector<float>    depth;                       // R32
 
 		SyntheticGBuffer(int w, int h) : w(w), h(h),
-			albedo((size_t)w * h * 4), normals((size_t)w * h * 4), specular((size_t)w * h * 4, 0),
+			albedo((size_t)w * h * 4), normals((size_t)w * h * 4), specular((size_t)w * h * 4, 0), material((size_t)w * h * 4, 0),
 			speed((size_t)w * h * 2, 0), depth((size_t)w * h)
 		{
 			const uint8_t band_albedo[4][4] = { { 230, 60, 40, 0 }, { 60, 200, 80, 0 }, { 50, 90, 220, 0 }, { 200, 200, 200, 128 } };
@@ -417,9 +417,7 @@ namespace
 			put(data.GBuffer_Albedo,    albedo.data(),   4);
 			put(data.GBuffer_Normals,   normals.data(),  4);
 			put(data.GBuffer_Specular,  specular.data(), 4);
-			// All zero is what the material target holds for an uncoated surface
-			// (shading model STANDARD), so the zeroed specular buffer serves.
-			put(data.GBuffer_Material,  specular.data(), 4);
+			put(data.GBuffer_Material,  material.data(), 4);
 			put(data.GBuffer_Speed,     speed.data(),    4);
 			put(data.GBuffer_DepthMips, depth.data(),    4);
 		}
@@ -1060,6 +1058,100 @@ export namespace Test
 			}
 
 		Test::check_texture_data_reference(result, "fg_vsm_unshadowed");
+	}
+
+	// NRD_ShadowCombine (the RTX-reference shadow source) with a fully lit shadow
+	// must light every pixel exactly as VSM_Unshadowed does: both end in the same
+	// diffuse term plus coat attenuation and material_sun_lobes. The material bands
+	// cover coat, sheen, anisotropy and a half-metallic standard surface, so a
+	// source that drops the lobes (as this one once did) differs from the other.
+	TEST(RenderSystem.FrameGraph, Effect_NRDShadowCombine_MatchesVSMLighting)
+	{
+		constexpr int w = kReferenceWidth, h = kReferenceHeight;
+		const vec3 sun = vec3(0.3f, 0.8f, 0.5f).normalize();
+		SyntheticGBuffer gbuffer(w, h);
+		const uint8_t band_material[4][4] = { { 255, 77, 0, 1 }, { 255, 128, 0, 2 }, { 200, 128, 0, 3 }, { 0, 0, 0, 0 } };
+		for (int y = 0; y < h; ++y)
+			for (int x = 0; x < w; ++x)
+			{
+				std::memcpy(&gbuffer.material[((size_t)y * w + x) * 4], band_material[std::min(x * 4 / w, 3)], 4);
+				gbuffer.depth[(size_t)y * w + x] = y < h / 5 ? 0.0f : 0.02f;
+			}
+
+		camera cam;
+		cam.position = vec3(0.0f, 5.0f, -10.0f);
+		cam.target   = vec3(0.0f, 0.0f, 0.0f);
+		cam.set_projection_params(Math::pi / 4, kReferenceAspect, 0.1f, 1000.0f);
+		cam.update();
+
+		auto render = [&](auto& pipeline, bool rtx_reference, auto setup)
+		{
+			auto sink = make_sink(w, h, 1, 1, HAL::Format::R16G16B16A16_FLOAT);
+			pipeline.fGT_ProduceGBuffer.render_func   = [&](auto& data, FrameContext& ctx) { gbuffer.upload(data, ctx); };
+			pipeline.fGT_CopyResultToSink.render_func = [](auto& data, FrameContext& ctx) {
+				ctx.get_list()->get_copy().copy_texture(data.FGT_Sink.info->resource, 0, data.ResultTexture.info->resource, 0);
+			};
+			setup(pipeline);
+
+			GraphRunner r;
+			r.graph.get_context<ViewportInfo>().frame_size   = { w, h };
+			r.graph.get_context<ViewportInfo>().upscale_size = { w, h };
+			r.graph.get_context<SkyInfo>().sunDir = sun;
+			r.graph.get_context<Table::Shadows::VSM::VSMSelectors>().supported = false;
+			r.graph.get_context<Table::Shadows::VSM::VSMSelectors>().shadow_source = rtx_reference ? Shadows::VSM::ShadowSource::RTXReference : Shadows::VSM::ShadowSource::VSM;
+			r.graph.get_context<Table::Raytrace::RenderDeviceCapabilities>().rtx_supported = rtx_reference;
+			r.on_frame = [&](Graph& g) {
+				g.add_slot_generator([&](Graph& g) {
+					Slots::Frame::FrameInfo fi;
+					fi.GetSunDir().xyz     = sun;
+					fi.GetCamera()         = cam.camera_cb.current;
+					fi.GetPrevCamera()     = cam.camera_cb.current;
+					fi.GetBrdf()           = EngineAssets::brdf.get_asset()->get_texture()->texture_3d().texture3D;
+					fi.GetBestFitNormals() = EngineAssets::best_fit_normals.get_asset()->get_texture()->texture_2d().texture2D;
+					g.register_slot_setter(fi.compile(*g.builder.current_frame));
+				});
+			};
+			r.run_frames(pipeline, sink, ivec2(w, h));
+			return read_sink(sink.get());
+		};
+
+		FGT_VSMUnshadowedPipeline vsm_pipeline;
+		VSM vsm(vsm_pipeline);
+		auto vsm_result = render(vsm_pipeline, false, [](auto&) {});
+
+		const std::vector<uint8_t> lit(size_t(w) * h, 255);
+		FGT_NRDShadowCombinePipeline nrd_pipeline;
+		auto nrd_result = render(nrd_pipeline, true, [&](auto& p) {
+			p.fGT_ProduceShadow.render_func = [&](auto& data, FrameContext& ctx) {
+				ctx.get_list()->get_copy().update_texture(data.VSM_ShadowDenoised.info->resource, ivec3(0, 0, 0), ivec3(w, h, 1), 0,
+					reinterpret_cast<const char*>(lit.data()), w);
+			};
+		});
+
+		auto& a = vsm_result->array[0]->mips[0];
+		auto& b = nrd_result->array[0]->mips[0];
+		int differs_from_diffuse = 0;
+		for (int y = h / 5; y < h; ++y)
+			for (int x = 0; x < w; ++x)
+			{
+				auto pa = reinterpret_cast<const uint16_t*>(a->data.data() + (size_t)y * a->width_stride) + x * 4;
+				auto pb = reinterpret_cast<const uint16_t*>(b->data.data() + (size_t)y * b->width_stride) + x * 4;
+				const vec3 diffuse = gbuffer.unshadowed(x, y, sun);
+				const float d[3] = { diffuse.x, diffuse.y, diffuse.z };
+				for (int c = 0; c < 3; ++c)
+				{
+					const float want = half_to_float_normal(pa[c]), got = half_to_float_normal(pb[c]);
+					if (!(std::abs(got - want) <= 2e-3f + 2e-3f * want))
+						throw Test::TestFailure("pixel (" + std::to_string(x) + "," + std::to_string(y) + ") channel "
+							+ std::to_string(c) + " is " + std::to_string(got) + " with NRD_ShadowCombine, " + std::to_string(want) + " with VSM");
+					if (std::abs(want - d[c]) > 2e-3f + 2e-3f * d[c])
+						++differs_from_diffuse;
+				}
+			}
+
+		// Guards the comparison itself: if neither source added any lobe, the match above is vacuous.
+		if (differs_from_diffuse == 0)
+			throw Test::TestFailure("no pixel differs from the plain diffuse term; the lobes were never exercised");
 	}
 
 	// VSM_DepthAnalysis on async compute over a synthetic depth buffer (a far

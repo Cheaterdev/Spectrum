@@ -70,6 +70,7 @@ export import "../defines.h";
 #include "pass/FrameGraphTests/FGT_CopyResultToSink.h"
 #include "pass/FrameGraphTests/FGT_ProduceBloomInputs.h"
 #include "pass/FrameGraphTests/FGT_ProduceGBuffer.h"
+#include "pass/FrameGraphTests/FGT_ProduceShadow.h"
 #include "pass/FrameGraphTests/FGT_AppendTiles.h"
 #include "pass/FrameGraphTests/FGT_CopyTileList.h"
 #include "pass/FrameGraphTests/FGT_CaptureAlbedo.h"
@@ -162,6 +163,7 @@ export import "../defines.h";
 #include "pass/FrameGraphTests/FGT_TonemapPipeline.pipeline.h"
 #include "pass/FrameGraphTests/FGT_BloomPipeline.pipeline.h"
 #include "pass/FrameGraphTests/FGT_VSMUnshadowedPipeline.pipeline.h"
+#include "pass/FrameGraphTests/FGT_NRDShadowCombinePipeline.pipeline.h"
 #include "pass/FrameGraphTests/FGT_VSMDepthAnalysisPipeline.pipeline.h"
 #include "pass/FrameGraphTests/FGT_VSMFullChainPipeline.pipeline.h"
 #include "pass/FrameGraphTests/FGT_TileListPipeline.pipeline.h"
@@ -423,6 +425,10 @@ export namespace Passes
 	namespace FrameGraphTests
 	{
 		using ::Passes::FrameGraphTests::FGT_ProduceGBuffer;
+	}
+	namespace FrameGraphTests
+	{
+		using ::Passes::FrameGraphTests::FGT_ProduceShadow;
 	}
 	namespace FrameGraphTests
 	{
@@ -894,6 +900,10 @@ export namespace Pipelines
 	namespace FrameGraphTests
 	{
 		using ::Pipelines::FrameGraphTests::FGT_VSMUnshadowedPipeline;
+	}
+	namespace FrameGraphTests
+	{
+		using ::Pipelines::FrameGraphTests::FGT_NRDShadowCombinePipeline;
 	}
 	namespace FrameGraphTests
 	{

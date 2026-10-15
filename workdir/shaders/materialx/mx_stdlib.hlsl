@@ -57,6 +57,13 @@ float3 mx_normal()              { return mx_geom_normal; }
 float3 mx_tangent(int index)    { return mx_geom_tangent; }
 float3 mx_bitangent(int index)  { return mx_geom_bitangent; }
 
+// The engine's meshes carry no vertex colours, so geomcolor is the neutral white a
+// document would get from a mesh without any: a graph that multiplies by it
+// still builds and renders as if it were absent.
+float  mx_geomcolor_float(int index)  { return 1.0; }
+float3 mx_geomcolor_color3(int index) { return float3(1, 1, 1); }
+float4 mx_geomcolor_color4(int index) { return float4(1, 1, 1, 1); }
+
 // Tangent-space normal (encoded 0..1, as the texture stores it) to the frame
 // N/T/B. All-zero input means "no map": the flat normal.
 float3 mx_normalmap(float3 value, float2 normal_scale, float3 N, float3 T, float3 B)

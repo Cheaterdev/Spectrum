@@ -66,6 +66,7 @@ namespace FrameGraph
 		FGT_CopyResultToSink,
 		FGT_ProduceBloomInputs,
 		FGT_ProduceGBuffer,
+		FGT_ProduceShadow,
 		FGT_AppendTiles,
 		FGT_CopyTileList,
 		FGT_CaptureAlbedo,

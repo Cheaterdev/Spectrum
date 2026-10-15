@@ -76,6 +76,7 @@ export
 		Library::FGT_CopyResultToSink FGT_CopyResultToSink;
 		Library::FGT_ProduceBloomInputs FGT_ProduceBloomInputs;
 		Library::FGT_ProduceGBuffer FGT_ProduceGBuffer;
+		Library::FGT_ProduceShadow FGT_ProduceShadow;
 		Library::FGT_AppendTiles FGT_AppendTiles;
 		Library::FGT_CopyTileList FGT_CopyTileList;
 		Library::FGT_CaptureAlbedo FGT_CaptureAlbedo;

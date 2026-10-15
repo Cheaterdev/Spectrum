@@ -20,9 +20,30 @@ static const float ALBEDO_FLOOR = 0.05;
 // Taps are at most 3 px apart (3 * MAX_SIGMA_PX / TAPS): sparser than that and a wide
 // kernel turns into visible copies of the image instead of a blur.
 static const float MAX_SIGMA_PX = 16.0;
-// A Gaussian of this sigma stands in for the mean free path: ~all of its energy
-// lies within the radius.
+// The scattering profile is a sum of three Gaussians (the separable-SSS
+// approximation of Jimenez et al.): a narrow core that keeps detail, a body, and
+// a wide tail that carries the soft red glow of skin-like media. Scales are
+// relative to the sigma derived from the radius, weights sum to 1, and the mix
+// keeps the variance of the single Gaussian it replaces (sum a * s^2 = 1.03).
+static const float3 PROFILE_WEIGHT = float3(0.5, 0.35, 0.15);
+static const float3 PROFILE_SCALE  = float3(0.4, 1.0, 2.0);
+static const float  PROFILE_WIDEST = 2.0;
+// Sigma of a single Gaussian standing in for the mean free path: ~all of its
+// energy lies within the radius.
 static const float SIGMA_PER_RADIUS = 0.5;
+
+// Profile of one colour channel at distance d (px); each Gaussian is normalised, so
+// the narrow core is tall and the tail low, as they should be.
+float profile(float d, float sigma)
+{
+	float3 s = max(PROFILE_SCALE * sigma, 0.05);
+	return dot(PROFILE_WEIGHT / s * exp(-0.5 * d * d / (s * s)), float3(1, 1, 1));
+}
+
+float3 profile3(float d, float3 sigma)
+{
+	return float3(profile(d, sigma.x), profile(d, sigma.y), profile(d, sigma.z));
+}
 
 float view_depth(float raw_z, Camera camera)
 {
@@ -55,8 +76,9 @@ void blur_axis(uint2 pixel, int2 dir, bool from_radiance, bool final_pass)
 	// Pixels per world unit at this depth, along the blur axis.
 	float focal = dir.x != 0 ? 0.5 * dims.x * camera.GetProj()._11 : 0.5 * dims.y * camera.GetProj()._22;
 	float3 sigma_world = sss_decode_radius(material_params(material)) * SIGMA_PER_RADIUS;
-	float3 sigma_px = min(sigma_world * focal / max(z, 1e-3), MAX_SIGMA_PX);
-	float  max_sigma_px = max(sigma_px.x, max(sigma_px.y, sigma_px.z));
+	float3 sigma_px = min(sigma_world * focal / max(z, 1e-3), MAX_SIGMA_PX / PROFILE_WIDEST);
+	// Reach of the widest Gaussian in the mix.
+	float  max_sigma_px = PROFILE_WIDEST * max(sigma_px.x, max(sigma_px.y, sigma_px.z));
 	float  max_sigma_world = max(sigma_world.x, max(sigma_world.y, sigma_world.z));
 
 	float3 center = GetSSSBlurParams().GetSource()[tc].rgb;
@@ -68,14 +90,15 @@ void blur_axis(uint2 pixel, int2 dir, bool from_radiance, bool final_pass)
 	// Under a quarter of a pixel nothing is gathered beyond the centre tap.
 	if (max_sigma_px > 0.25)
 	{
-		// Taps cover +-3 sigma of the widest channel; a channel with a narrower
+		// Taps cover +-3 sigma of the widest Gaussian of the widest channel; a channel with a narrower
 		// sigma just gets small weights on the outer ones.
 		float step = max(1.0, 3.0 * max_sigma_px / TAPS);
 		// Hard cut on the depth gap: past this the neighbour is another surface.
 		float depth_tolerance = max(2.0 * max_sigma_world, 0.02);
 
-		float3 sum = center;
-		float3 weight_sum = 1.0;
+		float3 centre_weight = profile3(0, sigma_px);
+		float3 sum = center * centre_weight;
+		float3 weight_sum = centre_weight;
 
 		[loop]
 		for (int i = -TAPS; i <= TAPS; i++)
@@ -106,7 +129,7 @@ void blur_axis(uint2 pixel, int2 dir, bool from_radiance, bool final_pass)
 				e /= max(gbuffer.GetAlbedo()[p].rgb, ALBEDO_FLOOR);
 
 			float d = i * step;
-			float3 w = exp(-0.5 * d * d / max(sigma_px * sigma_px, 1e-4));
+			float3 w = profile3(d, sigma_px);
 
 			sum += e * w;
 			weight_sum += w;

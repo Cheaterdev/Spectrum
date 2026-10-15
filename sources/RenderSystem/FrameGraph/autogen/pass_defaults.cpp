@@ -453,6 +453,13 @@ FrameGraph::SetupResult PassSetupDefault<Passes::FrameGraphTests::FGT_ProduceGBu
 }
 
 
+FrameGraph::SetupResult PassSetupDefault<Passes::FrameGraphTests::FGT_ProduceShadow>::setup(
+	Passes::FrameGraphTests::FGT_ProduceShadow::Context& data, FrameGraph::TaskBuilder& builder)
+{
+	return FrameGraph::SetupResult::NeedsRender;
+}
+
+
 FrameGraph::SetupResult PassSetupDefault<Passes::FrameGraphTests::FGT_AppendTiles>::setup(
 	Passes::FrameGraphTests::FGT_AppendTiles::Context& data, FrameGraph::TaskBuilder& builder)
 {
