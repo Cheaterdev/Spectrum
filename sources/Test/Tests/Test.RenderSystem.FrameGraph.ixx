@@ -1038,7 +1038,25 @@ export namespace Test
 		r.graph.get_context<ViewportInfo>().frame_size   = { w, h };
 		r.graph.get_context<ViewportInfo>().upscale_size = { w, h };
 		r.graph.get_context<SkyInfo>().sunDir = sun;
-		r.on_frame = add_frame_info;
+		// A defined camera: metallic pixels' sun highlight depends on the view vector, and
+		// an unset one leaves it to whatever the constant buffer held (Debug zero-fills
+		// it with 0xCC, Profile does not), so the golden would differ between builds.
+		camera cam;
+		cam.position = vec3(0.0f, 5.0f, -10.0f);
+		cam.target   = vec3(0.0f, 0.0f, 0.0f);
+		cam.set_projection_params(Math::pi / 4, kReferenceAspect, 0.1f, 1000.0f);
+		cam.update();
+		r.on_frame = [&](Graph& g) {
+			g.add_slot_generator([&](Graph& g) {
+				Slots::Frame::FrameInfo fi;
+				fi.GetSunDir().xyz     = g.get_context<SkyInfo>().sunDir;
+				fi.GetCamera()         = cam.camera_cb.current;
+				fi.GetPrevCamera()     = cam.camera_cb.current;
+				fi.GetBrdf()           = EngineAssets::brdf.get_asset()->get_texture()->texture_3d().texture3D;
+				fi.GetBestFitNormals() = EngineAssets::best_fit_normals.get_asset()->get_texture()->texture_2d().texture2D;
+				g.register_slot_setter(fi.compile(*g.builder.current_frame));
+			});
+		};
 		r.run_frames(p, sink, ivec2(w, h));
 
 		auto result = read_sink(sink.get());
@@ -1057,7 +1075,9 @@ export namespace Test
 							+ std::to_string(c) + " is " + std::to_string(got[c]) + ", expected " + std::to_string(exp[c]));
 			}
 
-		Test::check_texture_data_reference(result, "fg_vsm_unshadowed");
+		// A pixel or two on a lobe edge land either side of a rounding step between
+		// Debug and optimised builds.
+		Test::check_texture_data_reference(result, "fg_vsm_unshadowed", { .max_mismatch_fraction = 0.0001 });
 	}
 
 	// NRD_ShadowCombine (the RTX-reference shadow source) with a fully lit shadow

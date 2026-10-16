@@ -83,8 +83,8 @@ namespace HAL
 
 		auto native = m_swapChain;
 		device.get_queue(CommandListType::DIRECT)->run([native, this](){
-			PROFILE(L"Present")
-					native->Present(1, 0);
+			PROFILE(L"Present");
+			native->Present(1, 0);
 			});
 	
 		frames[m_frameIndex].fence_event = device.get_queue(CommandListType::DIRECT)->signal();
