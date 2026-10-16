@@ -1,8 +1,8 @@
 {
     // Debug the Android app from VS Code with the CodeLLDB extension (vadimcn.vscode-lldb).
-    // Build and install first (SpectrumAndroid.sln F7, or android/build.py + package.py --install).
+    // Build and install first (SpectrumAndroid.sln F7, or build/driver.py android build + package --install).
     // The task starts the app and lldb-server and writes projects/android/<mode>/attach.lldb (with the
-    // app's pid); the commands below mirror android/debug.py: the target is the device's app_process64,
+    // app's pid); the commands below mirror build/platforms/android/debug.py: the target is the device's app_process64,
     // editor breakpoints stay pending until `target symbols add` loads the unstripped libspectrum.so.
     "version": "0.2.0",
     "configurations": [

@@ -20,7 +20,7 @@ SDK = next(Path(p) for p in (os.environ.get("ANDROID_HOME"), os.environ.get("AND
                              os.path.join(os.environ.get("LOCALAPPDATA", ""), "Android", "Sdk"))
            if p and Path(p).is_dir())
 ADB = str(SDK / "platform-tools" / "adb.exe")
-LAST = Path(__file__).resolve().parent.parent / "projects" / "android" / "last_device.json"
+LAST = Path(__file__).resolve().parents[3] / "projects" / "android" / "last_device.json"
 
 
 def _adb(*args, serial=None, timeout=20):

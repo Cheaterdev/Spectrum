@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Attach the NDK's lldb to the running Spectrum app on the device (source-level debugging).
 
-    python android/debug.py [--mode debug|profile|retail] [--launch] [-b FUNC ...] [--batch "cmd; cmd"]
+    python build/driver.py android debug [--mode debug|profile|retail] [--launch] [-b FUNC ...] [--batch "cmd; cmd"]
 
 Starts the app if it is not running (--launch restarts it), puts the NDK's lldb-server inside the app's
 sandbox (the APK is debuggable, so `run-as` works), forwards it over adb and runs the NDK lldb against
@@ -22,7 +22,7 @@ import sys
 import time
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parents[3]   # repo root: build/platforms/android/<this file>
 OUT = ROOT / "projects" / "android"
 PACKAGE = "com.spectrum"
 SOCKET = f"{PACKAGE}/platform.sock"

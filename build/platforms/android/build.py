@@ -6,24 +6,26 @@ wrapper uses, and AGDE has no module support at all. So: build header units
 first, scan the sources with clang-scan-deps (P1689), then emit a Ninja file
 with exact module/header-unit dependencies and let Ninja run it.
 
-    python android/build.py [--mode debug|profile|retail] [--target core] [-k]
+    python build/driver.py android build [--mode debug|profile|retail] [--target core] [-k]
 
 Needs only the Android SDK/NDK (auto-detected, or ANDROID_HOME /
 ANDROID_NDK_HOME) and the Ninja that ships with Visual Studio.
 """
 import argparse
-import hashlib
 import json
 import os
 import re
 import subprocess
 import sys
-from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # build/: the platform-neutral clang_modules
+from clang_modules import fwd, ninja_path, find_ninja, write_text, run, scan_p1689
+
+ROOT = Path(__file__).resolve().parents[3]   # repo root: build/platforms/android/<this file>
 SRC = ROOT / "sources"
 OUT = ROOT / "projects" / "android"
+PLATFORM_DIR = "sources/Platform/Android"   # entry point, pass members and the stand-ins (shims/) for what Android lacks
 
 API = 29
 ABI_TRIPLE = "aarch64-linux-android"
@@ -50,7 +52,7 @@ TARGETS = {
     "modules": dict(
         dirs=["Modules/stl", "Modules/magic_enum", "Modules/crc32", "Modules/cereal",
               "Modules/crossguid", "Modules/zlib", "Modules/vulkan", "Modules/meshoptimizer", "Modules/skribidi"],
-        extra=["android/shims/windows.ixx", "android/shims/ppl.ixx"],   # Android stand-ins
+        extra=[f"{PLATFORM_DIR}/shims/windows.ixx", f"{PLATFORM_DIR}/shims/ppl.ixx"],   # Android stand-ins
         **layer("modules"),
     ),
     "core": dict(
@@ -62,8 +64,8 @@ TARGETS = {
         # D3D12/DXGI don't exist here; DXC (the runtime shader compiler) is
         # Windows-only, Android ships precompiled SPIR-V.
         exclude_dirs=["HAL/API/D3D12", "HAL/DXGI", "HAL/DXC"],
-        extra=["android/shims/HAL.API.ShaderCompiler.ixx", "android/shims/HAL.ShaderCompiler.android.cpp",
-               "android/shims/HAL.NvidiaStubs.ixx"],
+        extra=[f"{PLATFORM_DIR}/shims/HAL.API.ShaderCompiler.ixx", f"{PLATFORM_DIR}/shims/HAL.ShaderCompiler.android.cpp",
+               f"{PLATFORM_DIR}/shims/HAL.NvidiaStubs.ixx"],
         **layer("hal"),
     ),
     # The tests that run on the device: Core / math / serialization / threading / events / file system / profiling, and
@@ -77,7 +79,7 @@ TARGETS = {
     ),
     "app": dict(
         dirs=[],
-        extra=["android/app/android_entry.cpp"],   # JNI_OnLoad -> Application singleton + logs
+        extra=[f"{PLATFORM_DIR}/android_entry.cpp"],   # JNI_OnLoad -> Application singleton + logs
         root="Core",
         forced="Core/Defines.h",
         deps=["rendersystem", "demo", "tests"],
@@ -92,7 +94,7 @@ TARGETS = {
         # legacy raw4 mesh format: raw4.h does `import Core;` and its .cpp files then include C
         # headers textually, which can't coexist with the combined header unit
         exclude_dirs=["RenderSystem/Mesh/raw4"],
-        extra=["android/app/android_pass_members.cpp"],   # module FrameGraph member bodies the excluded PassDefaults.cpp would have provided
+        extra=[f"{PLATFORM_DIR}/android_pass_members.cpp"],   # module FrameGraph member bodies the excluded PassDefaults.cpp would have provided
         **layer("rendersystem"),
     ),
 }
@@ -162,7 +164,7 @@ MODULE_DECL_RE = re.compile(r"^(\s*(?:export\s+)?module\s+[A-Za-z_][\w.]*(?::[A-
 PLAIN_TU_RE = re.compile(r"^\s*module\s*(?:vulkan)?\s*;[^\n]*$", re.M)
 
 # `import <windows/windows.h>;` appears in GUI/camera code next to `import windows;`.
-# Whatever Win32 surface they need comes from android/shims/windows.ixx.
+# Whatever Win32 surface they need comes from sources/Platform/Android/shims/windows.ixx.
 WINDOWS_HEADER_UNITS = {"windows/windows.h"}
 
 # Plain .cpp files that `import GUI;` and then define members of GUI's classes. MSVC lets a
@@ -178,7 +180,7 @@ RETARGET_MODULE = {"RenderSystem/FrameGraph/autogen/pass_defaults.cpp": ("Graphi
 
 # Partitions removed above: umbrella modules (HAL.ixx) re-export them, so drop those imports.
 DROP_MODULE_IMPORTS = {":Streamline", ":DLSS", ":DLSSRR", ":NRD"}
-# ...replaced by one import of android/shims/HAL.NvidiaStubs.ixx (same `nvidia::` names, all "unavailable")
+# ...replaced by one import of sources/Platform/Android/shims/HAL.NvidiaStubs.ixx (same `nvidia::` names, all "unavailable")
 NVIDIA_STUB_IMPORT = {":Streamline": "export import :NvidiaStubs;"}
 DROP_IMPORT_RE = re.compile(r'^(\s*)(?:export\s+)?import\s+(:[A-Za-z_][\w.]*)\s*;', re.M)
 
@@ -202,13 +204,6 @@ def find_ndk(sdk):
     return cands[-1]
 
 
-def find_ninja():
-    vs = Path(os.environ.get("ProgramFiles", r"C:\Program Files")) / "Microsoft Visual Studio"
-    for p in vs.glob("*/*/Common7/IDE/CommonExtensions/Microsoft/CMake/Ninja/ninja.exe"):
-        return p
-    return "ninja"
-
-
 SDK = find_sdk()
 NDK = find_ndk(SDK)
 BIN = NDK / "toolchains" / "llvm" / "prebuilt" / "windows-x86_64" / "bin"
@@ -218,14 +213,6 @@ AR = BIN / "llvm-ar.exe"
 NINJA = find_ninja()
 
 IMPORT_RE = re.compile(r'(?:^|;)[ \t]*(?:export\s+)?import\s+(<[^>]+>|"[^"]+")\s*;', re.M)
-
-
-def fwd(p):
-    return str(p).replace("\\", "/")
-
-
-def ninja_path(p):
-    return fwd(p).replace("$", "$$").replace(" ", "$ ").replace(":", "$:")
 
 
 INCLUDE_ROOTS = [SRC]
@@ -239,7 +226,7 @@ def base_flags(mode):
          *[f"-I{fwd(d)}" for d in INCLUDE_ROOTS]]
     f += ["-DSPECTRUM_PLATFORM_ANDROID", "-DSPECTRUM_ENABLE_EXCEPTIONS", "-DHAL_BACKEND_VULKAN", "-DLEAK_TEST_ENABLE"]
     if mode == "debug":
-        # full debug info (locals and types) for android/debug.py; package.py strips it from the APK
+        # full debug info (locals and types) for build/platforms/android/debug.py; package.py strips it from the APK
         f += ["-O0", "-g", "-DDEV", "-DPROFILING"]
     elif mode == "profile":
         # What the PC's Profile configuration is: optimized, with the profiler on and none of the DEV checks.
@@ -250,7 +237,7 @@ def base_flags(mode):
 
 
 def rel(p):
-    """Path relative to sources/, or to the repo root for files outside it (android/shims)."""
+    """Path relative to sources/, or to the repo root for files outside it."""
     try:
         return fwd(p.relative_to(SRC))
     except ValueError:
@@ -681,20 +668,6 @@ def patched_context_deps(src):
     return out
 
 
-def write_text(path, text, encoding="utf-8"):
-    """Write only when the content differs. Everything generated goes through here: a rewrite bumps
-    the mtime, and Ninja then recompiles everything that depends on the file, which for a patched
-    header or combined header unit is the whole tree."""
-    data = text.encode(encoding)
-    if path.exists() and path.read_bytes() == data:
-        return
-    path.write_bytes(data)
-
-
-def run(cmd, **kw):
-    return subprocess.run([str(c) for c in cmd], capture_output=True, text=True, **kw)
-
-
 def refresh_unported_stubs(out, app_objs, libs, stubs_s):
     """Make libspectrum.so loadable while parts of the engine are not ported yet.
 
@@ -879,50 +852,14 @@ def main():
         near = [f"-I{fwd(p.parent)}"] if src != p else []
         tu[p] = dict(target=t, obj=out / "obj" / objname, is_ixx=p.suffix == ".ixx", src=src, near=near)
 
-    # A scan result (what a file provides / imports) depends on the file, the exact command line and, in
-    # principle, on the headers it includes, so the cache key covers all three. Headers are fingerprinted as
-    # one set (path + mtime + size of every .h/.hpp/.inl under the source trees), not per file: an edited
-    # header rescans everything, which is the same cost as before, while the common edit (a .cpp/.ixx body)
-    # only rescans that file.
-    scan_cache_file = out / "scan_cache.json"
-    try:
-        scan_cache = json.loads(scan_cache_file.read_text(encoding="utf-8"))
-    except (OSError, ValueError):
-        scan_cache = {}
-    headers = hashlib.sha1()
-    for root in (SRC, ROOT / "android", out / "gen"):
-        for h in sorted(root.rglob("*")):
-            if h.suffix in (".h", ".hpp", ".inl"):
-                st = h.stat()
-                headers.update(f"{h}|{st.st_mtime_ns}|{st.st_size}\n".encode())
-    headers_stamp = headers.hexdigest()
-    new_cache = {}
-
-    def scan(p):
+    def scan_unit(p):
         t = tu[p]["target"]
         cmd = [SCAN, "-format=p1689", "--", CLANGXX, *flags, *tu[p]["near"], *forced_for(t), *hu_flags(imports[p]),
                *(["-x", "c++-module"] if p.suffix == ".ixx" else []), "-c", tu[p]["src"], "-o", tu[p]["obj"]]
-        st = tu[p]["src"].stat()
-        key = hashlib.sha1(("\0".join(map(str, cmd)) + f"|{st.st_mtime_ns}|{st.st_size}|{headers_stamp}").encode()).hexdigest()
-        hit = scan_cache.get(str(p))
-        if hit and hit["key"] == key:
-            new_cache[str(p)] = hit
-            return p, hit["rule"], hit["rc"], hit["err"]
-        r = run(cmd)
-        try:
-            data = json.loads(r.stdout)
-            rule = data["rules"][0] if data["rules"] else {}
-        except Exception:
-            rule = {}
-        if rule:   # failures are not cached: they are rescanned (and reported) every time
-            new_cache[str(p)] = dict(key=key, rule=rule, rc=r.returncode, err=r.stderr)
-        return p, rule, r.returncode, r.stderr
+        return p, tu[p]["src"], cmd
 
     print("scanning...")
-    with ThreadPoolExecutor(args.j) as ex:
-        results = list(ex.map(scan, [p for _, p in allfiles]))
-    print(f"  {len(results) - sum(1 for p, rule, rc, err in results if str(p) not in scan_cache or scan_cache[str(p)]['key'] != new_cache.get(str(p), {}).get('key'))} of {len(results)} from cache")
-    scan_cache_file.write_text(json.dumps(new_cache), encoding="utf-8")
+    results = scan_p1689([scan_unit(p) for _, p in allfiles], out / "scan_cache.json", (SRC, out / "gen"), args.j)
 
     provides, requires, scan_fail = {}, {}, []
     for p, rule, rc, err in results:

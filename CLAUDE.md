@@ -29,21 +29,31 @@ Open `projects/Spectrum.sln` in Visual Studio 2026. Three configurations: **Debu
 
 Executables output to `bin/Debug`, `bin/Profile`, `bin/Retail`. The working directory for running is `workdir/`.
 
+### Platforms (Android, later others)
+Where things live: platform **source code** (entry point, stand-ins for APIs the platform lacks, packaging files) is in
+`sources/Platform/<Name>/`, like `sources/HAL/API/<Backend>/` is for graphics backends; the **scripts** that build and run it are
+`build/platforms/<name>/<command>.py`, started through `python build/driver.py <platform> <command> [args]`;
+`build/clang_modules.py` is the platform-neutral part of a Clang modules build (Ninja helpers, change-only writes, the cached
+dependency scan) for the next Clang platform to reuse. Generated output is `projects/<platform>/`. Windows is Sharpmake/MSBuild
+only and has no driver. A new platform: a folder in `sources/Platform/`, a folder in `build/platforms/` with its commands, an entry in
+`BuildPlatforms` / a solution in `main.sharpmake.cs`.
+
 ### Android
 `generate_project.bat` also generates `projects/SpectrumAndroid.sln` (configs **Debug/Profile/Retail-Android**).
 It holds one NMake project, `SpectrumAndroid`, which depends on `Tools` (so the Windows `spectrum_tool` and the engine
-layers below it are built first, like the Windows solution). F7 then runs `android/prepare.py` (arm64 vcpkg ports,
-and the shader/texture/asset precompile with `spectrum_tool`, each skipped while its inputs are unchanged), `android/build.py
---target app` and `android/package.py` (APK in `projects/android/<mode>/spectrum.apk`); a clean `projects/` works from a
-single F7. Clean/Rebuild wipe that mode's dir only (not the vcpkg install or the shader cache). F5 runs `android/run.py`
-(install, launch, stream `logcat -s Spectrum`). `android/device.py` picks the phone: one connected phone is used silently;
+layers below it are built first, like the Windows solution). F7 then runs `driver.py android prepare` (arm64 vcpkg ports,
+and the shader/texture/asset precompile with `spectrum_tool`, each skipped while its inputs are unchanged), `... build
+--target app` and `... package` (APK in `projects/android/<mode>/spectrum.apk`); a clean `projects/` works from a
+single F7. Clean/Rebuild wipe that mode's dir only (not the vcpkg install or the shader cache). F5 runs
+`build/platforms/android/run.py` (install, launch, stream `logcat -s Spectrum`). `device.py` picks the phone: one connected
+phone is used silently;
 with none or several (or `--pick`) a small window opens to select, connect (ip:port) or pair (ip:port + code) one, and a paired
 phone advertising over mDNS is connected automatically. `run.py` reinstalls (uninstall, then install) when the installed app
 was signed by a different debug keystore. `spectrum_tool` has been seen to crash while shutting down after writing
 everything (`assets` command); prepare.py accepts that only when the tool printed its success line. It cannot be an MSBuild/AGDE
 build because AGDE has no C++ module / header-unit support; `build.py` does the real compiling.
-**Debugging on the device:** make `SpectrumAndroidLldb` the startup project and press F5 (or run
-`python android/debug.py --mode debug -b SomeFunction`): it starts the NDK's `lldb-server` inside the debuggable app,
+**Debugging on the device:** run
+`python build/driver.py android debug --mode debug -b SomeFunction` (a console lldb): it starts the NDK's `lldb-server` inside the debuggable app,
 attaches the NDK `lldb` in a console, and loads the unstripped `projects/android/<mode>/lib/libspectrum.so` for
 symbols. Source-level breakpoints, stepping, stacks and locals work in `debug` mode (built with full `-g`; `package.py`
 strips the DWARF from the APK copy, the unstripped one stays in `lib/`); `profile` has line tables only (no locals).
@@ -57,8 +67,8 @@ symbols)" in Run and Debug, F5. `.vscode/tasks.json` runs `debug.py --server --l
 `projects/android/<mode>/attach.lldb` with the pid) and `.vscode/launch.json` replays the same lldb commands as `debug.py`.
 Gutter breakpoints stay pending until `target symbols add` loads the unstripped library after attach.
 
-Same commands from a shell: `python android/build.py --mode profile --target app`,
-`python android/package.py --mode profile --install`, `python android/run.py --mode profile`.
+Same commands from a shell: `python build/driver.py android build --mode profile --target app`,
+`... android package --mode profile --install`, `... android run --mode profile`.
 `generate_project.bat` also writes `projects/android/targets.json` (the engine layer stack, from `EngineLayers` in
 `main.sharpmake.cs`, which the Windows projects use too) and `projects/android/vcpkg.json` + `vcpkg-configuration.json` (the
 arm64-android subset of the root manifest; the port list is `AndroidMetadata.VcpkgPorts`). `build.py` needs targets.json, so

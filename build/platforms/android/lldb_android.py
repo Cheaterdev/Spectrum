@@ -1,4 +1,4 @@
-"""lldb helpers for debugging Spectrum on Android (loaded by android/debug.py).
+"""lldb helpers for debugging Spectrum on Android (loaded by debug.py).
 
 ART (the Java runtime in the app) raises SIGSEGV on purpose for implicit null checks and stack-overflow
 probes, and a few other signals are routine, so a debugger stopping on every one is unusable. The stop

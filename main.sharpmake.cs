@@ -34,7 +34,7 @@ namespace Spectrum
     }
 
     // The engine's layer stack, declared once. The Windows projects take their dependencies from it and
-    // AndroidMetadata exports it to projects/android/targets.json for android/build.py, so a layer or a
+    // AndroidMetadata exports it to projects/android/targets.json for build/platforms/android/build.py, so a layer or a
     // dependency added here shows up in both builds.
     public static class EngineLayers
     {
@@ -66,7 +66,7 @@ namespace Spectrum
         }
     }
 
-    // What the Android build (android/build.py, plain Python + Ninja) needs from this description, written
+    // What the Android build (build/platforms/android/build.py, plain Python + Ninja) needs from this description, written
     // to projects/android/ on every generate: the layer stack and a vcpkg manifest for arm64-android.
     public static class AndroidMetadata
     {
@@ -730,8 +730,19 @@ namespace Spectrum
         }
     }
 
+    // Where a platform's source code and its build tooling live. Platform code (entry point, stand-ins for
+    // missing APIs, packaging files) is under sources/Platform/<Name>/, like sources/HAL/API/<Backend>/ is;
+    // the scripts that build and run it are build/platforms/<name>/, started through build/driver.py.
+    public static class BuildPlatforms
+    {
+        public const string AndroidSources = @"[project.SharpmakeCsPath]\sources\Platform\Android";
+        public const string AndroidScripts = @"[project.SharpmakeCsPath]\build\platforms\android";
+        public const string Tooling = @"[project.SharpmakeCsPath]\build";
+        public const string Driver = @"[project.SharpmakeCsPath]\build\driver.py";
+    }
+
     // The Android build cannot be an MSBuild/AGDE one: AGDE has no C++ module or header-unit support.
-    // android/build.py does the compiling (header units + clang-scan-deps + Ninja); this project is
+    // build/platforms/android/build.py does the compiling (header units + clang-scan-deps + Ninja); this project is
     // only the Visual Studio front end for it: F7 builds and packages the APK, F5 installs, launches
     // and streams the log. Compiler errors land in the Error List because Clang prints file:line:col.
     [Sharpmake.Generate]
@@ -741,7 +752,8 @@ namespace Spectrum
         {
             Name = "SpectrumAndroid";
             RootPath = @"[project.SharpmakeCsPath]\projects\android";
-            SourceRootPath = @"[project.SharpmakeCsPath]\android";
+            SourceRootPath = BuildPlatforms.AndroidSources;        // entry point, shims, Java/manifest
+            AdditionalSourceRootPaths.Add(BuildPlatforms.Tooling); // build/driver.py, clang_modules.py, platforms/android/*.py
             SourceFilesExtensions.Add(".py");
             SourceFilesExtensions.Add(".java");
             SourceFilesExtensions.Add(".xml");
@@ -758,8 +770,6 @@ namespace Spectrum
                 Backend = Backend.Vulkan
             });
         }
-
-        protected bool OwnsBuild = true;
 
         // The pythonw.exe of the first python on PATH that is not the WindowsApps alias (an app-execution
         // alias, not a program the debugger can launch). A launcher shim in between (the "py install
@@ -804,7 +814,7 @@ namespace Spectrum
         {
             // build.py's --mode values: debug | profile | retail
             string mode = target.Mode.ToString().ToLowerInvariant();
-            const string script = @"python ""[project.SharpmakeCsPath]\android\";
+            string driver = @"python """ + BuildPlatforms.Driver + @""" android ";
 
             conf.ProjectFileName = "[project.Name]";
             conf.ProjectPath = @"[project.RootPath]";
@@ -813,9 +823,9 @@ namespace Spectrum
             // The commands are written into the vcxproj as-is, so & has to be XML-escaped.
             // prepare.py: arm64 vcpkg ports and the precompiled shaders/textures/assets (needs the Tools project built,
             // which the dependency below takes care of); each step skips itself while its inputs are unchanged.
-            string build = script + @"prepare.py"" --mode " + mode + " &amp;&amp; " +
-                           script + @"build.py"" --mode " + mode + " --target app &amp;&amp; " +
-                           script + @"package.py"" --mode " + mode;
+            string build = driver + "prepare --mode " + mode + " &amp;&amp; " +
+                           driver + "build --mode " + mode + " --target app &amp;&amp; " +
+                           driver + "package --mode " + mode;
 
             conf.CustomBuildSettings = new Configuration.NMakeBuildSettings
             {
@@ -824,52 +834,18 @@ namespace Spectrum
                 CleanCommand = @"rmdir /s /q ""[project.RootPath]\" + mode + @"""",
                 OutputFile = @"[project.RootPath]\" + mode + @"\spectrum.apk",
             };
-            if (!OwnsBuild)
-            {
-                // only one project may run the build, or building the solution would run it twice at once
-                conf.CustomBuildSettings.BuildCommand = "echo built by SpectrumAndroid";
-                conf.CustomBuildSettings.RebuildCommand = "echo built by SpectrumAndroid";
-                conf.CustomBuildSettings.CleanCommand = "echo cleaned by SpectrumAndroid";
-            }
-            else
-            {
-                // spectrum_tool (Windows, Vulkan, same mode) precompiles what the device cannot: it is built
-                // first, with the engine layers it uses, like any other project of the Windows solution.
-                conf.AddPublicDependency<Tools>(target);
-            }
+            // spectrum_tool (Windows, Vulkan, same mode) precompiles what the device cannot: it is built
+            // first, with the engine layers it uses, like any other project of the Windows solution.
+            conf.AddPublicDependency<Tools>(target);
 
+            // F5 debugs pythonw.exe running run.py: it has no console of its own, and run.py sends the device
+            // log to OutputDebugString, so it shows up in the Output window's Debug pane. The debugger launcher
+            // does not search PATH (the build commands do, under cmd), so the full path is needed. The platform
+            // script is started directly, not through the driver: the debuggee has to be the process that logs.
             conf.VcxprojUserFile = new Project.Configuration.VcxprojUserFileSettings();
             conf.VcxprojUserFile.LocalDebuggerWorkingDirectory = @"[project.SharpmakeCsPath]";
-            ConfigureLaunch(conf.VcxprojUserFile, mode);
-        }
-
-        // F5 debugs pythonw.exe running run.py: it has no console of its own, and run.py sends the device
-        // log to OutputDebugString, so it shows up in the Output window's Debug pane. The debugger launcher
-        // does not search PATH (the build commands do, under cmd), so the full path is needed.
-        protected virtual void ConfigureLaunch(Project.Configuration.VcxprojUserFileSettings user, string mode)
-        {
-            user.LocalDebuggerCommand = FindPythonw();
-            user.LocalDebuggerCommandArguments = @"""[project.SharpmakeCsPath]\android\run.py"" --mode " + mode;
-        }
-    }
-
-    // Same build commands, but F5 attaches the NDK's lldb to the app (android/debug.py) in a console
-    // window, for breakpoints and stepping. Make it the startup project to use it. A separate project
-    // because a project has one launch command.
-    [Sharpmake.Generate]
-    public class AndroidLldb : AndroidApp
-    {
-        public AndroidLldb()
-        {
-            Name = "SpectrumAndroidLldb";
-            OwnsBuild = false;
-        }
-
-        protected override void ConfigureLaunch(Project.Configuration.VcxprojUserFileSettings user, string mode)
-        {
-            user.LocalDebuggerCommand = @"$(SystemRoot)\System32\cmd.exe";
-            // pause only when it failed, so an error message stays readable
-            user.LocalDebuggerCommandArguments = @"/c python ""[project.SharpmakeCsPath]\android\debug.py"" --mode " + mode + " || pause";
+            conf.VcxprojUserFile.LocalDebuggerCommand = FindPythonw();
+            conf.VcxprojUserFile.LocalDebuggerCommandArguments = @"""" + BuildPlatforms.AndroidScripts + @"\run.py"" --mode " + mode;
         }
     }
 
@@ -899,7 +875,6 @@ namespace Spectrum
             conf.Name = target.Mode + "-Android";
 
             conf.AddProject<AndroidApp>(target);
-            conf.AddProject<AndroidLldb>(target);
 
             // The same vcxproj files the Windows solution uses, grouped in a folder for editing and navigation.
             // They are built here too: AndroidApp depends on Tools (the precompile tool), which pulls in the layers

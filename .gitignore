@@ -46,3 +46,4 @@ obj/
 bin/
 .vs/
 vcpkg_installed/
+__pycache__/

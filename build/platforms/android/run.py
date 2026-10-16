@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Install the built APK on the connected device, launch it and stream its log.
 
-    python android/run.py [--mode debug|profile|retail] [--no-install] [--args "--es tests all"]
+    python build/driver.py android run [--mode debug|profile|retail] [--no-install] [--args "--es tests all"]
 
 This is what F5 runs from the Visual Studio SpectrumAndroid solution (as pythonw.exe, debugged, so the
 log appears in the Output window's Debug pane). Build first (F7, or build.py then package.py).
@@ -16,7 +16,7 @@ import sys
 import traceback
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parents[3]   # repo root: build/platforms/android/<this file>
 OUT = ROOT / "projects" / "android"
 
 SDK = next(Path(p) for p in (os.environ.get("ANDROID_HOME"), os.environ.get("ANDROID_SDK_ROOT"),

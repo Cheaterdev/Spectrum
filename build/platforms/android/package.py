@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Package libspectrum.so into an installable, debug-signed APK. No Gradle.
 
-    python android/package.py            # builds projects/android/<mode>/spectrum.apk
-    python android/package.py --install  # ...then `adb install -r` it to the connected device
+    python build/driver.py android package            # builds projects/android/<mode>/spectrum.apk
+    python build/driver.py android package --install  # ...then `adb install -r` it to the connected device
 
 Steps: javac -> d8 (classes.dex) -> aapt2 link (manifest) -> add dex + lib/arm64-v8a/*.so
 -> zipalign -> apksigner (debug keystore, created on first use).
@@ -15,8 +15,8 @@ import sys
 import zipfile
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
-APP = ROOT / "android" / "app"
+ROOT = Path(__file__).resolve().parents[3]   # repo root: build/platforms/android/<this file>
+APP = ROOT / "sources" / "Platform" / "Android" / "package"   # MainActivity.java, AndroidManifest.xml
 OUT = ROOT / "projects" / "android"
 SHADER_CACHE = OUT / "shader_cache" / "vulkan"
 ENGINE_ASSETS = OUT / "shader_cache" / "assets"
@@ -59,13 +59,13 @@ def main():
 
     so = OUT / args.mode / "lib" / "libspectrum.so"
     if not so.exists():
-        sys.exit(f"{so} missing: run  python android/build.py --target app  first")
+        sys.exit(f"{so} missing: run  python build/driver.py android build --target app  first")
 
     work = OUT / args.mode / "apk"
     shutil.rmtree(work, ignore_errors=True)
     (work / "classes").mkdir(parents=True)
 
-    # The debug mode is built with full -g; the device does not need it (android/debug.py reads the
+    # The debug mode is built with full -g; the device does not need it (debug.py reads the
     # unstripped library from lib/, matching by build-id), so the APK gets a copy without DWARF.
     device_lib = so
     if args.mode == "debug":
