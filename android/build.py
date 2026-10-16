@@ -12,6 +12,7 @@ Needs only the Android SDK/NDK (auto-detected, or ANDROID_HOME /
 ANDROID_NDK_HOME) and the Ninja that ships with Visual Studio.
 """
 import argparse
+import hashlib
 import json
 import os
 import re
@@ -27,6 +28,22 @@ OUT = ROOT / "projects" / "android"
 API = 29
 ABI_TRIPLE = "aarch64-linux-android"
 
+# The engine's layer stack (root dir, forced-include header, dependencies) is declared once, in
+# main.sharpmake.cs (EngineLayers), and exported by generate_project.bat to projects/android/targets.json.
+# What stays here is Android-only: which dirs/files of a layer are built, exclusions and shims.
+try:
+    LAYERS = json.loads((OUT / "targets.json").read_text(encoding="utf-8"))["layers"]
+except OSError:
+    sys.exit(f"{OUT / 'targets.json'} missing: run generate_project.bat (Sharpmake writes it)")
+
+
+def layer(name, as_names=None):
+    """root / forced / deps of an engine layer; as_names renames layers to this file's target names."""
+    l = LAYERS[name]
+    names = as_names or {}
+    return dict(root=l["root"], forced=l["forced"], deps=[names.get(d, d) for d in l["deps"]])
+
+
 # name -> (source dirs relative to sources/, forced-include header, dependencies)
 # Grows layer by layer as each one is ported.
 TARGETS = {
@@ -34,15 +51,11 @@ TARGETS = {
         dirs=["Modules/stl", "Modules/magic_enum", "Modules/crc32", "Modules/cereal",
               "Modules/crossguid", "Modules/zlib", "Modules/vulkan", "Modules/meshoptimizer", "Modules/skribidi"],
         extra=["android/shims/windows.ixx", "android/shims/ppl.ixx"],   # Android stand-ins
-        root="Modules",           # project root: MSVC adds it to the include path
-        forced="Modules/Defines.h",
-        deps=[],
+        **layer("modules"),
     ),
     "core": dict(
         dirs=["Core"],
-        root="Core",
-        forced="Core/Defines.h",
-        deps=["modules"],
+        **layer("core"),
     ),
     "hal": dict(
         dirs=["HAL"],
@@ -51,9 +64,7 @@ TARGETS = {
         exclude_dirs=["HAL/API/D3D12", "HAL/DXGI", "HAL/DXC"],
         extra=["android/shims/HAL.API.ShaderCompiler.ixx", "android/shims/HAL.ShaderCompiler.android.cpp",
                "android/shims/HAL.NvidiaStubs.ixx"],
-        root="HAL",
-        forced="HAL/Defines.h",
-        deps=["core"],
+        **layer("hal"),
     ),
     # The tests that run on the device: Core / math / serialization / threading / events / file system / profiling, and
     # the compute GPU tests (Test.HAL.Compute).
@@ -62,9 +73,7 @@ TARGETS = {
     # initializer, which an archive member nobody references would never run.
     "tests": dict(
         dirs=["Test/TestFramework", "Test/Tests"],
-        root="Test",
-        forced="Test/Defines.h",
-        deps=["hal", "rendersystem"],   # the GPU tests (Test.HAL.Compute) create the engine's device
+        **layer("test"),   # depends on rendersystem (and so hal): the GPU tests (Test.HAL.Compute) create the engine's device
     ),
     "app": dict(
         dirs=[],
@@ -76,9 +85,7 @@ TARGETS = {
     # The demo screen shared with the Windows `spectrum_tool demo` host (sources/Tools/Demo).
     "demo": dict(
         dirs=["Tools/Demo"],
-        root="Tools",
-        forced="Tools/Defines.h",
-        deps=["rendersystem"],
+        **layer("tools"),
     ),
     "rendersystem": dict(
         dirs=["RenderSystem"],
@@ -86,9 +93,7 @@ TARGETS = {
         # headers textually, which can't coexist with the combined header unit
         exclude_dirs=["RenderSystem/Mesh/raw4"],
         extra=["android/app/android_pass_members.cpp"],   # module FrameGraph member bodies the excluded PassDefaults.cpp would have provided
-        root="RenderSystem",
-        forced="RenderSystem/Defines.h",
-        deps=["hal"],
+        **layer("rendersystem"),
     ),
 }
 
@@ -234,7 +239,8 @@ def base_flags(mode):
          *[f"-I{fwd(d)}" for d in INCLUDE_ROOTS]]
     f += ["-DSPECTRUM_PLATFORM_ANDROID", "-DSPECTRUM_ENABLE_EXCEPTIONS", "-DHAL_BACKEND_VULKAN", "-DLEAK_TEST_ENABLE"]
     if mode == "debug":
-        f += ["-O0", "-gline-tables-only", "-DDEV", "-DPROFILING"]
+        # full debug info (locals and types) for android/debug.py; package.py strips it from the APK
+        f += ["-O0", "-g", "-DDEV", "-DPROFILING"]
     elif mode == "profile":
         # What the PC's Profile configuration is: optimized, with the profiler on and none of the DEV checks.
         f += ["-O2", "-gline-tables-only", "-DPROFILING", "-DNDEBUG"]
@@ -324,7 +330,7 @@ def maybe_patch_header(c):
     out = HEADER_COPIES / c.name
     HEADER_COPIES.mkdir(parents=True, exist_ok=True)
     if not out.exists() or out.read_text(encoding="utf-8-sig", errors="ignore") != patched:
-        out.write_text(patched, encoding="utf-8")
+        write_text(out, patched)
     if exports:
         EXPORT_PARTS[fwd(out)] = exports
     return out
@@ -496,7 +502,7 @@ def patched_source(p, gen_dir, wrapper=False, drop=frozenset(), ifaces={}):
     out = gen_dir / rel(p).replace("/", "__")
     gen_dir.mkdir(parents=True, exist_ok=True)
     if not out.exists() or out.read_text(encoding="utf-8-sig", errors="ignore") != patched:
-        out.write_text(patched, encoding="utf-8")
+        write_text(out, patched)
     return out
 
 
@@ -578,7 +584,7 @@ def patched_pass_defaults(src):
     out = HEADER_COPIES / "autogen" / src.name
     out.parent.mkdir(parents=True, exist_ok=True)
     if not out.exists() or out.read_text(encoding="utf-8", errors="ignore") != text:
-        out.write_text(text, encoding="utf-8")
+        write_text(out, text)
     return out
 
 
@@ -650,7 +656,7 @@ def split_pass_members(text, rule, gen_dir):
             + rule.get("prelude", "") + "\n\n"
             + "\n\n".join(copied + moved) + "\n")
     if not out.exists() or out.read_text(encoding="utf-8", errors="ignore") != body:
-        out.write_text(body, encoding="utf-8")
+        write_text(out, body)
     return text
 
 
@@ -671,8 +677,18 @@ def patched_context_deps(src):
     out = HEADER_COPIES / "autogen" / src.name
     out.parent.mkdir(parents=True, exist_ok=True)
     if not out.exists() or out.read_text(encoding="utf-8", errors="ignore") != text:
-        out.write_text(text, encoding="utf-8")
+        write_text(out, text)
     return out
+
+
+def write_text(path, text, encoding="utf-8"):
+    """Write only when the content differs. Everything generated goes through here: a rewrite bumps
+    the mtime, and Ninja then recompiles everything that depends on the file, which for a patched
+    header or combined header unit is the whole tree."""
+    data = text.encode(encoding)
+    if path.exists() and path.read_bytes() == data:
+        return
+    path.write_bytes(data)
 
 
 def run(cmd, **kw):
@@ -734,7 +750,7 @@ def refresh_unported_stubs(out, app_objs, libs, stubs_s):
         + "\n.section .rodata\n" + "\n".join(d for d in data if "%object" not in d) + "\n"
     old = stubs_s.read_text() if stubs_s.exists() else ""
     if text != old:
-        stubs_s.write_text(text)
+        write_text(stubs_s, text)
     funcs = sum(1 for sym, name in zip(missing, demangled) if "(" in name)
     print(f"unported stubs: {funcs} functions, {len(missing) - funcs} data symbols (see {fwd(stubs_s)})")
 
@@ -752,13 +768,13 @@ def main():
     out.mkdir(parents=True, exist_ok=True)
     order, files = gather([args.target])
     INCLUDE_ROOTS.extend(SRC / TARGETS[t]["root"] for t in order)
-    vcpkg_inc = OUT / "vcpkg_installed" / "arm64-android" / "include"   # see android/vcpkg.json
+    vcpkg_inc = OUT / "vcpkg_installed" / "arm64-android" / "include"   # see projects/android/vcpkg.json (generated by Sharpmake)
     if vcpkg_inc.is_dir():
         INCLUDE_ROOTS.append(vcpkg_inc)
     # The Windows vcpkg layout is <vma/vk_mem_alloc.h>; the Android port installs it at the top level.
     vma_fwd = out / "gen" / "include" / "vma" / "vk_mem_alloc.h"
     vma_fwd.parent.mkdir(parents=True, exist_ok=True)
-    vma_fwd.write_text("#include <vk_mem_alloc.h>\n")
+    write_text(vma_fwd, "#include <vk_mem_alloc.h>\n")
     INCLUDE_ROOTS.append(out / "gen" / "include")
     flags = base_flags(args.mode)
     allfiles = [(t, p) for t in order for p in files[t]]
@@ -789,7 +805,7 @@ def main():
     combined_text = "#pragma once\n" + "\n".join(specs) + "\n"
     combined = gen / COMBINED_HEADER
     if not combined.exists() or combined.read_text() != combined_text:
-        combined.write_text(combined_text)
+        write_text(combined, combined_text)
 
     forced_keys = forced_header_keys(order)
     ifaces = {}
@@ -863,21 +879,50 @@ def main():
         near = [f"-I{fwd(p.parent)}"] if src != p else []
         tu[p] = dict(target=t, obj=out / "obj" / objname, is_ixx=p.suffix == ".ixx", src=src, near=near)
 
+    # A scan result (what a file provides / imports) depends on the file, the exact command line and, in
+    # principle, on the headers it includes, so the cache key covers all three. Headers are fingerprinted as
+    # one set (path + mtime + size of every .h/.hpp/.inl under the source trees), not per file: an edited
+    # header rescans everything, which is the same cost as before, while the common edit (a .cpp/.ixx body)
+    # only rescans that file.
+    scan_cache_file = out / "scan_cache.json"
+    try:
+        scan_cache = json.loads(scan_cache_file.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        scan_cache = {}
+    headers = hashlib.sha1()
+    for root in (SRC, ROOT / "android", out / "gen"):
+        for h in sorted(root.rglob("*")):
+            if h.suffix in (".h", ".hpp", ".inl"):
+                st = h.stat()
+                headers.update(f"{h}|{st.st_mtime_ns}|{st.st_size}\n".encode())
+    headers_stamp = headers.hexdigest()
+    new_cache = {}
+
     def scan(p):
         t = tu[p]["target"]
         cmd = [SCAN, "-format=p1689", "--", CLANGXX, *flags, *tu[p]["near"], *forced_for(t), *hu_flags(imports[p]),
                *(["-x", "c++-module"] if p.suffix == ".ixx" else []), "-c", tu[p]["src"], "-o", tu[p]["obj"]]
+        st = tu[p]["src"].stat()
+        key = hashlib.sha1(("\0".join(map(str, cmd)) + f"|{st.st_mtime_ns}|{st.st_size}|{headers_stamp}").encode()).hexdigest()
+        hit = scan_cache.get(str(p))
+        if hit and hit["key"] == key:
+            new_cache[str(p)] = hit
+            return p, hit["rule"], hit["rc"], hit["err"]
         r = run(cmd)
         try:
             data = json.loads(r.stdout)
             rule = data["rules"][0] if data["rules"] else {}
         except Exception:
             rule = {}
+        if rule:   # failures are not cached: they are rescanned (and reported) every time
+            new_cache[str(p)] = dict(key=key, rule=rule, rc=r.returncode, err=r.stderr)
         return p, rule, r.returncode, r.stderr
 
     print("scanning...")
     with ThreadPoolExecutor(args.j) as ex:
         results = list(ex.map(scan, [p for _, p in allfiles]))
+    print(f"  {len(results) - sum(1 for p, rule, rc, err in results if str(p) not in scan_cache or scan_cache[str(p)]['key'] != new_cache.get(str(p), {}).get('key'))} of {len(results)} from cache")
+    scan_cache_file.write_text(json.dumps(new_cache), encoding="utf-8")
 
     provides, requires, scan_fail = {}, {}, []
     for p, rule, rc, err in results:
@@ -1002,12 +1047,12 @@ def main():
             f'rule link\n  command = "{CLANGXX}" --target={ABI_TRIPLE}{API} -shared -fuse-ld=lld -static-libstdc++ '
             f'-Wl,-z,max-page-size=16384 -o $out @$out.rsp -Wl,--start-group $libs -Wl,--end-group '
             f'-llog -landroid -lvulkan\n  rspfile = $out.rsp\n  rspfile_content = $in\n  description = LINK $out\n')
-        third_party = sorted((OUT / "vcpkg_installed" / "arm64-android" / "lib").glob("*.a"))   # see android/vcpkg.json
+        third_party = sorted((OUT / "vcpkg_installed" / "arm64-android" / "lib").glob("*.a"))   # see projects/android/vcpkg.json (generated by Sharpmake)
         stubs_s = out / "gen" / "unported_stubs.s"
         stubs_o = out / "obj" / "unported_stubs.o"
         stubs_s.parent.mkdir(parents=True, exist_ok=True)
         if not stubs_s.exists():
-            stubs_s.write_text(".text\n")
+            write_text(stubs_s, ".text\n")
         lines.append(f'rule asm\n  command = "{CLANGXX}" --target={ABI_TRIPLE}{API} -c $in -o $out\n  description = ASM $out\n')
         lines.append(f"build {ninja_path(stubs_o)}: asm {ninja_path(stubs_s)}\n")
         objs["app"] = objs["app"] + objs.get("tests", []) + [stubs_o]   # tests link directly, see TARGETS["tests"]
@@ -1017,7 +1062,7 @@ def main():
         defaults.append(so)
     if defaults:
         lines.append("default " + " ".join(ninja_path(l) for l in defaults) + "\n")
-    (out / "build.ninja").write_text("\n".join(lines), encoding="utf-8")
+    write_text(out / "build.ninja", "\n".join(lines))
     print(f"\n{len(allfiles) - len(skipped)} buildable, {len(skipped)} skipped; wrote {fwd(out / 'build.ninja')}")
     if args.no_build:
         return 0

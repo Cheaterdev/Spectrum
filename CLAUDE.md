@@ -29,6 +29,43 @@ Open `projects/Spectrum.sln` in Visual Studio 2026. Three configurations: **Debu
 
 Executables output to `bin/Debug`, `bin/Profile`, `bin/Retail`. The working directory for running is `workdir/`.
 
+### Android
+`generate_project.bat` also generates `projects/SpectrumAndroid.sln` (configs **Debug/Profile/Retail-Android**).
+It holds one NMake project, `SpectrumAndroid`, which depends on `Tools` (so the Windows `spectrum_tool` and the engine
+layers below it are built first, like the Windows solution). F7 then runs `android/prepare.py` (arm64 vcpkg ports,
+and the shader/texture/asset precompile with `spectrum_tool`, each skipped while its inputs are unchanged), `android/build.py
+--target app` and `android/package.py` (APK in `projects/android/<mode>/spectrum.apk`); a clean `projects/` works from a
+single F7. Clean/Rebuild wipe that mode's dir only (not the vcpkg install or the shader cache). F5 runs `android/run.py`
+(install, launch, stream `logcat -s Spectrum`). `android/device.py` picks the phone: one connected phone is used silently;
+with none or several (or `--pick`) a small window opens to select, connect (ip:port) or pair (ip:port + code) one, and a paired
+phone advertising over mDNS is connected automatically. `run.py` reinstalls (uninstall, then install) when the installed app
+was signed by a different debug keystore. `spectrum_tool` has been seen to crash while shutting down after writing
+everything (`assets` command); prepare.py accepts that only when the tool printed its success line. It cannot be an MSBuild/AGDE
+build because AGDE has no C++ module / header-unit support; `build.py` does the real compiling.
+**Debugging on the device:** make `SpectrumAndroidLldb` the startup project and press F5 (or run
+`python android/debug.py --mode debug -b SomeFunction`): it starts the NDK's `lldb-server` inside the debuggable app,
+attaches the NDK `lldb` in a console, and loads the unstripped `projects/android/<mode>/lib/libspectrum.so` for
+symbols. Source-level breakpoints, stepping, stacks and locals work in `debug` mode (built with full `-g`; `package.py`
+strips the DWARF from the APK copy, the unstripped one stays in `lib/`); `profile` has line tables only (no locals).
+Gotchas: `frame variable` on big objects crashes the NDK's Windows lldb at the default depth, so debug.py sets
+`target.max-children-depth 1` (use `frame variable -D N x` for more); SIGSEGV/SIGBUS are passed to the app without
+stopping because ART raises them itself (`--crashes` stops on ones from our library, not fully reliable).
+
+**Editor breakpoints (VS Code):** Visual Studio's own Android attach needs an AGDE project as the startup project (not
+possible here), so use VS Code with the CodeLLDB extension: open the repo folder, pick "Spectrum Android (debug, full
+symbols)" in Run and Debug, F5. `.vscode/tasks.json` runs `debug.py --server --launch` (app + lldb-server, writes
+`projects/android/<mode>/attach.lldb` with the pid) and `.vscode/launch.json` replays the same lldb commands as `debug.py`.
+Gutter breakpoints stay pending until `target symbols add` loads the unstripped library after attach.
+
+Same commands from a shell: `python android/build.py --mode profile --target app`,
+`python android/package.py --mode profile --install`, `python android/run.py --mode profile`.
+`generate_project.bat` also writes `projects/android/targets.json` (the engine layer stack, from `EngineLayers` in
+`main.sharpmake.cs`, which the Windows projects use too) and `projects/android/vcpkg.json` + `vcpkg-configuration.json` (the
+arm64-android subset of the root manifest; the port list is `AndroidMetadata.VcpkgPorts`). `build.py` needs targets.json, so
+run `generate_project.bat` first on a fresh checkout (`prepare.py` runs the vcpkg install, ~4 min the first time).
+`build.py` caches
+dependency scans in `projects/android/<mode>/scan_cache.json` (a no-change build takes ~8 s).
+
 ### Kill MSBuild after every build
 After any `msbuild` invocation you run, always kill the lingering worker
 (`/nodeReuse:true` keeps `MSBuild.exe` alive after the build). It locks files,

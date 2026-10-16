@@ -551,7 +551,6 @@ namespace GUI
 
 				float r = pinch_ratio;
 				pinch_ratio = 1.0f;
-				{ FILE* fp = fopen("pinch.temp", "a"); fprintf(fp, "pinch end r=%f scaler=%f t0=%f\n", r, build_scaler, build_t0); fclose(fp); }   // TEMP
 				float names_w = names_col ? names_col->get_render_bounds().w : 0.0f;
 				float eff_vw  = filled->get_render_bounds().w - names_w;
 				if (eff_vw <= 0 || std::abs(r - 1.0f) < 0.05f) return;

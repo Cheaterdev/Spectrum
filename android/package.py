@@ -29,6 +29,8 @@ BUILD_TOOLS = max((d for d in (SDK / "build-tools").iterdir() if d.is_dir()),
 PLATFORM = max((d for d in (SDK / "platforms").iterdir() if (d / "android.jar").exists()),
                key=lambda d: [int(x) for x in d.name.replace("android-", "").split(".") if x.isdigit()])
 ANDROID_JAR = PLATFORM / "android.jar"
+NDK = max((d for d in (SDK / "ndk").iterdir() if d.is_dir()), key=lambda d: [int(x) for x in d.name.split(".") if x.isdigit()])
+NDK_STRIP = NDK / "toolchains" / "llvm" / "prebuilt" / "windows-x86_64" / "bin" / "llvm-strip.exe"
 
 
 def java_tool(name):
@@ -63,6 +65,13 @@ def main():
     shutil.rmtree(work, ignore_errors=True)
     (work / "classes").mkdir(parents=True)
 
+    # The debug mode is built with full -g; the device does not need it (android/debug.py reads the
+    # unstripped library from lib/, matching by build-id), so the APK gets a copy without DWARF.
+    device_lib = so
+    if args.mode == "debug":
+        device_lib = work / "libspectrum.so"
+        run([NDK_STRIP, "--strip-debug", "-o", device_lib, so])
+
     # 1. Java -> dex
     run([java_tool("javac"), "--release", "8", "-Xlint:-options", "-classpath", ANDROID_JAR,
          "-d", work / "classes", APP / "MainActivity.java"])
@@ -83,7 +92,7 @@ def main():
             dst.writestr(item, src.read(item.filename))
         dst.write(work / "classes.dex", "classes.dex", compress_type=zipfile.ZIP_DEFLATED)
         # Stored (uncompressed) so zipalign can page-align it and the loader can map it in place.
-        dst.write(so, "lib/arm64-v8a/libspectrum.so", compress_type=zipfile.ZIP_STORED)
+        dst.write(device_lib, "lib/arm64-v8a/libspectrum.so", compress_type=zipfile.ZIP_STORED)
 
         # Precompiled shaders from `spectrum_tool shaders --target android` (the device has no
         # compiler). MainActivity extracts them to <files>/cache/vulkan, where the engine's

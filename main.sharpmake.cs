@@ -1,7 +1,11 @@
 ﻿using Sharpmake;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 
 namespace Spectrum
 {
@@ -27,77 +31,112 @@ namespace Spectrum
         public Optimization Optimization;
         public Mode Mode;
         public Backend Backend;
-        // Left at 0 for Windows targets: Sharpmake omits zero-valued fragments
-        // from target/config names, so existing Windows config names don't change.
-        public Android.AndroidBuildTargets AndroidBuildTargets;
     }
 
-    public static class AndroidSetup
+    // The engine's layer stack, declared once. The Windows projects take their dependencies from it and
+    // AndroidMetadata exports it to projects/android/targets.json for android/build.py, so a layer or a
+    // dependency added here shows up in both builds.
+    public static class EngineLayers
     {
-        // Resolves SDK/NDK/JDK without requiring environment variables (a freshly
-        // set variable isn't seen by already-running shells): explicit env var
-        // wins, then the default Android Studio / cmdline-tools location.
-        public static bool Configure()
+        public class Layer
         {
-            string sdk = FirstExisting(
-                Environment.GetEnvironmentVariable("ANDROID_HOME"),
-                Environment.GetEnvironmentVariable("ANDROID_SDK_ROOT"),
-                System.IO.Path.Combine(Environment.GetEnvironmentVariable("LOCALAPPDATA") ?? "", "Android", "Sdk"));
-
-            string ndk = FirstExisting(
-                Environment.GetEnvironmentVariable("ANDROID_NDK_HOME"),
-                Environment.GetEnvironmentVariable("ANDROID_NDK_ROOT"),
-                LatestSubdir(sdk == null ? null : System.IO.Path.Combine(sdk, "ndk"), "", MaxAgdeNdkMajor));
-
-            string java = FirstExisting(
-                Environment.GetEnvironmentVariable("JAVA_HOME"),
-                LatestSubdir(@"C:\Program Files\Java", "jdk"),
-                @"C:\Program Files\Android\Android Studio\jbr");
-
-            if (sdk == null || ndk == null || java == null)
-            {
-                Console.WriteLine("WARNING: Android SDK/NDK/JDK not found (sdk={0}, ndk={1} [AGDE needs r<={2}], jdk={3}); " +
-                    "skipping the Android solution. Set ANDROID_HOME / ANDROID_NDK_HOME / JAVA_HOME to override.",
-                    sdk ?? "-", ndk ?? "-", MaxAgdeNdkMajor, java ?? "-");
-                return false;
-            }
-
-            Android.GlobalSettings.AndroidHome = sdk;
-            Android.GlobalSettings.NdkRoot = ndk;
-            Android.GlobalSettings.JavaHome = java;
-            return true;
+            public string Name;      // key in targets.json
+            public Type Project;
+            public string Dir;       // under sources/, also where its Defines.h (the forced include) lives
+            public string[] Deps;    // names of the layers this one depends on
         }
 
-        static string FirstExisting(params string[] paths)
+        public static readonly Layer[] All =
         {
-            foreach (var p in paths)
-                if (!string.IsNullOrEmpty(p) && System.IO.Directory.Exists(p))
-                    return p;
-            return null;
+            new Layer { Name = "modules",      Project = typeof(Modules),      Dir = "Modules",      Deps = new string[0] },
+            new Layer { Name = "core",         Project = typeof(Core),         Dir = "Core",         Deps = new[] { "modules" } },
+            new Layer { Name = "hal",          Project = typeof(HAL),          Dir = "HAL",          Deps = new[] { "core" } },
+            new Layer { Name = "rendersystem", Project = typeof(RenderSystem), Dir = "RenderSystem", Deps = new[] { "hal" } },
+            new Layer { Name = "prism",        Project = typeof(Prism),        Dir = "Prism",        Deps = new[] { "core" } },
+            new Layer { Name = "spectrum",     Project = typeof(Spectrum),     Dir = "Spectrum",     Deps = new[] { "rendersystem" } },
+            new Layer { Name = "test",         Project = typeof(Test),         Dir = "Test",         Deps = new[] { "rendersystem" } },
+            new Layer { Name = "tools",        Project = typeof(Tools),        Dir = "Tools",        Deps = new[] { "rendersystem" } },
+        };
+
+        public static void AddDependencies(Project project, Project.Configuration conf, ITarget target)
+        {
+            var layer = All.First(l => l.Project == project.GetType());
+            foreach (var dep in layer.Deps)
+                conf.AddPublicDependency(target, All.First(l => l.Name == dep).Project);
+        }
+    }
+
+    // What the Android build (android/build.py, plain Python + Ninja) needs from this description, written
+    // to projects/android/ on every generate: the layer stack and a vcpkg manifest for arm64-android.
+    public static class AndroidMetadata
+    {
+        // The ports the arm64-android build uses: a subset of the root vcpkg.json (everything else there is
+        // Windows, DirectX, NVIDIA or a host tool). Versions and the baseline come from the root manifest.
+        static readonly string[] VcpkgPorts =
+        {
+            "zlib", "magic-enum", "crossguid", "crc32c", "cereal", "bshoshany-thread-pool",
+            "vulkan-headers", "vulkan-memory-allocator", "meshoptimizer", "skribidi"
+        };
+
+        static readonly JsonSerializerOptions Indented = new JsonSerializerOptions
+        {
+            WriteIndented = true,
+            // keeps "version>=" readable instead of "version>="
+            Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+        };
+
+        public static void Write([CallerFilePath] string callerPath = "")
+        {
+            string root = Path.GetDirectoryName(callerPath);
+            string outDir = Path.Combine(root, "projects", "android");
+            Directory.CreateDirectory(outDir);
+
+            var layers = new JsonObject();
+            foreach (var l in EngineLayers.All)
+                layers[l.Name] = new JsonObject
+                {
+                    ["root"] = l.Dir,
+                    ["forced"] = l.Dir + "/Defines.h",
+                    ["deps"] = new JsonArray(l.Deps.Select(d => (JsonNode)JsonValue.Create(d)).ToArray()),
+                };
+            WriteIfChanged(Path.Combine(outDir, "targets.json"), new JsonObject { ["layers"] = layers });
+
+            // Manifest: the Android subset of the root one.
+            var rootManifest = JsonNode.Parse(File.ReadAllText(Path.Combine(root, "vcpkg.json")));
+            string NameOf(JsonNode n) => n is JsonValue ? n.GetValue<string>() : n["name"].GetValue<string>();
+            var deps = new JsonArray();
+            foreach (var dep in rootManifest["dependencies"].AsArray().Where(d => VcpkgPorts.Contains(NameOf(d))))
+                deps.Add(dep.DeepClone());
+            var manifest = new JsonObject
+            {
+                ["name"] = "spectrum-android",
+                ["version-string"] = rootManifest["version-string"].DeepClone(),
+                ["dependencies"] = deps,
+                ["builtin-baseline"] = rootManifest["builtin-baseline"].DeepClone(),
+            };
+            var overrides = new JsonArray();
+            if (rootManifest["overrides"] != null)
+                foreach (var o in rootManifest["overrides"].AsArray().Where(o => VcpkgPorts.Contains(o["name"].GetValue<string>())))
+                    overrides.Add(o.DeepClone());
+            if (overrides.Count > 0)
+                manifest["overrides"] = overrides;
+            WriteIfChanged(Path.Combine(outDir, "vcpkg.json"), manifest);
+
+            // Configuration: the root one without the artifact registry (an Android build has no use for it),
+            // with the overlay path made relative to this directory.
+            var config = JsonNode.Parse(File.ReadAllText(Path.Combine(root, "vcpkg-configuration.json"))).AsObject();
+            config.Remove("registries");
+            string overlay = Path.GetRelativePath(outDir, Path.Combine(root, "custom-overlay")).Replace('\\', '/');
+            config["overlay-ports"] = new JsonArray(JsonValue.Create(overlay));
+            WriteIfChanged(Path.Combine(outDir, "vcpkg-configuration.json"), config);
         }
 
-        // AGDE's MSBuild integration only ships toolset files up to NDK r29
-        // (Google.Android.Cpp.Toolset.r*.props); newer NDKs fail with
-        // "NDK major version N is unknown or not supported".
-        const int MaxAgdeNdkMajor = 29;
-
-        static string LatestSubdir(string root, string prefix = "", int maxMajor = int.MaxValue)
+        // Only touches a file whose content changed, so tools that watch timestamps are not disturbed.
+        static void WriteIfChanged(string path, JsonNode json)
         {
-            if (string.IsNullOrEmpty(root) || !System.IO.Directory.Exists(root))
-                return null;
-            string best = null;
-            foreach (var d in System.IO.Directory.GetDirectories(root))
-            {
-                string name = System.IO.Path.GetFileName(d);
-                if (!name.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
-                    continue;
-                var digits = new string(name.Substring(prefix.Length).TrimStart('-').TakeWhile(char.IsDigit).ToArray());
-                if (maxMajor != int.MaxValue && (digits.Length == 0 || int.Parse(digits) > maxMajor))
-                    continue;
-                if (best == null || string.Compare(d, best, StringComparison.OrdinalIgnoreCase) > 0)
-                    best = d;
-            }
-            return best;
+            string text = json.ToJsonString(Indented).Replace("\r\n", "\n") + "\n";
+            if (!File.Exists(path) || File.ReadAllText(path) != text)
+                File.WriteAllText(path, text);
         }
     }
 
@@ -145,8 +184,6 @@ namespace Spectrum
                 Backend = Backend.D3D12 | Backend.Vulkan
             });
 
-            AddTargets(AndroidTarget());
-
             CustomProperties.Add("VcpkgEnabled", "true");
             CustomProperties.Add("VcpkgEnableManifest", "true");
 			CustomProperties.Add("VcpkgTriplet", Vcpkg.Triplet);
@@ -160,20 +197,6 @@ namespace Spectrum
         //    GeneratableBlobCount  = 8;
         }
 
-        // UI-only Android (arm64, Vulkan) for now; 3D passes are compiled out.
-        public static CustomTarget AndroidTarget()
-        {
-            return new CustomTarget
-            {
-                Platform = Platform.agde,
-                DevEnv = DevEnv.vs2026,
-                Optimization = Optimization.Release,
-                Mode = Mode.Debug | Mode.Retail,
-                Backend = Backend.Vulkan,
-                AndroidBuildTargets = Android.AndroidBuildTargets.arm64_v8a
-            };
-        }
-
         [Configure]
         public virtual void ConfigureAll(Configuration conf, CustomTarget target)
         {
@@ -182,17 +205,6 @@ namespace Spectrum
 
             conf.ProjectFileName = "[project.Name]";
             conf.ProjectPath = @"[project.RootPath]";
-
-            if (target.Platform == Platform.agde)
-            {
-                // A separate vcxproj: AGDE projects can't share a file with the win64 ones.
-                conf.ProjectFileName = "[project.Name]_Android";
-                conf.ProjectName = "[project.Name]_Android";
-                conf.IntermediatePath = @"[project.SharpmakeCsPath]\projects\obj\android\[target.Mode]\[project.Name]";
-                conf.TargetLibraryPath = conf.IntermediatePath;
-                ConfigureAndroid(conf, target);
-                return;
-            }
 
             conf.IncludePaths.Add(SourceRootPath);
             // Repository sources root — allows cross-project Defines.h chains
@@ -266,45 +278,6 @@ namespace Spectrum
 
 
         }
-
-        void ConfigureAndroid(Configuration conf, CustomTarget target)
-        {
-            conf.IncludePaths.Add(SourceRootPath);
-            conf.IncludePaths.Add(@"[project.SharpmakeCsPath]\sources");
-            conf.ForcedIncludes.Add(@"[project.SourceRootPath]\Defines.h");
-            conf.PrecompSourceExcludeExtension.Add(".ixx");
-
-            conf.Options.Add(new Options.Agde.General.AndroidGradleBuildDir("$(SolutionDir)"));
-            conf.Options.Add(Options.Android.General.AndroidAPILevel.Android29);
-            conf.Options.Add(Options.Agde.General.UseOfStl.LibCpp_Shared);
-            conf.Options.Add(Options.Agde.Linker.BuildId.Md5);
-            conf.Options.Add(Options.Agde.Compiler.ExceptionHandling.Enable);
-            conf.Options.Add(Options.Agde.Compiler.CppLanguageStandard.Cpp20);
-
-            // The project-level Vcpkg properties are x64-windows; the msbuild integration
-            // would feed Windows include/lib paths into the NDK build.
-            conf.CustomProperties["VcpkgEnabled"] = "false";
-            conf.CustomProperties["VcpkgEnableManifest"] = "false";
-            conf.CustomProperties["VcpkgApplocalDeps"] = "false";
-            // AGDE has no C++23 enum value; modules are built from .ixx by the
-            // compiler's own scanning, which needs a >= C++20 standard.
-            conf.AdditionalCompilerOptions.Add("-std=c++2b", "-frtti");
-
-            conf.Defines.Add("SPECTRUM_PLATFORM_ANDROID");
-            conf.Defines.Add("SPECTRUM_ENABLE_EXCEPTIONS");
-            conf.Defines.Add("HAL_BACKEND_VULKAN");
-
-            if (target.Mode == Mode.Debug)
-            {
-                conf.Defines.Add("DEV");
-                conf.Defines.Add("PROFILING");
-            }
-            else
-            {
-                conf.Defines.Add("RETAIL");
-            }
-        }
-
 
     }
 
@@ -388,16 +361,6 @@ namespace Spectrum
         {
             base.ConfigureAll(conf, target);
             conf.IncludePaths.Add(@"[project.SourceRootPath]/include");
-
-            if (target.Platform == Platform.agde)
-            {
-                // Windows/DirectX/NVIDIA wrappers can't exist on Android. The vcpkg-backed
-                // ones are off until their arm64-android builds are set up.
-                foreach (var w in new[] { "windows", "WRL", "ppl", "d3d12", "dxc", "streamline", "nrd", "vulkan",
-                                          "assimp", "antlr4", "jinja2cpp", "meshoptimizer", "skribidi", "zlib" })
-                    conf.SourceFilesBuildExcludeRegex.Add(@".*\\Modules\\" + w + @"\\.*");
-                return;
-            }
 
 			conf.ExportAdditionalLibrariesEvenForStaticLib = false;
 
@@ -488,7 +451,7 @@ namespace Spectrum
         public override void ConfigureAll(Configuration conf, CustomTarget target)
         {
             base.ConfigureAll(conf, target);
-			conf.AddPublicDependency<Modules>(target);	
+            EngineLayers.AddDependencies(this, conf, target);
             conf.Defines.Add("LEAK_TEST_ENABLE");
             
         }
@@ -541,7 +504,7 @@ namespace Spectrum
             // DXC folder is always compiled — DXC emits SPIR-V for Vulkan too.
             // (No exclusion needed for DXC.)
 
-            conf.AddPublicDependency<Core>(target);
+            EngineLayers.AddDependencies(this, conf, target);
         }
     }
 
@@ -557,7 +520,7 @@ namespace Spectrum
         public override void ConfigureAll(Configuration conf, CustomTarget target)
         {
             base.ConfigureAll(conf, target);
-            conf.AddPublicDependency<HAL>(target);
+            EngineLayers.AddDependencies(this, conf, target);
 
             // Sharpmake Defines don't propagate through AddPublicDependency, so
             // mirror HAL's own HAL_BACKEND_* defines here for RenderSystem's
@@ -595,7 +558,7 @@ namespace Spectrum
             conf.VcxprojUserFile = new Project.Configuration.VcxprojUserFileSettings();
             conf.VcxprojUserFile.LocalDebuggerWorkingDirectory = @"[project.SharpmakeCsPath]\sources\Prism";
 
-            conf.AddPublicDependency<Core>(target);	
+            EngineLayers.AddDependencies(this, conf, target);
         }
     }
 
@@ -638,7 +601,7 @@ namespace Spectrum
             // this depends on.
             conf.EventPostBuild.Add(@"call ""[project.SharpmakeCsPath]\sync_nrd_shaders.bat""");
 
-            conf.AddPublicDependency<RenderSystem>(target);
+            EngineLayers.AddDependencies(this, conf, target);
         }
     }
 
@@ -678,7 +641,7 @@ namespace Spectrum
             conf.VcxprojUserFile = new Project.Configuration.VcxprojUserFileSettings();
             conf.VcxprojUserFile.LocalDebuggerWorkingDirectory = @"[project.SharpmakeCsPath]\workdir";
 
-            conf.AddPublicDependency<RenderSystem>(target);
+            EngineLayers.AddDependencies(this, conf, target);
         }
     }
 
@@ -704,7 +667,7 @@ namespace Spectrum
             conf.VcxprojUserFile = new Project.Configuration.VcxprojUserFileSettings();
             conf.VcxprojUserFile.LocalDebuggerWorkingDirectory = @"[project.SharpmakeCsPath]\workdir";
 
-            conf.AddPublicDependency<RenderSystem>(target);
+            EngineLayers.AddDependencies(this, conf, target);
         }
     }
 
@@ -760,24 +723,172 @@ namespace Spectrum
         [Sharpmake.Main]
         public static void SharpmakeMain(Sharpmake.Arguments arguments)
         {
-            bool android = AndroidSetup.Configure();
+            AndroidMetadata.Write();
             FastBuildSettings.FastBuildMakeCommand = @"[project.SharpmakeCsPath]\tools\FastBuild\FBuild.exe";
             arguments.Generate<SpectrumSolution>();
-            if (android)
-                arguments.Generate<SpectrumAndroidSolution>();
+            arguments.Generate<SpectrumAndroidSolution>();
         }
     }
 
-    // Separate from SpectrumSolution: the generator emits an Android platform entry
-    // for every solution target, so mixing would force an Android architecture
-    // onto the Windows targets (and rename their configs).
+    // The Android build cannot be an MSBuild/AGDE one: AGDE has no C++ module or header-unit support.
+    // android/build.py does the compiling (header units + clang-scan-deps + Ninja); this project is
+    // only the Visual Studio front end for it: F7 builds and packages the APK, F5 installs, launches
+    // and streams the log. Compiler errors land in the Error List because Clang prints file:line:col.
+    [Sharpmake.Generate]
+    public class AndroidApp : Project
+    {
+        public AndroidApp() : base(typeof(CustomTarget))
+        {
+            Name = "SpectrumAndroid";
+            RootPath = @"[project.SharpmakeCsPath]\projects\android";
+            SourceRootPath = @"[project.SharpmakeCsPath]\android";
+            SourceFilesExtensions.Add(".py");
+            SourceFilesExtensions.Add(".java");
+            SourceFilesExtensions.Add(".xml");
+            SourceFilesExtensions.Add(".ixx");
+            // The files are listed for browsing only; cl.exe must not try to compile Android sources.
+            SourceFilesCompileExtensions.Clear();
+
+            AddTargets(new CustomTarget
+            {
+                Platform = Platform.win64,
+                DevEnv = DevEnv.vs2026,
+                Optimization = Optimization.Release,
+                Mode = Mode.Debug | Mode.Profile | Mode.Retail,
+                Backend = Backend.Vulkan
+            });
+        }
+
+        protected bool OwnsBuild = true;
+
+        // The pythonw.exe of the first python on PATH that is not the WindowsApps alias (an app-execution
+        // alias, not a program the debugger can launch). A launcher shim in between (the "py install
+        // manager" bin dir) would be the debuggee instead of the interpreter, so the real executable is
+        // asked for: the debugger has to be attached to the process that calls OutputDebugString.
+        static string FindPythonw()
+        {
+            foreach (var dir in (Environment.GetEnvironmentVariable("PATH") ?? "").Split(System.IO.Path.PathSeparator))
+            {
+                if (dir.Length == 0 || dir.IndexOf("WindowsApps", StringComparison.OrdinalIgnoreCase) >= 0)
+                    continue;
+                string python = System.IO.Path.Combine(dir.Trim('"'), "python.exe");
+                if (!System.IO.File.Exists(python))
+                    continue;
+                try
+                {
+                    var psi = new System.Diagnostics.ProcessStartInfo(python, "-c \"import sys; print(sys.executable)\"")
+                    {
+                        RedirectStandardOutput = true,
+                        UseShellExecute = false,
+                        CreateNoWindow = true
+                    };
+                    using (var p = System.Diagnostics.Process.Start(psi))
+                    {
+                        string real = p.StandardOutput.ReadToEnd().Trim();
+                        p.WaitForExit();
+                        string candidate = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(real) ?? "", "pythonw.exe");
+                        if (System.IO.File.Exists(candidate))
+                            return candidate;
+                    }
+                }
+                catch (Exception)
+                {
+                }
+            }
+            Console.WriteLine("WARNING: no pythonw.exe on PATH; F5 in SpectrumAndroid will not start. Put Python on PATH and regenerate.");
+            return "pythonw.exe";
+        }
+
+        [Configure]
+        public void ConfigureAll(Configuration conf, CustomTarget target)
+        {
+            // build.py's --mode values: debug | profile | retail
+            string mode = target.Mode.ToString().ToLowerInvariant();
+            const string script = @"python ""[project.SharpmakeCsPath]\android\";
+
+            conf.ProjectFileName = "[project.Name]";
+            conf.ProjectPath = @"[project.RootPath]";
+            conf.Output = Configuration.OutputType.None;   // None + CustomBuildSettings is what makes a Makefile (NMake) project
+
+            // The commands are written into the vcxproj as-is, so & has to be XML-escaped.
+            // prepare.py: arm64 vcpkg ports and the precompiled shaders/textures/assets (needs the Tools project built,
+            // which the dependency below takes care of); each step skips itself while its inputs are unchanged.
+            string build = script + @"prepare.py"" --mode " + mode + " &amp;&amp; " +
+                           script + @"build.py"" --mode " + mode + " --target app &amp;&amp; " +
+                           script + @"package.py"" --mode " + mode;
+
+            conf.CustomBuildSettings = new Configuration.NMakeBuildSettings
+            {
+                BuildCommand = build,
+                RebuildCommand = @"rmdir /s /q ""[project.RootPath]\" + mode + @""" 2&gt;nul &amp; " + build,
+                CleanCommand = @"rmdir /s /q ""[project.RootPath]\" + mode + @"""",
+                OutputFile = @"[project.RootPath]\" + mode + @"\spectrum.apk",
+            };
+            if (!OwnsBuild)
+            {
+                // only one project may run the build, or building the solution would run it twice at once
+                conf.CustomBuildSettings.BuildCommand = "echo built by SpectrumAndroid";
+                conf.CustomBuildSettings.RebuildCommand = "echo built by SpectrumAndroid";
+                conf.CustomBuildSettings.CleanCommand = "echo cleaned by SpectrumAndroid";
+            }
+            else
+            {
+                // spectrum_tool (Windows, Vulkan, same mode) precompiles what the device cannot: it is built
+                // first, with the engine layers it uses, like any other project of the Windows solution.
+                conf.AddPublicDependency<Tools>(target);
+            }
+
+            conf.VcxprojUserFile = new Project.Configuration.VcxprojUserFileSettings();
+            conf.VcxprojUserFile.LocalDebuggerWorkingDirectory = @"[project.SharpmakeCsPath]";
+            ConfigureLaunch(conf.VcxprojUserFile, mode);
+        }
+
+        // F5 debugs pythonw.exe running run.py: it has no console of its own, and run.py sends the device
+        // log to OutputDebugString, so it shows up in the Output window's Debug pane. The debugger launcher
+        // does not search PATH (the build commands do, under cmd), so the full path is needed.
+        protected virtual void ConfigureLaunch(Project.Configuration.VcxprojUserFileSettings user, string mode)
+        {
+            user.LocalDebuggerCommand = FindPythonw();
+            user.LocalDebuggerCommandArguments = @"""[project.SharpmakeCsPath]\android\run.py"" --mode " + mode;
+        }
+    }
+
+    // Same build commands, but F5 attaches the NDK's lldb to the app (android/debug.py) in a console
+    // window, for breakpoints and stepping. Make it the startup project to use it. A separate project
+    // because a project has one launch command.
+    [Sharpmake.Generate]
+    public class AndroidLldb : AndroidApp
+    {
+        public AndroidLldb()
+        {
+            Name = "SpectrumAndroidLldb";
+            OwnsBuild = false;
+        }
+
+        protected override void ConfigureLaunch(Project.Configuration.VcxprojUserFileSettings user, string mode)
+        {
+            user.LocalDebuggerCommand = @"$(SystemRoot)\System32\cmd.exe";
+            // pause only when it failed, so an error message stays readable
+            user.LocalDebuggerCommandArguments = @"/c python ""[project.SharpmakeCsPath]\android\debug.py"" --mode " + mode + " || pause";
+        }
+    }
+
+    // A separate solution: Android has its own build tool, so it must not be mixed into the
+    // Windows one (which would also rename those configurations).
     [Sharpmake.Generate]
     public class SpectrumAndroidSolution : Solution
     {
         public SpectrumAndroidSolution()
         : base(typeof(CustomTarget))
         {
-            AddTargets(Common.AndroidTarget());
+            AddTargets(new CustomTarget
+            {
+                Platform = Platform.win64,
+                DevEnv = DevEnv.vs2026,
+                Optimization = Optimization.Release,
+                Mode = Mode.Debug | Mode.Profile | Mode.Retail,
+                Backend = Backend.Vulkan
+            });
         }
 
         [Configure()]
@@ -787,7 +898,18 @@ namespace Spectrum
             conf.SolutionPath = @"[solution.SharpmakeCsPath]\projects\";
             conf.Name = target.Mode + "-Android";
 
-            conf.AddProject<Core>(target);   // pulls in Modules; grows as more layers port
+            conf.AddProject<AndroidApp>(target);
+            conf.AddProject<AndroidLldb>(target);
+
+            // The same vcxproj files the Windows solution uses, grouped in a folder for editing and navigation.
+            // They are built here too: AndroidApp depends on Tools (the precompile tool), which pulls in the layers
+            // below it, so a first F7 compiles them for Windows (MSBuild keeps them up to date afterwards).
+            // IntelliSense sees them as a Windows build, so SPECTRUM_PLATFORM_ANDROID branches look disabled.
+            conf.AddProject<Modules>(target, false, "Engine");
+            conf.AddProject<Core>(target, false, "Engine");
+            conf.AddProject<HAL>(target, false, "Engine");
+            conf.AddProject<RenderSystem>(target, false, "Engine");
+            conf.AddProject<Tools>(target, false, "Engine");
         }
     }
 }

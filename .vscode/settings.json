@@ -1,0 +1,9 @@
+{
+    // .ixx (C++ module interface) is not a language the debugger extensions claim, so VS Code would
+    // refuse breakpoints in it: treat it as C++ and allow breakpoints in any file.
+    "files.associations": {
+        "*.ixx": "cpp"
+    },
+    "debug.allowBreakpointsEverywhere": true,
+    "cmake.sourceDirectory": "C:/Users/Bohdan/Documents/GitHub/Spectrum/custom-overlay/skribidi"
+}
