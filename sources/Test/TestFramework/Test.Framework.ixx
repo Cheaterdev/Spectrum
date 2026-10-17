@@ -48,6 +48,8 @@ export namespace Test
 		using TestFunc = std::function<void()>;
 		using SetupFunc = std::function<void()>;
 		using TeardownFunc = std::function<void()>;
+		// (finished, selected total, names of the tests that failed so far, name of the test about to run or empty once all are done)
+		using ProgressFunc = std::function<void(size_t, size_t, const std::vector<std::string>&, const std::string&)>;
 
 		static TestRegistry& Instance()
 		{
@@ -68,6 +70,11 @@ export namespace Test
 		void RegisterTeardown(const std::string& category, TeardownFunc func)
 		{
 			teardowns[category] = std::move(func);
+		}
+
+		void SetProgress(ProgressFunc func)
+		{
+			progress = std::move(func);
 		}
 
 		void SkipCategory(const std::string& category, const std::string& reason)
@@ -141,6 +148,13 @@ export namespace Test
 			};
 
 			std::string currentCategory;
+			auto failures = [&] {
+				std::vector<std::string> names;
+				for (const auto& r : results)
+					if (!r.passed)
+						names.push_back(r.category.empty() ? r.name : r.category + "::" + r.name);
+				return names;
+			};
 
 			for (const auto& test : tests)
 			{
@@ -170,6 +184,9 @@ export namespace Test
 				result.line = test.line;
 
 				std::string fullName = result.category.empty() ? result.name : result.category + "::" + result.name;
+
+				if (progress)
+					progress(results.size(), matchCount, failures(), fullName);
 
 				auto skipIt = skipped_categories.find(test.category);
 				if (skipIt != skipped_categories.end())
@@ -230,6 +247,8 @@ export namespace Test
 
 			runTeardown(currentCategory);
 
+			if (progress)
+				progress(results.size(), matchCount, failures(), {});
 			return results;
 		}
 
@@ -303,6 +322,7 @@ export namespace Test
 		std::function<uint64_t()>          error_count;
 		std::function<std::string()>       last_error;
 		std::function<void()>              error_settle;
+		ProgressFunc                       progress;
 	};
 
 

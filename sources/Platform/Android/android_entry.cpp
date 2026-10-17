@@ -396,6 +396,13 @@ extern "C"
 		Application::test_mode = true;
 
 		auto& registry = Test::TestRegistry::Instance();
+		// MainActivity paints this file as a progress bar on the screen: "done total current-test" (current is "-" once finished), then one failed test per line.
+		registry.SetProgress([](size_t done, size_t total, const std::vector<std::string>& failed, const std::string& current) {
+			std::ofstream out("test_progress.txt", std::ios::trunc);
+			out << done << ' ' << total << ' ' << (current.empty() ? "-" : current) << '\n';
+			for (const auto& name : failed)
+				out << name << '\n';
+		});
 		auto results = registry.RunAll(filter ? filter : "");
 		registry.PrintResults(results);
 

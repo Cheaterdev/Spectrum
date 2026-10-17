@@ -1110,7 +1110,8 @@ namespace HAL
             return build_sizes(to_native(inputs), fn_get_as_build_sizes, vk_device);
         }
 
-        VkAccelerationStructureKHR Device::get_acceleration_structure(VkBuffer buffer, VkDeviceSize offset, VkDeviceSize buffer_size)
+        VkAccelerationStructureKHR Device::get_acceleration_structure(VkBuffer buffer, VkDeviceSize offset, VkDeviceSize buffer_size,
+                                                                          VkAccelerationStructureTypeKHR type)
         {
             if (!fn_create_as || buffer == VK_NULL_HANDLE || offset >= buffer_size) return VK_NULL_HANDLE;
 
@@ -1123,7 +1124,7 @@ namespace HAL
             ci.buffer = buffer;
             ci.offset = offset;
             ci.size   = buffer_size - offset;
-            ci.type   = VK_ACCELERATION_STRUCTURE_TYPE_GENERIC_KHR;
+            ci.type   = type;
             fn_create_as(vk_device, &ci, nullptr, &as);
             ASSERT(as != VK_NULL_HANDLE && "vkCreateAccelerationStructureKHR failed");
             return as;

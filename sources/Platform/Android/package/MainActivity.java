@@ -1,6 +1,9 @@
 package com.spectrum;
 
 import android.app.Activity;
+import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.Paint;
 import android.os.Bundle;
 import android.system.Os;
 import android.util.Log;
@@ -43,6 +46,7 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback
     private boolean renderActive;   // the render thread is inside nativeRenderSurface
     private boolean running = true;
     private int generation;         // bumped on every surface change; the native loop ends when it moves
+    private volatile boolean testsRunning;
 
     @Override
     protected void onCreate(Bundle savedInstanceState)
@@ -68,7 +72,10 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback
                 if (tests.equals("all"))
                     tests = "";
                 try { Os.setenv("SPECTRUM_TEST_FILTER", tests, true); } catch (Exception e) { Log.e("Spectrum", "setenv failed", e); }
+                testsRunning = true;
+                new Thread(this::paintTestProgress, "spectrum-test-progress").start();
                 nativeRunTests();
+                testsRunning = false;
                 runOnUiThread(this::finish);
                 return;
             }
@@ -103,6 +110,81 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback
                 }
             }
         }, "spectrum-main").start();
+    }
+
+    // Test mode draws no UI: the surface shows a progress bar instead, from the file the native test
+    // runner rewrites before every test ("done total current-test", then one failed test per line). The CPU canvas is fine
+    // here because nothing else (no swapchain) connects to this surface in test mode.
+    private void paintTestProgress()
+    {
+        final File file = new File(getFilesDir(), "test_progress.txt");
+        file.delete();   // the previous run's last state
+        final String appName = getApplicationInfo().loadLabel(getPackageManager()).toString();
+        final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        final long start = System.currentTimeMillis();
+        while (testsRunning)
+        {
+            int done = 0, total = 0;
+            String current = "starting up";
+            String[] failedTests = new String[0];
+            try
+            {
+                String[] lines = new String(Files.readAllBytes(file.toPath())).split("\n");
+                String[] head = lines[0].split(" ", 3);
+                done = Integer.parseInt(head[0]); total = Integer.parseInt(head[1]);
+                current = head[2];
+                failedTests = java.util.Arrays.copyOfRange(lines, 1, lines.length);
+            }
+            catch (Exception e) { /* not written yet, or caught mid-write: show the last state next round */ }
+
+            boolean ready;
+            synchronized (lock) { ready = surfaceReady; }
+            Canvas canvas = ready ? view.getHolder().lockCanvas() : null;
+            if (canvas != null)
+            {
+                try
+                {
+                    final float w = canvas.getWidth(), h = canvas.getHeight(), margin = w * 0.08f, bar = h * 0.025f;
+                    final float y = h * 0.22f;
+                    final int failed = failedTests.length;
+                    canvas.drawColor(Color.rgb(16, 18, 26));
+
+                    paint.setColor(Color.WHITE);
+                    paint.setTextSize(w * 0.08f);
+                    paint.setFakeBoldText(true);
+                    canvas.drawText(appName + " tests", margin, h * 0.12f, paint);
+                    paint.setFakeBoldText(false);
+
+                    paint.setColor(Color.rgb(48, 52, 66));
+                    canvas.drawRoundRect(margin, y, w - margin, y + bar, bar / 2, bar / 2, paint);
+                    paint.setColor(failed > 0 ? Color.rgb(224, 82, 82) : Color.rgb(60, 168, 255));
+                    final float fraction = total > 0 ? Math.min(1f, (float) done / total) : 0f;
+                    canvas.drawRoundRect(margin, y, margin + (w - 2 * margin) * fraction, y + bar, bar / 2, bar / 2, paint);
+
+                    paint.setColor(Color.WHITE);
+                    paint.setTextSize(w * 0.05f);
+                    canvas.drawText(done + " / " + total + (failed > 0 ? "   failed " + failed : ""), margin, y - bar * 0.6f, paint);
+                    paint.setColor(Color.rgb(170, 176, 196));
+                    paint.setTextSize(w * 0.034f);
+                    canvas.drawText(current.equals("-") ? "finishing" : current, margin, y + bar * 2.6f, paint);
+                    canvas.drawText((System.currentTimeMillis() - start) / 1000 + " s", margin, y + bar * 4.0f, paint);
+
+                    // Failed tests, newest last; what does not fit is summarized.
+                    paint.setTextSize(w * 0.032f);
+                    final float line = paint.getTextSize() * 1.35f;
+                    float ty = y + bar * 6.5f;
+                    final int room = Math.max(1, (int) ((h - ty - line) / line));
+                    final int shown = failed > room ? room - 1 : failed;
+                    paint.setColor(Color.rgb(224, 82, 82));
+                    for (int i = 0; i < shown; i++, ty += line)
+                        canvas.drawText(failedTests[i], margin, ty, paint);
+                    if (shown < failed)
+                        canvas.drawText("+ " + (failed - shown) + " more", margin, ty, paint);
+                }
+                finally { view.getHolder().unlockCanvasAndPost(canvas); }
+            }
+            try { Thread.sleep(200); } catch (InterruptedException e) { return; }
+        }
     }
 
     // Fingers go to native code untouched by any mouse emulation. The action says which finger changed:

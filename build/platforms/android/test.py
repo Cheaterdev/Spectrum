@@ -86,6 +86,20 @@ def pull_results():
     return len(list(dest.glob("*.png"))) if dest.is_dir() else 0
 
 
+def progress_line(log, elapsed):
+    """One status line from the app's log so far: a bar, tests finished of the total, the running test, elapsed time."""
+    passed = len(re.findall(r"\[PASS\]", log))
+    failed = len(re.findall(r"\[FAIL\]", log))
+    skipped = len(re.findall(r"\[SKIP\]", log))
+    total_m = re.search(r"Running (\d+) test", log)
+    total = int(total_m.group(1)) if total_m else 0
+    done = passed + failed + skipped
+    started = re.findall(r">> Starting: (\S+)", log)
+    current = started[-1] if started else "starting up"
+    bar = f"[{'#' * (20 * done // total)}{'.' * (20 - 20 * done // total)}] {done}/{total}" if total else f"{done} done"
+    return f"{bar}  {passed} ok, {failed} failed, {skipped} skipped  {int(elapsed)}s  {current}"
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--mode", default="debug", choices=["debug", "profile", "retail"])
@@ -117,13 +131,27 @@ def main():
     summary = None
     deadline = time.time() + args.timeout
     log = ""
+    started_at = time.time()
+    live = sys.stdout.isatty()   # one line rewritten in place; a pipe or log gets a new line per change instead
+    last_shown = ""
     while time.time() < deadline:
-        time.sleep(3)
+        time.sleep(2)
         log = adb("logcat", "-d", "-s", "Spectrum")
         m = re.search(r"TESTS: (\d+) total, (\d+) passed, (\d+) failed, (\d+) skipped", log)
         if m:
             summary = tuple(int(x) for x in m.groups())
             break
+        shown = progress_line(log, time.time() - started_at)
+        if live:
+            width = shutil.get_terminal_size().columns - 1
+            print(chr(13) + shown[:width].ljust(width), end="", flush=True)
+        else:
+            changed = progress_line(log, 0)
+            if changed != last_shown:
+                print(shown, flush=True)
+            last_shown = changed
+    if live:
+        print()
     if not summary:
         print(log[-3000:])
         sys.exit(f"no TESTS: summary within {args.timeout} s (app crashed or still running?); log tail above")

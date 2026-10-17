@@ -136,7 +136,8 @@ namespace HAL
             const VkDeviceSize base = api_res.get_vk_buffer_offset();
             rec.type = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
             rec.acceleration_structure = heap.device.get_acceleration_structure(api_res.get_vk_buffer(),
-                base + rt->OffsetInBytes, base + v.Resource->get_desc().as_buffer().SizeInBytes);
+                base + rt->OffsetInBytes, base + v.Resource->get_desc().as_buffer().SizeInBytes,
+                VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR);
             ASSERT(rec.acceleration_structure != VK_NULL_HANDLE && "SRV: TLAS view without acceleration-structure support");
             if (rec.acceleration_structure == VK_NULL_HANDLE) return;
         }

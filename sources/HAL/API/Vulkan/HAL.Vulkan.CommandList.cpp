@@ -1062,13 +1062,14 @@ namespace HAL::API
 
     // The acceleration-structure object over `address`'s storage; see
     // API::Device::get_acceleration_structure.
-    static VkAccelerationStructureKHR acceleration_structure_at(Device& dev, const HAL::ResourceAddress& address)
+    static VkAccelerationStructureKHR acceleration_structure_at(Device& dev, const HAL::ResourceAddress& address,
+                                                                VkAccelerationStructureTypeKHR type)
     {
         if (!address) return VK_NULL_HANDLE;
         auto& res = static_cast<API::Resource&>(*address.resource);
         const VkDeviceSize base = res.get_vk_buffer_offset();
         return dev.get_acceleration_structure(res.get_vk_buffer(), base + address.resource_offset,
-                                              base + address.resource->get_desc().as_buffer().SizeInBytes);
+                                              base + address.resource->get_desc().as_buffer().SizeInBytes, type);
     }
 
     static void build_acceleration_structure(VkCommandBuffer cmd, Device& dev, const AccelerationStructureInputs& inputs,
@@ -1077,8 +1078,8 @@ namespace HAL::API
         if (!dev.fn_cmd_build_as) return;
 
         auto info = inputs.info(update);
-        info.dstAccelerationStructure = acceleration_structure_at(dev, desc.DestAccelerationStructureData);
-        info.srcAccelerationStructure = update ? acceleration_structure_at(dev, desc.SourceAccelerationStructureData) : VK_NULL_HANDLE;
+        info.dstAccelerationStructure = acceleration_structure_at(dev, desc.DestAccelerationStructureData, inputs.type);
+        info.srcAccelerationStructure = update ? acceleration_structure_at(dev, desc.SourceAccelerationStructureData, inputs.type) : VK_NULL_HANDLE;
         info.scratchData.deviceAddress = to_native(desc.ScratchAccelerationStructureData);
         if (info.dstAccelerationStructure == VK_NULL_HANDLE) return;
 

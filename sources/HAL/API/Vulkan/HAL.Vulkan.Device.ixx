@@ -195,7 +195,8 @@ export namespace HAL
             // (buffer, offset), spanning to the buffer's end -- a build writes
             // only the bytes it needs, and the BLAS address an instance stores
             // must be the object's address (checked equal to the storage's).
-            VkAccelerationStructureKHR get_acceleration_structure(VkBuffer buffer, VkDeviceSize offset, VkDeviceSize buffer_size);
+            VkAccelerationStructureKHR get_acceleration_structure(VkBuffer buffer, VkDeviceSize offset, VkDeviceSize buffer_size,
+                                                                VkAccelerationStructureTypeKHR type = VK_ACCELERATION_STRUCTURE_TYPE_GENERIC_KHR);
             void forget_acceleration_structures(VkBuffer buffer);   // the buffer is being destroyed
 
             VkDescriptorSetLayout get_resource_set_layout()    const noexcept { return resource_set_layout; }

@@ -152,6 +152,11 @@ namespace HAL
         VkDevice vk_dev = api_dev.get_native_device();
         if (vk_dev == VK_NULL_HANDLE) return;
 
+        // Deserialized material pipelines (HAL::Wrapper) still describe the mesh-shader form on a GPU without
+        // it, where the driver rejects them (VK_ERROR_UNKNOWN); those materials draw through their vertex-stage pipelines.
+        if ((desc.mesh || desc.amplification) && !root_signature->get_device().is_mesh_shader_supported())
+            return;
+
         // ---- Shader modules -------------------------------------------------
         auto make_stage = [&](VkShaderStageFlagBits stage,
                                const binary& blob,
