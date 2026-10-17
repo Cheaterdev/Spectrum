@@ -65,7 +65,8 @@ TARGETS = {
         # Windows-only, Android ships precompiled SPIR-V.
         exclude_dirs=["HAL/API/D3D12", "HAL/DXGI", "HAL/DXC"],
         extra=[f"{PLATFORM_DIR}/shims/HAL.API.ShaderCompiler.ixx", f"{PLATFORM_DIR}/shims/HAL.ShaderCompiler.android.cpp",
-               f"{PLATFORM_DIR}/shims/HAL.NvidiaStubs.ixx"],
+               f"{PLATFORM_DIR}/shims/HAL.NvidiaStubs.ixx",
+               f"{PLATFORM_DIR}/HAL.Android.TextureData.cpp", f"{PLATFORM_DIR}/png_bridge.cpp"],   # PNG codec on libpng
         **layer("hal"),
     ),
     # The tests that run on the device: Core / math / serialization / threading / events / file system / profiling, and
@@ -101,17 +102,15 @@ TARGETS = {
 
 # Files that cannot build on Android yet (Windows-only etc.), relative to sources/.
 EXCLUDE = {
-    # Tests that need a desktop device, the GUI/render stack, or PNG goldens (WIC): not on Android yet.
-    "Test/Tests/Test.HAL.ixx", "Test/Tests/Test.HAL.Rendering.ixx", "Test/Tests/Test.HAL.SIG.ixx",
-    "Test/Tests/Test.HAL.UI.ixx", "Test/Tests/Test.HAL.TextureUtils.ixx", "Test/Tests/Test.HAL.TextureUtils.cpp",
-    "Test/Tests/Test.GUI.ixx", "Test/Tests/Test.FrameGraph.ixx", "Test/Tests/Test.RenderSystem.FrameGraph.ixx",
-    "Test/Tests/Test.RTX.ixx", "Test/Tests/Test.SceneParity.ixx",
+    # Renders the full scene through Graphics::SceneFrameRenderer, which is still unported on Android (calls an unported stub).
+    "Test/Tests/Test.SceneParity.ixx",
     # NVIDIA-only: Streamline / DLSS / NRD
     "HAL/HAL.Streamline.ixx", "HAL/HAL.Streamline.cpp", "HAL/API/Vulkan/HAL.Vulkan.Streamline.ixx",
     "HAL/HAL.DLSS.ixx", "HAL/HAL.DLSS.cpp", "HAL/HAL.DLSSRR.ixx", "HAL/HAL.DLSSRR.cpp",
     "HAL/HAL.NRD.ixx", "HAL/HAL.NRD.cpp",
-    # DirectXTex / WIC are Windows-only; Android needs its own image loaders.
-    "HAL/HAL.DirectXTexLoad.cpp", "HAL/API/Vulkan/HAL.Vulkan.TextureData.cpp",
+    # DirectXTex / WIC are Windows-only; Android's PNG codec (libpng) is sources/Platform/Android/HAL.Android.TextureData.cpp.
+    # The rest of texture_data (HAL.Vulkan.TextureData.cpp) is portable and is built here.
+    "HAL/HAL.DirectXTexLoad.cpp", "HAL/API/Vulkan/HAL.Vulkan.TextureData.Windows.cpp",
     # needs DXC's reflection API
     "HAL/API/Vulkan/HAL.Vulkan.ShaderReflection.cpp",
     # 3D pass bodies. They define PassDefault<Passes::X>::render()/setup(), members of classes
@@ -470,6 +469,12 @@ def patched_source(p, gen_dir, wrapper=False, drop=frozenset(), ifaces={}):
     patched = DROP_IMPORT_RE.sub(
         lambda mm: (f"{mm.group(1)}{NVIDIA_STUB_IMPORT[mm.group(2)]}" if mm.group(2) in NVIDIA_STUB_IMPORT
                     else f"{mm.group(1)}//" if mm.group(2) in DROP_MODULE_IMPORTS else mm.group(0)), patched)
+    if rel(p) == "Test/Tests/Test.HAL.ixx":
+        # The umbrella only imports the other test modules so MSVC links them; every test
+        # module is linked anyway, and importing several that instantiate the same HAL
+        # templates makes Clang reject the merge ("attached to named module ... cannot be
+        # attached to other modules").
+        patched = re.sub(r'^import\s+Test\.(?!Framework|HAL\.TextureUtils)[\w.]+\s*;', "//", patched, flags=re.M)
     if rel(p) in PURVIEW_EXTERN_C_INCLUDES:
         mirror_pass_headers(p.parent, gen_dir)
         patched = wrap_purview_includes(patched, PURVIEW_EXTERN_C_INCLUDES[rel(p)],

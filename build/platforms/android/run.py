@@ -62,15 +62,7 @@ def main():
         if not apk.exists():
             emit(f"{apk} missing: build first")
             return 1
-        out = adb("install", "-r", str(apk), check=False)
-        if "INSTALL_FAILED_UPDATE_INCOMPATIBLE" in out:
-            # The debug keystore (projects/android/debug.keystore) is generated per checkout/clean tree, so an
-            # app installed from another one is signed differently and cannot be updated in place.
-            emit("installed app was signed with a different key; uninstalling it (its data goes too) and retrying")
-            adb("uninstall", "com.spectrum", check=False)
-            out = adb("install", str(apk), check=False)
-        emit(out)
-        if "Success" not in out:
+        if not device.install_apk(apk, say=emit):
             return 1
 
     adb("logcat", "-c")

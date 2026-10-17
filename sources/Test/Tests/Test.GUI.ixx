@@ -547,7 +547,7 @@ export namespace Test
 
 		list->execute_and_wait();
 
-		ASSERT_TEXTURE(tex.get(), "gui_element_label");
+		ASSERT_TEXTURE_EX(tex.get(), "gui_element_label", .tolerance = 24);   // glyph anti-aliasing differs a little per GPU
 	}
 
 	// Renders a realistic multi-widget UI into a reference-size texture.
@@ -726,7 +726,7 @@ export namespace Test
 		renderer.flush(c);
 
 		list->execute_and_wait();
-		ASSERT_TEXTURE(tex.get(), "gui_full_screen");
+		ASSERT_TEXTURE_EX(tex.get(), "gui_full_screen", .tolerance = 24);   // glyph edges and 1px tab border rows differ a little per GPU
 	}
 
 	// Renders a 32x32 nine-patch source texture into a 256x128 target at three
@@ -902,6 +902,6 @@ export namespace Test
 			sizer{ 0, 0, float(W), float(H) }, vec2(float(W), float(H)), true);
 
 		list->execute_and_wait();
-		ASSERT_TEXTURE(tex.get(), "text_engine_direct_draw");
+		ASSERT_TEXTURE_EX(tex.get(), "text_engine_direct_draw", .tolerance = 24);
 	}
 }

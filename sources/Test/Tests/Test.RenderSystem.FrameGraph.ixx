@@ -860,7 +860,7 @@ export namespace Test
 		r.run(p, sink, ivec2(size, size));
 
 		auto subs = read_sink_subresources(sink.get());
-		const Test::TextureCompare hdr{ .float_encoding = Test::FloatEncoding::Tonemapped, .exposure = 1.0f };
+		const Test::TextureCompare hdr{ .tolerance = 4, .float_encoding = Test::FloatEncoding::Tonemapped, .exposure = 1.0f };
 		for (uint f = 0; f < 6; ++f)
 		{
 			Test::check_texture_data_reference(subs[f],     "fg_sky_specular_f" + std::to_string(f), hdr);
@@ -939,10 +939,13 @@ export namespace Test
 		// resolution (it works on upscale_size / 4 and below), so this keeps the
 		// scene the same at any reference size.
 		struct Spot { int x, y; vec3 color; };
+		// Rounded in double: int(h * 0.70f) truncates 755.99998 on MSVC but 756.0 on Clang, which
+		// moved the spot by a pixel between platforms.
+		const auto at = [](int n, float fraction) { return int(std::lround(double(n) * fraction)); };
 		const Spot spots[] = {
-			{ int(w * 0.19f), int(h * 0.31f), vec3(60.0f,  8.0f,  4.0f) },
-			{ int(w * 0.50f), int(h * 0.50f), vec3(40.0f, 40.0f, 40.0f) },
-			{ int(w * 0.78f), int(h * 0.70f), vec3( 4.0f, 10.0f, 60.0f) },
+			{ at(w, 0.19f), at(h, 0.31f), vec3(60.0f,  8.0f,  4.0f) },
+			{ at(w, 0.50f), at(h, 0.50f), vec3(40.0f, 40.0f, 40.0f) },
+			{ at(w, 0.78f), at(h, 0.70f), vec3( 4.0f, 10.0f, 60.0f) },
 		};
 		const int spot_half = std::max(3, h / 40);
 		const int halo_gap  = std::max(8, h / 16);

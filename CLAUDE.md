@@ -67,6 +67,17 @@ symbols)" in Run and Debug, F5. `.vscode/tasks.json` runs `debug.py --server --l
 `projects/android/<mode>/attach.lldb` with the pid) and `.vscode/launch.json` replays the same lldb commands as `debug.py`.
 Gutter breakpoints stay pending until `target symbols add` loads the unstripped library after attach.
 
+**Tests on the phone:** `python build/driver.py android test [--mode debug] [--filter Name]` installs the APK, pushes
+`workdir/test_references` (the same golden PNGs as Windows; PNG encode/decode on Android is libpng via
+`sources/Platform/Android/png_bridge.cpp` + `HAL.Android.TextureData.cpp`), runs the app in test mode and prints failures;
+failing images (`*_actual.png`, `*_diff.png`) and the full log land in `projects/android/test_results/` and `test_log.txt`.
+On Android a missing reference is a failure, not "save and pass". Per-platform references are not used yet: the
+tests share the Windows ones and the default tolerance (2 per channel) absorbs GPU rounding.
+**Test shaders are files, not strings:** a phone has no shader compiler, so every shader a test uses must be a PSO declared in
+Prism (`sources/Prism/defs/gpu_tests.prism`, HLSL in `workdir/shaders/test/`) and used as `gfx.set_pipeline<PSOS::Tests::Name>()`,
+so `spectrum_tool shaders` precompiles it with the rest. An inline-HLSL `SimpleGraphicsPSO` in a test builds an empty pipeline
+on the device, and the draw is silently skipped (no error): the symptom is a render of just the clear colour.
+
 Same commands from a shell: `python build/driver.py android build --mode profile --target app`,
 `... android package --mode profile --install`, `... android run --mode profile`.
 `generate_project.bat` also writes `projects/android/targets.json` (the engine layer stack, from `EngineLayers` in

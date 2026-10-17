@@ -78,6 +78,10 @@ namespace Spectrum
             "vulkan-headers", "vulkan-memory-allocator", "meshoptimizer", "skribidi"
         };
 
+        // Ports only the Android build links directly (Windows has WIC/DirectXTex for these jobs).
+        // libpng: PNG encode/decode for the golden-image tests (sources/Platform/Android/png_bridge.cpp).
+        static readonly string[] AndroidOnlyPorts = { "libpng" };
+
         static readonly JsonSerializerOptions Indented = new JsonSerializerOptions
         {
             WriteIndented = true,
@@ -107,6 +111,8 @@ namespace Spectrum
             var deps = new JsonArray();
             foreach (var dep in rootManifest["dependencies"].AsArray().Where(d => VcpkgPorts.Contains(NameOf(d))))
                 deps.Add(dep.DeepClone());
+            foreach (var port in AndroidOnlyPorts)
+                deps.Add(JsonValue.Create(port));
             var manifest = new JsonObject
             {
                 ["name"] = "spectrum-android",

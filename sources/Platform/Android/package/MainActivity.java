@@ -207,8 +207,10 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback
             deleteTree(assetRoot);
             int assetCount = extractTree("engine_assets", assetRoot, buffer);
 
+            int fontCount = extractTree("fonts", new File(root, "fonts"), buffer);
+
             Files.write(stamp.toPath(), current.getBytes());
-            Log.i("Spectrum", "extracted " + names.length + " shader blobs to " + shaders + ", " + assetCount + " engine assets");
+            Log.i("Spectrum", "extracted " + names.length + " shader blobs to " + shaders + ", " + assetCount + " engine assets, " + fontCount + " fonts");
         }
         catch (Exception e)
         {

@@ -22,35 +22,30 @@ namespace Text
             uint8_t     family;
         };
 
+        // Latin text and monospace come from the same bundled files (workdir/fonts, Apache-2.0
+        // Roboto / Droid Sans Mono) on every platform, so a glyph rasterizes identically and the
+        // golden images are shared. Segoe UI / Consolas are Windows-only and not redistributable.
+        constexpr const char* bundled_font_dir = "fonts/";
+        constexpr FontFile bundled_fonts[] = {
+            { "RobotoStatic-Regular.ttf", SKB_FONT_FAMILY_DEFAULT },
+            { "DroidSansMono.ttf",        SKB_FONT_FAMILY_MONOSPACE },
+        };
+
+        // Scripts and emoji the bundled fonts lack fall back to what the OS ships (searched after
+        // the bundled ones, so they never change how Latin text looks).
 #ifdef SPECTRUM_PLATFORM_ANDROID
-        // Segoe UI / Consolas are Windows fonts (and not redistributable), so Android uses the fonts
-        // every device ships in /system/fonts: Roboto covers Latin, Greek and Cyrillic; the Noto
-        // Hebrew and symbols files fill in what it lacks, and NotoColorEmoji supplies emoji.
         constexpr const char* system_font_dir = "/system/fonts/";
         constexpr FontFile system_fonts[] = {
-            { "Roboto-Regular.ttf",                    SKB_FONT_FAMILY_DEFAULT },
             { "NotoSansHebrew-Regular.ttf",            SKB_FONT_FAMILY_DEFAULT },
             { "NotoSansHebrew-Bold.ttf",               SKB_FONT_FAMILY_DEFAULT },
             { "NotoSansSymbols-Regular-Subsetted.ttf", SKB_FONT_FAMILY_DEFAULT },
             { "NotoSansSymbols-Regular-Subsetted2.ttf", SKB_FONT_FAMILY_DEFAULT },
-            { "DroidSansMono.ttf",                     SKB_FONT_FAMILY_MONOSPACE },
             { "NotoColorEmoji.ttf",                    SKB_FONT_FAMILY_EMOJI },
         };
 #else
-        // Segoe UI covers Latin, Greek, Cyrillic, Arabic and Hebrew; the rest fall back.
-        // Weights are picked by Skribidi from each file's own metadata.
         constexpr FontFile system_fonts[] = {
-            { "segoeuil.ttf", SKB_FONT_FAMILY_DEFAULT },
-            { "seguili.ttf",  SKB_FONT_FAMILY_DEFAULT },
             { "segoeui.ttf",  SKB_FONT_FAMILY_DEFAULT },
-            { "segoeuii.ttf", SKB_FONT_FAMILY_DEFAULT },
-            { "segoeuib.ttf", SKB_FONT_FAMILY_DEFAULT },
-            { "segoeuiz.ttf", SKB_FONT_FAMILY_DEFAULT },
             { "seguisym.ttf", SKB_FONT_FAMILY_DEFAULT },
-            { "consola.ttf",  SKB_FONT_FAMILY_MONOSPACE },
-            { "consolai.ttf", SKB_FONT_FAMILY_MONOSPACE },
-            { "consolab.ttf", SKB_FONT_FAMILY_MONOSPACE },
-            { "consolaz.ttf", SKB_FONT_FAMILY_MONOSPACE },
             { "seguiemj.ttf", SKB_FONT_FAMILY_EMOJI },
         };
 #endif
@@ -410,12 +405,17 @@ namespace Text
         const std::string font_dir = std::string(windows_dir) + "\\Fonts\\";
 #endif
 
-        for (auto& f : system_fonts)
+        const auto add_fonts = [&](const std::string& dir, const auto& files)
         {
-            const std::string path = font_dir + f.file;
-            if (!skb_font_collection_add_font(impl->fonts, path.c_str(), f.family, nullptr))
-                Log::get() << Log::LEVEL_WARNING << "Text::Engine: failed to load font " << path << Log::endl;
-        }
+            for (auto& f : files)
+            {
+                const std::string path = dir + f.file;
+                if (!skb_font_collection_add_font(impl->fonts, path.c_str(), f.family, nullptr))
+                    Log::get() << Log::LEVEL_WARNING << "Text::Engine: failed to load font " << path << Log::endl;
+            }
+        };
+        add_fonts(bundled_font_dir, bundled_fonts);
+        add_fonts(font_dir, system_fonts);
 
         impl->icons = skb_icon_collection_create();
         add_builtin_icons(impl->icons);

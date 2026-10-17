@@ -151,6 +151,16 @@ void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 	tasks.emplace_back(PSOBase::create<PSOS::Dev::DebugLinesOccluded>(device, pso[PSO::DebugLinesOccluded]));
 	tasks.emplace_back(PSOBase::create<PSOS::Dev::DebugViewMesh>(device, pso[PSO::DebugViewMesh]));
 	tasks.emplace_back(PSOBase::create<PSOS::UI::Text::GlyphRender>(device, pso[PSO::GlyphRender]));
+	tasks.emplace_back(PSOBase::create<PSOS::Tests::TestTriangle>(device, pso[PSO::TestTriangle]));
+	tasks.emplace_back(PSOBase::create<PSOS::Tests::TestInstancing>(device, pso[PSO::TestInstancing]));
+	tasks.emplace_back(PSOBase::create<PSOS::Tests::TestCube>(device, pso[PSO::TestCube]));
+	tasks.emplace_back(PSOBase::create<PSOS::Tests::TestCullNone>(device, pso[PSO::TestCullNone]));
+	tasks.emplace_back(PSOBase::create<PSOS::Tests::TestCullBack>(device, pso[PSO::TestCullBack]));
+	tasks.emplace_back(PSOBase::create<PSOS::Tests::TestCullFront>(device, pso[PSO::TestCullFront]));
+	tasks.emplace_back(PSOBase::create<PSOS::Tests::TestGeometryShader>(device, pso[PSO::TestGeometryShader]));
+	tasks.emplace_back(PSOBase::create<PSOS::Tests::TestMeshDirect>(device, pso[PSO::TestMeshDirect]));
+	tasks.emplace_back(PSOBase::create<PSOS::Tests::TestSIGColor>(device, pso[PSO::TestSIGColor]));
+	tasks.emplace_back(PSOBase::create<PSOS::Tests::TestSIGCopy>(device, pso[PSO::TestSIGCopy]));
 	tasks.emplace_back(PSOBase::create<PSOS::Meshes::RenderBoxes>(device, pso[PSO::RenderBoxes]));
 	tasks.emplace_back(PSOBase::create<PSOS::Utility::RenderToDS>(device, pso[PSO::RenderToDS]));
 	tasks.emplace_back(PSOBase::create<PSOS::Utility::QualityColor>(device, pso[PSO::QualityColor]));

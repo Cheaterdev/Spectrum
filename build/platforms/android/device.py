@@ -109,6 +109,20 @@ def ensure_device(say=print, pick=False):
     _use(chosen, say)
 
 
+def install_apk(apk, say=print):
+    """adb install -r; if the installed app was signed with another debug key, uninstall it (its data goes
+    too) and install again. True on success."""
+    out = _adb("install", "-r", str(apk), timeout=300)
+    if "INSTALL_FAILED_UPDATE_INCOMPATIBLE" in out:
+        # The debug keystore (projects/android/debug.keystore) is generated per checkout/clean tree, so an
+        # app installed from another one is signed differently and cannot be updated in place.
+        say("installed app was signed with a different key; uninstalling it (its data goes too) and retrying")
+        _adb("uninstall", "com.spectrum")
+        out = _adb("install", str(apk), timeout=300)
+    say(out)
+    return "Success" in out
+
+
 def choose_in_window(phones):
     import tkinter as tk
     from tkinter import ttk

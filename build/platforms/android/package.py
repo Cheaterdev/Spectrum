@@ -109,6 +109,10 @@ def main():
             if asset.is_file():
                 dst.write(asset, f"assets/engine_assets/{asset.relative_to(ENGINE_ASSETS).as_posix()}", compress_type=zipfile.ZIP_DEFLATED)
 
+        # The UI fonts shared with Windows (workdir/fonts), extracted to <files>/fonts.
+        for font in sorted((ROOT / "workdir" / "fonts").glob("*.ttf")):
+            dst.write(font, f"assets/fonts/{font.name}", compress_type=zipfile.ZIP_DEFLATED)
+
     # 4. align, sign
     aligned = work / "aligned.apk"
     zipalign = [BUILD_TOOLS / "zipalign.exe", "-f"]
