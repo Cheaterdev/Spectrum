@@ -1,4 +1,4 @@
-﻿module Graphics:Materials.UniversalMaterial;
+module Graphics:Materials.UniversalMaterial;
 import RenderSystem;
 
 
@@ -504,13 +504,34 @@ void materials::universal_material::generate_texture_handles()
 
 }
 
-// Refraction (IOR) wired -> Translucent; else opacity wired -> Masked; else Opaque.
+// Opacity wired with its threshold wired to a constant 0 means a blended surface
+// (partial coverage, drawn as a thin translucent layer); any other threshold, or
+// none, is a cutout.
+static bool opacity_is_blended(MaterialGraph* g)
+{
+	if (!g || !g->get_opacity()->has_input())
+		return false;
+
+	auto threshold = g->get_opacity_threshold();
+
+	if (threshold->input_connections.empty())
+		return false;
+
+	auto* constant = dynamic_cast<ScalarNode*>((*threshold->input_connections.begin())->from->owner);
+	return constant && constant->get_value() <= 0.0f;
+}
+
+// IOR or transmission weight wired, or a blended opacity -> Translucent; else
+// opacity wired -> Masked; else Opaque.
 void materials::universal_material::resolve_transparency_mode()
 {
 	auto g = graph.get();
 	if (!g)
-		return;   // a device build has no graph: the mode stored with the material stands
-	if (g->get_refraction()->has_input())
+		return;   // a device build has no graph: the mode and blend flag stored with the material stand
+
+	opacity_blend = opacity_is_blended(g.get());
+
+	if (opacity_blend || g->get_ior()->has_input() || g->get_transmission_weight()->has_input())
 		transparency_mode = Meshes::TransparencyMode::Translucent;
 	else if (g->get_opacity()->has_input())
 		transparency_mode = Meshes::TransparencyMode::Masked;
@@ -540,6 +561,9 @@ void materials::universal_material::generate_material()
 		context->hit_shader.macros.emplace_back("TRANSPARENT", "1");
 	else if (transparency_mode == Meshes::TransparencyMode::Translucent)
 		context->hit_shader.macros.emplace_back("TRANSLUCENT", "1");
+
+	if (opacity_blend)
+		context->hit_shader.macros.emplace_back("TRANSLUCENT_BLEND", "1");
 
 	// The hit shaders read MaterialInfo through the hit group's local data,
 	// which Vulkan delivers as the shader record (see Prism's slot template).

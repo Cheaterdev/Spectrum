@@ -10,6 +10,7 @@
 // is exactly this pixel's lit scene colour -- no ray needed for it.
 // Solid (thickness > 0): refracted in and out; the traced in-medium distance
 // drives Beer-Lambert absorption. Once bent, the ray needs a real scene query.
+#include "../common/medium.hlsl"
 #include "../autogen/FrameInfo.h"
 #include "../autogen/Raytracing.h"
 #include "../autogen/TranslucentRTXData.h"
@@ -218,6 +219,7 @@ void TranslucentRaygenShader()
 		float  ior          = max(hit.ior, 1.0001);
 		float  transmission = saturate(hit.transmission);
 		float3 albedo       = saturate(hit.albedo);
+		float3 tint         = saturate(hit.transmission_color);
 		bool   thin         = hit.thickness <= 0;
 		float  roughness    = saturate(hit.roughness);
 		float  alpha        = roughness * roughness;
@@ -247,7 +249,7 @@ void TranslucentRaygenShader()
 
 		if (thin)
 		{
-			throughput *= (1 - R) * transmission * albedo;
+			throughput *= (1 - R) * transmission * tint;
 
 			if (alpha >= TRANSLUCENT_MIN_ALPHA)
 			{
@@ -287,8 +289,8 @@ void TranslucentRaygenShader()
 				throughput *= 1 - F;
 				if (entering)
 				{
-					throughput *= transmission;
-					sigma = -log(max(albedo, 0.001)) / max(hit.absorption_distance, 0.0001);
+					throughput *= transmission * medium_entry_tint(tint, hit.absorption_distance);
+					sigma = medium_sigma(tint, hit.absorption_distance);
 				}
 				dir = normalize(refr);
 				pos = hit_pos - N * TRANSLUCENT_RAY_EPS;

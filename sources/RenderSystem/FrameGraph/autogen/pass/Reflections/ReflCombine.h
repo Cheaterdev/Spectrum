@@ -42,6 +42,12 @@ namespace Reflections
 			Handlers::Texture RTXReflectionDenoised = ResourceID::RTXReflectionDenoised;
 
 
+			Handlers::Texture GBuffer_Material = ResourceID::GBuffer_Material;
+
+
+			Handlers::Texture RTXReflectionCoat = ResourceID::RTXReflectionCoat;
+
+
 			// Resources this pass always needs whenever it runs, generated from
 			// each field's own [Always=X] annotation (further gated by [Optional=X]
 			// when present -- a raw bool expression, e.g. builder.exists(...) or a
@@ -65,6 +71,8 @@ namespace Reflections
 				builder.need(data.GBuffer_DepthMips, FrameGraph::ResourceFlags::None);
 				builder.need(data.ResultTexture, FrameGraph::ResourceFlags::UnorderedAccess);
 				builder.need(data.RTXReflectionDenoised, FrameGraph::ResourceFlags::Read);
+				builder.need(data.GBuffer_Material, FrameGraph::ResourceFlags::Read);
+				builder.need(data.RTXReflectionCoat, FrameGraph::ResourceFlags::Read);
 			}
 			// Which chain link each handler field resolved to, one named slot per
 			// field. Filled from a live frame's finished Context and applied on a
@@ -80,6 +88,8 @@ namespace Reflections
 				FrameGraph::ChainIndex GBuffer_DepthMips = FrameGraph::ChainIndex::Unresolved;
 				FrameGraph::ChainIndex ResultTexture = FrameGraph::ChainIndex::Unresolved;
 				FrameGraph::ChainIndex RTXReflectionDenoised = FrameGraph::ChainIndex::Unresolved;
+				FrameGraph::ChainIndex GBuffer_Material = FrameGraph::ChainIndex::Unresolved;
+				FrameGraph::ChainIndex RTXReflectionCoat = FrameGraph::ChainIndex::Unresolved;
 			};
 
 			static void save_to_cache([[maybe_unused]] const Context& data, [[maybe_unused]] Cache& cache)
@@ -91,6 +101,8 @@ namespace Reflections
 				cache.GBuffer_DepthMips = FrameGraph::TaskBuilder::cache_slot(data.GBuffer_DepthMips, ResourceID::GBuffer_DepthMips);
 				cache.ResultTexture = FrameGraph::TaskBuilder::cache_slot(data.ResultTexture, ResourceID::ResultTexture);
 				cache.RTXReflectionDenoised = FrameGraph::TaskBuilder::cache_slot(data.RTXReflectionDenoised, ResourceID::RTXReflectionDenoised);
+				cache.GBuffer_Material = FrameGraph::TaskBuilder::cache_slot(data.GBuffer_Material, ResourceID::GBuffer_Material);
+				cache.RTXReflectionCoat = FrameGraph::TaskBuilder::cache_slot(data.RTXReflectionCoat, ResourceID::RTXReflectionCoat);
 			}
 
 			// Replay counterpart of create_always/need_always. A field this pass
@@ -109,6 +121,8 @@ namespace Reflections
 				builder.load(data.GBuffer_DepthMips, ResourceID::GBuffer_DepthMips, cache.GBuffer_DepthMips);
 				builder.load(data.ResultTexture, ResourceID::ResultTexture, cache.ResultTexture);
 				builder.load(data.RTXReflectionDenoised, ResourceID::RTXReflectionDenoised, cache.RTXReflectionDenoised);
+				builder.load(data.GBuffer_Material, ResourceID::GBuffer_Material, cache.GBuffer_Material);
+				builder.load(data.RTXReflectionCoat, ResourceID::RTXReflectionCoat, cache.RTXReflectionCoat);
 			}
 
 			// Resources this pass touches, in declaration order, each paired with
@@ -122,6 +136,8 @@ namespace Reflections
 				{ ResourceID::GBuffer_DepthMips, false },
 				{ ResourceID::ResultTexture, true },
 				{ ResourceID::RTXReflectionDenoised, false },
+				{ ResourceID::GBuffer_Material, false },
+				{ ResourceID::RTXReflectionCoat, false },
 			};
 			static constexpr uint resource_count = std::size(resource_accesses);
 		};

@@ -11,6 +11,7 @@ export import :Utils;
 export import :Device;
 export import :Queue;
 export import :Shader;
+export import :ShaderCompiler;
 export import :HLSL;
 
 export import :Fence;

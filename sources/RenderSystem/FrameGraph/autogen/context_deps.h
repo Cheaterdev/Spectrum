@@ -35,7 +35,7 @@ namespace FrameGraph
 // .prism edit renumbers those enums, a plan from before the edit would not fail
 // to load, it would misapply -- wrong resource, wrong barriers. A plan whose
 // header does not carry this exact value must be rejected.
-constexpr unsigned long long generated_id_space_hash = 12481651581434128331ull;
+constexpr unsigned long long generated_id_space_hash = 13088206348554744531ull;
 
 // One bit per context field, in (struct, field) declaration order.
 enum class ContextFieldID : unsigned int
@@ -399,6 +399,10 @@ static inline const PassContextDeps pass_context_deps[] = {
 		  ContextField::None,
 		  ContextField::None,
 		true },
+	{ PassID::FGT_ProduceShadow,
+		  ContextField::None,
+		  ContextField::None,
+		true },
 	{ PassID::FGT_AppendTiles,
 		  ContextField::None,
 		  ContextField::None,
@@ -540,6 +544,26 @@ static inline const PassContextDeps pass_context_deps[] = {
 		true },
 	{ PassID::SMAA,
 		  ContextField::UpscalerSelectors_upscaling_enabled,
+		  ContextField::None,
+		true },
+	{ PassID::SSS_Classify,
+		  ContextField::None,
+		  ContextField::None,
+		true },
+	{ PassID::SSS_BlurH,
+		  ContextField::UpscalerSelectors_upscaler_type,
+		  ContextField::None,
+		true },
+	{ PassID::SSS_BlurV,
+		  ContextField::UpscalerSelectors_upscaler_type,
+		  ContextField::None,
+		true },
+	{ PassID::SSSRR_BlurH,
+		  ContextField::UpscalerSelectors_upscaler_type,
+		  ContextField::None,
+		true },
+	{ PassID::SSSRR_BlurV,
+		  ContextField::UpscalerSelectors_upscaler_type,
 		  ContextField::None,
 		true },
 	{ PassID::stencil_renderer,

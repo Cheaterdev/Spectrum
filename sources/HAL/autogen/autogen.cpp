@@ -113,6 +113,10 @@ std::optional<SlotID> get_slot(std::string_view slot_name)
 	if(slot_name == "SMAA_Global") return SlotID::SMAA_Global;
 	if(slot_name == "SMAA_Weights") return SlotID::SMAA_Weights;
 	if(slot_name == "SMAA_Blend") return SlotID::SMAA_Blend;
+	if(slot_name == "SSSClassifyParams") return SlotID::SSSClassifyParams;
+	if(slot_name == "SSSTilesAppend") return SlotID::SSSTilesAppend;
+	if(slot_name == "SSSTilesRead") return SlotID::SSSTilesRead;
+	if(slot_name == "SSSBlurParams") return SlotID::SSSBlurParams;
 	if(slot_name == "DispatchParameters") return SlotID::DispatchParameters;
 	if(slot_name == "Countour") return SlotID::Countour;
 	if(slot_name == "DrawStencil") return SlotID::DrawStencil;
@@ -386,6 +390,14 @@ uint get_table_index(SlotID id)
 
 	if(id == SlotID::SMAA_Blend) return Slots::Post::AA::SMAA_Blend::Slot::ID;
 
+	if(id == SlotID::SSSClassifyParams) return Slots::Subsurface::SSSClassifyParams::Slot::ID;
+
+	if(id == SlotID::SSSTilesAppend) return Slots::Subsurface::SSSTilesAppend::Slot::ID;
+
+	if(id == SlotID::SSSTilesRead) return Slots::Subsurface::SSSTilesRead::Slot::ID;
+
+	if(id == SlotID::SSSBlurParams) return Slots::Subsurface::SSSBlurParams::Slot::ID;
+
 	if(id == SlotID::DispatchParameters) return Slots::Shadows::Screen::DispatchParameters::Slot::ID;
 
 	if(id == SlotID::Countour) return Slots::Editor::Countour::Slot::ID;
@@ -612,6 +624,10 @@ std::string get_slot_name(SlotID id)
 	if(id == SlotID::SMAA_Global) return "SMAA_Global";
 	if(id == SlotID::SMAA_Weights) return "SMAA_Weights";
 	if(id == SlotID::SMAA_Blend) return "SMAA_Blend";
+	if(id == SlotID::SSSClassifyParams) return "SSSClassifyParams";
+	if(id == SlotID::SSSTilesAppend) return "SSSTilesAppend";
+	if(id == SlotID::SSSTilesRead) return "SSSTilesRead";
+	if(id == SlotID::SSSBlurParams) return "SSSBlurParams";
 	if(id == SlotID::DispatchParameters) return "DispatchParameters";
 	if(id == SlotID::Countour) return "Countour";
 	if(id == SlotID::DrawStencil) return "DrawStencil";

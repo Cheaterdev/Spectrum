@@ -12,6 +12,7 @@ projects/
 
 workdir/cache/
 workdir/Assets/
+workdir/test_results/
 workdir/pso
 workdir/assert.txt
 

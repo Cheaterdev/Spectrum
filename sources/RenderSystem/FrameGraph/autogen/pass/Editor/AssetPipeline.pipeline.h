@@ -84,6 +84,7 @@ namespace Editor
 			L"GBuffer_Specular",
 			L"GBuffer_Speed",
 			L"GBuffer_ObjectID",
+			L"GBuffer_Material",
 			L"GBuffer_DepthMips",
 			L"GBuffer_HiZ",
 			L"GBuffer_HiZ_UAV",
@@ -188,6 +189,14 @@ namespace Editor
 		};
 		static inline const FrameGraph::PrecompiledState GBuffer_ObjectID_c0_states[] = {
 			{ true, { GBuffer_ObjectID_c0_pass_refs + 0, 1 } },
+		};
+		static inline const FrameGraph::PassRef GBuffer_Material_c0_pass_refs[] = {
+			{ PassID::AssetGBuffer, 0 },
+			{ PassID::PSSM_Combine, 0 },
+		};
+		static inline const FrameGraph::PrecompiledState GBuffer_Material_c0_states[] = {
+			{ true, { GBuffer_Material_c0_pass_refs + 0, 1 } },
+			{ false, { GBuffer_Material_c0_pass_refs + 1, 1 } },
 		};
 		static inline const FrameGraph::PassRef GBuffer_DepthMips_c0_pass_refs[] = {
 			{ PassID::AssetGBuffer, 0 },
@@ -359,6 +368,7 @@ namespace Editor
 			{ ResourceID::GBuffer_Specular, 0, GBuffer_Specular_c0_states },
 			{ ResourceID::GBuffer_Speed, 0, GBuffer_Speed_c0_states },
 			{ ResourceID::GBuffer_ObjectID, 0, GBuffer_ObjectID_c0_states },
+			{ ResourceID::GBuffer_Material, 0, GBuffer_Material_c0_states },
 			{ ResourceID::GBuffer_DepthMips, 0, GBuffer_DepthMips_c0_states },
 			{ ResourceID::GBuffer_HiZ, 0, GBuffer_HiZ_c0_states },
 			{ ResourceID::GBuffer_HiZ_UAV, 0, GBuffer_HiZ_UAV_c0_states },

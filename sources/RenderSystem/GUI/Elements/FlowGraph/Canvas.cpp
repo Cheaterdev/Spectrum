@@ -523,10 +523,40 @@ bool GUI::Elements::FlowGraph::canvas::on_mouse_action(mouse_action action, mous
 		auto& nodes = ::FlowGraph::FlowSystem::get().get_all();
 		vec2 t = (pos - vec2(contents->get_render_bounds().pos)) / contents->scale;
 
+		// A '/' in a registered name nests the entry in submenus
+		// ("MaterialX/math/add_float" -> MaterialX > math > add_float);
+		// names without one stay at the top level in registration order.
+		std::map<std::string, menu_list::ptr> submenus;
+
 		for (auto& n : nodes)
 		{
 			auto nptr = &n;
-			menu->add_item(n.name)->on_click = [nptr, t, this](menu_list_element::ptr e)
+
+			std::vector<std::string> parts;
+			std::stringstream name_stream(n.name);
+			std::string part;
+
+			while (std::getline(name_stream, part, '/'))
+				parts.push_back(part);
+
+			if (parts.empty())
+				continue;
+
+			menu_list::ptr parent = menu;
+			std::string path;
+
+			for (size_t i = 0; i + 1 < parts.size(); i++)
+			{
+				path += parts[i] + "/";
+				auto it = submenus.find(path);
+
+				if (it == submenus.end())
+					it = submenus.emplace(path, parent->add_item(parts[i])->get_menu()).first;
+
+				parent = it->second;
+			}
+
+			parent->add_item(parts.back())->on_click = [nptr, t, this](menu_list_element::ptr e)
 			{
 				::FlowGraph::window::ptr node = nptr->create();
 

@@ -91,7 +91,18 @@ struct ShaderParams:public Singleton<ShaderParams>
     // (all M=1) or VectorType::can_cast's M==1 check, so the GUI won't let
     // it link to a plain float/vector port.
     const ShaderParamType TEXTURE = ShaderParamType(2,1,"uint");
+    // MaterialX integer/boolean. Distinct M values (not M=1) so operator==
+    // and uniform packing never confuse them with FLOAT1, which shares N=1.
+    const ShaderParamType INT  = ShaderParamType(3,1,"int");
+    const ShaderParamType BOOL = ShaderParamType(4,1,"bool");
 };
+
+// Converts `src` to an HLSL expression of type `dst`: splats a scalar,
+// truncates with a swizzle, extends with 0/1 (w=1 for a 4th component, 0
+// for the rest), and casts between float/int/bool. Same-type values pass
+// through unchanged. Only numeric types (M=1 float, INT, BOOL) convert;
+// anything else (TEXTURE) is returned as-is.
+std::string coerce(const shader_parameter& src, const ShaderParamType& dst);
 template <class T, class N>
 class TemplatedParameter: public T
 {
@@ -439,13 +450,53 @@ class MaterialGraph : public MaterialFunction
         FlowGraph::output::ptr i_glow;
         // Registered after i_glow so they append to the end of the generated
         // COMPILED_FUNC output list (keeps existing output order stable).
+        // Transparency, in MaterialX's vocabulary. The members keep their original
+        // names (they are the serialization keys); the ports and getters are named
+        // after MaterialX: i_refraction is "ior", i_transmission "transmission
+        // weight", i_absorption_distance "transmission depth". thickness is 0 for a
+        // thin-walled surface and positive for a solid one (MaterialX thin_walled).
         FlowGraph::output::ptr i_opacity;
         FlowGraph::output::ptr i_refraction;
         FlowGraph::output::ptr i_thickness;
         FlowGraph::output::ptr i_transmission;
         FlowGraph::output::ptr i_absorption_distance;
+        // Clearcoat lobe (shading model CLEARCOAT, see common/shading_model.hlsl).
+        // Not serialized as members: graphs saved before these existed have no
+        // such ports, so after loading they are looked up by name and added when
+        // missing (restore_coat_outputs), which keeps the saved format unchanged.
+        FlowGraph::output::ptr i_coat;
+        FlowGraph::output::ptr i_coat_roughness;
+        // Sheen lobe (shading model SHEEN); same load-time restoration as the coat.
+        FlowGraph::output::ptr i_sheen;
+        FlowGraph::output::ptr i_sheen_roughness;
+        // Anisotropic specular (shading model ANISOTROPIC): strength, and the
+        // tangent's rotation about the normal in turns (0..1).
+        FlowGraph::output::ptr i_anisotropy;
+        FlowGraph::output::ptr i_anisotropy_rotation;
+        // Subsurface scattering (shading model SUBSURFACE): weight, the per-channel
+        // mean free path and a scale on it, in scene units.
+        FlowGraph::output::ptr i_sss_weight;
+        FlowGraph::output::ptr i_sss_radius;
+        FlowGraph::output::ptr i_sss_scale;
+        // How far the sheen colour follows the base colour: 0 white, 1 tinted like it.
+        // Registered last so graphs saved before it existed gain it at the same position.
+        FlowGraph::output::ptr i_sheen_tint;
+        // Colour of transmitted light / what a solid absorbs to over the depth.
+        // Negative (the default) means "use the base colour", which is what graphs
+        // saved before this output existed did.
+        FlowGraph::output::ptr i_transmission_color;
+        // Where opacity cuts out (UsdPreviewSurface's opacityThreshold, glTF's
+        // alpha cutoff). Left unwired it is 0.5, the old fixed cutout. Wired to a
+        // constant 0 the material is blended instead: see
+        // universal_material::resolve_transparency_mode.
+        FlowGraph::output::ptr i_opacity_threshold;
+        // Thin-film interference on the specular layer (shading model THINFILM):
+        // film thickness in nanometres (0 = none) and its index of refraction.
+        FlowGraph::output::ptr i_thin_film_thickness;
+        FlowGraph::output::ptr i_thin_film_ior;
 
         void set_translucent_defaults();
+        void restore_coat_outputs();
 
     public:
         using ptr = s_ptr<MaterialGraph>;
@@ -465,6 +516,7 @@ class MaterialGraph : public MaterialFunction
         virtual ~MaterialGraph();
         virtual GUI::base::ptr create_editor_window() override;
         FlowGraph::input::ptr get_texcoord();
+        FlowGraph::input::ptr get_position();
 
         FlowGraph::output::ptr get_base_color();
 
@@ -476,11 +528,26 @@ class MaterialGraph : public MaterialFunction
            FlowGraph::output::ptr get_roughness();
     FlowGraph::output::ptr get_tess_displacement();
         FlowGraph::output::ptr get_opacity();
-        FlowGraph::output::ptr get_refraction();
+        FlowGraph::output::ptr get_ior();
         FlowGraph::output::ptr get_thickness();
-        FlowGraph::output::ptr get_transmission();
-        FlowGraph::output::ptr get_absorption_distance();
+        FlowGraph::output::ptr get_transmission_weight();
+        FlowGraph::output::ptr get_transmission_color();
+        FlowGraph::output::ptr get_transmission_depth();
+        FlowGraph::output::ptr get_opacity_threshold();
+        FlowGraph::output::ptr get_thin_film_thickness();
+        FlowGraph::output::ptr get_thin_film_ior();
+        FlowGraph::output::ptr get_coat();
+        FlowGraph::output::ptr get_coat_roughness();
+        FlowGraph::output::ptr get_sheen();
+        FlowGraph::output::ptr get_sheen_roughness();
+        FlowGraph::output::ptr get_anisotropy();
+        FlowGraph::output::ptr get_anisotropy_rotation();
+        FlowGraph::output::ptr get_subsurface_weight();
+        FlowGraph::output::ptr get_subsurface_radius();
+        FlowGraph::output::ptr get_subsurface_scale();
+        FlowGraph::output::ptr get_sheen_tint();
         void set_translucent_outputs_enabled(bool enabled);
+        void set_coat_outputs_enabled(bool enabled);
         virtual void start(MaterialContext* context);
     private:
         SERIALIZE()
@@ -512,6 +579,7 @@ class MaterialGraph : public MaterialFunction
             i_opacity->default_value = shader_parameter("1.0", ShaderParams::get().FLOAT1);
             i_refraction->default_value = shader_parameter("1.0", ShaderParams::get().FLOAT1);
             set_translucent_defaults();
+            IF_LOAD() restore_coat_outputs();
         }
 
 };
@@ -640,6 +708,7 @@ class VectorNode : public MaterialNode
         using ptr = s_ptr<VectorNode>;
 
         VectorNode(vec4 value);
+        vec4 get_value() const { return uniform->value.f4_value; }
              	static ptr create_default() {
 			return std::make_shared<VectorNode>(vec4(1,1,1,1));
 		}
@@ -666,6 +735,7 @@ class ScalarNode : public MaterialNode
         using ptr = s_ptr<ScalarNode>;
 
         ScalarNode(float value);
+        float get_value() const { return uniform->value.f_value; }
                	static ptr create_default() {
 			return std::make_shared<ScalarNode>(1.0f);
 		}

@@ -12,6 +12,7 @@ import Test.HAL.Compute;
 import Test.HAL.SubresRangeMap;
 import Test.RenderSystem.FrameGraph;
 import Test.SceneParity;
+import Test.MaterialX;
 import Core;
 import HAL;
 import RenderSystem;

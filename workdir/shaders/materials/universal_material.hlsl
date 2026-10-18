@@ -1,4 +1,6 @@
 #include "common/common.hlsl"
+#include "common/shading_model.hlsl"
+#include "materialx/mx_stdlib.hlsl"
 
 #include "autogen/FrameInfo.h"
 #define DRAW_DATA_MATERIAL
@@ -79,7 +81,7 @@ Texture2D get_texture(uint i)
 #ifdef BUILD_FUNC_PS
 
 
-GBuffer universal(vertex_output i, float4 albedo, float metallic,float roughness, float4 bump, float4 glow)
+GBuffer universal(vertex_output i, float4 albedo, float metallic,float roughness, float4 bump, float4 glow, float coat, float coat_roughness, float sheen, float sheen_roughness, float anisotropy, float aniso_rotation, float sss_weight, float3 sss_radius, float sss_scale, float sheen_tint, float film_thickness, float film_ior)
 { 
 #ifdef ALPHA_CLIP
    clip(albedo.w-0.5);
@@ -95,6 +97,7 @@ GBuffer universal(vertex_output i, float4 albedo, float metallic,float roughness
     result.albedo = float4(albedo.rgb, metallic);
     result.normals = float4(GetFrameInfo().compress_normals(normal), max(MIN_ROUGHNESS, roughness));
 	result.specular = float4(saturate(glow.rgb), 0);
+	result.material = pack_material_from_graph(coat, coat_roughness, sheen, sheen_roughness, anisotropy, aniso_rotation, sss_weight, sss_radius, sss_scale, sheen_tint, film_thickness, film_ior, normal, i.tangent);
       
 
     float2 cur_p = float2(0.5, 0.5) + float2(0.5, -0.5)*(i.cur_pos.xy / i.cur_pos.w);
@@ -106,7 +109,7 @@ GBuffer universal(vertex_output i, float4 albedo, float metallic,float roughness
     return result;       
 }    
 
-void COMPILED_FUNC(in float3 a, in float2 b, out float4 c, out float d, out float e, out float4 f, out float4 g, out float h, out float ior, out float thickness, out float transmission, out float absorption_distance, float lod);
+void COMPILED_FUNC(in float3 a, in float2 b, out float4 c, out float d, out float e, out float4 f, out float4 g, out float h, out float ior, out float thickness, out float transmission, out float absorption_distance, out float coat, out float coat_roughness, out float sheen, out float sheen_roughness, out float anisotropy, out float aniso_rotation, out float sss_weight, out float3 sss_radius, out float sss_scale, out float sheen_tint, out float3 transmission_color, out float opacity_threshold, out float thin_film_thickness, out float thin_film_ior, float lod);
 GBuffer PS(vertex_output i DRAW_ID_PARAM)
 {
 	SET_DRAW_ID();
@@ -116,12 +119,14 @@ GBuffer PS(vertex_output i DRAW_ID_PARAM)
 	float4 normal = 0;
     float4 glow = 0;
     float opacity = 1;
-    float refraction = 1, thickness = 0, transmission = 1, absorption_distance = 1;
+    float refraction = 1, thickness = 0, transmission = 1, absorption_distance = 1, coat = 0, coat_roughness = 0.1, sheen = 0, sheen_roughness = 0.3, anisotropy = 0, aniso_rotation = 0, sss_weight = 0, sss_scale = 1, sheen_tint = 0; float3 sss_radius = float3(1, 1, 1), transmission_color = float3(-1, -1, -1); float opacity_threshold = 0.5, thin_film_thickness = 0, thin_film_ior = 1.5;
 
-    COMPILED_FUNC(i.wpos, i.tc, color, metallic, roughness, normal, glow, opacity, refraction, thickness, transmission, absorption_distance, 0);
+    mx_set_geometry(normalize(i.normal), normalize(i.tangent), normalize(i.binormal));
+    mx_set_time(GetFrameInfo().GetTime().y);
+    COMPILED_FUNC(i.wpos, i.tc, color, metallic, roughness, normal, glow, opacity, refraction, thickness, transmission, absorption_distance, coat, coat_roughness, sheen, sheen_roughness, anisotropy, aniso_rotation, sss_weight, sss_radius, sss_scale, sheen_tint, transmission_color, opacity_threshold, thin_film_thickness, thin_film_ior, 0);
 
-color.w=opacity;
-	return universal(i, color, metallic, roughness, normal, glow);
+color.w = opacity - opacity_threshold + 0.5;   // universal() clips at 0.5
+	return universal(i, color, metallic, roughness, normal, glow, coat, coat_roughness, sheen, sheen_roughness, anisotropy, aniso_rotation, sss_weight, sss_radius, sss_scale, sheen_tint, thin_film_thickness, thin_film_ior);
 }
 
 #endif
@@ -141,7 +146,7 @@ struct vsm_depth_vertex_output
 	float2 tc : TEXCOORD;
 };
 
-void COMPILED_FUNC(in float3 a, in float2 b, out float4 c, out float d, out float e, out float4 f, out float4 g, out float h, out float ior, out float thickness, out float transmission, out float absorption_distance, float lod);
+void COMPILED_FUNC(in float3 a, in float2 b, out float4 c, out float d, out float e, out float4 f, out float4 g, out float h, out float ior, out float thickness, out float transmission, out float absorption_distance, out float coat, out float coat_roughness, out float sheen, out float sheen_roughness, out float anisotropy, out float aniso_rotation, out float sss_weight, out float3 sss_radius, out float sss_scale, out float sheen_tint, out float3 transmission_color, out float opacity_threshold, out float thin_film_thickness, out float thin_film_ior, float lod);
 void PS_VSM_DEPTH(vsm_depth_vertex_output i DRAW_ID_PARAM)
 {
 	SET_DRAW_ID();
@@ -151,11 +156,11 @@ void PS_VSM_DEPTH(vsm_depth_vertex_output i DRAW_ID_PARAM)
 	float4 normal = 0;
 	float4 glow = 0;
 	float opacity = 1;
-	float refraction = 1, thickness = 0, transmission = 1, absorption_distance = 1;
+	float refraction = 1, thickness = 0, transmission = 1, absorption_distance = 1, coat = 0, coat_roughness = 0.1, sheen = 0, sheen_roughness = 0.3, anisotropy = 0, aniso_rotation = 0, sss_weight = 0, sss_scale = 1, sheen_tint = 0; float3 sss_radius = float3(1, 1, 1), transmission_color = float3(-1, -1, -1); float opacity_threshold = 0.5, thin_film_thickness = 0, thin_film_ior = 1.5;
 
-	COMPILED_FUNC(i.wpos, i.tc, color, metallic, roughness, normal, glow, opacity, refraction, thickness, transmission, absorption_distance, 0);
+	COMPILED_FUNC(i.wpos, i.tc, color, metallic, roughness, normal, glow, opacity, refraction, thickness, transmission, absorption_distance, coat, coat_roughness, sheen, sheen_roughness, anisotropy, aniso_rotation, sss_weight, sss_radius, sss_scale, sheen_tint, transmission_color, opacity_threshold, thin_film_thickness, thin_film_ior, 0);
 
-	clip(opacity - 0.5);
+	clip(opacity - opacity_threshold);
 }
 
 #endif
@@ -185,7 +190,7 @@ void universal_voxel(vertex_output i, float4 albedo, float metallic, float rough
 #endif
     
 }
-void COMPILED_FUNC(in float3 a, in float2 b, out float4 c, out float d, out float e, out float4 f, out float4 g, out float h, out float ior, out float thickness, out float transmission, out float absorption_distance, float lod);
+void COMPILED_FUNC(in float3 a, in float2 b, out float4 c, out float d, out float e, out float4 f, out float4 g, out float h, out float ior, out float thickness, out float transmission, out float absorption_distance, out float coat, out float coat_roughness, out float sheen, out float sheen_roughness, out float anisotropy, out float aniso_rotation, out float sss_weight, out float3 sss_radius, out float sss_scale, out float sheen_tint, out float3 transmission_color, out float opacity_threshold, out float thin_film_thickness, out float thin_film_ior, float lod);
 void PS_VOXEL(vertex_output i DRAW_ID_PARAM)
 {
 	SET_DRAW_ID();
@@ -195,9 +200,11 @@ void PS_VOXEL(vertex_output i DRAW_ID_PARAM)
 	float4 normal = 0;
     float4 glow = 0;
     float opacity = 1;
-    float refraction = 1, thickness = 0, transmission = 1, absorption_distance = 1;
+    float refraction = 1, thickness = 0, transmission = 1, absorption_distance = 1, coat = 0, coat_roughness = 0.1, sheen = 0, sheen_roughness = 0.3, anisotropy = 0, aniso_rotation = 0, sss_weight = 0, sss_scale = 1, sheen_tint = 0; float3 sss_radius = float3(1, 1, 1), transmission_color = float3(-1, -1, -1); float opacity_threshold = 0.5, thin_film_thickness = 0, thin_film_ior = 1.5;
 
-	COMPILED_FUNC(i.wpos, i.tc, color, metallic, roughness, normal, glow, opacity, refraction, thickness, transmission, absorption_distance, 1);
+	mx_set_geometry(normalize(i.normal), normalize(i.tangent), normalize(i.binormal));
+	mx_set_time(GetFrameInfo().GetTime().y);
+	COMPILED_FUNC(i.wpos, i.tc, color, metallic, roughness, normal, glow, opacity, refraction, thickness, transmission, absorption_distance, coat, coat_roughness, sheen, sheen_roughness, anisotropy, aniso_rotation, sss_weight, sss_radius, sss_scale, sheen_tint, transmission_color, opacity_threshold, thin_film_thickness, thin_film_ior, 1);
     color.w = opacity;
 
 	universal_voxel(i, color, metallic, roughness, normal, glow);

@@ -12,6 +12,7 @@ static const GBuffer gbuffer = GetVSMLighting().GetGbuffer();
 
 #include "../../common/pbr.hlsl"
 #include "../../common/sky_indirect.hlsl"
+#include "../../common/lobes.hlsl"
 // Only the resolve half of VSM_impl.hlsl's old contents (get_shadow_vsm,
 // vsm_pcf_shadow, debug helpers) -- see VSM_impl_search.hlsl's own top
 // comment for why this is split from VSM_BlockerSearch.hlsl's own include.
@@ -101,7 +102,11 @@ float4 combine_result(float2 tc, uint2 pixel)
 
 	float2 EnvBRDF = GetBRDF(info.roughness, 0, 0.5 + 0.5 * NL) * GetBRDF(info.roughness, 0, 0.5 + 0.5 * NV);
 
-    return float4(shadow * (NL * info.albedo * (1 - info.metallic)), 1);
+	float4 material = gbuffer.GetMaterial().SampleLevel(pointClampSampler, tc, 0);
+    float3 result = shadow * (NL * info.albedo * (1 - info.metallic)) * coat_base_attenuation(material, info.normal, info.view);
+	result += material_sun_lobes(material, info.normal, info.view, light_dir, shadow,
+		lerp(0.04, info.albedo, info.metallic), max(MIN_ROUGHNESS, gbuffer.GetNormals().SampleLevel(pointClampSampler, tc, 0).w), info.albedo, info.metallic);
+    return float4(result, 1);
 }
 
 // VSM_Unshadowed: the same direct lighting as combine_result, without a shadow
@@ -117,24 +122,30 @@ float4 unshadowed_result(float2 tc)
 	Camera camera = GetFrameInfo().GetCamera();
 
 	float4 packed_0 = gbuffer.GetAlbedo().SampleLevel(pointClampSampler, tc, 0);
-	float4 packed_n = gbuffer.GetNormals().SampleLevel(pointClampSampler, tc, 0);
-	float3 albedo   = packed_0.rgb;
-	float  metallic = packed_0.w;
-	float3 normal   = normalize(packed_n.xyz * 2 - 1);
-	float  roughness = pow(max(MIN_ROUGHNESS, packed_n.w), 2);
+	float4 packed_n  = gbuffer.GetNormals().SampleLevel(pointClampSampler, tc, 0);
+	float3 albedo    = packed_0.rgb;
+	float  metallic  = packed_0.w;
+	float3 normal    = normalize(packed_n.xyz * 2 - 1);
+	float3 light_dir = normalize(GetFrameInfo().GetSunDir().xyz);
+	float  NL        = saturate(dot(normal, light_dir));
 
 	float3 pos  = depth_to_wpos(raw_z, tc, camera.GetInvViewProj());
 	float3 view = normalize(camera.GetPosition() - pos);
 
-	float NL = saturate(dot(normal, normalize(GetFrameInfo().GetSunDir().xyz)));
-	float NV = saturate(dot(normal, view));
+	float3 result = NL * albedo * (1 - metallic);
 
-	float3 diffuse_color = albedo * (1 - metallic);
-	float3 f0 = lerp(float3(0.04, 0.04, 0.04), albedo, metallic);
+	// Material lobes (coat, sheen, ...) and the metal's sun reflection, as in combine_result.
+	float4 material = gbuffer.GetMaterial().SampleLevel(pointClampSampler, tc, 0);
+	if (material_model(material) != SHADING_MODEL_STANDARD || metallic > 0.001)
+	{
+		result *= coat_base_attenuation(material, normal, view);
+		result += material_sun_lobes(material, normal, view, light_dir, 1.0,
+			lerp(0.04, albedo, metallic), max(MIN_ROUGHNESS, packed_n.w), albedo, metallic);
+	}
 
-	float3 color = NL * diffuse_color
-	             + sky_indirect_light(GetFrameInfo().GetSky(), albedo, metallic, normal, view, roughness);
-	return float4(color, 1);
+	result += sky_indirect_light(GetFrameInfo().GetSky(), albedo, metallic, normal, view,
+		pow(max(MIN_ROUGHNESS, packed_n.w), 2));
+	return float4(result, 1);
 }
 
 [numthreads(16, 16, 1)]

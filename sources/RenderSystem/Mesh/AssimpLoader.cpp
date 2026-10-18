@@ -1027,8 +1027,8 @@ std::shared_ptr<MeshData> MeshData::load_assimp(const std::string& file_name, re
                         float file_ior;
                         if (aiReturn_SUCCESS == ai_get(*native_material, AiKey::Refracti, file_ior) && file_ior > 1.0f)
                             ior = file_ior;
-                        link_scalar(ior, graph->get_refraction(), "IOR -> refraction");
-                        link_scalar(transmission, graph->get_transmission(), "transmission");
+                        link_scalar(ior, graph->get_ior(), "IOR");
+                        link_scalar(transmission, graph->get_transmission_weight(), "transmission");
 
                         // glTF KHR_materials_volume: 0 = thin-walled, same convention as ours.
                         float thickness;
@@ -1037,7 +1037,7 @@ std::shared_ptr<MeshData> MeshData::load_assimp(const std::string& file_name, re
 
                         float attenuation_distance;
                         if (aiReturn_SUCCESS == ai_get(*native_material, AiKey::VolumeAttenuationDistance, attenuation_distance) && attenuation_distance > 0.0f)
-                            link_scalar(attenuation_distance, graph->get_absorption_distance(), "absorption distance");
+                            link_scalar(attenuation_distance, graph->get_transmission_depth(), "transmission depth");
                     }
                 }
 

@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<!-- Car-paint-like material: a rough red base under a smooth clearcoat.
+     The coat shows as a tight white sun highlight over the duller base. -->
+<materialx version="1.39">
+  <standard_surface name="paint_shader" type="surfaceshader">
+    <input name="base_color" type="color3" value="0.55, 0.04, 0.04" />
+    <input name="metalness" type="float" value="0.0" />
+    <input name="specular_roughness" type="float" value="0.6" />
+    <input name="coat" type="float" value="1.0" />
+    <input name="coat_roughness" type="float" value="0.08" />
+  </standard_surface>
+
+  <surfacematerial name="coated_paint" type="material">
+    <input name="surfaceshader" type="surfaceshader" nodename="paint_shader" />
+  </surfacematerial>
+</materialx>

@@ -70,6 +70,7 @@ export import "../defines.h";
 #include "pass/FrameGraphTests/FGT_CopyResultToSink.h"
 #include "pass/FrameGraphTests/FGT_ProduceBloomInputs.h"
 #include "pass/FrameGraphTests/FGT_ProduceGBuffer.h"
+#include "pass/FrameGraphTests/FGT_ProduceShadow.h"
 #include "pass/FrameGraphTests/FGT_AppendTiles.h"
 #include "pass/FrameGraphTests/FGT_CopyTileList.h"
 #include "pass/FrameGraphTests/FGT_CaptureAlbedo.h"
@@ -103,6 +104,11 @@ export import "../defines.h";
 #include "pass/Environment/CubeMapDownsample.h"
 #include "pass/Environment/CubeMapEnviromentProcessor.h"
 #include "pass/Post/AA/SMAA.h"
+#include "pass/Subsurface/SSS_Classify.h"
+#include "pass/Subsurface/SSS_BlurH.h"
+#include "pass/Subsurface/SSS_BlurV.h"
+#include "pass/Subsurface/SSSRR_BlurH.h"
+#include "pass/Subsurface/SSSRR_BlurV.h"
 #include "pass/Editor/stencil_renderer.h"
 #include "pass/Post/Tonemap.h"
 #include "pass/UI/UI_PreDraw.h"
@@ -158,6 +164,7 @@ export import "../defines.h";
 #include "pass/FrameGraphTests/FGT_TonemapPipeline.pipeline.h"
 #include "pass/FrameGraphTests/FGT_BloomPipeline.pipeline.h"
 #include "pass/FrameGraphTests/FGT_VSMUnshadowedPipeline.pipeline.h"
+#include "pass/FrameGraphTests/FGT_NRDShadowCombinePipeline.pipeline.h"
 #include "pass/FrameGraphTests/FGT_VSMDepthAnalysisPipeline.pipeline.h"
 #include "pass/FrameGraphTests/FGT_VSMFullChainPipeline.pipeline.h"
 #include "pass/FrameGraphTests/FGT_TileListPipeline.pipeline.h"
@@ -423,6 +430,10 @@ export namespace Passes
 	}
 	namespace FrameGraphTests
 	{
+		using ::Passes::FrameGraphTests::FGT_ProduceShadow;
+	}
+	namespace FrameGraphTests
+	{
 		using ::Passes::FrameGraphTests::FGT_AppendTiles;
 	}
 	namespace FrameGraphTests
@@ -588,6 +599,26 @@ export namespace Passes
 		{
 			using ::Passes::Post::AA::SMAA;
 		}
+	}
+	namespace Subsurface
+	{
+		using ::Passes::Subsurface::SSS_Classify;
+	}
+	namespace Subsurface
+	{
+		using ::Passes::Subsurface::SSS_BlurH;
+	}
+	namespace Subsurface
+	{
+		using ::Passes::Subsurface::SSS_BlurV;
+	}
+	namespace Subsurface
+	{
+		using ::Passes::Subsurface::SSSRR_BlurH;
+	}
+	namespace Subsurface
+	{
+		using ::Passes::Subsurface::SSSRR_BlurV;
 	}
 	namespace Editor
 	{
@@ -878,6 +909,10 @@ export namespace Pipelines
 	namespace FrameGraphTests
 	{
 		using ::Pipelines::FrameGraphTests::FGT_VSMUnshadowedPipeline;
+	}
+	namespace FrameGraphTests
+	{
+		using ::Pipelines::FrameGraphTests::FGT_NRDShadowCombinePipeline;
 	}
 	namespace FrameGraphTests
 	{

@@ -13,6 +13,7 @@
     "cereal",
     "dstorage",
     "jinja2cpp",
+    "materialx",
     {"name" :"directx-dxc", "version>=":"2026-05-27"},
       {"name" :"directx12-agility", "version>=":"1.619.3"},
      {"name" :"directx-headers", "version>=":"1.619.1"},

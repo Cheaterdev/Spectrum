@@ -1,4 +1,4 @@
-﻿export module Graphics:Materials.UniversalMaterial;
+export module Graphics:Materials.UniversalMaterial;
 
 
 import :Materials.Values;
@@ -191,6 +191,8 @@ export namespace materials
 		// PSOs, raster passes and RT instance flags, so it is per material,
 		// unlike the per-pixel graph values it is derived from.
 		Meshes::TransparencyMode transparency_mode = Meshes::TransparencyMode::Opaque;
+		// Translucent because of a blended opacity rather than transmission.
+		bool opacity_blend = false;
 		void resolve_transparency_mode();
 
 		void generate_texture_handles();

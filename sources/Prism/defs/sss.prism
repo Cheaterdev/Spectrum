@@ -1,0 +1,162 @@
+# Screen-space subsurface scattering for the SUBSURFACE shading model
+# (common/shading_model.hlsl): a separable bilateral Gaussian blur of the
+# diffuse light, in screen space, applied only to pixels whose GBuffer_Material
+# says SUBSURFACE.
+#
+# It has to run where the target holds diffuse light and nothing else, since
+# blurring the final image would smear reflections and highlights too:
+#   - FSR/DLSS-SR/native: between NRD_IndirectCombine (the last diffuse writer)
+#     and ReflCombine (the first specular one), blurring ResultTexture in place.
+#   - DLSS-RR: RTXCombine computes everything in one dispatch, so for
+#     SUBSURFACE pixels it writes only diffuse into ResultTextureRTXNoise and
+#     parks the specular part in RTXCombineSpecular; the vertical pass adds it
+#     back after blurring.
+# Horizontal and vertical halves are separate PassNodes: the vertical one
+# reads what the horizontal one wrote (SSSTemp) and updates the target.
+#
+# SSS_Classify finds the 16x16 screen tiles that contain at least one SUBSURFACE
+# pixel and appends their positions to SSSTiles; the blur passes then dispatch
+# indirectly over just those tiles (same scheme as VSM's tile lists), so a frame
+# with no subsurface material costs one cheap classify dispatch and nothing else.
+
+namespace Subsurface
+{
+	[Bind = DefaultLayout::Instance0]
+	struct SSSClassifyParams
+	{
+		GBuffer gbuffer;
+	}
+
+	[Bind = DefaultLayout::Instance1]
+	struct SSSTilesAppend
+	{
+		AppendStructuredBuffer<uint2> tiles;
+	}
+
+	# Read-side counterpart of SSSTilesAppend: the same buffer as a plain list.
+	[Bind = DefaultLayout::Instance1]
+	struct SSSTilesRead
+	{
+		StructuredBuffer<uint2> tiles;
+	}
+
+	[Bind = DefaultLayout::Instance0]
+	struct SSSBlurParams
+	{
+		GBuffer gbuffer;
+		# H: the lit target (radiance, divided by albedo to get irradiance).
+		# V: SSSTemp (already irradiance).
+		Texture2D<float4> source;
+		# DLSS-RR only: RTXCombine's parked specular term, added back by V.
+		[Auto = Texture_Null]
+		Texture2D<float4> specular;
+		RWTexture2D<float4> target;
+		int add_specular;
+	}
+
+	ComputePSO SSSClassify
+	{
+		root = DefaultLayout;
+
+		[EntryPoint = CS_CLASSIFY]
+		compute = "postprocess/sss_classify.hlsl";
+	}
+
+	ComputePSO SSSBlurH
+	{
+		root = DefaultLayout;
+
+		[EntryPoint = CS_H]
+		compute = "postprocess/sss_blur.hlsl";
+	}
+
+	ComputePSO SSSBlurV
+	{
+		root = DefaultLayout;
+
+		[EntryPoint = CS_V]
+		compute = "postprocess/sss_blur.hlsl";
+	}
+
+	[Static]
+	[Compute]
+	[RunAlways]
+	PassNode SSS_Classify
+	{
+		[Always = Read] Texture GBuffer_Albedo;
+		[Always = Read] Texture GBuffer_Normals;
+		[Always = Read] Texture GBuffer_Specular;
+		[Always = Read] Texture GBuffer_Material;
+		[Always = Read] Texture GBuffer_Speed;
+		[Always = None] Texture GBuffer_DepthMips;
+		# Worst case every tile qualifies. `true` = counted: an AppendStructuredBuffer
+		# needs a real GPU counter, which is also what the indirect args are copied from.
+		[Always = UnorderedAccess] [Size = area(tiles(ViewportContext::frame_size, 16))] [Counted]
+		StructuredBuffer<uint2> SSSTiles;
+	}
+
+	[Static]
+	[Compute]
+	[SetupCondition = UpscalerSelectors::upscaler_type != UpscalerType::DLSSRR]
+	PassNode SSS_BlurH
+	{
+		[Always = Read] Texture GBuffer_Albedo;
+		[Always = Read] Texture GBuffer_Normals;
+		[Always = Read] Texture GBuffer_Specular;
+		[Always = Read] Texture GBuffer_Material;
+		[Always = Read] Texture GBuffer_Speed;
+		[Always = None] Texture GBuffer_DepthMips;
+		[Always = Read] StructuredBuffer<uint2> SSSTiles;
+		[Always = Read] Texture ResultTexture;
+		[Always = UnorderedAccess] [Size = ViewportContext::frame_size] [Format = R16G16B16A16_FLOAT] Texture SSSTemp;
+	}
+
+	[Static]
+	[Compute]
+	[SetupCondition = UpscalerSelectors::upscaler_type != UpscalerType::DLSSRR]
+	PassNode SSS_BlurV
+	{
+		[Always = Read] Texture GBuffer_Albedo;
+		[Always = Read] Texture GBuffer_Normals;
+		[Always = Read] Texture GBuffer_Specular;
+		[Always = Read] Texture GBuffer_Material;
+		[Always = Read] Texture GBuffer_Speed;
+		[Always = None] Texture GBuffer_DepthMips;
+		[Always = Read] StructuredBuffer<uint2> SSSTiles;
+		[Always = Read] Texture SSSTemp;
+		[Always = UnorderedAccess] Texture ResultTexture;
+	}
+
+	[Static]
+	[Compute]
+	[SetupCondition = UpscalerSelectors::upscaler_type == UpscalerType::DLSSRR]
+	PassNode SSSRR_BlurH
+	{
+		[Always = Read] Texture GBuffer_Albedo;
+		[Always = Read] Texture GBuffer_Normals;
+		[Always = Read] Texture GBuffer_Specular;
+		[Always = Read] Texture GBuffer_Material;
+		[Always = Read] Texture GBuffer_Speed;
+		[Always = None] Texture GBuffer_DepthMips;
+		[Always = Read] StructuredBuffer<uint2> SSSTiles;
+		[Always = Read] Texture ResultTextureRTXNoise;
+		[Always = UnorderedAccess] [Size = ViewportContext::frame_size] [Format = R16G16B16A16_FLOAT] Texture SSSTemp;
+	}
+
+	[Static]
+	[Compute]
+	[SetupCondition = UpscalerSelectors::upscaler_type == UpscalerType::DLSSRR]
+	PassNode SSSRR_BlurV
+	{
+		[Always = Read] Texture GBuffer_Albedo;
+		[Always = Read] Texture GBuffer_Normals;
+		[Always = Read] Texture GBuffer_Specular;
+		[Always = Read] Texture GBuffer_Material;
+		[Always = Read] Texture GBuffer_Speed;
+		[Always = None] Texture GBuffer_DepthMips;
+		[Always = Read] StructuredBuffer<uint2> SSSTiles;
+		[Always = Read] Texture SSSTemp;
+		[Always = Read] Texture RTXCombineSpecular;
+		[Always = UnorderedAccess] Texture ResultTextureRTXNoise;
+	}
+}

@@ -190,7 +190,7 @@ void MaterialContext::start(std::string orig_file, MaterialGraph* graph)
 	graph->get_base_color()->set_enabled(true);
 	graph->get_roughness()->set_enabled(true);
 	graph->get_opacity()->set_enabled(true);
-	graph->get_refraction()->set_enabled(true);
+	graph->get_ior()->set_enabled(true);
 	graph->set_translucent_outputs_enabled(true);
 
 	graph->get_tess_displacement()->set_enabled(false);
@@ -239,7 +239,7 @@ void MaterialContext::start(std::string orig_file, MaterialGraph* graph)
 		graph->get_mettalic()->set_enabled(false);
 		graph->get_roughness()->set_enabled(false);
 		graph->get_opacity()->set_enabled(false);
-		graph->get_refraction()->set_enabled(false);
+		graph->get_ior()->set_enabled(false);
 		graph->set_translucent_outputs_enabled(false);
 
 		graph->get_base_color()->set_enabled(false);
@@ -273,7 +273,7 @@ void MaterialContext::start(std::string orig_file, MaterialGraph* graph)
 		graph->get_base_color()->set_enabled(true);
 		graph->get_roughness()->set_enabled(true);
 		graph->get_opacity()->set_enabled(true);
-		graph->get_refraction()->set_enabled(true);
+		graph->get_ior()->set_enabled(true);
 		graph->set_translucent_outputs_enabled(true);
 		graph->get_tess_displacement()->set_enabled(false);
 
@@ -458,7 +458,16 @@ void MaterialFunction::on_finish()
 	{
 		if (!output_parametres[i]->enabled) continue;
 
-		add_function(f_output_names[o++] + " = " + output_parametres[i]->get<shader_parameter>().name);
+		// A linked value can be a different numeric width/kind than the port
+		// (links between numeric types are allowed, see ShaderParamType::
+		// can_cast) -- convert to the port's own type, which is what the
+		// `out` parameter was declared with in generate_output().
+		auto value = output_parametres[i]->get<shader_parameter>();
+
+		if (auto* dst = dynamic_cast<ShaderParamType*>(output_parametres[i]->type.get()))
+			value.name = coerce(value, *dst);
+
+		add_function(f_output_names[o++] + " = " + value.name);
 	};
 
 	for (unsigned int i = 0; i < outputs.size(); i++)
@@ -707,11 +716,39 @@ MaterialGraph::MaterialGraph()
 	i_glow = register_output(/*ShaderParams::get().FLOAT4, */"glow", ShaderParams::get().FLOAT4);
 	// Registered after glow so they append to the end of the COMPILED_FUNC output list.
 	i_opacity = register_output("opacity", ShaderParams::get().FLOAT1);
-	i_refraction = register_output("refraction", ShaderParams::get().FLOAT1);
+	i_refraction = register_output("ior", ShaderParams::get().FLOAT1);
 	// Translucent-only (refraction wired): see TranslucentRTX, raytracing.prism.
 	i_thickness = register_output("thickness", ShaderParams::get().FLOAT1);
-	i_transmission = register_output("transmission", ShaderParams::get().FLOAT1);
-	i_absorption_distance = register_output("absorption distance", ShaderParams::get().FLOAT1);
+	i_transmission = register_output("transmission weight", ShaderParams::get().FLOAT1);
+	i_absorption_distance = register_output("transmission depth", ShaderParams::get().FLOAT1);
+	i_coat = register_output("coat weight", ShaderParams::get().FLOAT1);
+	i_coat_roughness = register_output("coat roughness", ShaderParams::get().FLOAT1);
+	i_coat->default_value = shader_parameter("0.0", ShaderParams::get().FLOAT1);
+	i_coat_roughness->default_value = shader_parameter("0.1", ShaderParams::get().FLOAT1);
+	i_sheen = register_output("sheen weight", ShaderParams::get().FLOAT1);
+	i_sheen_roughness = register_output("sheen roughness", ShaderParams::get().FLOAT1);
+	i_sheen->default_value = shader_parameter("0.0", ShaderParams::get().FLOAT1);
+	i_sheen_roughness->default_value = shader_parameter("0.3", ShaderParams::get().FLOAT1);
+	i_anisotropy = register_output("anisotropy", ShaderParams::get().FLOAT1);
+	i_anisotropy_rotation = register_output("anisotropy rotation", ShaderParams::get().FLOAT1);
+	i_anisotropy->default_value = shader_parameter("0.0", ShaderParams::get().FLOAT1);
+	i_anisotropy_rotation->default_value = shader_parameter("0.0", ShaderParams::get().FLOAT1);
+	i_sss_weight = register_output("subsurface weight", ShaderParams::get().FLOAT1);
+	i_sss_radius = register_output("subsurface radius", ShaderParams::get().FLOAT3);
+	i_sss_scale = register_output("subsurface scale", ShaderParams::get().FLOAT1);
+	i_sss_weight->default_value = shader_parameter("0.0", ShaderParams::get().FLOAT1);
+	i_sss_radius->default_value = shader_parameter("float3(1,1,1)", ShaderParams::get().FLOAT3);
+	i_sss_scale->default_value = shader_parameter("1.0", ShaderParams::get().FLOAT1);
+	i_sheen_tint = register_output("sheen tint", ShaderParams::get().FLOAT1);
+	i_sheen_tint->default_value = shader_parameter("0.0", ShaderParams::get().FLOAT1);
+	i_transmission_color = register_output("transmission color", ShaderParams::get().FLOAT3);
+	i_transmission_color->default_value = shader_parameter("float3(-1,-1,-1)", ShaderParams::get().FLOAT3);
+	i_opacity_threshold = register_output("opacity threshold", ShaderParams::get().FLOAT1);
+	i_opacity_threshold->default_value = shader_parameter("0.5", ShaderParams::get().FLOAT1);
+	i_thin_film_thickness = register_output("thin film thickness", ShaderParams::get().FLOAT1);
+	i_thin_film_ior = register_output("thin film ior", ShaderParams::get().FLOAT1);
+	i_thin_film_thickness->default_value = shader_parameter("0.0", ShaderParams::get().FLOAT1);
+	i_thin_film_ior->default_value = shader_parameter("1.5", ShaderParams::get().FLOAT1);
 
 	i_base_color->default_value = shader_parameter("float4(0,0,0,1)", ShaderParams::get().FLOAT4);
 	i_metallic->default_value = shader_parameter("0.0", ShaderParams::get().FLOAT1);
@@ -743,6 +780,11 @@ MaterialGraph::~MaterialGraph()
 FlowGraph::input::ptr MaterialGraph::get_texcoord()
 {
 	return texcoord;
+}
+
+FlowGraph::input::ptr MaterialGraph::get_position()
+{
+	return position;
 }
 
 FlowGraph::output::ptr MaterialGraph::get_base_color()
@@ -784,7 +826,7 @@ FlowGraph::output::ptr MaterialGraph::get_opacity()
 	return i_opacity;
 }
 
-FlowGraph::output::ptr MaterialGraph::get_refraction()
+FlowGraph::output::ptr MaterialGraph::get_ior()
 {
 	return i_refraction;
 }
@@ -794,21 +836,233 @@ FlowGraph::output::ptr MaterialGraph::get_thickness()
 	return i_thickness;
 }
 
-FlowGraph::output::ptr MaterialGraph::get_transmission()
+FlowGraph::output::ptr MaterialGraph::get_transmission_weight()
 {
 	return i_transmission;
 }
 
-FlowGraph::output::ptr MaterialGraph::get_absorption_distance()
+FlowGraph::output::ptr MaterialGraph::get_transmission_color()
+{
+	return i_transmission_color;
+}
+
+FlowGraph::output::ptr MaterialGraph::get_transmission_depth()
 {
 	return i_absorption_distance;
 }
 
+FlowGraph::output::ptr MaterialGraph::get_opacity_threshold()
+{
+	return i_opacity_threshold;
+}
+
+FlowGraph::output::ptr MaterialGraph::get_thin_film_thickness()
+{
+	return i_thin_film_thickness;
+}
+
+FlowGraph::output::ptr MaterialGraph::get_thin_film_ior()
+{
+	return i_thin_film_ior;
+}
+
+FlowGraph::output::ptr MaterialGraph::get_coat()
+{
+	return i_coat;
+}
+
+FlowGraph::output::ptr MaterialGraph::get_coat_roughness()
+{
+	return i_coat_roughness;
+}
+
+FlowGraph::output::ptr MaterialGraph::get_sheen()
+{
+	return i_sheen;
+}
+
+FlowGraph::output::ptr MaterialGraph::get_sheen_roughness()
+{
+	return i_sheen_roughness;
+}
+
+FlowGraph::output::ptr MaterialGraph::get_anisotropy()
+{
+	return i_anisotropy;
+}
+
+FlowGraph::output::ptr MaterialGraph::get_anisotropy_rotation()
+{
+	return i_anisotropy_rotation;
+}
+
+FlowGraph::output::ptr MaterialGraph::get_subsurface_weight()
+{
+	return i_sss_weight;
+}
+
+FlowGraph::output::ptr MaterialGraph::get_subsurface_radius()
+{
+	return i_sss_radius;
+}
+
+FlowGraph::output::ptr MaterialGraph::get_subsurface_scale()
+{
+	return i_sss_scale;
+}
+
+FlowGraph::output::ptr MaterialGraph::get_sheen_tint()
+{
+	return i_sheen_tint;
+}
+
+void MaterialGraph::set_coat_outputs_enabled(bool enabled)
+{
+	i_coat->set_enabled(enabled);
+	i_coat_roughness->set_enabled(enabled);
+	i_sheen->set_enabled(enabled);
+	i_sheen_roughness->set_enabled(enabled);
+	i_anisotropy->set_enabled(enabled);
+	i_anisotropy_rotation->set_enabled(enabled);
+	i_sss_weight->set_enabled(enabled);
+	i_sss_radius->set_enabled(enabled);
+	i_sss_scale->set_enabled(enabled);
+	i_sheen_tint->set_enabled(enabled);
+}
+
+// Ports are serialized with the graph, so a graph saved before the coat
+// outputs existed comes back without them. They go last in the COMPILED_FUNC
+// output list, so appending reproduces the order a new graph has.
+void MaterialGraph::restore_coat_outputs()
+{
+	// The constructor's own ports were dropped when the saved port list was
+	// loaded over them, so the members are stale until looked up again.
+	i_coat.reset();
+	i_coat_roughness.reset();
+	i_sheen.reset();
+	i_sheen_roughness.reset();
+	i_anisotropy.reset();
+	i_anisotropy_rotation.reset();
+	i_sss_weight.reset();
+	i_sss_radius.reset();
+	i_sss_scale.reset();
+	i_sheen_tint.reset();
+	i_transmission_color.reset();
+	i_opacity_threshold.reset();
+	i_thin_film_thickness.reset();
+	i_thin_film_ior.reset();
+
+	for (auto& out : output_parametres)
+	{
+		// Transparency ports were renamed to MaterialX's names.
+		if (out->name == "refraction")
+			out->name = "ior";
+		else if (out->name == "transmission")
+			out->name = "transmission weight";
+		else if (out->name == "absorption distance")
+			out->name = "transmission depth";
+
+		if (out->name == "coat weight")
+			i_coat = out;
+		else if (out->name == "coat roughness")
+			i_coat_roughness = out;
+		else if (out->name == "sheen weight")
+			i_sheen = out;
+		else if (out->name == "sheen roughness")
+			i_sheen_roughness = out;
+		else if (out->name == "anisotropy")
+			i_anisotropy = out;
+		else if (out->name == "anisotropy rotation")
+			i_anisotropy_rotation = out;
+		else if (out->name == "subsurface weight")
+			i_sss_weight = out;
+		else if (out->name == "subsurface radius")
+			i_sss_radius = out;
+		else if (out->name == "subsurface scale")
+			i_sss_scale = out;
+		else if (out->name == "sheen tint")
+			i_sheen_tint = out;
+		else if (out->name == "transmission color")
+			i_transmission_color = out;
+		else if (out->name == "opacity threshold")
+			i_opacity_threshold = out;
+		else if (out->name == "thin film thickness")
+			i_thin_film_thickness = out;
+		else if (out->name == "thin film ior")
+			i_thin_film_ior = out;
+	}
+
+	if (!i_coat)
+		i_coat = register_output("coat weight", ShaderParams::get().FLOAT1);
+
+	if (!i_coat_roughness)
+		i_coat_roughness = register_output("coat roughness", ShaderParams::get().FLOAT1);
+
+	if (!i_sheen)
+		i_sheen = register_output("sheen weight", ShaderParams::get().FLOAT1);
+
+	if (!i_sheen_roughness)
+		i_sheen_roughness = register_output("sheen roughness", ShaderParams::get().FLOAT1);
+
+	if (!i_anisotropy)
+		i_anisotropy = register_output("anisotropy", ShaderParams::get().FLOAT1);
+
+	if (!i_anisotropy_rotation)
+		i_anisotropy_rotation = register_output("anisotropy rotation", ShaderParams::get().FLOAT1);
+
+	if (!i_sss_weight)
+		i_sss_weight = register_output("subsurface weight", ShaderParams::get().FLOAT1);
+
+	if (!i_sss_radius)
+		i_sss_radius = register_output("subsurface radius", ShaderParams::get().FLOAT3);
+
+	if (!i_sss_scale)
+		i_sss_scale = register_output("subsurface scale", ShaderParams::get().FLOAT1);
+
+	if (!i_sheen_tint)
+		i_sheen_tint = register_output("sheen tint", ShaderParams::get().FLOAT1);
+
+	if (!i_transmission_color)
+		i_transmission_color = register_output("transmission color", ShaderParams::get().FLOAT3);
+
+	if (!i_opacity_threshold)
+		i_opacity_threshold = register_output("opacity threshold", ShaderParams::get().FLOAT1);
+
+	if (!i_thin_film_thickness)
+		i_thin_film_thickness = register_output("thin film thickness", ShaderParams::get().FLOAT1);
+
+	if (!i_thin_film_ior)
+		i_thin_film_ior = register_output("thin film ior", ShaderParams::get().FLOAT1);
+
+	i_coat->default_value = shader_parameter("0.0", ShaderParams::get().FLOAT1);
+	i_coat_roughness->default_value = shader_parameter("0.1", ShaderParams::get().FLOAT1);
+	i_sheen->default_value = shader_parameter("0.0", ShaderParams::get().FLOAT1);
+	i_sheen_roughness->default_value = shader_parameter("0.3", ShaderParams::get().FLOAT1);
+	i_anisotropy->default_value = shader_parameter("0.0", ShaderParams::get().FLOAT1);
+	i_anisotropy_rotation->default_value = shader_parameter("0.0", ShaderParams::get().FLOAT1);
+	i_sss_weight->default_value = shader_parameter("0.0", ShaderParams::get().FLOAT1);
+	i_sss_radius->default_value = shader_parameter("float3(1,1,1)", ShaderParams::get().FLOAT3);
+	i_sss_scale->default_value = shader_parameter("1.0", ShaderParams::get().FLOAT1);
+	i_sheen_tint->default_value = shader_parameter("0.0", ShaderParams::get().FLOAT1);
+	i_transmission_color->default_value = shader_parameter("float3(-1,-1,-1)", ShaderParams::get().FLOAT3);
+	i_opacity_threshold->default_value = shader_parameter("0.5", ShaderParams::get().FLOAT1);
+	i_thin_film_thickness->default_value = shader_parameter("0.0", ShaderParams::get().FLOAT1);
+	i_thin_film_ior->default_value = shader_parameter("1.5", ShaderParams::get().FLOAT1);
+}
+
+// Toggled together with the coat outputs: both are "extra" outputs that every
+// full (non-tessellation) variant of COMPILED_FUNC takes and the tessellation
+// variant omits.
 void MaterialGraph::set_translucent_outputs_enabled(bool enabled)
 {
+	set_coat_outputs_enabled(enabled);
 	i_thickness->set_enabled(enabled);
 	i_transmission->set_enabled(enabled);
 	i_absorption_distance->set_enabled(enabled);
+	i_transmission_color->set_enabled(enabled);
+	i_opacity_threshold->set_enabled(enabled);
+	i_thin_film_thickness->set_enabled(enabled);
+	i_thin_film_ior->set_enabled(enabled);
 }
 
 void MaterialGraph::start(MaterialContext* context)
@@ -1171,6 +1425,13 @@ GUI::base::ptr TextureAssetNode::create_editor_window()
 	return back;
 }
 
+// M=1 is a float scalar/vector, M=3/4 are INT/BOOL; M=2 (TEXTURE) is not
+// numeric and never converts.
+static bool is_numeric_type(const ShaderParamType& t)
+{
+	return t.M == 1 || t.M == 3 || t.M == 4;
+}
+
 bool ShaderParamType::can_cast(parameter_type* other)
 {
 	VectorType* vtype = dynamic_cast<VectorType*>(other);
@@ -1183,8 +1444,51 @@ bool ShaderParamType::can_cast(parameter_type* other)
 	if (N == -1 || type->N == -1)
 		return M == type->M;
 
-	bool res = M == type->M && N == type->N;
-	return res;
+	if (M == type->M && N == type->N)
+		return true;
+
+	// Any numeric type links to any other; the width/kind mismatch is
+	// resolved by coerce() where the value is consumed (MaterialXNode inputs
+	// and MaterialFunction's output assignment).
+	return is_numeric_type(*this) && is_numeric_type(*type);
+}
+
+std::string coerce(const shader_parameter& src, const ShaderParamType& dst)
+{
+	const auto& s = src.type;
+
+	if (s.M == dst.M && s.N == dst.N)
+		return src.name;
+
+	if (!is_numeric_type(s) || !is_numeric_type(dst))
+		return src.name;
+
+	const std::string& n = src.name;
+	const bool src_scalar = s.M != 1 || s.N == 1;
+
+	// Scalar destinations (float, int, bool): take .x of a vector, then cast.
+	if (dst.M != 1 || dst.N == 1)
+	{
+		std::string x = (s.M == 1 && s.N > 1) ? "(" + n + ").x" : n;
+		return "((" + dst.name + ")(" + x + "))";
+	}
+
+	// Float vector destinations.
+	if (src_scalar)
+		return "((" + dst.name + ")(" + (s.M == 1 ? n : "(float)(" + n + ")") + "))";
+
+	if (s.N > dst.N)
+	{
+		static const char* swizzle[] = { "", ".x", ".xy", ".xyz", ".xyzw" };
+		return "(" + n + ")" + swizzle[dst.N];
+	}
+
+	// s.N < dst.N, both vectors (2->3, 2->4, 3->4): pad with 0, w gets 1.
+	std::string pad;
+	for (int i = s.N; i < dst.N; i++)
+		pad += (i == 3 ? ", 1" : ", 0");
+
+	return dst.name + "(" + n + pad + ")";
 }
 REGISTER_TYPE(MaterialContext);
 

@@ -1174,6 +1174,7 @@ namespace Shadows
 			[Always = Read] Texture GBuffer_Albedo;
 			[Always = Read] Texture GBuffer_Normals;
 			[Always = Read] Texture GBuffer_Specular;
+			[Always = Read] Texture GBuffer_Material;
 			[Always = Read] Texture GBuffer_Speed;
 			[Always = None] Texture GBuffer_DepthMips;
 			[Always = Read] Texture VSM_Atlas;
@@ -1232,6 +1233,7 @@ namespace Shadows
 			[Always = Read] Texture GBuffer_Albedo;
 			[Always = Read] Texture GBuffer_Normals;
 			[Always = Read] Texture GBuffer_Specular;
+			[Always = Read] Texture GBuffer_Material;
 			[Always = Read] Texture GBuffer_Speed;
 			[Always = None] Texture GBuffer_DepthMips;
 			[Always = Read] Texture VSM_Atlas;
@@ -1292,6 +1294,7 @@ namespace Shadows
 			[Always = Read] Texture GBuffer_Albedo;
 			[Always = Read] Texture GBuffer_Normals;
 			[Always = Read] Texture GBuffer_Specular;
+			[Always = Read] Texture GBuffer_Material;
 			[Always = Read] Texture GBuffer_Speed;
 			[Always = None] Texture GBuffer_DepthMips;
 			[Always = UnorderedAccess] Texture ResultTexture;

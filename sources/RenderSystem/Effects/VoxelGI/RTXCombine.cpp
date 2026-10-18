@@ -34,6 +34,8 @@ void PassDefault<Passes::GI::RTXCombine>::render(
 		Slots::GI::RTXCombine combine;
 		gbuffer.SetTable(combine.GetGbuffer());
 		combine.GetReflection() = data.RTXReflectionNoise->texture2D;
+		combine.GetCoat()       = data.RTXReflectionCoat->texture2D;
+		combine.GetSpecular_out() = data.RTXCombineSpecular->rwTexture2D;
 		combine.GetIndirect()   = data.RTXIndirectNoise->texture2D;
 		combine.GetShadow()     = data.RTXShadowNoise->texture2D;
 		combine.GetTarget()     = data.ResultTextureRTXNoise->rwTexture2D;

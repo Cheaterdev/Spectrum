@@ -75,6 +75,12 @@ namespace Reflections
 			Handlers::Texture RTXReflectionDirPdf = ResourceID::RTXReflectionDirPdf;
 
 
+			Handlers::Texture GBuffer_Material = ResourceID::GBuffer_Material;
+
+
+			Handlers::Texture RTXReflectionCoat = ResourceID::RTXReflectionCoat;
+
+
 			// Resources this pass always needs whenever it runs, generated from
 			// each field's own [Always=X] annotation (further gated by [Optional=X]
 			// when present -- a raw bool expression, e.g. builder.exists(...) or a
@@ -111,6 +117,7 @@ namespace Reflections
 					builder.need(data.DDGI_ProbeResidency, FrameGraph::ResourceFlags::Read);
 				if (builder.graph->get_context<Table::GI::DDGI::DDGISelectors>().enabled)
 					builder.need(data.DDGI_ProbeResidencyPending, FrameGraph::ResourceFlags::UnorderedAccess);
+				builder.need(data.GBuffer_Material, FrameGraph::ResourceFlags::Read);
 			}
 
 			// Resources this pass always creates with a fixed desc, generated from
@@ -130,6 +137,7 @@ namespace Reflections
 			{
 				builder.create(data.RTXReflectionNoise, { ivec3(builder.graph->get_context<Table::Frame::ViewportContext>().frame_size, 0), HAL::Format::R16G16B16A16_FLOAT, 1, 1 }, FrameGraph::ResourceFlags::UnorderedAccess);
 				builder.create(data.RTXReflectionDirPdf, { ivec3(builder.graph->get_context<Table::Frame::ViewportContext>().frame_size, 0), HAL::Format::R16G16B16A16_FLOAT, 1, 1 }, FrameGraph::ResourceFlags::UnorderedAccess);
+				builder.create(data.RTXReflectionCoat, { ivec3(builder.graph->get_context<Table::Frame::ViewportContext>().frame_size, 0), HAL::Format::R16G16B16A16_FLOAT, 1, 1 }, FrameGraph::ResourceFlags::UnorderedAccess);
 			}
 			// Which chain link each handler field resolved to, one named slot per
 			// field. Filled from a live frame's finished Context and applied on a
@@ -156,6 +164,8 @@ namespace Reflections
 				FrameGraph::ChainIndex DDGI_ProbeResidencyPending = FrameGraph::ChainIndex::Unresolved;
 				FrameGraph::ChainIndex RTXReflectionNoise = FrameGraph::ChainIndex::Unresolved;
 				FrameGraph::ChainIndex RTXReflectionDirPdf = FrameGraph::ChainIndex::Unresolved;
+				FrameGraph::ChainIndex GBuffer_Material = FrameGraph::ChainIndex::Unresolved;
+				FrameGraph::ChainIndex RTXReflectionCoat = FrameGraph::ChainIndex::Unresolved;
 			};
 
 			static void save_to_cache([[maybe_unused]] const Context& data, [[maybe_unused]] Cache& cache)
@@ -178,6 +188,8 @@ namespace Reflections
 				cache.DDGI_ProbeResidencyPending = FrameGraph::TaskBuilder::cache_slot(data.DDGI_ProbeResidencyPending, ResourceID::DDGI_ProbeResidencyPending);
 				cache.RTXReflectionNoise = FrameGraph::TaskBuilder::cache_slot(data.RTXReflectionNoise, ResourceID::RTXReflectionNoise);
 				cache.RTXReflectionDirPdf = FrameGraph::TaskBuilder::cache_slot(data.RTXReflectionDirPdf, ResourceID::RTXReflectionDirPdf);
+				cache.GBuffer_Material = FrameGraph::TaskBuilder::cache_slot(data.GBuffer_Material, ResourceID::GBuffer_Material);
+				cache.RTXReflectionCoat = FrameGraph::TaskBuilder::cache_slot(data.RTXReflectionCoat, ResourceID::RTXReflectionCoat);
 			}
 
 			// Replay counterpart of create_always/need_always. A field this pass
@@ -207,6 +219,8 @@ namespace Reflections
 				builder.load(data.DDGI_ProbeResidencyPending, ResourceID::DDGI_ProbeResidencyPending, cache.DDGI_ProbeResidencyPending);
 				builder.create_versioned(data.RTXReflectionNoise, cache.RTXReflectionNoise, { ivec3(builder.graph->get_context<Table::Frame::ViewportContext>().frame_size, 0), HAL::Format::R16G16B16A16_FLOAT, 1, 1 });
 				builder.create_versioned(data.RTXReflectionDirPdf, cache.RTXReflectionDirPdf, { ivec3(builder.graph->get_context<Table::Frame::ViewportContext>().frame_size, 0), HAL::Format::R16G16B16A16_FLOAT, 1, 1 });
+				builder.load(data.GBuffer_Material, ResourceID::GBuffer_Material, cache.GBuffer_Material);
+				builder.create_versioned(data.RTXReflectionCoat, cache.RTXReflectionCoat, { ivec3(builder.graph->get_context<Table::Frame::ViewportContext>().frame_size, 0), HAL::Format::R16G16B16A16_FLOAT, 1, 1 });
 			}
 
 			// Resources this pass touches, in declaration order, each paired with
@@ -231,6 +245,8 @@ namespace Reflections
 				{ ResourceID::DDGI_ProbeResidencyPending, true },
 				{ ResourceID::RTXReflectionNoise, true },
 				{ ResourceID::RTXReflectionDirPdf, true },
+				{ ResourceID::GBuffer_Material, false },
+				{ ResourceID::RTXReflectionCoat, true },
 			};
 			static constexpr uint resource_count = std::size(resource_accesses);
 		};

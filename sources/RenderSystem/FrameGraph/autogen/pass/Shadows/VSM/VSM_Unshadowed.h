@@ -32,6 +32,9 @@ namespace Shadows
 				Handlers::Texture GBuffer_Specular = ResourceID::GBuffer_Specular;
 
 
+				Handlers::Texture GBuffer_Material = ResourceID::GBuffer_Material;
+
+
 				Handlers::Texture GBuffer_Speed = ResourceID::GBuffer_Speed;
 
 
@@ -63,6 +66,7 @@ namespace Shadows
 					builder.need(data.GBuffer_Albedo, FrameGraph::ResourceFlags::Read);
 					builder.need(data.GBuffer_Normals, FrameGraph::ResourceFlags::Read);
 					builder.need(data.GBuffer_Specular, FrameGraph::ResourceFlags::Read);
+					builder.need(data.GBuffer_Material, FrameGraph::ResourceFlags::Read);
 					builder.need(data.GBuffer_Speed, FrameGraph::ResourceFlags::Read);
 					builder.need(data.GBuffer_DepthMips, FrameGraph::ResourceFlags::None);
 					builder.need(data.ResultTexture, FrameGraph::ResourceFlags::UnorderedAccess);
@@ -79,6 +83,7 @@ namespace Shadows
 					FrameGraph::ChainIndex GBuffer_Albedo = FrameGraph::ChainIndex::Unresolved;
 					FrameGraph::ChainIndex GBuffer_Normals = FrameGraph::ChainIndex::Unresolved;
 					FrameGraph::ChainIndex GBuffer_Specular = FrameGraph::ChainIndex::Unresolved;
+					FrameGraph::ChainIndex GBuffer_Material = FrameGraph::ChainIndex::Unresolved;
 					FrameGraph::ChainIndex GBuffer_Speed = FrameGraph::ChainIndex::Unresolved;
 					FrameGraph::ChainIndex GBuffer_DepthMips = FrameGraph::ChainIndex::Unresolved;
 					FrameGraph::ChainIndex ResultTexture = FrameGraph::ChainIndex::Unresolved;
@@ -90,6 +95,7 @@ namespace Shadows
 					cache.GBuffer_Albedo = FrameGraph::TaskBuilder::cache_slot(data.GBuffer_Albedo, ResourceID::GBuffer_Albedo);
 					cache.GBuffer_Normals = FrameGraph::TaskBuilder::cache_slot(data.GBuffer_Normals, ResourceID::GBuffer_Normals);
 					cache.GBuffer_Specular = FrameGraph::TaskBuilder::cache_slot(data.GBuffer_Specular, ResourceID::GBuffer_Specular);
+					cache.GBuffer_Material = FrameGraph::TaskBuilder::cache_slot(data.GBuffer_Material, ResourceID::GBuffer_Material);
 					cache.GBuffer_Speed = FrameGraph::TaskBuilder::cache_slot(data.GBuffer_Speed, ResourceID::GBuffer_Speed);
 					cache.GBuffer_DepthMips = FrameGraph::TaskBuilder::cache_slot(data.GBuffer_DepthMips, ResourceID::GBuffer_DepthMips);
 					cache.ResultTexture = FrameGraph::TaskBuilder::cache_slot(data.ResultTexture, ResourceID::ResultTexture);
@@ -108,6 +114,7 @@ namespace Shadows
 					builder.load(data.GBuffer_Albedo, ResourceID::GBuffer_Albedo, cache.GBuffer_Albedo);
 					builder.load(data.GBuffer_Normals, ResourceID::GBuffer_Normals, cache.GBuffer_Normals);
 					builder.load(data.GBuffer_Specular, ResourceID::GBuffer_Specular, cache.GBuffer_Specular);
+					builder.load(data.GBuffer_Material, ResourceID::GBuffer_Material, cache.GBuffer_Material);
 					builder.load(data.GBuffer_Speed, ResourceID::GBuffer_Speed, cache.GBuffer_Speed);
 					builder.load(data.GBuffer_DepthMips, ResourceID::GBuffer_DepthMips, cache.GBuffer_DepthMips);
 					builder.load(data.ResultTexture, ResourceID::ResultTexture, cache.ResultTexture);
@@ -121,6 +128,7 @@ namespace Shadows
 					{ ResourceID::GBuffer_Albedo, false },
 					{ ResourceID::GBuffer_Normals, false },
 					{ ResourceID::GBuffer_Specular, false },
+					{ ResourceID::GBuffer_Material, false },
 					{ ResourceID::GBuffer_Speed, false },
 					{ ResourceID::GBuffer_DepthMips, false },
 					{ ResourceID::ResultTexture, true },

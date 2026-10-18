@@ -417,7 +417,8 @@ namespace HAL
         void CommandList::update_texture(HAL::Resource* resource, ivec3 offset, ivec3 box, UINT sub_resource, ResourceAddress address, texture_layout layout)
         {
             auto buffer_desc = address.resource->get_desc().as_buffer();
-            auto size = box.z * box.y * layout.row_stride;
+            // rows_count, not box.y: block-compressed formats have box.y / 4 rows
+            auto size = static_cast<uint64>(box.z) * layout.rows_count * layout.row_stride;
 
             ASSERT(address.resource_offset + size <= buffer_desc.SizeInBytes);
             ASSERT(box.z > 0);

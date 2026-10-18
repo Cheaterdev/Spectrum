@@ -142,8 +142,15 @@ namespace Frame
 			# for DLSS-RR -- see nrd_sig_test.prism's own PassNode comment and
 			# [[project-nrd-integration]].
 			[Async]NRD_IndirectCombine;
+			# Subsurface blur: after the last diffuse writer, before the first
+			# specular one, so the target holds only diffuse light for it (sss.prism).
+			[Async]SSS_Classify;
+			[Async]SSS_BlurH;
+			[Async]SSS_BlurV;
 			[Async]ReflCombine;
 			[Async]RTXCombine;
+			[Async]SSSRR_BlurH;
+			[Async]SSSRR_BlurV;
 			# RTX-reference shadow (see vsm.prism's own VSMSelectors::shadow_source
 			# comment, [[project-nrd-integration]]) -- runs after VSM's own chain
 			# above so its overwrite of ResultTexture's shadow term is the last

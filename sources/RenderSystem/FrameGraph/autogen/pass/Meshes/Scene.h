@@ -39,6 +39,9 @@ namespace Meshes
 			Handlers::Texture GBuffer_ObjectID = ResourceID::GBuffer_ObjectID;
 
 
+			Handlers::Texture GBuffer_Material = ResourceID::GBuffer_Material;
+
+
 			Handlers::Texture GBuffer_DepthMips = ResourceID::GBuffer_DepthMips;
 
 
@@ -116,6 +119,7 @@ namespace Meshes
 				builder.create(data.GBuffer_Specular, { ivec3(builder.graph->get_context<Table::Frame::ViewportContext>().frame_size, 0), HAL::Format::R8G8B8A8_UNORM, 1, 1 }, FrameGraph::ResourceFlags::RenderTarget);
 				builder.create(data.GBuffer_Speed, { ivec3(builder.graph->get_context<Table::Frame::ViewportContext>().frame_size, 0), HAL::Format::R16G16_FLOAT, 1, 1 }, FrameGraph::ResourceFlags::RenderTarget);
 				builder.create(data.GBuffer_ObjectID, { ivec3(builder.graph->get_context<Table::Frame::ViewportContext>().frame_size, 0), HAL::Format::R32_UINT, 1, 1 }, FrameGraph::ResourceFlags::RenderTarget);
+				builder.create(data.GBuffer_Material, { ivec3(builder.graph->get_context<Table::Frame::ViewportContext>().frame_size, 0), HAL::Format::R8G8B8A8_UNORM, 1, 1 }, FrameGraph::ResourceFlags::RenderTarget);
 				builder.create(data.GBuffer_DepthMips, { ivec3(builder.graph->get_context<Table::Frame::ViewportContext>().frame_size, 0), HAL::Format::R32_TYPELESS, 1, 1 }, FrameGraph::ResourceFlags::UnorderedAccess | FrameGraph::ResourceFlags::RenderTarget);
 				builder.create_prev(data.GBuffer_DepthPrev, data.GBuffer_DepthMips);
 				builder.create(data.GBuffer_Quality, { ivec3(builder.graph->get_context<Table::Frame::ViewportContext>().frame_size, 0), HAL::Format::D24_UNORM_S8_UINT, 1, 1 }, FrameGraph::ResourceFlags::DepthStencil);
@@ -135,6 +139,7 @@ namespace Meshes
 				FrameGraph::ChainIndex GBuffer_Specular = FrameGraph::ChainIndex::Unresolved;
 				FrameGraph::ChainIndex GBuffer_Speed = FrameGraph::ChainIndex::Unresolved;
 				FrameGraph::ChainIndex GBuffer_ObjectID = FrameGraph::ChainIndex::Unresolved;
+				FrameGraph::ChainIndex GBuffer_Material = FrameGraph::ChainIndex::Unresolved;
 				FrameGraph::ChainIndex GBuffer_DepthMips = FrameGraph::ChainIndex::Unresolved;
 				FrameGraph::ChainIndex GBuffer_Quality = FrameGraph::ChainIndex::Unresolved;
 				FrameGraph::ChainIndex GBuffer_NormalsPrev = FrameGraph::ChainIndex::Unresolved;
@@ -152,6 +157,7 @@ namespace Meshes
 				cache.GBuffer_Specular = FrameGraph::TaskBuilder::cache_slot(data.GBuffer_Specular, ResourceID::GBuffer_Specular);
 				cache.GBuffer_Speed = FrameGraph::TaskBuilder::cache_slot(data.GBuffer_Speed, ResourceID::GBuffer_Speed);
 				cache.GBuffer_ObjectID = FrameGraph::TaskBuilder::cache_slot(data.GBuffer_ObjectID, ResourceID::GBuffer_ObjectID);
+				cache.GBuffer_Material = FrameGraph::TaskBuilder::cache_slot(data.GBuffer_Material, ResourceID::GBuffer_Material);
 				cache.GBuffer_DepthMips = FrameGraph::TaskBuilder::cache_slot(data.GBuffer_DepthMips, ResourceID::GBuffer_DepthMips);
 				cache.GBuffer_Quality = FrameGraph::TaskBuilder::cache_slot(data.GBuffer_Quality, ResourceID::GBuffer_Quality);
 				cache.GBuffer_NormalsPrev = FrameGraph::TaskBuilder::cache_slot(data.GBuffer_NormalsPrev, ResourceID::GBuffer_NormalsPrev);
@@ -176,6 +182,7 @@ namespace Meshes
 				builder.create_versioned(data.GBuffer_Specular, cache.GBuffer_Specular, { ivec3(builder.graph->get_context<Table::Frame::ViewportContext>().frame_size, 0), HAL::Format::R8G8B8A8_UNORM, 1, 1 });
 				builder.create_versioned(data.GBuffer_Speed, cache.GBuffer_Speed, { ivec3(builder.graph->get_context<Table::Frame::ViewportContext>().frame_size, 0), HAL::Format::R16G16_FLOAT, 1, 1 });
 				builder.create_versioned(data.GBuffer_ObjectID, cache.GBuffer_ObjectID, { ivec3(builder.graph->get_context<Table::Frame::ViewportContext>().frame_size, 0), HAL::Format::R32_UINT, 1, 1 });
+				builder.create_versioned(data.GBuffer_Material, cache.GBuffer_Material, { ivec3(builder.graph->get_context<Table::Frame::ViewportContext>().frame_size, 0), HAL::Format::R8G8B8A8_UNORM, 1, 1 });
 				builder.create_versioned(data.GBuffer_DepthMips, cache.GBuffer_DepthMips, { ivec3(builder.graph->get_context<Table::Frame::ViewportContext>().frame_size, 0), HAL::Format::R32_TYPELESS, 1, 1 });
 				builder.create_versioned(data.GBuffer_Quality, cache.GBuffer_Quality, { ivec3(builder.graph->get_context<Table::Frame::ViewportContext>().frame_size, 0), HAL::Format::D24_UNORM_S8_UINT, 1, 1 });
 				builder.load(data.GBuffer_NormalsPrev, ResourceID::GBuffer_NormalsPrev, cache.GBuffer_NormalsPrev);
@@ -195,6 +202,7 @@ namespace Meshes
 				{ ResourceID::GBuffer_Specular, true },
 				{ ResourceID::GBuffer_Speed, true },
 				{ ResourceID::GBuffer_ObjectID, true },
+				{ ResourceID::GBuffer_Material, true },
 				{ ResourceID::GBuffer_DepthMips, true },
 				{ ResourceID::GBuffer_Quality, true },
 				{ ResourceID::GBuffer_NormalsPrev, true },

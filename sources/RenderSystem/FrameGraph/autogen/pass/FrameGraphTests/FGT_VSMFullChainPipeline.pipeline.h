@@ -70,6 +70,7 @@ namespace FrameGraphTests
 			L"GBuffer_Albedo",
 			L"GBuffer_Normals",
 			L"GBuffer_Specular",
+			L"GBuffer_Material",
 			L"GBuffer_Speed",
 			L"GBuffer_DepthMips",
 			L"ResultTexture",
@@ -151,6 +152,15 @@ namespace FrameGraphTests
 		static inline const FrameGraph::PrecompiledState GBuffer_Specular_c0_states[] = {
 			{ true, { GBuffer_Specular_c0_pass_refs + 0, 1 } },
 			{ false, { GBuffer_Specular_c0_pass_refs + 1, 6 } },
+		};
+		static inline const FrameGraph::PassRef GBuffer_Material_c0_pass_refs[] = {
+			{ PassID::FGT_ProduceGBuffer, 0 },
+			{ PassID::VSM_ShadowResolve, 0 },
+			{ PassID::VSM_Combine, 0 },
+		};
+		static inline const FrameGraph::PrecompiledState GBuffer_Material_c0_states[] = {
+			{ true, { GBuffer_Material_c0_pass_refs + 0, 1 } },
+			{ false, { GBuffer_Material_c0_pass_refs + 1, 2 } },
 		};
 		static inline const FrameGraph::PassRef GBuffer_Speed_c0_pass_refs[] = {
 			{ PassID::FGT_ProduceGBuffer, 0 },
@@ -359,6 +369,7 @@ namespace FrameGraphTests
 			{ ResourceID::GBuffer_Albedo, 0, GBuffer_Albedo_c0_states },
 			{ ResourceID::GBuffer_Normals, 0, GBuffer_Normals_c0_states },
 			{ ResourceID::GBuffer_Specular, 0, GBuffer_Specular_c0_states },
+			{ ResourceID::GBuffer_Material, 0, GBuffer_Material_c0_states },
 			{ ResourceID::GBuffer_Speed, 0, GBuffer_Speed_c0_states },
 			{ ResourceID::GBuffer_DepthMips, 0, GBuffer_DepthMips_c0_states },
 			{ ResourceID::ResultTexture, 0, ResultTexture_c0_states },
