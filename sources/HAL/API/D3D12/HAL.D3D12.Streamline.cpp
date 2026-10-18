@@ -1,9 +1,6 @@
-module;
-
-#include <Windows.h>
-
 module HAL:API.Streamline;
 
+import windows;
 import Core;
 import :Utils;
 import streamline;

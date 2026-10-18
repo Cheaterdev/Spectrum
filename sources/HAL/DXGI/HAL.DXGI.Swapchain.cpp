@@ -1,6 +1,3 @@
-module;
-#include <comdef.h>
-
 module HAL:SwapChain;
 import:Device;
 import HAL;

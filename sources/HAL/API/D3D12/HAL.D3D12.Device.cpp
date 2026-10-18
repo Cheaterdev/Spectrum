@@ -1,11 +1,4 @@
-﻿module;
-// DXGI_ERROR_DEVICE_* are #defines (winerror.h) -- macros don't cross the
-// `import d3d12` module boundary even though that module's global fragment
-// already includes headers that define them, so this TU needs its own
-// #include to see them (process_result's own DRED diagnostic, below).
-#include <winerror.h>
-
-module HAL:Device;
+﻿module HAL:Device;
 import :Debug;
 import :Streamline;
 import :DLSS;
