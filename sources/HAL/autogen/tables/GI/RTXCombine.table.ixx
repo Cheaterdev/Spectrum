@@ -21,11 +21,15 @@ export namespace Table
 		{
 			static constexpr SlotID ID = SlotID::RTXCombine;
 			HLSL::Texture2D<float4> reflection;
+			HLSL::Texture2D<float4> coat;
 			HLSL::Texture2D<float4> indirect;
 			HLSL::Texture2D<float4> shadow;
+			HLSL::RWTexture2D<float4> specular_out;
 			HLSL::RWTexture2D<float4> target;
 			Table::Meshes::GBuffer gbuffer;
 			HLSL::Texture2D<float4>& GetReflection() { return reflection; }
+			HLSL::Texture2D<float4>& GetCoat() { return coat; }
+			HLSL::RWTexture2D<float4>& GetSpecular_out() { return specular_out; }
 			HLSL::Texture2D<float4>& GetIndirect() { return indirect; }
 			HLSL::Texture2D<float4>& GetShadow() { return shadow; }
 			HLSL::RWTexture2D<float4>& GetTarget() { return target; }
@@ -35,16 +39,20 @@ export namespace Table
 			void compile(Compiler& compiler) const
 			{
 				compiler.compile(reflection, "RTXCombine::reflection");
+				compiler.compile(coat, "RTXCombine::coat");
 				compiler.compile(indirect, "RTXCombine::indirect");
 				compiler.compile(shadow, "RTXCombine::shadow");
+				compiler.compile(specular_out, "RTXCombine::specular_out");
 				compiler.compile(target, "RTXCombine::target");
 				compiler.compile(gbuffer, "RTXCombine::gbuffer");
 			}
 			struct Compiled
 			{
 				uint reflection; // Texture2D<float4>
+				uint coat; // Texture2D<float4>
 				uint indirect; // Texture2D<float4>
 				uint shadow; // Texture2D<float4>
+				uint specular_out; // RWTexture2D<float4>
 				uint target; // RWTexture2D<float4>
 				Table::Meshes::GBuffer::Compiled gbuffer; // GBuffer
 

@@ -604,6 +604,7 @@ VoxelGI::VoxelGI(Scene::ptr& scene, VSM& vsm) :scene(scene), vsm(vsm), VariableC
 			Slots::Reflections::ReflectionCombine combine;
 			gbuffer.SetTable(combine.GetGbuffer());
 			combine.GetReflection() = data.RTXReflectionDenoised->texture2D;
+			combine.GetCoat()       = data.RTXReflectionCoat->texture2D;
 			combine.GetTarget()     = data.ResultTexture->rwTexture2D;
 			compute.set(combine);
 		}

@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<!-- Skin-like material: a pale base with subsurface scattering. Light blurs into
+     the shadowed side of edges and creases, red travelling furthest, so shadow
+     boundaries turn warm and soft instead of hard. The radius is in scene
+     units (here scaled by subsurface_scale), so tune it to your scene. -->
+<materialx version="1.39">
+  <standard_surface name="skin_shader" type="surfaceshader">
+    <input name="base_color" type="color3" value="0.8, 0.55, 0.45" />
+    <input name="metalness" type="float" value="0.0" />
+    <input name="specular_roughness" type="float" value="0.45" />
+    <input name="subsurface" type="float" value="1.0" />
+    <input name="subsurface_radius" type="color3" value="1.0, 0.35, 0.2" />
+    <input name="subsurface_scale" type="float" value="0.05" />
+  </standard_surface>
+
+  <surfacematerial name="skin" type="material">
+    <input name="surfaceshader" type="surfaceshader" nodename="skin_shader" />
+  </surfacematerial>
+</materialx>

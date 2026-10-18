@@ -26,6 +26,12 @@ namespace Meshes
 		# read GBuffer_ObjectID directly. Only the render-target form uses it.
 		[Auto = Texture_Null]
 		RenderTarget<uint> object_id;
+		# Shading model (alpha) and its parameters (rgb), see common/shading_model.hlsl.
+		# [Auto] so passes that never sample it need not declare GBuffer_Material:
+		# SetTable() leaves it null for them. The lighting passes that do sample it
+		# (VSM_Combine/ShadowResolve/Unshadowed, PSSM_Combine) declare it [Read].
+		[Auto = Texture_Null]
+		RenderTarget<float4> material;
 
 		DepthStencil<float> depth;
 	}
@@ -62,7 +68,7 @@ namespace Meshes
 		[AS, nullable]
 		define ClusterLod;
 
-		rtv ={ R8G8B8A8_UNORM, R8G8B8A8_UNORM, R8G8B8A8_UNORM, R16G16_FLOAT, R32_UINT };
+		rtv ={ R8G8B8A8_UNORM, R8G8B8A8_UNORM, R8G8B8A8_UNORM, R16G16_FLOAT, R32_UINT, R8G8B8A8_UNORM };
 
 		ds = D32_FLOAT;
 		cull = None;
@@ -180,6 +186,7 @@ namespace Meshes
 		[Always = RenderTarget] [Size = ViewportContext::frame_size] [Format = R8G8B8A8_UNORM] Texture GBuffer_Specular;
 		[Always = RenderTarget] [Size = ViewportContext::frame_size] [Format = R16G16_FLOAT] Texture GBuffer_Speed;
 		[Always = RenderTarget] [Size = ViewportContext::frame_size] [Format = R32_UINT] Texture GBuffer_ObjectID;
+		[Always = RenderTarget] [Size = ViewportContext::frame_size] [Format = R8G8B8A8_UNORM] Texture GBuffer_Material;
 		[Always = UnorderedAccess | RenderTarget] [Size = ViewportContext::frame_size] [Format = R32_TYPELESS] Texture GBuffer_DepthMips;
 		[Always = DepthStencil] [Size = ViewportContext::frame_size] [Format = D24_UNORM_S8_UINT] Texture GBuffer_Quality;
 		[PrevFor = GBuffer_Normals] [Write] Texture GBuffer_NormalsPrev;

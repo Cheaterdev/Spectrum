@@ -384,6 +384,86 @@ struct PassDefault<Passes::Environment::CubeMapEnviromentProcessor>
 
 
 template<>
+struct PassDefault<Passes::Subsurface::SSS_Classify>
+{
+	static constexpr bool enabled = true;
+	static constexpr FrameGraph::PassFlags flags = FrameGraph::PassFlags::Compute;
+
+	// setup() is declared here regardless -- if this pass carries
+	// [RunAlways]/[SetupCondition]/[RenderCondition], its DEFINITION is
+	// generated into autogen/pass_defaults.cpp instead of a hand-written one
+	// in some .cpp (see that file's own header comment for why it's a
+	// separate translation unit, not inlined here).
+	static FrameGraph::SetupResult setup(Passes::Subsurface::SSS_Classify::Context& data, FrameGraph::TaskBuilder& builder);
+	static void render(Passes::Subsurface::SSS_Classify::Context& data, FrameGraph::FrameContext& context);
+};
+
+
+template<>
+struct PassDefault<Passes::Subsurface::SSS_BlurH>
+{
+	static constexpr bool enabled = true;
+	static constexpr FrameGraph::PassFlags flags = FrameGraph::PassFlags::Compute;
+
+	// setup() is declared here regardless -- if this pass carries
+	// [RunAlways]/[SetupCondition]/[RenderCondition], its DEFINITION is
+	// generated into autogen/pass_defaults.cpp instead of a hand-written one
+	// in some .cpp (see that file's own header comment for why it's a
+	// separate translation unit, not inlined here).
+	static FrameGraph::SetupResult setup(Passes::Subsurface::SSS_BlurH::Context& data, FrameGraph::TaskBuilder& builder);
+	static void render(Passes::Subsurface::SSS_BlurH::Context& data, FrameGraph::FrameContext& context);
+};
+
+
+template<>
+struct PassDefault<Passes::Subsurface::SSS_BlurV>
+{
+	static constexpr bool enabled = true;
+	static constexpr FrameGraph::PassFlags flags = FrameGraph::PassFlags::Compute;
+
+	// setup() is declared here regardless -- if this pass carries
+	// [RunAlways]/[SetupCondition]/[RenderCondition], its DEFINITION is
+	// generated into autogen/pass_defaults.cpp instead of a hand-written one
+	// in some .cpp (see that file's own header comment for why it's a
+	// separate translation unit, not inlined here).
+	static FrameGraph::SetupResult setup(Passes::Subsurface::SSS_BlurV::Context& data, FrameGraph::TaskBuilder& builder);
+	static void render(Passes::Subsurface::SSS_BlurV::Context& data, FrameGraph::FrameContext& context);
+};
+
+
+template<>
+struct PassDefault<Passes::Subsurface::SSSRR_BlurH>
+{
+	static constexpr bool enabled = true;
+	static constexpr FrameGraph::PassFlags flags = FrameGraph::PassFlags::Compute;
+
+	// setup() is declared here regardless -- if this pass carries
+	// [RunAlways]/[SetupCondition]/[RenderCondition], its DEFINITION is
+	// generated into autogen/pass_defaults.cpp instead of a hand-written one
+	// in some .cpp (see that file's own header comment for why it's a
+	// separate translation unit, not inlined here).
+	static FrameGraph::SetupResult setup(Passes::Subsurface::SSSRR_BlurH::Context& data, FrameGraph::TaskBuilder& builder);
+	static void render(Passes::Subsurface::SSSRR_BlurH::Context& data, FrameGraph::FrameContext& context);
+};
+
+
+template<>
+struct PassDefault<Passes::Subsurface::SSSRR_BlurV>
+{
+	static constexpr bool enabled = true;
+	static constexpr FrameGraph::PassFlags flags = FrameGraph::PassFlags::Compute;
+
+	// setup() is declared here regardless -- if this pass carries
+	// [RunAlways]/[SetupCondition]/[RenderCondition], its DEFINITION is
+	// generated into autogen/pass_defaults.cpp instead of a hand-written one
+	// in some .cpp (see that file's own header comment for why it's a
+	// separate translation unit, not inlined here).
+	static FrameGraph::SetupResult setup(Passes::Subsurface::SSSRR_BlurV::Context& data, FrameGraph::TaskBuilder& builder);
+	static void render(Passes::Subsurface::SSSRR_BlurV::Context& data, FrameGraph::FrameContext& context);
+};
+
+
+template<>
 struct PassDefault<Passes::Post::Tonemap>
 {
 	static constexpr bool enabled = true;
@@ -1151,6 +1231,17 @@ struct PassSetupDefault<Passes::FrameGraphTests::FGT_ProduceGBuffer>
 	// Generated from this pass's [RunAlways]/[SetupCondition]/
 	// [RenderCondition]; defined in autogen/pass_defaults.cpp.
 	static FrameGraph::SetupResult setup(Passes::FrameGraphTests::FGT_ProduceGBuffer::Context& data, FrameGraph::TaskBuilder& builder);
+};
+
+
+template<>
+struct PassSetupDefault<Passes::FrameGraphTests::FGT_ProduceShadow>
+{
+	static constexpr bool enabled = true;
+
+	// Generated from this pass's [RunAlways]/[SetupCondition]/
+	// [RenderCondition]; defined in autogen/pass_defaults.cpp.
+	static FrameGraph::SetupResult setup(Passes::FrameGraphTests::FGT_ProduceShadow::Context& data, FrameGraph::TaskBuilder& builder);
 };
 
 

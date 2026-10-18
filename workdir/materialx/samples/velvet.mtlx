@@ -1,0 +1,17 @@
+<?xml version="1.0"?>
+<!-- Velvet-like cloth: dark base with a strong sheen. The sheen shows as a soft
+     bright rim where the surface turns away from the viewer or the sun, and
+     stays faint head-on. -->
+<materialx version="1.39">
+  <standard_surface name="velvet_shader" type="surfaceshader">
+    <input name="base_color" type="color3" value="0.35, 0.02, 0.05" />
+    <input name="metalness" type="float" value="0.0" />
+    <input name="specular_roughness" type="float" value="0.8" />
+    <input name="sheen" type="float" value="1.0" />
+    <input name="sheen_roughness" type="float" value="0.35" />
+  </standard_surface>
+
+  <surfacematerial name="velvet" type="material">
+    <input name="surfaceshader" type="surfaceshader" nodename="velvet_shader" />
+  </surfacematerial>
+</materialx>

@@ -76,6 +76,12 @@ namespace GI
 			[Auto = Texture_Null]
 			RWTexture2D<float4> noise;
 
+			# Clearcoat reflection (RGB radiance, A hit distance), written only by
+			# ReflectionRTX's full-res raygen for CLEARCOAT pixels -- a second ray at the
+			# coat's own roughness. Not a denoiser input; added by the combine passes.
+			[Auto = Texture_Null]
+			RWTexture2D<float4> coat;
+
 			[Auto = Texture_Null]
 			RWTexture2D<float4> DirAndPdf;
 			[Auto = Texture_Null]
@@ -349,6 +355,7 @@ namespace Reflections
 	{
 		GBuffer gbuffer;
 		Texture2D<float4> reflection;
+		Texture2D<float4> coat;
 
 		RWTexture2D<float4> target;
 	}
@@ -379,6 +386,10 @@ namespace GI
 	{
 		GBuffer gbuffer;
 		Texture2D<float4> reflection;
+		Texture2D<float4> coat;
+		# SUBSURFACE pixels only: the specular part, parked for the SSS blur to add
+		# back after it has blurred the diffuse part (see sss.prism).
+		RWTexture2D<float4> specular_out;
 		Texture2D<float4> indirect;
 		Texture2D<float4> shadow;
 
@@ -442,6 +453,7 @@ namespace Meshes
 		# actually reads it).
 		[Always = Read] Texture GBuffer_Albedo;
 		[Always = Read] Texture GBuffer_Normals;
+		[Always = Read] Texture GBuffer_Material;
 		[Always = Read] Texture GBuffer_Specular;
 		[Always = Read] Texture GBuffer_Speed;
 		[Always = None] Texture GBuffer_DepthMips;
@@ -583,6 +595,9 @@ namespace Reflections
 
 		[Always = UnorderedAccess] [Size = ViewportContext::frame_size] [Format = R16G16B16A16_FLOAT] Texture RTXReflectionNoise;
 		[Always = UnorderedAccess] [Size = ViewportContext::frame_size] [Format = R16G16B16A16_FLOAT] Texture RTXReflectionDirPdf;
+		# Clearcoat reflection, see VoxelOutput::coat.
+		[Always = Read] Texture GBuffer_Material;
+		[Always = UnorderedAccess] [Size = ViewportContext::frame_size] [Format = R16G16B16A16_FLOAT] Texture RTXReflectionCoat;
 	}
 
 }
@@ -729,6 +744,9 @@ namespace Reflections
 		# NRD REBLUR_SPECULAR's denoised output (NRD_REBLUR_Execute, see
 		# [[project-nrd-integration]]) -- the only reflection denoiser now.
 		[Always = Read] Texture RTXReflectionDenoised;
+		# Clearcoat reflection, added undenoised (a near-mirror ray barely needs it).
+		[Always = Read] Texture GBuffer_Material;
+		[Always = Read] Texture RTXReflectionCoat;
 	}
 
 }
@@ -765,8 +783,12 @@ namespace GI
 		[Always = Read] Texture RTXReflectionNoise;
 		[Always = Read] Texture RTXIndirectNoise;
 		[Always = Read] Texture RTXShadowNoise;
+		# Clearcoat: sun highlight and reflection, see common/coat.hlsl.
+		[Always = Read] Texture GBuffer_Material;
+		[Always = Read] Texture RTXReflectionCoat;
 
 		[Always = UnorderedAccess] [Size = ViewportContext::frame_size] [Format = R16G16B16A16_FLOAT] Texture ResultTextureRTXNoise;
+		[Always = UnorderedAccess] [Size = ViewportContext::frame_size] [Format = R16G16B16A16_FLOAT] Texture RTXCombineSpecular;
 	}
 
 	namespace Voxel

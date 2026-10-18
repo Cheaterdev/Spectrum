@@ -333,9 +333,17 @@ namespace FrameGraphTests
 		[Always = CopyDest] [Size = FGTestState::size] [Format = R8G8B8A8_UNORM] Texture GBuffer_Albedo;
 		[Always = CopyDest] [Size = FGTestState::size] [Format = R8G8B8A8_UNORM] Texture GBuffer_Normals;
 		[Always = CopyDest] [Size = FGTestState::size] [Format = R8G8B8A8_UNORM] Texture GBuffer_Specular;
+		[Always = CopyDest] [Size = FGTestState::size] [Format = R8G8B8A8_UNORM] Texture GBuffer_Material;
 		[Always = CopyDest] [Size = FGTestState::size] [Format = R16G16_FLOAT] Texture GBuffer_Speed;
 		[Always = CopyDest] [Size = FGTestState::size] [Format = R32_TYPELESS] Texture GBuffer_DepthMips;
 		[Always = UnorderedAccess] [Size = FGTestState::size] [Format = R16G16B16A16_FLOAT] Texture ResultTexture;
+	}
+
+	# SIGMA-packed shadow as NRD_ShadowCombine reads it (uploaded by the test).
+	[RunAlways]
+	PassNode FGT_ProduceShadow
+	{
+		[Always = CopyDest] [Size = FGTestState::size] [Format = R8_UNORM] Texture VSM_ShadowDenoised;
 	}
 
 	# ---- pipelines, one per scenario --------------------------------------------
@@ -476,6 +484,16 @@ namespace FrameGraphTests
 	{
 		FGT_ProduceGBuffer;
 		[Async] VSM_Unshadowed;
+		FGT_CopyResultToSink;
+	}
+
+	# NRD_ShadowCombine over the same synthetic GBuffer, to compare against
+	# FGT_VSMUnshadowedPipeline: with a fully lit shadow both must light alike.
+	Pipeline FGT_NRDShadowCombinePipeline
+	{
+		FGT_ProduceGBuffer;
+		FGT_ProduceShadow;
+		NRD_ShadowCombine;
 		FGT_CopyResultToSink;
 	}
 

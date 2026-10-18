@@ -21,6 +21,8 @@
 
 static const GBuffer gbuffer = GetVSMLighting().GetGbuffer();
 
+#include "../../common/lobes.hlsl"
+
 // Real value the shadow uses (vsm_pcf_shadow below); moved up here (from just
 // above vsm_pcf_shadow, where it used to live) so CS_FULL_LIT/CS_FULL_SHADOW
 // can also use it for their own diagnostic-only shadow_noise packing --
@@ -64,14 +66,30 @@ uint2 resolve_pixel(uint3 groupID, uint3 groupThreadID)
 // stays legible over dark/black albedo. Reads GetVSMConstants() directly
 // rather than threading a param through every one of this function's
 // callers -- same reasoning as reading GetFrameInfo() directly above.
-float4 vsm_resolve_combine(float3 albedo, float metallic, float3 normal, float shadow)
+float4 vsm_resolve_combine(float3 albedo, float metallic, float3 normal, float shadow, float2 tc)
 {
 	if (GetVSMConstants().GetDebug_view() == VSMDebugView::ShadowOnly)
 		return float4(shadow, shadow, shadow, 1);
 
 	float3 light_dir = normalize(GetFrameInfo().GetSunDir().xyz);
 	float  NL = saturate(dot(normal, light_dir));
-	return float4(shadow * (NL * albedo * (1 - metallic)), 1);
+	float3 result = shadow * (NL * albedo * (1 - metallic));
+
+	// Clearcoat sun highlight (common/coat.hlsl). STANDARD pixels stop at the
+	// material read; only coated ones reconstruct the view vector.
+	float4 material = gbuffer.GetMaterial().SampleLevel(pointClampSampler, tc, 0);
+	if (material_model(material) != SHADING_MODEL_STANDARD || metallic > 0.001)
+	{
+		Camera camera = GetFrameInfo().GetCamera();
+		float  raw_z  = gbuffer.GetDepth().SampleLevel(pointClampSampler, tc, 0);
+		float3 wpos   = depth_to_wpos(raw_z, tc, camera.GetInvViewProj());
+		float3 view = normalize(camera.GetPosition() - wpos);
+		result *= coat_base_attenuation(material, normal, view);
+		result += material_sun_lobes(material, normal, view, light_dir, shadow,
+			lerp(0.04, albedo, metallic), max(MIN_ROUGHNESS, gbuffer.GetNormals().SampleLevel(pointClampSampler, tc, 0).w), albedo, metallic);
+	}
+
+	return float4(result, 1);
 }
 
 // full-lit: stage 1 already proved every pixel in this tile is confidently
@@ -105,7 +123,7 @@ void CS_FULL_LIT(uint3 groupID : SV_GroupID, uint3 groupThreadID : SV_GroupThrea
 
 	float4 packed_0 = gbuffer.GetAlbedo().SampleLevel(pointClampSampler, tc, 0);
 	float3 normal = normalize(gbuffer.GetNormals().SampleLevel(pointClampSampler, tc, 0).xyz * 2 - 1);
-	GetVSMLighting().GetResult()[pixel] = vsm_resolve_combine(packed_0.rgb, packed_0.w, normal, 1.0);
+	GetVSMLighting().GetResult()[pixel] = vsm_resolve_combine(packed_0.rgb, packed_0.w, normal, 1.0, tc);
 	// Diagnostic-only: confidently lit == no occluder.
 	GetVSMLighting().GetShadow_noise()[pixel] = NRD_FP16_MAX;
 }
@@ -284,7 +302,7 @@ void CS_SHADOW_BLUR(uint3 groupID : SV_GroupID, uint3 groupThreadID : SV_GroupTh
 		int probe_level = get_vsm_level(c, probe_pos_ls);
 		if (probe_level < 0)
 		{
-			GetVSMLighting().GetResult()[pixel] = vsm_resolve_combine(albedo, metallic, normal, 1.0);
+			GetVSMLighting().GetResult()[pixel] = vsm_resolve_combine(albedo, metallic, normal, 1.0, tc);
 			return;
 		}
 		float probe_texel_world_size = c.GetLevel_info(probe_level).z / c.GetPage_size();
@@ -295,7 +313,7 @@ void CS_SHADOW_BLUR(uint3 groupID : SV_GroupID, uint3 groupThreadID : SV_GroupTh
 	int level = get_vsm_level(c, pos_ls);
 	if (level < 0)
 	{
-		GetVSMLighting().GetResult()[pixel] = vsm_resolve_combine(albedo, metallic, normal, 1.0);
+		GetVSMLighting().GetResult()[pixel] = vsm_resolve_combine(albedo, metallic, normal, 1.0, tc);
 		lighting.GetShadow_noise()[pixel] = NRD_FP16_MAX;
 		return;
 	}
@@ -304,7 +322,7 @@ void CS_SHADOW_BLUR(uint3 groupID : SV_GroupID, uint3 groupThreadID : SV_GroupTh
 	uint slot = get_vsm_slot(c, lighting.GetPage_table(), pos_ls, level, resolved_level);
 	if (slot == VSM_INVALID_SLOT)
 	{
-		GetVSMLighting().GetResult()[pixel] = vsm_resolve_combine(albedo, metallic, normal, 1.0);
+		GetVSMLighting().GetResult()[pixel] = vsm_resolve_combine(albedo, metallic, normal, 1.0, tc);
 		lighting.GetShadow_noise()[pixel] = NRD_FP16_MAX;
 		return;
 	}
@@ -316,7 +334,7 @@ void CS_SHADOW_BLUR(uint3 groupID : SV_GroupID, uint3 groupThreadID : SV_GroupTh
 
 	if (pos_l.z < 0 || pos_l.z > 1 || any(light_tc < 0) || any(light_tc > 1))
 	{
-		GetVSMLighting().GetResult()[pixel] = vsm_resolve_combine(albedo, metallic, normal, 1.0);
+		GetVSMLighting().GetResult()[pixel] = vsm_resolve_combine(albedo, metallic, normal, 1.0, tc);
 		lighting.GetShadow_noise()[pixel] = NRD_FP16_MAX;
 		return;
 	}
@@ -552,7 +570,7 @@ void CS_SHADOW_BLUR(uint3 groupID : SV_GroupID, uint3 groupThreadID : SV_GroupTh
 	if (c.GetUse_contact_shadow())
 		shadow = min(shadow, lighting.GetContact_shadow()[pixel]);
 
-	GetVSMLighting().GetResult()[pixel] = vsm_resolve_combine(albedo, metallic, normal, shadow);
+	GetVSMLighting().GetResult()[pixel] = vsm_resolve_combine(albedo, metallic, normal, shadow, tc);
 
 	// Diagnostic-only (see this file's own top comment) -- packed and
 	// written regardless of the contact-shadow blend above, which only

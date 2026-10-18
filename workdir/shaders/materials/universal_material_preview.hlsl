@@ -11,6 +11,7 @@
 // expects to find in scope (named exactly as MaterialGraph::start wires
 // them for the pixel path).
 #include "autogen/MaterialPreviewInfo.h"
+#include "materialx/mx_stdlib.hlsl"
 
 #define Sampler linearSampler
 
@@ -50,7 +51,7 @@ float4 tile_sample(Texture2D<float4> tex, SamplerState s, float2 tc, Texture2D<f
 
 #define sample(tex, s, tc, lod) get_texture(tex).SampleLevel(s, tc, lod);
 
-void COMPILED_FUNC(in float3 a, in float2 b, out float4 c, out float d, out float e, out float4 f, out float4 g, out float h, out float ior, out float thickness, out float transmission, out float absorption_distance, float lod);
+void COMPILED_FUNC(in float3 a, in float2 b, out float4 c, out float d, out float e, out float4 f, out float4 g, out float h, out float ior, out float thickness, out float transmission, out float absorption_distance, out float coat, out float coat_roughness, out float sheen, out float sheen_roughness, out float anisotropy, out float aniso_rotation, out float sss_weight, out float3 sss_radius, out float sss_scale, out float sheen_tint, out float3 transmission_color, out float opacity_threshold, out float thin_film_thickness, out float thin_film_ior, float lod);
 
 [numthreads(8, 8, 1)]
 void CS(uint3 id : SV_DispatchThreadID)
@@ -105,6 +106,11 @@ void CS(uint3 id : SV_DispatchThreadID)
         float3 hit_normal  = hit; // already unit length (unit sphere @ origin)
 
         pos = hit;
+
+        // Sphere frame: tangent along increasing u (azimuth), bitangent completing it.
+        float3 sphere_t = normalize(float3(-hit_normal.z, 0, hit_normal.x) + float3(1e-5, 0, 0));
+        mx_set_geometry(hit_normal, sphere_t, cross(hit_normal, sphere_t));
+
         tc  = float2(0.5 + atan2(hit_normal.z, hit_normal.x) / (2 * 3.14159265), 0.5 - asin(hit_normal.y) / 3.14159265);
 
         float3 light_dir = normalize(float3(0.5, 0.8, -0.6));
@@ -118,7 +124,7 @@ void CS(uint3 id : SV_DispatchThreadID)
     float4 normal      = 0;
     float4 glow        = 0;
     float  opacity     = 1;
-    float  refraction  = 1, thickness = 0, transmission = 1, absorption_distance = 1;
+    float  refraction  = 1, thickness = 0, transmission = 1, absorption_distance = 1, coat = 0, coat_roughness = 0.1, sheen = 0, sheen_roughness = 0.3, anisotropy = 0, aniso_rotation = 0, sss_weight = 0, sss_scale = 1, sheen_tint = 0; float3 sss_radius = float3(1, 1, 1), transmission_color = float3(-1, -1, -1); float opacity_threshold = 0.5, thin_film_thickness = 0, thin_film_ior = 1.5;
 
-    COMPILED_FUNC(pos, tc, color, metallic, roughness, normal, glow, opacity, refraction, thickness, transmission, absorption_distance, 0);
+    COMPILED_FUNC(pos, tc, color, metallic, roughness, normal, glow, opacity, refraction, thickness, transmission, absorption_distance, coat, coat_roughness, sheen, sheen_roughness, anisotropy, aniso_rotation, sss_weight, sss_radius, sss_scale, sheen_tint, transmission_color, opacity_threshold, thin_film_thickness, thin_film_ior, 0);
 }

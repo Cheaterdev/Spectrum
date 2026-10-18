@@ -123,6 +123,7 @@ export{
 		HAL::Texture2DView specular;
 		HAL::Texture2DView speed;
 		HAL::Texture2DView object_id;
+		HAL::Texture2DView material;
 
 
 		HAL::Texture2DView quality;
@@ -173,6 +174,12 @@ export{
 	 };
 
 	 template <class T>
+	 concept Has_GBuffer_Material =	  requires(T& context)
+	 {
+		 context.GBuffer_Material;
+	 };
+
+	 template <class T>
 	 concept Has_GBuffer_ObjectID =	  requires(T& context)
 	 {
 		 context.GBuffer_ObjectID;
@@ -187,6 +194,7 @@ export{
 		Handlers::Texture GBuffer_Specular = FrameGraph::ResourceID::GBuffer_Specular;
 		Handlers::Texture GBuffer_Speed = FrameGraph::ResourceID::GBuffer_Speed;
 		Handlers::Texture GBuffer_ObjectID = FrameGraph::ResourceID::GBuffer_ObjectID;
+		Handlers::Texture GBuffer_Material = FrameGraph::ResourceID::GBuffer_Material;
 		Handlers::Texture GBuffer_DepthMips = FrameGraph::ResourceID::GBuffer_DepthMips;
 		Handlers::Texture GBuffer_DepthPrev = FrameGraph::ResourceID::GBuffer_DepthPrev;
 
@@ -223,6 +231,7 @@ export{
 			 if constexpr(Has_GBuffer_Quality<T>) if (context.GBuffer_Quality)	result.quality = *context.GBuffer_Quality;
 			 if constexpr(Has_GBuffer_DepthMips<T>) if (context.GBuffer_DepthMips)	result.depth_mips = *context.GBuffer_DepthMips;
 			 if constexpr(Has_GBuffer_ObjectID<T>) if (context.GBuffer_ObjectID)	result.object_id = *context.GBuffer_ObjectID;
+			 if constexpr(Has_GBuffer_Material<T>) if (context.GBuffer_Material)	result.material = *context.GBuffer_Material;
 
 			
 				

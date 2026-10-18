@@ -402,6 +402,25 @@ float3 SampleReflectionVector(float3 view_direction, float3 normal, float roughn
     return mul(reflected_direction_tbn, inv_tbn_transform);
 }
 
+// Reflection direction for one anisotropic GGX sample (VNDF sampling, with the
+// roughness stretched along T): same role as SampleReflectionVector, which is
+// the isotropic case. `view_direction` points from the camera to the surface;
+// `alpha` is the already-squared roughness, as the reflection raygen holds it.
+float3 SampleAnisoReflectionVector(float3 view_direction, float3 N, float3 T, float alpha, float anisotropy, float2 random)
+{
+    float at = max(alpha * (1.0 + anisotropy), 0.002);
+    float ab = max(alpha * (1.0 - anisotropy), 0.002);
+    float3 B = cross(N, T);
+
+    float3 Ve = -view_direction;
+    float3 Ve_local = float3(dot(Ve, T), dot(Ve, B), dot(Ve, N));
+
+    float3 Ne = SampleGGXVNDF(Ve_local, at, ab, random.x, random.y);
+    float3 H = Ne.x * T + Ne.y * B + Ne.z * N;
+
+    return reflect(view_direction, H);
+}
+
 
 
 #endif

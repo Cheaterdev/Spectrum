@@ -241,10 +241,13 @@ namespace Raytrace
 		# uses front_face to know whether it is entering or leaving the volume.
 		float3 normal;
 		float3 albedo;
+		# Tint of transmitted light and colour the medium absorbs to over
+		# absorption_distance; the base colour when the graph leaves it unset.
+		float3 transmission_color;
 		float roughness;
 
-		# Material graph outputs: refraction (IOR), thickness, transmission,
-		# absorption distance.
+		# Material graph outputs: ior, thickness (0 = thin-walled), transmission
+		# weight, transmission depth.
 		float ior;
 		float thickness;
 		float transmission;

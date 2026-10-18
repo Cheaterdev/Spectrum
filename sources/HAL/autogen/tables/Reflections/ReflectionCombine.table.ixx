@@ -21,9 +21,11 @@ export namespace Table
 		{
 			static constexpr SlotID ID = SlotID::ReflectionCombine;
 			HLSL::Texture2D<float4> reflection;
+			HLSL::Texture2D<float4> coat;
 			HLSL::RWTexture2D<float4> target;
 			Table::Meshes::GBuffer gbuffer;
 			HLSL::Texture2D<float4>& GetReflection() { return reflection; }
+			HLSL::Texture2D<float4>& GetCoat() { return coat; }
 			HLSL::RWTexture2D<float4>& GetTarget() { return target; }
 			Table::Meshes::GBuffer& GetGbuffer() { return gbuffer; }
 			static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
@@ -31,12 +33,14 @@ export namespace Table
 			void compile(Compiler& compiler) const
 			{
 				compiler.compile(reflection, "ReflectionCombine::reflection");
+				compiler.compile(coat, "ReflectionCombine::coat");
 				compiler.compile(target, "ReflectionCombine::target");
 				compiler.compile(gbuffer, "ReflectionCombine::gbuffer");
 			}
 			struct Compiled
 			{
 				uint reflection; // Texture2D<float4>
+				uint coat; // Texture2D<float4>
 				uint target; // RWTexture2D<float4>
 				Table::Meshes::GBuffer::Compiled gbuffer; // GBuffer
 

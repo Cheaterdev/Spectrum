@@ -1,5 +1,6 @@
 module Graphics:AssetExplorer;
 import :Materials.UniversalMaterial;
+import :Materials.MaterialX;
 import :Materials.PreviewSession;
 import :MeshAsset;
 import :BinaryAsset;
@@ -319,7 +320,7 @@ namespace GUI
 				menu->add_item("Import asset")->on_click = [this](menu_list_element::ptr e)
 				{
 
-					auto files = Application::get().file_open("Choose your destiny", "", "dds|*.dds|" "png|*.png|" "jpg|*.jpg|"  "obj|*.obj|" "fbx|*.fbx|" "glb|*.glb|" "gltf|*.gltf|" "blend|*.blend|"  "all|*.*|"   "|");
+					auto files = Application::get().file_open("Choose your destiny", "", "dds|*.dds|" "png|*.png|" "jpg|*.jpg|"  "obj|*.obj|" "fbx|*.fbx|" "glb|*.glb|" "gltf|*.gltf|" "blend|*.blend|" "mtlx|*.mtlx|"  "all|*.*|"   "|");
 
 					struct material_info
 					{
@@ -385,6 +386,14 @@ namespace GUI
 					tasks.reserve(files.size());
 					for (auto s : files)
 					{
+
+						// Not lower-cased like the rest: the importer resolves the
+						// textures the file names relative to this path.
+						if (to_lower(s.substr(s.find_last_of(".") + 1)) == "mtlx")
+						{
+							MaterialXLibrary::get().import_file(std::filesystem::path(s));
+							continue;
+						}
 
 						s = to_lower(s);
 						std::string ext = to_lower(s.substr(s.find_last_of(".") + 1));

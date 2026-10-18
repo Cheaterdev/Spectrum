@@ -22,6 +22,7 @@ export namespace Table
 			float dist;
 			float3 normal;
 			float3 albedo;
+			float3 transmission_color;
 			float roughness;
 			float ior;
 			float thickness;
@@ -31,6 +32,7 @@ export namespace Table
 			float& GetDist() { return dist; }
 			float3& GetNormal() { return normal; }
 			float3& GetAlbedo() { return albedo; }
+			float3& GetTransmission_color() { return transmission_color; }
 			float& GetRoughness() { return roughness; }
 			float& GetIor() { return ior; }
 			float& GetThickness() { return thickness; }
@@ -44,6 +46,7 @@ export namespace Table
 				compiler.compile(dist, "TranslucentPayload::dist");
 				compiler.compile(normal, "TranslucentPayload::normal");
 				compiler.compile(albedo, "TranslucentPayload::albedo");
+				compiler.compile(transmission_color, "TranslucentPayload::transmission_color");
 				compiler.compile(roughness, "TranslucentPayload::roughness");
 				compiler.compile(ior, "TranslucentPayload::ior");
 				compiler.compile(thickness, "TranslucentPayload::thickness");
@@ -63,6 +66,7 @@ export namespace Table
 				ar& NVP(dist);
 				ar& NVP(normal);
 				ar& NVP(albedo);
+				ar& NVP(transmission_color);
 				ar& NVP(roughness);
 				ar& NVP(ior);
 				ar& NVP(thickness);

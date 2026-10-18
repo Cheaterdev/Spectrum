@@ -11,6 +11,7 @@
 static const GBuffer gbuffer = GetVSMLighting().GetGbuffer();
 
 #include "../../common/pbr.hlsl"
+#include "../../common/lobes.hlsl"
 // Only the resolve half of VSM_impl.hlsl's old contents (get_shadow_vsm,
 // vsm_pcf_shadow, debug helpers) -- see VSM_impl_search.hlsl's own top
 // comment for why this is split from VSM_BlockerSearch.hlsl's own include.
@@ -100,7 +101,11 @@ float4 combine_result(float2 tc, uint2 pixel)
 
 	float2 EnvBRDF = GetBRDF(info.roughness, 0, 0.5 + 0.5 * NL) * GetBRDF(info.roughness, 0, 0.5 + 0.5 * NV);
 
-    return float4(shadow * (NL * info.albedo * (1 - info.metallic)), 1);
+	float4 material = gbuffer.GetMaterial().SampleLevel(pointClampSampler, tc, 0);
+    float3 result = shadow * (NL * info.albedo * (1 - info.metallic)) * coat_base_attenuation(material, info.normal, info.view);
+	result += material_sun_lobes(material, info.normal, info.view, light_dir, shadow,
+		lerp(0.04, info.albedo, info.metallic), max(MIN_ROUGHNESS, gbuffer.GetNormals().SampleLevel(pointClampSampler, tc, 0).w), info.albedo, info.metallic);
+    return float4(result, 1);
 }
 
 // VSM_Unshadowed: the same direct lighting as combine_result, without a shadow
@@ -112,8 +117,22 @@ float4 unshadowed_result(float2 tc)
 
 	float4 packed_0 = gbuffer.GetAlbedo().SampleLevel(pointClampSampler, tc, 0);
 	float3 normal   = normalize(gbuffer.GetNormals().SampleLevel(pointClampSampler, tc, 0).xyz * 2 - 1);
-	float  NL       = saturate(dot(normal, normalize(GetFrameInfo().GetSunDir().xyz)));
-	return float4(NL * packed_0.rgb * (1 - packed_0.w), 1);
+	float3 light_dir = normalize(GetFrameInfo().GetSunDir().xyz);
+	float  NL       = saturate(dot(normal, light_dir));
+	float3 result   = NL * packed_0.rgb * (1 - packed_0.w);
+
+	float4 material = gbuffer.GetMaterial().SampleLevel(pointClampSampler, tc, 0);
+	if (material_model(material) != SHADING_MODEL_STANDARD || packed_0.w > 0.001)
+	{
+		Camera camera = GetFrameInfo().GetCamera();
+		float3 wpos   = depth_to_wpos(raw_z, tc, camera.GetInvViewProj());
+		float3 view = normalize(camera.GetPosition() - wpos);
+		result *= coat_base_attenuation(material, normal, view);
+		result += material_sun_lobes(material, normal, view, light_dir, 1.0,
+			lerp(0.04, packed_0.rgb, packed_0.w), max(MIN_ROUGHNESS, gbuffer.GetNormals().SampleLevel(pointClampSampler, tc, 0).w), packed_0.rgb, packed_0.w);
+	}
+
+	return float4(result, 1);
 }
 
 [numthreads(16, 16, 1)]
