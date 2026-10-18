@@ -1,4 +1,3 @@
-#include <Core_defs.h>
 #include "clusterlod.h"
 import Core;
 #include "MeshletGeneration.h"

@@ -1,5 +1,6 @@
 export module HAL:Adapter;
-import :Utils;   // pulls in DXGI_ADAPTER_DESC stub
+import :Utils;
+import :Types;   // AdapterInfo
 import :Impl;    // get_vk_instance()
 
 import vulkan;
@@ -14,14 +15,14 @@ export namespace HAL
         friend class Adapters;
 
     protected:
-        VkPhysicalDevice  vk_physical  = VK_NULL_HANDLE;
-        DXGI_ADAPTER_DESC adapter_desc = {};
+        VkPhysicalDevice vk_physical = VK_NULL_HANDLE;
+        AdapterInfo      info;
 
     public:
         using ptr = std::shared_ptr<Adapter>;
 
         explicit Adapter(VkPhysicalDevice physical);
-        const DXGI_ADAPTER_DESC& get_desc() const;
+        const AdapterInfo& get_info() const { return info; }
 
         // Public accessor — used by API::Device::init (cannot friend across
         // the circular Adapter ↔ API.Device import dependency).

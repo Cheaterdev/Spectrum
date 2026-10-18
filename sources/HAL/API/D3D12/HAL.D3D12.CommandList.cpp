@@ -86,6 +86,9 @@ namespace HAL
             m_commandList->Barrier(1, &group);
         }
 
+        static D3D12_CPU_DESCRIPTOR_HANDLE native_cpu(const Handle& h) { return { h.get_cpu().ptr }; }
+        static D3D12_GPU_DESCRIPTOR_HANDLE native_gpu(const Handle& h) { return { h.get_gpu().ptr }; }
+
         void CommandList::clear_uav(const Handles::UAV& h, vec4 ClearColor)
         {
             auto v = h.get_resource_info().view;
@@ -101,7 +104,7 @@ namespace HAL
             }
 
             auto dx_resource = uav.Resource->native_resource.Get();
-            m_commandList->ClearUnorderedAccessViewFloat(h.get_gpu(), h.get_cpu(), dx_resource, reinterpret_cast<FLOAT*>(ClearColor.data()), 0, nullptr);
+            m_commandList->ClearUnorderedAccessViewFloat(native_gpu(h), native_cpu(h), dx_resource, reinterpret_cast<FLOAT*>(ClearColor.data()), 0, nullptr);
         }
 
         void CommandList::clear_uav_uint(const Handles::UAV& h, uint4 ClearColor)
@@ -119,33 +122,33 @@ namespace HAL
             }
 
             auto dx_resource = uav.Resource->native_resource.Get();
-            m_commandList->ClearUnorderedAccessViewUint(h.get_gpu(), h.get_cpu(), dx_resource, reinterpret_cast<UINT*>(ClearColor.data()), 0, nullptr);
+            m_commandList->ClearUnorderedAccessViewUint(native_gpu(h), native_cpu(h), dx_resource, reinterpret_cast<UINT*>(ClearColor.data()), 0, nullptr);
         }
 
         void CommandList::clear_rtv(const Handles::RTV& h, vec4 ClearColor)
         {
-            m_commandList->ClearRenderTargetView(h.get_cpu(), ClearColor.data(), 0, nullptr);
+            m_commandList->ClearRenderTargetView(native_cpu(h), ClearColor.data(), 0, nullptr);
         }
 
         void CommandList::clear_stencil(const Handles::DSV& dsv, UINT8 stencil)
         {
-            m_commandList->ClearDepthStencilView(dsv.get_cpu(), D3D12_CLEAR_FLAG_STENCIL, 0, stencil, 0, nullptr);
+            m_commandList->ClearDepthStencilView(native_cpu(dsv), D3D12_CLEAR_FLAG_STENCIL, 0, stencil, 0, nullptr);
         }
 
         void CommandList::clear_depth(const Handles::DSV& dsv, float depth)
         {
-            m_commandList->ClearDepthStencilView(dsv.get_cpu(), D3D12_CLEAR_FLAG_DEPTH, depth, 0, 0, nullptr);
+            m_commandList->ClearDepthStencilView(native_cpu(dsv), D3D12_CLEAR_FLAG_DEPTH, depth, 0, 0, nullptr);
         }
 
         void CommandList::clear_depth_rects(const Handles::DSV& dsv, float depth, std::vector<sizer_long> rects)
         {
-            m_commandList->ClearDepthStencilView(dsv.get_cpu(), D3D12_CLEAR_FLAG_DEPTH, depth, 0,
+            m_commandList->ClearDepthStencilView(native_cpu(dsv), D3D12_CLEAR_FLAG_DEPTH, depth, 0,
                 static_cast<UINT>(rects.size()), reinterpret_cast<const D3D12_RECT*>(rects.data()));
         }
 
         void CommandList::clear_depth_stencil(const Handles::DSV& dsv, bool depth, bool stencil, float fdepth, UINT8 fstencil)
         {
-            m_commandList->ClearDepthStencilView(dsv.get_cpu(), D3D12_CLEAR_FLAGS((depth * D3D12_CLEAR_FLAG_DEPTH) | (stencil * D3D12_CLEAR_FLAG_STENCIL)), fdepth, fstencil, 0, nullptr);
+            m_commandList->ClearDepthStencilView(native_cpu(dsv), D3D12_CLEAR_FLAGS((depth * D3D12_CLEAR_FLAG_DEPTH) | (stencil * D3D12_CLEAR_FLAG_STENCIL)), fdepth, fstencil, 0, nullptr);
         }
 
         void CommandList::set_topology(HAL::PrimitiveTopologyType topology, HAL::PrimitiveTopologyFeed feedType, bool adjusted, uint controlpoints)
@@ -323,13 +326,13 @@ namespace HAL
 
             if (rt.is_valid())
             {
-                rtv = rt.get_cpu();
+                rtv = native_cpu(rt);
                 rtv_ptr = &rtv;
             }
 
             if (h.is_valid())
             {
-                dsv = h.get_cpu();
+                dsv = native_cpu(h);
                 dsv_ptr = &dsv;
             }
 

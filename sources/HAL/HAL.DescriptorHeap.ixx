@@ -154,9 +154,9 @@ export
 
 			void operator=(const Handle& r);
 
-			D3D12_CPU_DESCRIPTOR_HANDLE get_cpu() const;
+			CPUDescriptorAddress get_cpu() const;
 
-			D3D12_GPU_DESCRIPTOR_HANDLE get_gpu() const;
+			GPUDescriptorAddress get_gpu() const;
 
 			Handle operator[](uint i) const;
 

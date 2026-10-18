@@ -15,10 +15,10 @@ namespace HAL
     Descriptor::Descriptor(DescriptorHeap& heap, uint offset) : heap(heap), offset(offset)
     {
         // Vulkan has no CPU/GPU descriptor handles; the bindless slot index is
-        // carried in the stub handle value so the shared HAL::Handle interface
+        // carried in the address so the shared HAL::Handle interface
         // (get_cpu/get_gpu) keeps working unchanged.
-        cpu_handle = { static_cast<SIZE_T>(offset) };
-        gpu_handle = { static_cast<UINT64>(offset) };
+        cpu_handle = { static_cast<size_t>(offset) };
+        gpu_handle = { static_cast<uint64_t>(offset) };
     }
 
     // StructuredBuffers are sub-ranges (FirstElement..NumElements) of shared

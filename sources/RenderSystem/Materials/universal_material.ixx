@@ -22,9 +22,6 @@ export namespace materials
 		void init_pipeline_id();
 
 
-		D3D_PRIMITIVE_TOPOLOGY get_topology();
-
-
 		size_t get_pipeline_id();
 
 	private:

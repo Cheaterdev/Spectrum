@@ -623,11 +623,6 @@ void materials::universal_material::update_rtx()
 
 }
 
-D3D_PRIMITIVE_TOPOLOGY materials::render_pass::get_topology()
-{
-	return  ds_shader ? D3D_PRIMITIVE_TOPOLOGY_3_CONTROL_POINT_PATCHLIST : D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-}
-
 size_t materials::render_pass::get_pipeline_id()
 {
 	return pipeline_id;

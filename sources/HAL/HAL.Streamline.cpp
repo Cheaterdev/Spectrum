@@ -1,10 +1,10 @@
 module;
 
 #include <Windows.h>
-#include <fstream>
 
 module HAL:Streamline;
 
+import stl.core;
 import Core;
 import :Utils;
 import streamline;

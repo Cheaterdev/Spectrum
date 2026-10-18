@@ -264,16 +264,16 @@ namespace HAL {
 
 	std::shared_ptr<DescriptorHeapStorage> Handle::get_storage() const { return storage; }
 
-	D3D12_CPU_DESCRIPTOR_HANDLE Handle::get_cpu() const
+	CPUDescriptorAddress Handle::get_cpu() const
 	{
 		auto& heap = *storage->get_heap();
-		return heap[get_offset()].get_cpu();
+		return { heap[get_offset()].get_cpu().ptr };
 	}
 
-	D3D12_GPU_DESCRIPTOR_HANDLE Handle::get_gpu() const
+	GPUDescriptorAddress Handle::get_gpu() const
 	{
 		auto& heap = *storage->get_heap();
-		return heap[get_offset()].get_gpu();
+		return { heap[get_offset()].get_gpu().ptr };
 	}
 
 	DescriptorHeapFactory::ptr_type DescriptorHeapFactory::make_heap(DescriptorHeapIndex index, size_t size)

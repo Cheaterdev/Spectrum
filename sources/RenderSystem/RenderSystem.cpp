@@ -10,8 +10,8 @@ std::shared_ptr<HAL::Device> RenderSystem::select_adapter()
     HAL::Adapter::ptr result, any_result;
     std::string result_name;
     HAL::Adapters::get().enumerate([&](HAL::Adapter::ptr adapter) {
-        const auto& desc = adapter->get_desc();
-        Log::get() << "adapter: " << desc.Description << Log::endl;
+        const auto desc = adapter->get_info();
+        Log::get() << "adapter: " << desc.name << Log::endl;
 
         const auto props = HAL::Device::probe(adapter);
 
@@ -20,13 +20,13 @@ std::shared_ptr<HAL::Device> RenderSystem::select_adapter()
         if (const char* wanted = std::getenv("SPECTRUM_ADAPTER"); wanted && *wanted)
         {
             const std::wstring wanted_w(wanted, wanted + std::strlen(wanted));
-            if (!std::wstring(desc.Description).contains(wanted_w))
+            if (!desc.name.contains(wanted_w))
                 return;
         }
 
 
         if (!result && props.mesh_shader && props.full_bindless &&
-			!std::wstring(desc.Description).contains(L"Basic"))
+			!desc.name.contains(L"Basic"))
         {
             result = adapter;
             result_name = props.name;

@@ -1,5 +1,6 @@
 ﻿export module HAL:Adapter;
 import :Utils;
+import :Types;   // AdapterInfo
 
 import d3d12;
 
@@ -25,6 +26,7 @@ export namespace HAL
 
 
 		const DXGI_ADAPTER_DESC& get_desc() const;
+		AdapterInfo get_info() const;
 	private:
 
 		friend class Adapters;
