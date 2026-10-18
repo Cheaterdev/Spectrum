@@ -408,7 +408,7 @@ void CS_SHADOW_BLUR(uint3 groupID : SV_GroupID, uint3 groupThreadID : SV_GroupTh
 		float2 best_tc      = float2(asfloat(blocker_packed.y), asfloat(blocker_packed.z));
 		uint   best_slot    = blocker_packed.w;
 
-#ifdef VSM_RTX_VERIFY
+#if VSM_RTX_VERIFY   // a value, not a definition: the option is defined as 0 when off
 		// Shadow maps only record the front-most surface per texel -- a
 		// closer blocker can be geometrically present but never rasterized
 		// into the atlas at the exact XY the search looked, so world_delta

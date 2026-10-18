@@ -1,4 +1,4 @@
-﻿export module GUI:TabControl;
+export module GUI:TabControl;
 import :Base;
 import :MenuList;
 import :Button;
@@ -24,6 +24,8 @@ export namespace GUI
                 virtual void draw(Context& c) override;
 
                 bool is_current();
+                // The close button is shown by default; a fixed set of pages (a touch screen's) hides it.
+                void set_closable(bool closable);
                 tab_button();
 
                 virtual bool need_drag_drop() override;
@@ -84,6 +86,8 @@ export namespace GUI
                 void show_page(tab_button::ptr tab_but);
                 tab_button::ptr add_page(std::string str, base::ptr obj = nullptr);
                 tab_button::ptr add_button(tab_button::ptr);
+                // Height of the tab bar in layout units (25 by default; a touch screen wants a finger-sized bar).
+                void set_strip_height(float height);
 
 				void remove_button(tab_button::ptr b);
 

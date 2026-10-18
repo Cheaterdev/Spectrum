@@ -59,11 +59,19 @@ namespace HAL
         return desc;
     }
 
-    // Fallback for slot types that still carry their own create_indirect()
+    static_assert(sizeof(HAL::NodeGPUInput) == sizeof(D3D12_NODE_GPU_INPUT));
+    static_assert(sizeof(HAL::MultiNodeGPUInput) == sizeof(D3D12_MULTI_NODE_GPU_INPUT));
+
+    // A slot table in an indirect command is one root constant: the slot's id.
     template<class T>
     D3D12_INDIRECT_ARGUMENT_DESC create_indirect_for(T*)
     {
-        return T::create_indirect();
+        D3D12_INDIRECT_ARGUMENT_DESC desc;
+        desc.Type = D3D12_INDIRECT_ARGUMENT_TYPE_CONSTANT;
+        desc.Constant.RootParameterIndex = T::Slot::ID;
+        desc.Constant.DestOffsetIn32BitValues = 0;
+        desc.Constant.Num32BitValuesToSet = 1;
+        return desc;
     }
 
     template<class T>

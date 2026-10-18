@@ -23,7 +23,7 @@ template<class _resource, class _header, class _concrete>
 class resource_manager_base : public Singleton<resource_manager_base<_resource, _header, _concrete>>
 {
 	typedef ClassLogger<resource_system> Logger;
-	friend typename _concrete;
+	friend _concrete;
 
 	std::map<_header, std::shared_future<std::shared_ptr<_resource>>> resources;
 	std::mutex m;
@@ -311,8 +311,9 @@ class loader
 protected:
 	typedef std::function<std::shared_ptr<_resource>(const _header&, resource_file_depender&, _context&)> loader_func;
 private:
-	static std::vector<loader_func> loaders;
-	static bool inited;
+	// inline + in-class: an out-of-line definition here can't be instantiated by other modules under Clang
+	inline static std::vector<loader_func> loaders;
+	inline static bool inited = false;   // set by the first get(), which calls _resource::init_default_loaders() (_resource is still incomplete here)
 public:
 
 	static std::shared_ptr<_resource> get_resource(const _header& header, _context& context)
@@ -351,11 +352,6 @@ public:
 
 };
 
-template<class _resource, class _header, class _context>
-std::vector<typename loader<_resource, _header, _context>::loader_func> loader<_resource, _header, _context>::loaders;
-
-template<class _resource, class _header, class _context>
-bool loader<_resource, _header, _context>::inited = _resource::init_default_loaders();
 
 
 }

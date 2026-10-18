@@ -1,0 +1,190 @@
+# Shaders for the GPU tests (sources/Test/Tests/Test.HAL.Compute.ixx).
+namespace Tests
+{
+	[Bind = DefaultLayout::Instance0]
+	struct TestAppendData
+	{
+		AppendStructuredBuffer<uint2> items;
+		RWStructuredBuffer<uint> plain;
+		# One element, bumped with a plain atomic add: atomics through the ordinary buffer binding, for comparison with Append's counter.
+		RWStructuredBuffer<uint> atomic_counter;
+		uint count;
+	}
+
+	ComputePSO AppendCounter
+	{
+		root = DefaultLayout;
+
+		[EntryPoint = CS]
+		compute = "test/append_counter.hlsl";
+	}
+
+	# Graphics tests (Test.HAL.Rendering, Test.HAL.SIG). Their shaders are files rather than HLSL strings in
+	# the test code, so `spectrum_tool shaders` precompiles them with every other PSO: a phone has no compiler.
+	# The golden images are in workdir/test_references.
+
+	# Test.HAL.Rendering RenderTriangle.
+	GraphicsPSO TestTriangle
+	{
+		root = DefaultLayout;
+
+		[EntryPoint = VS]
+		vertex = "test/triangle.hlsl";
+
+		[EntryPoint = PS]
+		pixel = "test/triangle.hlsl";
+
+		rtv = { R8G8B8A8_UNORM };
+		enable_depth = false;
+		cull = None;
+	}
+
+	# RenderInstancing: 9 instances of a small triangle.
+	GraphicsPSO TestInstancing
+	{
+		root = DefaultLayout;
+
+		[EntryPoint = VS]
+		vertex = "test/instancing.hlsl";
+
+		[EntryPoint = PS]
+		pixel = "test/instancing.hlsl";
+
+		rtv = { R8G8B8A8_UNORM };
+		enable_depth = false;
+		cull = None;
+	}
+
+	# RenderCube: depth-tested, reversed-Z (the default depth_func).
+	GraphicsPSO TestCube
+	{
+		root = DefaultLayout;
+
+		[EntryPoint = VS]
+		vertex = "test/cube.hlsl";
+
+		[EntryPoint = PS]
+		pixel = "test/cube.hlsl";
+
+		rtv = { R8G8B8A8_UNORM };
+		ds = D32_FLOAT;
+		cull = None;
+	}
+
+	# RenderCull_None / _Back / _Front: the same two triangles, culling is baked into the PSO.
+	GraphicsPSO TestCullNone
+	{
+		root = DefaultLayout;
+
+		[EntryPoint = VS]
+		vertex = "test/cull.hlsl";
+
+		[EntryPoint = PS]
+		pixel = "test/cull.hlsl";
+
+		rtv = { R8G8B8A8_UNORM };
+		enable_depth = false;
+		cull = None;
+	}
+
+	GraphicsPSO TestCullBack
+	{
+		root = DefaultLayout;
+
+		[EntryPoint = VS]
+		vertex = "test/cull.hlsl";
+
+		[EntryPoint = PS]
+		pixel = "test/cull.hlsl";
+
+		rtv = { R8G8B8A8_UNORM };
+		enable_depth = false;
+		cull = Back;
+	}
+
+	GraphicsPSO TestCullFront
+	{
+		root = DefaultLayout;
+
+		[EntryPoint = VS]
+		vertex = "test/cull.hlsl";
+
+		[EntryPoint = PS]
+		pixel = "test/cull.hlsl";
+
+		rtv = { R8G8B8A8_UNORM };
+		enable_depth = false;
+		cull = Front;
+	}
+
+	# RenderGeometryShader: one point expanded to a triangle by the GS.
+	GraphicsPSO TestGeometryShader
+	{
+		root = DefaultLayout;
+
+		[EntryPoint = VS]
+		vertex = "test/geometry_shader.hlsl";
+
+		[EntryPoint = GS]
+		geometry = "test/geometry_shader.hlsl";
+
+		[EntryPoint = PS]
+		pixel = "test/geometry_shader.hlsl";
+
+		rtv = { R8G8B8A8_UNORM };
+		enable_depth = false;
+		cull = None;
+		topology = POINT;
+	}
+
+	# RenderMeshDirect: the engine's mesh and amplification stages with a normal-visualization pixel shader.
+	GraphicsPSO TestMeshDirect
+	{
+		root = DefaultLayout;
+
+		[EntryPoint = VS]
+		mesh = "gbuffer/mesh_shader.hlsl";
+
+		[EntryPoint = AS]
+		amplification = "gbuffer/mesh_shader.hlsl";
+
+		[EntryPoint = PS]
+		pixel = "test/mesh_direct_normal.hlsl";
+
+		rtv = { R8G8B8A8_UNORM };
+		ds = D32_FLOAT;
+		cull = None;
+		depth_func = GREATER;
+	}
+
+	# Test.HAL.SIG: a full-screen triangle that reads a slot (Color / CopyTexture) through the generated bindings.
+	GraphicsPSO TestSIGColor
+	{
+		root = DefaultLayout;
+
+		[EntryPoint = VS]
+		vertex = "test/sig_color.hlsl";
+
+		[EntryPoint = PS]
+		pixel = "test/sig_color.hlsl";
+
+		rtv = { R8G8B8A8_UNORM };
+		enable_depth = false;
+		cull = None;
+	}
+
+	GraphicsPSO TestSIGCopy
+	{
+		root = DefaultLayout;
+
+		[EntryPoint = VS]
+		vertex = "test/sig_copy_texture.hlsl";
+
+		[EntryPoint = PS]
+		pixel = "test/sig_copy_texture.hlsl";
+
+		rtv = { R8G8B8A8_UNORM };
+		enable_depth = false;
+		cull = None;
+	}
+}

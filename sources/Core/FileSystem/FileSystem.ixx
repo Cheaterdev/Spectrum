@@ -55,6 +55,10 @@ class FileSystem : public Singleton<FileSystem>
 public:
 	void register_provider(file_provider::ptr provider);
 
+	// Callers that may run after something else already registered a provider (a second native one makes
+	// iterate() visit every file twice).
+	bool has_providers() const { return !providers.empty(); }
+
 	virtual file::ptr get_file(std::filesystem::path);
 	virtual bool save_data(std::filesystem::path file_name, std::string data);
 

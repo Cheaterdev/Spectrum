@@ -5,9 +5,56 @@ import Core;
 import :Enums;
 import :Slots;
 import :Utils;   // get_backend_name() for per-backend shader cache
-std::optional<SlotID> get_slot(std::string_view slot_name);
+export std::optional<SlotID> get_slot(std::string_view slot_name);   // autogen.ixx exports it too; every declaration must agree (Clang)
 export
 {
+
+	// Compiled shaders can travel inside the asset that uses them (a material's pipelines): saving with
+	// `enabled()` writes each shader's cache file next to its header, loading puts it back in the shader cache
+	// before the shader is looked up, so a device with no compiler never needs the source. Off unless an
+	// offline tool turns it on.
+	struct ShaderEmbedding
+	{
+		static bool& enabled() { static bool v = false; return v; }
+
+		static std::filesystem::path cache_file(const HAL::shader_header& header)
+		{
+			return std::filesystem::path("cache") / get_backend_name() / (Hasher::hash(header) + ".bin");
+		}
+
+		static std::string read(const HAL::shader_header& header)
+		{
+			std::ifstream file(cache_file(header), std::ios::binary);
+			if (!file.is_open())
+				return {};
+			return std::string(std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>());
+		}
+
+		static void restore(const HAL::shader_header& header, const std::string& blob)
+		{
+			if (blob.empty())
+				return;
+
+			// Assets load on several threads and share shaders: the file must appear complete or not at all
+			// (a reader that finds it half written fails), and one thread writes it.
+			static std::mutex mutex;
+			std::lock_guard<std::mutex> lock(mutex);
+
+			const auto path = cache_file(header);
+			if (std::filesystem::exists(path))
+				return;
+			std::error_code ec;
+			std::filesystem::create_directories(path.parent_path(), ec);
+
+			auto partial = path;
+			partial += ".partial";
+			{
+				std::ofstream file(partial, std::ios::binary);
+				file.write(blob.data(), (std::streamsize)blob.size());
+			}
+			std::filesystem::rename(partial, path, ec);
+		}
+	};
 
 	template<class T>
 	class shader_with_id
@@ -83,7 +130,12 @@ export
 						ar& NVP(has_header);
 
 						if (has_header)
+						{
 							ar& NVP(shader->get_header());
+
+							std::string compiled = ShaderEmbedding::enabled() ? ShaderEmbedding::read(shader->get_header()) : std::string();
+							ar& NVP(compiled);
+						}
 				}
 				else
 				{
@@ -96,6 +148,10 @@ export
 						{
 							HAL::shader_header header;
 							ar& NVP(header);
+
+							std::string compiled;
+							ar& NVP(compiled);
+							ShaderEmbedding::restore(header, compiled);
 
 							shader = ShaderType::get_resource(header);
 						}
@@ -114,7 +170,7 @@ export
 		{
 			using Manager = resource_manager<_shader_type, shader_header>;
 
-			friend class Manager;
+			friend Manager;
 		protected:
 			static const char* compile_code;
 			static const char* compile_code_dxil;
@@ -191,6 +247,20 @@ export
 					{
 						HAL::shader_include In(header.file_name, depender);
 						res_blob = ShaderCompiler::get().Compile_Shader_File(header.file_name, header.macros, compile_code_dxil, header.entry_point,header.flags,  &In);
+					}
+					// The retry loop exists for editing a broken shader live. With no compiler
+					// a failure is permanent, so give back an empty shader instead of spinning.
+					if (!res_blob && !ShaderCompiler::can_compile)
+					{
+						std::string macros;
+						for (auto& m : header.macros)
+							macros += " " + m.name + "=" + m.value;
+						Log::get() << Log::LEVEL_ERROR << "missing precompiled shader cache/" << get_backend_name() << "/" << Hasher::hash(header)
+						           << ".bin: " << header.file_name << " " << header.entry_point << macros << Log::endl;
+
+						auto empty = std::make_shared<_shader_type>();
+						empty->header = header;
+						return empty;
 					}
 				}
 

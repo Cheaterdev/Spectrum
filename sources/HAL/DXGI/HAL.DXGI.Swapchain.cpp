@@ -1,6 +1,3 @@
-module;
-#include <comdef.h>
-
 module HAL:SwapChain;
 import:Device;
 import HAL;
@@ -14,7 +11,7 @@ namespace HAL
 	{
 
 		RECT r;
-		GetClientRect(c_desc.window->get_hwnd(), &r);
+		GetClientRect(static_cast<HWND>(c_desc.window->get_native_window()), &r);
 		DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
 		swapChainDesc.Width = r.right - r.left;
 		swapChainDesc.Height = r.bottom - r.top;
@@ -31,7 +28,7 @@ namespace HAL
 		ComPtr<IDXGISwapChain1> swapChain;
 		HRESULT res = HAL::Adapters::get().get_factory()->CreateSwapChainForHwnd(
 			device.get_queue(CommandListType::DIRECT)->get_native().Get(),
-			c_desc.window->get_hwnd(),
+			static_cast<HWND>(c_desc.window->get_native_window()),
 			&swapChainDesc, nullptr, nullptr, &swapChain);
 
 		swapChain.As(&m_swapChain);
@@ -62,7 +59,7 @@ namespace HAL
 				Log::get() << Log::LEVEL_WARNING << "[SwapChain] scRGB color space not supported for present" << Log::endl;
 		}
 
-		hwnd = c_desc.window->get_hwnd();
+		native_window = c_desc.window->get_native_window();
 		refresh_display_info();
 
 		frames.resize(desc.BufferCount);
@@ -168,7 +165,7 @@ namespace HAL
 			return;
 
 		RECT wr;
-		if (!GetWindowRect(hwnd, &wr))
+		if (!GetWindowRect(static_cast<HWND>(native_window), &wr))
 			return;
 
 		ComPtr<IDXGIOutput6> best;

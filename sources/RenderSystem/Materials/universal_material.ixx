@@ -22,9 +22,6 @@ export namespace materials
 		void init_pipeline_id();
 
 
-		D3D_PRIMITIVE_TOPOLOGY get_topology();
-
-
 		size_t get_pipeline_id();
 
 	private:
@@ -81,6 +78,9 @@ export namespace materials
 		// materials (the vast majority) never pay for this PSO at all and keep
 		// using VSM's single shared VSMDepthDraw (no pixel shader).
 		PSOS::Shadows::VSM::VSMDepthDrawMaterial::ptr vsm_depth_draw;
+		// The GBuffer draw behind a vertex stage, for GPUs without mesh shaders (see PipelineOptions). Null when
+		// not built.
+		PSOS::Meshes::GBufferDrawVS::ptr gbuffer_vs;
 		Meshes::TransparencyMode transparency_mode = Meshes::TransparencyMode::Opaque;
 	public:
 		using ptr = std::shared_ptr<PipelinePasses>;
@@ -95,15 +95,12 @@ export namespace materials
 		// first, or just null-check this directly.
 		PSOS::Shadows::VSM::VSMDepthDrawMaterial::ptr get_vsm_depth_draw() const override { return vsm_depth_draw; }
 
-		// The raster passes a preview or main view draws: every depth and GBuffer variant.
-		bool is_built() const override
-		{
-			for (auto& [key, pso] : gbuffer->psos)
-				if (!pso || !pso->is_built()) return false;
-			for (auto& [key, pso] : depth_draw->psos)
-				if (!pso || !pso->is_built()) return false;
-			return true;
-		}
+		// The raster passes a preview or main view draws: every depth and GBuffer variant the device can build
+		// (the mesh-shader ones only exist where mesh shaders do), and the vertex-stage GBuffer draw when built.
+		bool is_built() const override;
+
+		void set_vertex_front_end(HAL::GraphicsContext& graphics) override;
+		bool has_vertex_front_end() const override { return !!gbuffer_vs; }
 	private:
 
 		SERIALIZE()
@@ -114,6 +111,7 @@ export namespace materials
 			ar& NVP(depth_draw);
 			ar& NVP(voxelization);
 			ar& NVP(vsm_depth_draw);
+			ar& NVP(gbuffer_vs);
 			ar& NVP(transparency_mode);
 
 		}
@@ -174,6 +172,10 @@ export namespace materials
 		bool need_update_uniforms = false;
 		bool need_update_compiled = false;
 
+		// Which of `textures` drives a Masked material's opacity (-1: none). Derived from the graph when the
+		// material compiles and stored with it, so a device build, which has no graph, still knows.
+		int opacity_texture_slot = -1;
+
 		std::mutex m;
 		virtual void on_asset_change(std::shared_ptr<Asset> asset) override;
 		virtual void compile() override;
@@ -225,6 +227,14 @@ export namespace materials
 		Meshes::TransparencyMode get_transparency_mode() const { return transparency_mode; }
 
 		Pipeline::ptr get_pipeline();
+
+		// For saving a Device file (AssetTarget): the shader-include assets are editing inputs, so the
+		// references to them go, and the saved asset's reference list then doesn't name them.
+		void drop_editor_references()
+		{
+			include_file = std::shared_ptr<BinaryAsset>();
+			include_file_raytacing = std::shared_ptr<BinaryAsset>();
+		}
 
 		// Bumped whenever a material's pipeline is (re)generated or a mesh's
 		// material assignment changes. Scene caches its derived material and
@@ -295,13 +305,22 @@ export namespace materials
 			SAVE_PARENT(MaterialAsset);
 			ar& NVP(textures);
 			ar& NVP(texture_to_linear);
-			////////////////////////////////////////////////////////////////////////////	ar& NVP(passes);
-			ar& NVP(graph);
-			ar& NVP(include_file);
-			ar& NVP(include_file_raytacing);
+
+			// Editing data (the graph and the shader-include assets it is generated from) only goes into
+			// Editor files; a Device file is the same material without it (see AssetTarget).
+			bool editor_data = AssetSerialization::target() == AssetTarget::Editor;
+			ar& NVP(editor_data);
+			if (editor_data)
+			{
+				ar& NVP(graph);
+				ar& NVP(include_file);
+				ar& NVP(include_file_raytacing);
+			}
 
 			ar& NVP(ps_uniforms);
 			ar& NVP(tess_uniforms);
+			ar& NVP(transparency_mode);
+			ar& NVP(opacity_texture_slot);
 			ar& NVP(pipeline);
 
 

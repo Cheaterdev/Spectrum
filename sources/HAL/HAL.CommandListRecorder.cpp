@@ -1,5 +1,3 @@
-module;
-#include <Core_defs.h>
 module HAL:CommandListRecorder;
 
 

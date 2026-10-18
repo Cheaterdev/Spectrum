@@ -16,17 +16,16 @@ export namespace HAL
 
         // Vulkan equivalent of D3D12's API::Descriptor base.  The shared
         // HAL::Descriptor (HAL.DescriptorHeap.ixx) derives from this and the
-        // public HAL::Handle interface still exposes D3D12-style handles
-        // (stubbed in Vulkan builds); for Vulkan the handle value carries the
-        // bindless slot index.
+        // public HAL::Handle interface reports descriptor addresses; for Vulkan
+        // the address carries the bindless slot index.
         class Descriptor
         {
         protected:
-            D3D12_CPU_DESCRIPTOR_HANDLE cpu_handle = {};
-            D3D12_GPU_DESCRIPTOR_HANDLE gpu_handle = {};
+            CPUDescriptorAddress cpu_handle = {};
+            GPUDescriptorAddress gpu_handle = {};
         public:
-            D3D12_CPU_DESCRIPTOR_HANDLE get_cpu() const { return cpu_handle; }
-            D3D12_GPU_DESCRIPTOR_HANDLE get_gpu() const { return gpu_handle; }
+            CPUDescriptorAddress get_cpu() const { return cpu_handle; }
+            GPUDescriptorAddress get_gpu() const { return gpu_handle; }
         };
 
         // Everything needed to (re)write one heap slot.  D3D12 descriptors are

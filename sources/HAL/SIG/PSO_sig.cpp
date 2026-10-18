@@ -22,38 +22,92 @@ static void init_indirect_commands(HAL::Device& device, enum_array<IndirectComma
 		commands[IndirectCommands::DrawMeshCommand].slots.merge(slot);
 }
 
+// PSOs a specific GPU's driver cannot build, by GPU name fragment and PSO name. These are skipped
+// like any other unsupported PSO (create() returns null), so only that one pipeline is lost, not the
+// whole feature it belongs to. Temporary: remove an entry once the shader or the driver is fixed.
+static bool driver_cannot_build(HAL::Device& device, const std::string& pso_name)
+{
+	struct Entry { const char* gpu; const char* pso; const char* why; };
+	static const Entry entries[] = {
+		// Adreno's shader compiler never finishes it (100% CPU, GBs of memory, the app is killed).
+		// A debug visualization, so nothing is lost; cause not isolated yet (2 ray queries only).
+		{ "Adreno", "DDGIIndirectDebug", "driver shader compiler never finishes" },
+	};
+
+	const auto& gpu = device.get_properties().name;
+	for (const auto& e : entries)
+		if (pso_name == e.pso && gpu.find(e.gpu) != std::string::npos)
+		{
+			Log::get() << "PSO " << pso_name << " skipped on " << gpu << ": " << e.why << Log::endl;
+			return true;
+		}
+	return false;
+}
+
 HAL::ComputePipelineState::ptr SimpleComputePSO::create(HAL::Device& device)
 {
 	// [Requires = Raytracing] on a compute/graphics PSO means inline RayQuery:
 	// ray tracing pipelines are state objects, not PSOs.
-	if ((requires_raytracing && !device.is_ray_query_supported()) || (requires_tiled_depth && !device.is_tiled_depth_supported()))
-		return nullptr;
+	auto report = [this](PSOBuildResult r) {
+		if (auto& f = PSOBuildObserver::compute()) f(*this, r);
+	};
 
 	HAL::ComputePipelineStateDesc desc;
 	desc.layout = root_signature;
+
+	if ((requires_raytracing && !device.is_ray_query_supported()) || (requires_tiled_depth && !device.is_tiled_depth_supported()))
+	{
+		if (PSOBuildObserver::compile_unsupported())
+			HAL::compute_shader::get_resource(compute);
+		report(PSOBuildResult::Unsupported);
+		return nullptr;
+	}
+
+	if (driver_cannot_build(device, name))
+	{
+		report(PSOBuildResult::Unsupported);
+		return nullptr;
+	}
+
 	desc.shader = HAL::compute_shader::get_resource(compute);
 
-	return HAL::ComputePipelineState::create(device, desc, name);
+	auto result = HAL::ComputePipelineState::create(device, desc, name);
+	report(result ? PSOBuildResult::Created : PSOBuildResult::Failed);
+	return result;
 }
 
 HAL::PipelineState::ptr SimpleGraphicsPSO::create(HAL::Device&device)
 {
-	if ((requires_raytracing && !device.is_ray_query_supported()) || (requires_tiled_depth && !device.is_tiled_depth_supported()))
-		return nullptr;
-	if ((!mesh.entry_point.empty() || !amplification.entry_point.empty()) && !device.is_mesh_shader_supported())
-		return nullptr;
+	auto report = [this](PSOBuildResult r) {
+		if (auto& f = PSOBuildObserver::graphics()) f(*this, r);
+	};
 
 	HAL::PipelineStateDesc desc;
 	desc.layout = root_signature;
-	if (!vertex.entry_point.empty())	desc.vertex = HAL::vertex_shader::get_resource(vertex);
-	if (!pixel.entry_point.empty())	desc.pixel = HAL::pixel_shader::get_resource(pixel);
 
-	if (!geometry.entry_point.empty())	desc.geometry = HAL::geometry_shader::get_resource(geometry);
-	if (!domain.entry_point.empty())	desc.domain = HAL::domain_shader::get_resource(domain);
-	if (!hull.entry_point.empty())	desc.hull = HAL::hull_shader::get_resource(hull);
+	auto load_shaders = [&]() {
+		if (!vertex.entry_point.empty())	desc.vertex = HAL::vertex_shader::get_resource(vertex);
+		if (!pixel.entry_point.empty())	desc.pixel = HAL::pixel_shader::get_resource(pixel);
 
-	if (!mesh.entry_point.empty())	desc.mesh = HAL::mesh_shader::get_resource(mesh);
-	if (!amplification.entry_point.empty())	desc.amplification = HAL::amplification_shader::get_resource(amplification);
+		if (!geometry.entry_point.empty())	desc.geometry = HAL::geometry_shader::get_resource(geometry);
+		if (!domain.entry_point.empty())	desc.domain = HAL::domain_shader::get_resource(domain);
+		if (!hull.entry_point.empty())	desc.hull = HAL::hull_shader::get_resource(hull);
+
+		if (!mesh.entry_point.empty())	desc.mesh = HAL::mesh_shader::get_resource(mesh);
+		if (!amplification.entry_point.empty())	desc.amplification = HAL::amplification_shader::get_resource(amplification);
+	};
+
+	if ((requires_raytracing && !device.is_ray_query_supported()) || (requires_tiled_depth && !device.is_tiled_depth_supported())
+		|| ((!mesh.entry_point.empty() || !amplification.entry_point.empty()) && !device.is_mesh_shader_supported()))
+	{
+		// Offline tooling wants the shaders of PSOs this GPU can't run too.
+		if (PSOBuildObserver::compile_unsupported())
+			load_shaders();
+		report(PSOBuildResult::Unsupported);
+		return nullptr;
+	}
+
+	load_shaders();
 
 	if(ds==HAL::Format::UNKNOWN)
 	enable_depth  = false;
@@ -79,7 +133,9 @@ HAL::PipelineState::ptr SimpleGraphicsPSO::create(HAL::Device&device)
 	desc.blend.render_target[i] = blend[i];
 
 	desc.blend.independ_blend = rtv_formats.size() == blend.size();
-	return HAL::PipelineState::create(device, desc, name);
+	auto result = HAL::PipelineState::create(device, desc, name);
+	report(result ? PSOBuildResult::Created : PSOBuildResult::Failed);
+	return result;
 }
 
 void EngineRootLayoutHolder::init(HAL::Device& device)

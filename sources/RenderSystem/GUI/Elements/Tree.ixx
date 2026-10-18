@@ -46,6 +46,7 @@ export namespace GUI
 
             void draw(Context& c, bool selected);
     	};
+    	inline float tree_row_padding = 0;
     	template<class TreeNode, class Creator>
         class line : public line_base
         {
@@ -98,7 +99,7 @@ export namespace GUI
                 {
                     if (button == mouse_button::LEFT)
                         if (action == mouse_action::DOWN)
-                            owner->main_tree.lock()->on_select_internal(owner->get_ptr<tree_element<TreeNode,Creator>>());
+                            owner->main_tree.lock()->on_select_internal(owner->template get_ptr<tree_element<TreeNode,Creator>>());
 
                     return true;
                 }
@@ -154,7 +155,7 @@ export namespace GUI
                 label_text->docking = dock::LEFT;
                 label_text->text = convert(elem->get_name());
                 label_text->magnet_text = FW1_TEXT_FLAG::FW1_LEFT | FW1_TEXT_FLAG::FW1_VCENTER | FW1_TEXT_FLAG::FW1_NOWORDWRAP;
-                label_text->margin = { 5, 0, 0, 0 };
+                label_text->margin = { 5, tree_row_padding, 0, tree_row_padding };
                 l->add_child(label_text);
                 tree->add_child(l);
 

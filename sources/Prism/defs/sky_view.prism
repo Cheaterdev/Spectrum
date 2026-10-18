@@ -1,0 +1,40 @@
+# A scene view for hosts without ray tracing, mesh shaders or sparse resources (the Android demo): the GBuffer of the
+# scene lit by the sun with VSM shadows (a resident atlas drawn through a vertex stage, PCSS penumbra) and the baked sky as ambient
+# light, with the atmosphere behind it, then bloom and the tonemap. With VSM switched off, VSM_Unshadowed lights the
+# scene with no shadows instead.
+namespace Environment
+{
+	Pipeline SkyViewPipeline
+	{
+		PreScene;
+		BlueNoise;
+
+		# Shadow maps first: VSM_RenderPages draws the pages the GBuffer pass lights from.
+		VSM_GatherDispatch;
+		VSM_RenderPages;
+
+		Scene;
+		ResultCreation;
+
+		CubeSky;
+		CubeMapDownsample;
+		CubeMapEnviromentProcessor;
+
+		VSM_DepthAnalysis;
+		VSM_HiZRebuild;
+		VSM_BlockerClassify;
+		VSM_BlockerSearch;
+		VSM_ScreenSpaceShadow;
+		VSM_ShadowResolve;
+		VSM_DebugClassifyOverlay;
+		VSM_Combine;
+		VSM_Unshadowed;
+		SkyAmbient;
+		Sky;
+
+		BloomBuild;
+		BloomProcess;
+		BloomComposite;
+		Tonemap;
+	}
+}

@@ -221,7 +221,7 @@ bool vsm_is_occluded(MeshletCullData c, float4x4 world, Camera page_cam, int slo
 	return near_clip.z < sampled;
 }
 
-#ifdef BUILD_FUNC_AS
+#if defined(BUILD_FUNC_AS) && !defined(VERTEX_FRONT_END)
 groupshared Payload s_Payload;
 
 // One thread per (meshlet, page) pair, 32 pairs per group -- flattens the
@@ -275,6 +275,7 @@ void AS(uint gtid : SV_GroupThreadID, uint dtid : SV_DispatchThreadID)
 }
 #endif
 
+#ifndef VERTEX_FRONT_END   // the mesh stage; vertex_shader_vsm.hlsl reuses everything above it
 [NumThreads(128, 1, 1)]
 [OutputTopology("triangle")]
 void VS(
@@ -324,3 +325,4 @@ void VS(
 		verts[gtid].tc = v.tc;
 	}
 }
+#endif

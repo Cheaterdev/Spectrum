@@ -57,6 +57,11 @@ export namespace HAL
 		extern SamplerDesc SamplerLinearBorderBlackDesc;
 		extern SamplerDesc SamplerShadowComparisonDesc;
 
+		// Turns the anisotropic samplers into trilinear ones. Anisotropic filtering is vendor-defined (NVIDIA, AMD and
+		// Adreno differ by up to 83/255 on the same footprint), which a golden image cannot hold across; trilinear is
+		// what the APIs define. Call it before the device is created: both backends build their static samplers
+		// from these descriptors.
+		void make_anisotropic_trilinear();
 	}
 
 	namespace Blends
@@ -106,6 +111,12 @@ namespace HAL
 			TextureAddressMode::CLAMP,0.0f,16, ComparisonFunc::GREATER_EQUAL, float4(1,1,1,1), 0, std::numeric_limits<float>::max() };
 		SamplerDesc SamplerVolumeWrapDesc = SamplerDesc{ Filter::POINT, Filter::POINT, Filter::POINT, TextureAddressMode::WRAP, TextureAddressMode::WRAP ,
 			TextureAddressMode::WRAP,0.0f,16, ComparisonFunc::LESS_EQUAL, float4(1,1,1,1), 0, std::numeric_limits<float>::max() };
+
+		void make_anisotropic_trilinear()
+		{
+			for (auto* desc : { &SamplerAnisoWrapDesc, &SamplerAnisoBorderDesc })
+				desc->MinFilter = desc->MagFilter = desc->MipFilter = Filter::LINEAR;
+		}
 
 	};
 

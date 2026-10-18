@@ -98,6 +98,8 @@ public:
  export namespace FrameGraph
 {
 	class Graph;
+	struct TaskBuilder;    // used before their definitions; Clang doesn't treat friend declarations as declarations
+	struct FrameContext;
 
 
 	enum class ResourceType :int {
@@ -266,7 +268,7 @@ public:
 	};
 
 	// A handler field's chain link as stored in a pass's generated Cache.
-	export enum class ChainIndex : uint32_t { Unresolved = ~0u };
+	enum class ChainIndex : uint32_t { Unresolved = ~0u };   // already inside `export namespace` (nested export is an error in Clang)
 
 	struct UsedResources
 	{
@@ -2094,13 +2096,13 @@ public:
 		template<class T>
 		void add_library_pass(typename T::setup_func_type s, typename T::render_func_type r, PassFlags flags = PassFlags::General)
 		{
-			internal_pass<TypedPass<T::Context>>(T::Name, s, r, flags, 0, T::ID);
+			internal_pass<TypedPass<typename T::Context>>(T::Name, s, r, flags, 0, T::ID);
 		}
 
 		template<class T>
 		void add_library_pass(uint32_t index, typename T::setup_func_type s, typename T::render_func_type r, PassFlags flags = PassFlags::General)
 		{
-			internal_pass<TypedPass<T::Context>>(T::Names[index], s, r, flags, index, T::ID);
+			internal_pass<TypedPass<typename T::Context>>(T::Names[index], s, r, flags, index, T::ID);
 		}
 
 

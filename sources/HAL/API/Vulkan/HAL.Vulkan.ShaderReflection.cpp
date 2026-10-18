@@ -1,8 +1,8 @@
-module;
-#include "HAL.Vulkan.SpirvEntryPoints.h"
 module HAL:ShaderCompiler;
 
+import stl.core;
 import Core;
+#include "HAL.Vulkan.SpirvEntryPoints.h"
 import DXCompiler;
 import :Slots;       // get_slot
 import :Autogen;     // get_table_index

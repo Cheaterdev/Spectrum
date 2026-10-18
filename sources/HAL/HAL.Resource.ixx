@@ -210,7 +210,7 @@ export{
 
 
 			template<class T, class ...Args>
-			typename T create_view(GPUEntityStorageInterface& frame, Args ...args)
+			T create_view(GPUEntityStorageInterface& frame, Args ...args)
 			{
 				return T(get_ptr<typename T::ResourceType>(), frame, args...);
 			}

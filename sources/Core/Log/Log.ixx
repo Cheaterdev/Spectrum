@@ -222,8 +222,8 @@ export {
 			logging_level = L;
 		}
 
-		template<class T>
-		LogBlock operator<<(const  T& smth)
+		template<class U>   // not T: that would shadow ClassLogger's own parameter
+		LogBlock operator<<(const  U& smth)
 		{
 
 			auto block = LogBlock(Log::get(), logging_level);
@@ -237,10 +237,11 @@ export {
 	};
 	void EVENT(std::string_view s);
 
+} // end export: Clang rejects out-of-class member definitions inside `export { }`
+
 	template<class T>
 	LogBlock Log::operator<<(const T& smth)
 	{
 		return LogBlock(*this, logging_level) << smth;
 	}
 
-}

@@ -42,8 +42,15 @@ void SingleThreadExecutorBatched::stop_and_wait()
 	SingleThreadExecutor::stop_and_wait();
 }
 
+SingleThreadExecutor::~SingleThreadExecutor()
+{
+	if (!stopped)
+		stop_and_wait();
+}
+
 void SingleThreadExecutor::stop_and_wait()
 {
+	stopped = true;
 	enqueue(nullptr);
 	concurrency::agent::wait(this);
 }

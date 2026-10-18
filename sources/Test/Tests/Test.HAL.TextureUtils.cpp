@@ -181,6 +181,12 @@ namespace Test
 
 		// No reference yet: save and pass
 		auto ref_file = FileSystem::get().get_file(ref_path);
+#ifdef SPECTRUM_PLATFORM_ANDROID
+		// The phone's references are the ones pushed from workdir/test_references (build/driver.py android test).
+		// Creating one from the phone's own render would pass any test whose output is wrong.
+		if (!ref_file)
+			throw TestFailure("check_texture_reference: no reference '" + ref_path.string() + "' on the device (was it pushed?)");
+#endif
 		if (!ref_file)
 		{
 			std::string png_str(reinterpret_cast<const char*>(actual_png.data()), actual_png.size());

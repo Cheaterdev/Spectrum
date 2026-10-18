@@ -1,14 +1,6 @@
-module;
-// Global module fragment: include Vulkan headers directly so that
-// `static const VkPipelineStageFlagBits2` / `VkAccessFlagBits2` values
-// (VK_PIPELINE_STAGE_2_*, VK_ACCESS_2_*) are visible as file-scope names.
-// MSVC does not export `static const` namespace-scope variables from header
-// units, so `import vulkan;` alone is not enough for these types.
-#define VK_USE_PLATFORM_WIN32_KHR
-#include <vulkan/vulkan.h>
-#include <vma/vk_mem_alloc.h>
 module HAL:Utils;
 import stl.core;
+import vulkan;
 import Core;
 
 namespace

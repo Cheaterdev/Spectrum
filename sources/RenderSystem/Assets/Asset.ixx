@@ -18,6 +18,21 @@ enum class Asset_Type : int
 	TILED_TEXTURE
 };
 
+// What an asset file is for. An asset class serializes the parts the target needs and records in the file
+// what it wrote, so one loader reads either: the editor keeps everything (a material's graph and its
+// shader sources), a device build drops the editing data and keeps what drawing needs (a material's
+// parameters, textures and compiled pipelines). Set by the offline tool before saving; Editor otherwise.
+enum class AssetTarget : int
+{
+	Editor,
+	Device
+};
+
+struct AssetSerialization
+{
+	static AssetTarget& target() { static AssetTarget t = AssetTarget::Editor; return t; }
+};
+
 
 class Asset;
 class AssetManagerHolder;
@@ -112,8 +127,8 @@ class AssetReference : public AssetReferenceBase
 			init();
 		}
 
-		template<class T>
-		void operator=(std::shared_ptr<T> asset)
+		template<class U>   // not T: that would shadow the class's own parameter
+		void operator=(std::shared_ptr<U> asset)
 		{
 			destroy();
 			base_asset = asset;
@@ -269,8 +284,8 @@ public:
 		SERIALIZE()
 		{
 			 SAVE_PARENT(AssetHolder);
-			ar& NVP(name);
-			ar& NVP(additional_files);
+			cereal::wide_serialize(ar, name);
+			cereal::wide_serialize(ar, additional_files);
 			ar& NVP(version);
 		}
 };
@@ -299,9 +314,9 @@ class AssetStorage : public SharedObject<AssetStorage>, public EditObject
 				SERIALIZE()
 				{
 					ar& NVP(id);
-					ar& NVP(name);
+					cereal::wide_serialize(ar, name);
 					ar& NVP(references);
-					ar& NVP(additional_files);
+					cereal::wide_serialize(ar, additional_files);
 					ar& NVP(type);
 				}
 
@@ -472,7 +487,7 @@ class AssetManager : public Singleton<AssetManager>, public EditContainer, publi
 			auto asset = create_func();
 			asset->register_new(asset->name, id);
 			asset->save();
-			return asset->get_ptr<T>();
+			return asset->template get_ptr<T>();
 		}
 
 		AssetStorage::ptr get_storage(Guid id);
@@ -489,7 +504,7 @@ class AssetManager : public Singleton<AssetManager>, public EditContainer, publi
 			auto storage = (new AssetStorage(asset))->get_ptr();
 
 			if (!id.isValid())
-				id = xg::newGuid();
+				id = xg::new_guid();
 
 			if (name.empty())
 				name = convert(to_string(id));
@@ -514,6 +529,8 @@ class AssetManager : public Singleton<AssetManager>, public EditContainer, publi
 
 		virtual void remove_listener(AssetListener* l);
 };
+
+} // end export: Clang rejects out-of-class member definitions inside `export { }`
 
 //////////////////////////////////////////////////////////////////////////
 /*  AssetReference(AssetReference<T>&& other) : AssetReferenceBase(std::forward<AssetReferenceBase>(other))
@@ -569,6 +586,8 @@ material_tester.reset(new MeshAssetInstance(asset_ptr));
 
 
 
+export {
+
 // Central registry of every EngineAsset's loader. EngineAssets are namespace-
 // scope globals (e.g. EngineAssets::brdf), so each registers a `[this]{ get_asset(); }`
 // on construction and preload_engine_assets() force-loads them all once at
@@ -616,13 +635,13 @@ public:
 
 		if (shared) return shared;
 
-		shared = AssetManager::get().get<T>(id);
+		shared = AssetManager::get().template get<T>(id);
 
 		if (!shared &&creator)
 		{
 			auto asset_ptr = creator();
 			asset_ptr->register_new(name, id);
-			shared = asset_ptr->get_ptr<T>();
+			shared = asset_ptr->template get_ptr<T>();
 		}
 		asset = shared;
 		return shared;
@@ -640,6 +659,8 @@ inline void preload_engine_assets()
 	for (auto& loader : engine_asset_preloaders())
 		loader();
 }
+
+} // end export again for the out-of-class serialize() definition below
 
 
 
@@ -663,14 +684,14 @@ void AssetReference<T>::serialize(Archive& ar)
 			auto storage = AssetManager::get().get_storage(guid);
 
 			if (!storage)
-				throw std::exception("cant load reference, no asset storage");
+				throw std::runtime_error("cant load reference, no asset storage");
 			if (!storage->is_loaded())
 				Log::get() << "UNWANTED BEHAVIOUR FOR " << "->" << convert(storage->get_name()) << " " << guid<< Log::endl;
 
 			auto asset = storage->get_asset();
 
 			if (!asset)
-				throw std::exception("cant load reference");
+				throw std::runtime_error("cant load reference");
 			base_asset = asset;
 			init();
 		}
@@ -685,4 +706,6 @@ void AssetReference<T>::serialize(Archive& ar)
 
 	//        ar &NVP(data);
 }
+
+export {   // reopened (empty) so the original closing brace below still pairs
 }

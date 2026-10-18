@@ -49,8 +49,8 @@ export class SceneFrameRenderer : public VariableContext
 	// always names itself "mesh_renderer" (see MeshRenderer.cpp), so without
 	// these every instance across the app would be an identically-named
 	// sibling in the Properties tree.
-	VariableContext m_forward_context{ L"Main View / Forward" };
-	VariableContext m_gpu_context{ L"Main View / GPU" };
+	std::unique_ptr<VariableContext> m_forward_context = VariableContext::create(L"Main View / Forward");   // ctor is protected: use create()
+	std::unique_ptr<VariableContext> m_gpu_context = VariableContext::create(L"Main View / GPU");
 
 	Scene::ptr          m_scene;
 	main_renderer::ptr  m_forward_renderer;

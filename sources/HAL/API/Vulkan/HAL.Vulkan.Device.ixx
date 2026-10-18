@@ -1,8 +1,3 @@
-module;
-// Global module fragment: extension types (e.g. VkMutableDescriptorTypeCreateInfoEXT)
-// are not reliably visible through the `vulkan` header unit, so include the header directly.
-#define VK_USE_PLATFORM_WIN32_KHR
-#include <vulkan/vulkan.h>
 export module HAL:API.Device;
 
 import stl.core;
@@ -19,7 +14,9 @@ using namespace HAL;
 // Forward declarations for HAL-layer classes that live outside namespace API
 // but must access protected API::Device fields (e.g. via static_cast<API::Device&>).
 // Full definitions live in their own partitions; only names needed here.
-namespace HAL
+// export: these are later defined as exported classes, and Clang rejects exporting a
+// redeclaration of something first declared with module linkage.
+export namespace HAL
 {
     class Heap;
     class SwapChain;
@@ -193,7 +190,8 @@ export namespace HAL
             // (buffer, offset), spanning to the buffer's end -- a build writes
             // only the bytes it needs, and the BLAS address an instance stores
             // must be the object's address (checked equal to the storage's).
-            VkAccelerationStructureKHR get_acceleration_structure(VkBuffer buffer, VkDeviceSize offset, VkDeviceSize buffer_size);
+            VkAccelerationStructureKHR get_acceleration_structure(VkBuffer buffer, VkDeviceSize offset, VkDeviceSize buffer_size,
+                                                                VkAccelerationStructureTypeKHR type = VK_ACCELERATION_STRUCTURE_TYPE_GENERIC_KHR);
             void forget_acceleration_structures(VkBuffer buffer);   // the buffer is being destroyed
 
             VkDescriptorSetLayout get_resource_set_layout()    const noexcept { return resource_set_layout; }

@@ -1,7 +1,3 @@
-module;
-#define VK_USE_PLATFORM_WIN32_KHR
-#include <vulkan/vulkan.h>
-#include <vma/vk_mem_alloc.h>
 module HAL:Device;
 
 import :Debug;
@@ -11,6 +7,7 @@ import :Sampler;
 import :HeapAllocators;
 
 import stl.core;
+import vulkan;
 import Core;
 
 namespace
@@ -235,30 +232,31 @@ namespace HAL
             std::vector<VkQueueFamilyProperties> qf_props(qf_count);
             vkGetPhysicalDeviceQueueFamilyProperties(vk_physical, &qf_count, qf_props.data());
 
-            uint32_t graphics_family = UINT32_MAX;
-            uint32_t compute_family  = UINT32_MAX;
-            uint32_t transfer_family = UINT32_MAX;
+            constexpr uint32_t invalid_family = std::numeric_limits<uint32_t>::max();
+            uint32_t graphics_family = invalid_family;
+            uint32_t compute_family  = invalid_family;
+            uint32_t transfer_family = invalid_family;
 
             for (uint32_t i = 0; i < qf_count; ++i)
             {
-                if (graphics_family == UINT32_MAX &&
+                if (graphics_family == invalid_family &&
                     (qf_props[i].queueFlags & VK_QUEUE_GRAPHICS_BIT))
                     graphics_family = i;
 
-                if (compute_family == UINT32_MAX &&
+                if (compute_family == invalid_family &&
                     (qf_props[i].queueFlags & VK_QUEUE_COMPUTE_BIT) &&
                     !(qf_props[i].queueFlags & VK_QUEUE_GRAPHICS_BIT))
                     compute_family = i;
 
-                if (transfer_family == UINT32_MAX &&
+                if (transfer_family == invalid_family &&
                     (qf_props[i].queueFlags & VK_QUEUE_TRANSFER_BIT) &&
                     !(qf_props[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) &&
                     !(qf_props[i].queueFlags & VK_QUEUE_COMPUTE_BIT))
                     transfer_family = i;
             }
             // Fall back to graphics queue if dedicated queues not found
-            if (compute_family  == UINT32_MAX) compute_family  = graphics_family;
-            if (transfer_family == UINT32_MAX) transfer_family = graphics_family;
+            if (compute_family  == invalid_family) compute_family  = graphics_family;
+            if (transfer_family == invalid_family) transfer_family = graphics_family;
 
             // Store for Queue::construct() and CommandAllocator, indexed by
             // HAL::CommandListType. The async compute queues (COMPUTE2/3) take
@@ -704,6 +702,7 @@ namespace HAL
                         Log::get().crash_error(std::string("[Vulkan] sparse block size of ") + what + " is "
                             + std::to_string(req.alignment) + ", the tile grid assumes 64 KB");
                     sparse_memory_type_bits &= req.memoryTypeBits;
+
                 };
 
                 VkBufferCreateInfo bci{ VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
@@ -749,7 +748,50 @@ namespace HAL
                     p.tiled_3d = probe_image(VK_IMAGE_TYPE_3D, VK_FORMAT_R16G16B16A16_SFLOAT, VK_IMAGE_USAGE_STORAGE_BIT, "3D image");
 
                 if (!sparse_memory_type_bits)
-                    Log::get().crash_error("[Vulkan] no memory type accepts every sparse resource kind");
+                {
+                    // Adreno: sparse buffers and sparse images require different memory types, so no one tile
+                    // heap can back every sparse kind. Heaps also carry the memory placed (non-sparse)
+                    // resources are bound into, so fall back to a type every plain kind accepts and give up on
+                    // sparse-bound (reserved) resources, which would need the tile heap.
+                    Log::get() << Log::LEVEL_WARNING << "[Vulkan] no memory type accepts every sparse resource kind; "
+                        "heaps use the placed-resource memory type, reserved (sparse) resources are unavailable" << Log::endl;
+
+                    uint32_t plain_bits = ~0u;
+                    VkBufferCreateInfo pbci{ VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
+                    pbci.size  = SPARSE_TILE_SIZE;
+                    pbci.usage = buffer_usage;
+                    VkBuffer plain_buffer = VK_NULL_HANDLE;
+                    vkCreateBuffer(vk_device, &pbci, nullptr, &plain_buffer);
+                    VkMemoryRequirements preq{};
+                    vkGetBufferMemoryRequirements(vk_device, plain_buffer, &preq);
+                    plain_bits &= preq.memoryTypeBits;
+                    vkDestroyBuffer(vk_device, plain_buffer, nullptr);
+
+                    auto plain_image = [&](VkFormat format, VkImageUsageFlags usage) {
+                        VkImageCreateInfo ici{ VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO };
+                        ici.imageType   = VK_IMAGE_TYPE_2D;
+                        ici.format      = format;
+                        ici.extent      = { 256, 256, 1 };
+                        ici.mipLevels   = 1;
+                        ici.arrayLayers = 1;
+                        ici.samples     = VK_SAMPLE_COUNT_1_BIT;
+                        ici.usage       = usage | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+                        VkImage image = VK_NULL_HANDLE;
+                        if (vkCreateImage(vk_device, &ici, nullptr, &image) != VK_SUCCESS)
+                            return;
+                        VkMemoryRequirements ireq{};
+                        vkGetImageMemoryRequirements(vk_device, image, &ireq);
+                        plain_bits &= ireq.memoryTypeBits;
+                        vkDestroyImage(vk_device, image, nullptr);
+                    };
+                    plain_image(VK_FORMAT_R16G16B16A16_SFLOAT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_STORAGE_BIT);
+                    plain_image(VK_FORMAT_D32_SFLOAT, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT);
+
+                    Log::get() << Log::LEVEL_INFO << "[Vulkan] placed-resource memoryTypeBits 0x" << std::hex << plain_bits << std::dec << Log::endl;
+                    if (!plain_bits)
+                        Log::get().crash_error("[Vulkan] no memory type accepts every placed resource kind either");
+                    sparse_memory_type_bits = plain_bits;
+                }
             }
 
             // ---- VRAM info --------------------------------------------------
@@ -792,6 +834,12 @@ namespace HAL
                          uint64_t(L.maxPerStageUpdateAfterBindResources) / 5,
                          uint64_t(L.maxUpdateAfterBindDescriptorsInAllPools) / 2 })
                     cap = std::min(cap, limit);
+                // Adreno: the Append/Consume counters are binding 2, behind the mutable resource array at binding 0.
+                // At 524288 entries that array is large enough that binding 2 is out of the driver's reach: every
+                // counter reads as unbound, so atomics return 0 and nothing counts (VSM's tile lists stayed empty).
+                // 262144 works; both found with Core.Compute::AppendCounter.
+                if (p.name.find("Adreno") != std::string::npos)
+                    cap = std::min<uint64_t>(cap, 65536 * 4);
                 resource_heap_capacity = static_cast<uint32_t>(cap);
                 sampler_heap_capacity  = static_cast<uint32_t>(std::min<uint64_t>({ REQUESTED_SAMPLERS,
                     L.maxDescriptorSetUpdateAfterBindSamplers - NUM_INLINE_SMP,
@@ -1060,7 +1108,8 @@ namespace HAL
             return build_sizes(to_native(inputs), fn_get_as_build_sizes, vk_device);
         }
 
-        VkAccelerationStructureKHR Device::get_acceleration_structure(VkBuffer buffer, VkDeviceSize offset, VkDeviceSize buffer_size)
+        VkAccelerationStructureKHR Device::get_acceleration_structure(VkBuffer buffer, VkDeviceSize offset, VkDeviceSize buffer_size,
+                                                                          VkAccelerationStructureTypeKHR type)
         {
             if (!fn_create_as || buffer == VK_NULL_HANDLE || offset >= buffer_size) return VK_NULL_HANDLE;
 
@@ -1073,7 +1122,7 @@ namespace HAL
             ci.buffer = buffer;
             ci.offset = offset;
             ci.size   = buffer_size - offset;
-            ci.type   = VK_ACCELERATION_STRUCTURE_TYPE_GENERIC_KHR;
+            ci.type   = type;
             fn_create_as(vk_device, &ci, nullptr, &as);
             ASSERT(as != VK_NULL_HANDLE && "vkCreateAccelerationStructureKHR failed");
             return as;

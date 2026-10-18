@@ -51,7 +51,7 @@ export{
 
 				if constexpr (Archive::is_loading::value)
 				{
-					Device& device = *cereal::get_user_data<UniversalContext>(ar).get_context<Device*>();
+					Device& device = *cereal::get_user_data<UniversalContext>(ar).template get_context<Device*>();
 					_init(device, desc, HeapType::DEFAULT, TextureLayout::UNDEFINED);
 					GPUBinaryData<true> binary;
 					ar& NVP(binary);

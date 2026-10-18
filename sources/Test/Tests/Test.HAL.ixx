@@ -438,6 +438,9 @@ export namespace Test
 
 	TEST(Core.HAL, LoadIconTexture)
 	{
+#ifdef SPECTRUM_PLATFORM_ANDROID
+		throw Test::TestSkipped("the device has no JPEG decoder (textures are pre-baked by spectrum_tool)");
+#endif
 		auto& device = RenderSystem::get().device();
 
 		auto file = FileSystem::get().get_file("resources/icon.jpg");
@@ -664,7 +667,8 @@ export namespace Test
 		// selection rounds by each vendor's fixed-point LOD: AMD against the
 		// NVIDIA golden differs on ~140 pixels there (point picks the other
 		// mip; trilinear by 3/255). NVIDIA D3D12 vs Vulkan is exact.
-		ASSERT_TEXTURE_EX(output.get(), "sampler_probe", .max_mismatch_fraction = 0.0005);
+		// Adreno against the NVIDIA golden: up to 4/255 (its fixed-point LOD blend), nothing beyond.
+		ASSERT_TEXTURE_EX(output.get(), "sampler_probe", .tolerance = 4, .max_mismatch_fraction = 0.0005);
 	}
 
 	// Vulkan keeps Append/Consume counters in their own binding, written apart

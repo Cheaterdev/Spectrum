@@ -312,6 +312,29 @@ struct  SimpleGraphicsPSO {
 };
 
 
+enum class PSOBuildResult
+{
+	Created,
+	Unsupported,   // device lacks a feature the PSO requires (mesh shaders, ray queries, tiled depth)
+	Failed         // shader compile or pipeline creation failed
+};
+
+// Lets offline tooling (spectrum_tool) see every PSO + key combination the
+// engine builds, without the engine knowing about the tool. Unset in the game.
+// Function-local so no dynamic-init static lives in the module interface.
+struct PSOBuildObserver
+{
+	using Compute  = std::function<void(const SimpleComputePSO&, PSOBuildResult)>;
+	using Graphics = std::function<void(const SimpleGraphicsPSO&, PSOBuildResult)>;
+
+	static Compute& compute() { static Compute f; return f; }
+	static Graphics& graphics() { static Graphics f; return f; }
+
+	// Compile the shaders of PSOs the current device can't run (and then report
+	// Unsupported), so a precompile pass covers every target's variants.
+	static bool& compile_unsupported() { static bool v = false; return v; }
+};
+
 template <auto Member, auto ... Args>
 struct ShaderDefine
 {
@@ -403,7 +426,17 @@ public:
 		return create_task([&]()
 		{
 		//		PROFILE(convert(typeid(T).name()));
-				target = std::make_shared<T>(device);
+				// A throw here would only surface at when_all().wait() (or, with PPL, never), leaving
+				// the engine holder's entry null; name the PSO so the cause is in the log.
+				try
+				{
+					target = std::make_shared<T>(device);
+				}
+				catch (const std::exception& e)
+				{
+					Log::get() << Log::LEVEL_ERROR << "PSO " << typeid(T).name() << " creation threw: " << e.what() << Log::endl;
+					throw;
+				}
 		});
 	}
 };

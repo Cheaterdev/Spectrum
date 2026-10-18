@@ -1,4 +1,4 @@
-﻿module GUI:TabControl;
+module GUI:TabControl;
 import :Renderer;
 
 
@@ -135,6 +135,11 @@ namespace GUI
             get_label()->docking = dock::LEFT;
             set_package("tab_button");
             skin = Skin::get().TabButton;
+        }
+
+        void tab_button::set_closable(bool closable)
+        {
+            close_button->visible = closable;
         }
 
         void tab_strip::draw(Context& c)
@@ -350,6 +355,14 @@ namespace GUI
             contents.reset(new base);
             contents->docking = dock::FILL;
             add_child(contents);
+        }
+
+        void tab_control::set_strip_height(float height)
+        {
+            strip->size = { height, height };
+            strip->all->size = { height, height };
+            strip->recalculate_tabs();
+            strip->set_update_layout();
         }
 
         void tab_control::draw(Context& c)

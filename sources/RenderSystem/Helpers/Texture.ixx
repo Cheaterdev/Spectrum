@@ -104,7 +104,7 @@ export
 			{
 			if constexpr (!Archive::is_saving::value)
 				{
-				 cereal::get_user_data<UniversalContext>(ar).get_context<Device*>() = &RenderSystem::get().device();
+				 cereal::get_user_data<UniversalContext>(ar).template get_context<Device*>() = &RenderSystem::get().device();
 
 			}
 				ar& NVP(resource);

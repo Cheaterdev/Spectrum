@@ -45,6 +45,12 @@ public:
 	// (get_shadow_vsm's default path) and the PCSS-style blocker-search +
 	// penumbra-scaled variant (VSM_impl.hlsl, gated by VSM_PENUMBRA) -- picks
 	// which VSMApplyCompute PSO permutation gets bound in m_combine_render.
+	// Off: VSM_Unshadowed lights the scene instead (no shadows).
+	Variable<bool> enabled = { true, "Enabled", this };
+	// Debug aid for bisecting a GPU fault in the penumbra path: how many of its stages record. 1 = classify,
+	// 2 = + blocker search, then the resolve's dispatches one by one: 3 = + lit tiles, 4 = + dark tiles,
+	// 5 = + confirmed-lit tiles, 6 = + blur tiles (everything).
+	Variable<float> debug_pcss_stages = { 6.0f, "Debug: PCSS stages", this, 0.0f, 6.0f };
 	Variable<bool> use_vsm_penumbra = { true, "PCSS penumbra", this };
 
 	// Runtime toggle for the RTX blocker-distance verification ray (Phase
@@ -506,6 +512,7 @@ private:
 
 	// Devices without sparse depth: direct lighting, unshadowed.
 	Passes::Shadows::VSM::VSM_Unshadowed::render_func_type m_unshadowed_render;
+	Passes::Shadows::VSM::SkyAmbient::render_func_type m_skyambient_render;
 
 	// Debug tile-classification overlay -- reads stage 1's real
 	// VSM_LitTiles/VSM_DarkTiles lists and paints over the already-shaded
@@ -548,6 +555,10 @@ public:
 
 	void pass_data(FrameGraph::TaskBuilder& builder);
 
+	// True when the GPU has no sparse depth textures: the atlas is then an ordinary texture of physical_page_count
+	// pages instead of a reserved one with pages mapped on demand.
+	static bool atlas_resident();
+
 	// For consumers outside VSM's own passes that only need a simple
 	// depth-compare sample (VSMShadowLookup/get_shadow_vsm_simple), not the
 	// full penumbra/PCSS pipeline -- e.g. VoxelGI's Lighting pass, which
@@ -589,6 +600,7 @@ public:
 		if constexpr (requires { pipeline.vSM_ShadowResolve; })        pipeline.vSM_ShadowResolve.render_func        = m_shadowresolve_render;
 		if constexpr (requires { pipeline.vSM_Combine; })              pipeline.vSM_Combine.render_func              = m_combine_render;
 		if constexpr (requires { pipeline.vSM_Unshadowed; })           pipeline.vSM_Unshadowed.render_func           = m_unshadowed_render;
+		if constexpr (requires { pipeline.skyAmbient; })               pipeline.skyAmbient.render_func               = m_skyambient_render;
 		if constexpr (requires { pipeline.vSM_DebugClassifyOverlay; }) pipeline.vSM_DebugClassifyOverlay.render_func = m_debugoverlay_render;
 		if constexpr (requires { pipeline.vSM_DepthAnalysis; })        pipeline.vSM_DepthAnalysis.render_func        = m_depth_analysis_render;
 	}

@@ -17,6 +17,7 @@ export namespace GUI
 			GUI::base::ptr over_filled;
 			bool allow_overflow = false;
 			vec2 speed;
+			vec2 fling_velocity;   // dp/s, set when a touch drag is released; decays in think()
 		public:
 			GUI::base::ptr contents;
 
@@ -36,6 +37,10 @@ export namespace GUI
 
 		
 			virtual void moving(vec2 pos);
+
+			// Two-finger pinch over the content: ratio is the distance change since the last call,
+			// center is in pixels; ended is set once when the fingers lift.
+			virtual void on_pinch(vec2 center, float ratio, bool ended) {}
 
 
 			virtual	bool on_wheel(mouse_wheel type, float value, vec2 pos) override;

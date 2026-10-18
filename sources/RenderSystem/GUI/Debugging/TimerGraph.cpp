@@ -241,6 +241,9 @@ namespace GUI
 					clickable = true;
 				}
 
+				// Touch pans and pinches through the scroll container's mover; range-select is mouse-only.
+				bool on_touch_action(mouse_action, touch&) override { return false; }
+
 				bool on_mouse_action(mouse_action action, mouse_button btn, vec2 pos) override
 				{
 					if (btn != mouse_button::LEFT) return false;
@@ -509,30 +512,60 @@ namespace GUI
 				float eff_vw     = filled->get_render_bounds().w - names_w;
 				if (eff_vw <= 0) return;
 
-				float origin = front->get_render_bounds().x + float(front->padding->left);
+				// x0/x1, origin and eff_vw are pixels; build_scaler is dp per second.
+				const float dp = 1.0f / result_scale;
+				float origin = front->get_render_bounds().x + float(front->padding->left) * result_scale;
 
 				if (x1 > x0)
 				{
 					// zoom in: selected range fills viewport
-					double dt0 = double(x0 - origin) / build_scaler;
-					double dt1 = double(x1 - origin) / build_scaler;
+					double dt0 = build_t0 + double((x0 - origin) * dp) / build_scaler;
+					double dt1 = build_t0 + double((x1 - origin) * dp) / build_scaler;
 					if (dt1 - dt0 < 1e-9) return;
-					build_scaler = eff_vw / float(dt1 - dt0);
+					build_scaler = eff_vw * dp / float(dt1 - dt0);
 					build_t0     = dt0;
 				}
 				else
 				{
 					// zoom out: drag_width maps inversely; center stays at viewport center
 					float  drag_px  = x0 - x1;
-					double center_t = double((x0 + x1) * 0.5f - origin) / build_scaler;
+					double center_t = build_t0 + double(((x0 + x1) * 0.5f - origin) * dp) / build_scaler;
 					build_scaler    = build_scaler * drag_px / eff_vw;
-					build_t0        = center_t - double(eff_vw * 0.5f) / build_scaler;
+					// A negative origin cannot be scrolled to (the content is clamped to start at 0).
+					build_t0        = std::max(0.0, center_t - double(eff_vw * dp * 0.5f) / build_scaler);
 				}
 
 				rebuild_display();
 			}
 
 			// ── TimeGraph::zoom_reset ─────────────────────────────────────────────
+
+			// Rebuilding the display is heavy, so a pinch only accumulates its ratio and zooms once on release.
+			void TimeGraph::on_pinch(vec2 center, float ratio, bool ended)
+			{
+				if (!ended)
+				{
+					pinch_ratio *= ratio;
+					return;
+				}
+
+				float r = pinch_ratio;
+				pinch_ratio = 1.0f;
+				float names_w = names_col ? names_col->get_render_bounds().w : 0.0f;
+				float eff_vw  = filled->get_render_bounds().w - names_w;
+				if (eff_vw <= 0 || std::abs(r - 1.0f) < 0.05f) return;
+
+				if (r > 1.0f)
+				{
+					float half = eff_vw / (2.0f * r);
+					zoom_to_selection(center.x - half, center.x + half);
+				}
+				else
+				{
+					float half = r * eff_vw * 0.5f;
+					zoom_to_selection(center.x + half, center.x - half);
+				}
+			}
 
 			void TimeGraph::zoom_reset()
 			{
@@ -571,7 +604,7 @@ namespace GUI
 				toolbar->color       = {0.08f, 0.08f, 0.10f, 1.0f};
 				toolbar->docking     = dock::TOP;
 				toolbar->height_size = size_type::FIXED;
-				toolbar->size        = {0, 30};
+				toolbar->size        = {0, 44};
 				toolbar->padding     = {6, 0, 6, 0};
 				base::add_child(toolbar);
 
@@ -579,7 +612,7 @@ namespace GUI
 				btn_start->docking     = dock::LEFT;
 				btn_start->width_size  = size_type::FIXED;
 				btn_start->height_size = size_type::FIXED;
-				btn_start->size        = {80, 26};
+				btn_start->size        = {84, 40};
 				btn_start->on_click = [this](button::ptr) { need_start = true; Profiler::get().set_cpu_listener(this);};
 				btn_start->get_label()->text = "capture";
 				toolbar->add_child(btn_start);
@@ -588,7 +621,7 @@ namespace GUI
 				btn_zoom_out->docking     = dock::LEFT;
 				btn_zoom_out->width_size  = size_type::FIXED;
 				btn_zoom_out->height_size = size_type::FIXED;
-				btn_zoom_out->size        = {80, 26};
+				btn_zoom_out->size        = {84, 40};
 				btn_zoom_out->on_click    = [this](button::ptr) { zoom_reset(); };
 				btn_zoom_out->get_label()->text = "zoom out";
 				toolbar->add_child(btn_zoom_out);
@@ -599,7 +632,7 @@ namespace GUI
 					lbl->docking     = dock::LEFT;
 					lbl->width_size  = size_type::FIXED;
 					lbl->height_size = size_type::FIXED;
-					lbl->size        = {60, 26};
+					lbl->size        = {52, 40};
 					lbl->text        = "  depth:";
 					lbl->color       = {0.6f, 0.6f, 0.6f, 1.0f};
 					toolbar->add_child(lbl);
@@ -609,7 +642,7 @@ namespace GUI
 					btn_dec->docking     = dock::LEFT;
 					btn_dec->width_size  = size_type::FIXED;
 					btn_dec->height_size = size_type::FIXED;
-					btn_dec->size        = {22, 26};
+					btn_dec->size        = {44, 40};
 					btn_dec->on_click    = [this](button::ptr) {
 						auto& ml = Profiler::get().max_level;
 						if (ml > 1 && ml != std::numeric_limits<int>::max()) --ml;
@@ -623,7 +656,7 @@ namespace GUI
 					val_lbl->docking     = dock::LEFT;
 					val_lbl->width_size  = size_type::FIXED;
 					val_lbl->height_size = size_type::FIXED;
-					val_lbl->size        = {24, 26};
+					val_lbl->size        = {30, 40};
 					val_lbl->text        = "inf";
 					val_lbl->color       = {1.0f, 1.0f, 1.0f, 1.0f};
 					toolbar->add_child(val_lbl);
@@ -634,7 +667,7 @@ namespace GUI
 					btn_inc->docking     = dock::LEFT;
 					btn_inc->width_size  = size_type::FIXED;
 					btn_inc->height_size = size_type::FIXED;
-					btn_inc->size        = {22, 26};
+					btn_inc->size        = {44, 40};
 					btn_inc->on_click    = [this](button::ptr) {
 						auto& ml = Profiler::get().max_level;
 						if (ml == std::numeric_limits<int>::max()) ml = 1;
@@ -649,7 +682,7 @@ namespace GUI
 					btn_inf->docking     = dock::LEFT;
 					btn_inf->width_size  = size_type::FIXED;
 					btn_inf->height_size = size_type::FIXED;
-					btn_inf->size        = {22, 26};
+					btn_inf->size        = {48, 40};
 					btn_inf->on_click    = [this](button::ptr) {
 						Profiler::get().max_level = std::numeric_limits<int>::max();
 						max_level_lbl->text = "inf";

@@ -8,6 +8,7 @@ import Test.Events;
 import Test.FileSystem;
 import Test.Profiling;
 import Test.HAL;
+import Test.HAL.Compute;
 import Test.HAL.SubresRangeMap;
 import Test.RenderSystem.FrameGraph;
 import Test.SceneParity;
@@ -34,13 +35,7 @@ int main(int argc, char** argv)
 	Application::test_mode = true;
 	SetupLogging();
 
-	// Anisotropic filtering is vendor-defined (AMD and NVIDIA differ by up to
-	// 21/255 on the same footprint), so a golden made on one GPU can't hold on
-	// another. Tests sample through the anisotropic samplers trilinearly,
-	// which the APIs define. Must precede device creation: both backends
-	// build their static samplers from these descriptors.
-	for (auto* desc : { &HAL::Samplers::SamplerAnisoWrapDesc, &HAL::Samplers::SamplerAnisoBorderDesc })
-		desc->MinFilter = desc->MagFilter = desc->MipFilter = HAL::Filter::LINEAR;
+	HAL::Samplers::make_anisotropic_trilinear();   // before any device exists; see its comment
 
 
 	std::string filter;

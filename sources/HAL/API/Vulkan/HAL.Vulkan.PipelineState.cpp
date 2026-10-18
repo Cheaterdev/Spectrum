@@ -1,16 +1,15 @@
-module;
-#define VK_USE_PLATFORM_WIN32_KHR
-#include <vulkan/vulkan.h>
-#include "HAL.Vulkan.SpirvEntryPoints.h"
 module HAL:PipelineState;
 
+import stl.core;
 import vulkan;
 import Core;
+#include "HAL.Vulkan.SpirvEntryPoints.h"
 import :Types;
 import :Utils;
 import :Device;
 import :RootSignature;
 import :Shader;
+import :ShaderCompiler;   // ShaderCompiler::can_compile
 import :PipelineState;
 import :API.Device;
 
@@ -152,6 +151,11 @@ namespace HAL
         VkDevice vk_dev = api_dev.get_native_device();
         if (vk_dev == VK_NULL_HANDLE) return;
 
+        // Deserialized material pipelines (HAL::Wrapper) still describe the mesh-shader form on a GPU without
+        // it, where the driver rejects them (VK_ERROR_UNKNOWN); those materials draw through their vertex-stage pipelines.
+        if ((desc.mesh || desc.amplification) && !root_signature->get_device().is_mesh_shader_supported())
+            return;
+
         // ---- Shader modules -------------------------------------------------
         auto make_stage = [&](VkShaderStageFlagBits stage,
                                const binary& blob,
@@ -198,6 +202,11 @@ namespace HAL
 
         if (stages.empty() || !all_stages_ready)
         {
+            // With no shader compiler an empty shader never fills in later (with one it does: material shaders are
+            // async), and every draw with this pipeline is then skipped without a word.
+            if (!ShaderCompiler::can_compile)
+                Log::get() << Log::LEVEL_ERROR << "pipeline '" << desc.name << "' not built: a shader has no blob "
+                           << "(precompiled shader missing from the cache)" << Log::endl;
             for (VkShaderModule m : modules_to_destroy)
                 vkDestroyShaderModule(vk_dev, m, nullptr);
             return; // vk_pipeline stays null; draws with it are skipped until the shaders land
@@ -406,7 +415,11 @@ namespace HAL
         if (vk_dev == VK_NULL_HANDLE) return;
 
         const auto& blob = desc.shader->get_blob();
-        if (blob.empty() || blob.size() % 4 != 0) return;
+        if (blob.empty() || blob.size() % 4 != 0)
+        {
+            Log::get() << Log::LEVEL_ERROR << "compute pipeline '" << desc.name << "': no usable shader blob (" << blob.size() << " bytes)" << Log::endl;
+            return;
+        }
 
         // Use the entry point name from compilation (-E flag), e.g. "CS".
         const auto& ep = desc.shader->blob.entry_point;
@@ -417,8 +430,12 @@ namespace HAL
         module_ci.pCode    = reinterpret_cast<const uint32_t*>(blob.data());
 
         VkShaderModule cs_module = VK_NULL_HANDLE;
-        vkCreateShaderModule(vk_dev, &module_ci, nullptr, &cs_module);
-        if (cs_module == VK_NULL_HANDLE) return;
+        const VkResult module_result = vkCreateShaderModule(vk_dev, &module_ci, nullptr, &cs_module);
+        if (cs_module == VK_NULL_HANDLE)
+        {
+            Log::get() << Log::LEVEL_ERROR << "vkCreateShaderModule failed for compute pipeline '" << desc.name << "' code=" << (int)module_result << Log::endl;
+            return;
+        }
 
         VkComputePipelineCreateInfo cp_ci{ VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO };
         cp_ci.stage.sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -428,7 +445,9 @@ namespace HAL
         cp_ci.layout       = api_dev.get_pipeline_layout();
 
         VkPipeline pipeline = VK_NULL_HANDLE;
-        vkCreateComputePipelines(vk_dev, VK_NULL_HANDLE, 1, &cp_ci, nullptr, &pipeline);
+        const VkResult pipeline_result = vkCreateComputePipelines(vk_dev, VK_NULL_HANDLE, 1, &cp_ci, nullptr, &pipeline);
+        if (pipeline_result != VK_SUCCESS)
+            Log::get() << Log::LEVEL_ERROR << "vkCreateComputePipelines failed for '" << desc.name << "' code=" << (int)pipeline_result << Log::endl;
         tracked_info->vk_pipeline = pipeline;
         tracked_info->vk_device   = vk_dev;
 

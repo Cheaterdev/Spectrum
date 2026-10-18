@@ -25,8 +25,6 @@ export namespace HAL
         protected:
             // CPU-side wait uses a binary VkFence on Vulkan.
             VkFence vk_fence     = VK_NULL_HANDLE;
-            // Kept for interface compat with common HAL code.
-            HANDLE  m_fenceEvent = nullptr;
 
         public:
             virtual ~Event() = default;

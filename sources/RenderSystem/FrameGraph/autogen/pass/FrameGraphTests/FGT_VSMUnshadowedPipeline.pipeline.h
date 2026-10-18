@@ -44,6 +44,7 @@ namespace FrameGraphTests
 			L"GBuffer_Speed",
 			L"GBuffer_DepthMips",
 			L"ResultTexture",
+			L"sky_cubemap_filtered",
 			L"FGT_Sink",
 		};
 		static constexpr uint32_t resource_count = std::size(resource_names);
@@ -113,6 +114,12 @@ namespace FrameGraphTests
 			{ true, { ResultTexture_c0_pass_refs + 1, 1 } },
 			{ false, { ResultTexture_c0_pass_refs + 2, 1 } },
 		};
+		static inline const FrameGraph::PassRef sky_cubemap_filtered_c0_pass_refs[] = {
+			{ PassID::VSM_Unshadowed, 0 },
+		};
+		static inline const FrameGraph::PrecompiledState sky_cubemap_filtered_c0_states[] = {
+			{ false, { sky_cubemap_filtered_c0_pass_refs + 0, 1 } },
+		};
 		static inline const FrameGraph::PassRef FGT_Sink_c0_pass_refs[] = {
 			{ PassID::FGT_CopyResultToSink, 0 },
 		};
@@ -127,6 +134,7 @@ namespace FrameGraphTests
 			{ ResourceID::GBuffer_Speed, 0, GBuffer_Speed_c0_states },
 			{ ResourceID::GBuffer_DepthMips, 0, GBuffer_DepthMips_c0_states },
 			{ ResourceID::ResultTexture, 0, ResultTexture_c0_states },
+			{ ResourceID::sky_cubemap_filtered, 0, sky_cubemap_filtered_c0_states },
 			{ ResourceID::FGT_Sink, 0, FGT_Sink_c0_states },
 		};
 		static constexpr uint32_t resource_info_count = std::size(resource_infos);

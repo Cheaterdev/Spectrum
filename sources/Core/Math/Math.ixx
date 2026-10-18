@@ -8,6 +8,7 @@ export import :Math.Matrices;
 export import :Math.Primitive;
 export import :Math.AABB;
 export import :Math.Frustum;
+export import :Math.Plane;   // used outside Core (StencilRenderer); MSVC leaked it, Clang needs the re-export
 export import :Math.Sphere;
 export import :Math.Ray;
 

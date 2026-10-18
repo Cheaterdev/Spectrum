@@ -5,6 +5,7 @@ import stl.threading;
 import :Singleton;
 import :Log;
 import :Tree;
+import :Exceptions;
 
 export
 {
@@ -60,14 +61,22 @@ export
 	template<class T>
 	class TypedObject : public Object
 	{
-		static ObjectTracker tracker;
+		// A function-local static, not a static data member: Clang rejects another module
+		// instantiating an out-of-line static member that lives in this one, and an in-class
+		// initializer would evaluate typeid(T) while T is still incomplete (TypedObject<Device>
+		// is a base of Device), which MSVC rejects. The body is only instantiated on use.
+		static ObjectTracker& tracker()
+		{
+			static ObjectTracker instance(typeid(T).name());
+			return instance;
+		}
 	protected:
 		TypedObject()
 		{
 			if constexpr (BuildOptions::ObjectTracking)
 			{
 				if (ObjectTracker::alive)
-					tracker.track(this);
+					tracker().track(this);
 			}
 
 		}
@@ -75,7 +84,7 @@ export
 			if constexpr (BuildOptions::ObjectTracking)
 			{
 				if (ObjectTracker::alive)
-					tracker.untrack(this);
+					tracker().untrack(this);
 			}
 		}
 	public:
@@ -105,7 +114,9 @@ export
 	class Counter
 	{
 		std::chrono::high_resolution_clock::time_point start_time = std::chrono::high_resolution_clock::now();
-		static std::atomic_int32_t time;
+		// Defined in-class: an out-of-line definition in this module can't be instantiated by
+		// other modules under Clang ("declaration of 'time' ... follows declaration in module Core:Debug").
+		inline static std::atomic_int32_t time{ 0 };
 		std::string name;
 	public:
 
@@ -132,8 +143,6 @@ export
 		}
 	};
 
-	template<class T>
-	std::atomic_int32_t Counter<T>::time = 0;
 
 
 	class Checker
@@ -149,6 +158,3 @@ export
 
 }
 
-
-template<class T>
-ObjectTracker TypedObject<T>::tracker(TypedObject<T>::get_type_name());

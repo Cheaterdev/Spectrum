@@ -4,7 +4,7 @@
   "description": "Skribidi bidirectional text layout, editing and glyph/icon rasterization. Built as one static library that also contains its pinned SheenBidi, libunibreak and budouxc; harfbuzz comes from vcpkg.",
   "homepage": "https://github.com/memononen/skribidi",
   "license": "MIT",
-  "supports": "windows & x64 & !uwp & !xbox",
+  "supports": "(windows & x64 & !uwp & !xbox) | android",
   "dependencies": [
     {
       "name": "harfbuzz",

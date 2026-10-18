@@ -13,12 +13,12 @@ void EVENT(std::string_view s)
 }
 
 
-const std::string LogLevel<log_level_internal::level_none>::NAME    = "NONE";
-const std::string LogLevel<log_level_internal::level_error>::NAME   = "ERROR";
-const std::string LogLevel<log_level_internal::level_warning>::NAME = "WARNING";
-const std::string LogLevel<log_level_internal::level_info>::NAME    = "INFO";
-const std::string LogLevel<log_level_internal::level_debug>::NAME   = "DEBUG";
-const std::string LogLevel<log_level_internal::level_all>::NAME     = "ALL";
+template<> const std::string LogLevel<log_level_internal::level_none>::NAME    = "NONE";
+template<> const std::string LogLevel<log_level_internal::level_error>::NAME   = "ERROR";
+template<> const std::string LogLevel<log_level_internal::level_warning>::NAME = "WARNING";
+template<> const std::string LogLevel<log_level_internal::level_info>::NAME    = "INFO";
+template<> const std::string LogLevel<log_level_internal::level_debug>::NAME   = "DEBUG";
+template<> const std::string LogLevel<log_level_internal::level_all>::NAME     = "ALL";
 
 
 const LogLevel<log_level_internal::level_none>		Log::LEVEL_NONE;

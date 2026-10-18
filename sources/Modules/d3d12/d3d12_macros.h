@@ -47,6 +47,35 @@
 #  define E_NOINTERFACE   ((HRESULT)0x80004002L)
 #endif
 
+// ---- DXGI device-loss codes ---------------------------------------------
+// Macros in winerror.h (via _HRESULT_TYPEDEF_), used by HAL.D3D12.Device.cpp's DRED diagnostic.
+#ifndef DXGI_ERROR_DEVICE_HUNG
+#  define DXGI_ERROR_DEVICE_HUNG     ((HRESULT)0x887A0006L)
+#endif
+#ifndef DXGI_ERROR_DEVICE_REMOVED
+#  define DXGI_ERROR_DEVICE_REMOVED  ((HRESULT)0x887A0005L)
+#endif
+#ifndef DXGI_ERROR_DEVICE_RESET
+#  define DXGI_ERROR_DEVICE_RESET    ((HRESULT)0x887A0007L)
+#endif
+
+// ---- Win32 error / display-config constants -----------------------------
+// Used by HAL.DXGI.Swapchain.cpp's display-info query (DisplayConfigGetDeviceInfo).
+#ifndef ERROR_SUCCESS
+#  define ERROR_SUCCESS  0L
+#endif
+#ifndef QDC_ONLY_ACTIVE_PATHS
+#  define QDC_ONLY_ACTIVE_PATHS  0x00000002
+#endif
+
+// ---- Win32 file-system / loader constants -------------------------------
+#ifndef MAX_PATH
+#  define MAX_PATH  260
+#endif
+#ifndef LOAD_WITH_ALTERED_SEARCH_PATH
+#  define LOAD_WITH_ALTERED_SEARCH_PATH  0x00000008
+#endif
+
 // ---- Code-page identifiers ----------------------------------------------
 #ifndef CP_ACP
 #  define CP_ACP    0

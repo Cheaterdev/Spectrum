@@ -139,6 +139,7 @@ export import "../defines.h";
 #include "pass/Shadows/VSM/VSM_ScreenSpaceShadow.h"
 #include "pass/Shadows/VSM/VSM_ShadowResolve.h"
 #include "pass/Shadows/VSM/VSM_Combine.h"
+#include "pass/Shadows/VSM/SkyAmbient.h"
 #include "pass/Shadows/VSM/VSM_Unshadowed.h"
 #include "pass/Shadows/VSM/Dev/VSM_DebugClassifyOverlay.h"
 #include "pass/Shadows/VSM/VSM_DepthAnalysis.h"
@@ -170,6 +171,7 @@ export import "../defines.h";
 #include "pass/FrameGraphTests/FGT_AliasingPipeline.pipeline.h"
 #include "pass/FrameGraphTests/FGT_RasterCapturePipeline.pipeline.h"
 #include "pass/FrameGraphTests/FGT_RTCapturePipeline.pipeline.h"
+#include "pass/Environment/SkyViewPipeline.pipeline.h"
 #include "pass/Frame/MainPipeline.pipeline.h"
 #include "pass/UI/UIPipeline.pipeline.h"
 
@@ -793,6 +795,13 @@ export namespace Passes
 	{
 		namespace VSM
 		{
+			using ::Passes::Shadows::VSM::SkyAmbient;
+		}
+	}
+	namespace Shadows
+	{
+		namespace VSM
+		{
 			using ::Passes::Shadows::VSM::VSM_Unshadowed;
 		}
 	}
@@ -928,6 +937,10 @@ export namespace Pipelines
 	namespace FrameGraphTests
 	{
 		using ::Pipelines::FrameGraphTests::FGT_RTCapturePipeline;
+	}
+	namespace Environment
+	{
+		using ::Pipelines::Environment::SkyViewPipeline;
 	}
 	namespace Frame
 	{

@@ -204,38 +204,13 @@ Audit checklist (per ixx file):
 
 ---
 
-## 2. Compatibility shims that should be removed in the clean version
+## 2. Compatibility shims — removed
 
-The fast path introduced D3D12-named stand-ins so common files compile
-unchanged. The *clean* refactor should replace these with backend-neutral
-names in the common headers and drop the shims.
-
-- `HAL.Vulkan.Utils.ixx` defines stubs for D3D12/DXGI types used in common code:
-  `D3D12_CPU_DESCRIPTOR_HANDLE`, `D3D12_GPU_DESCRIPTOR_HANDLE`,
-  `DXGI_ADAPTER_DESC`, `D3D12_DISPATCH_ARGUMENTS`, `D3D12_DRAW_INDEXED_ARGUMENTS`,
-  `D3D12_DISPATCH_MESH_ARGUMENTS`, `D3D12_PROGRAM_IDENTIFIER`,
-  `D3D12_INDIRECT_ARGUMENT_TYPE`, `D3D12_INDIRECT_ARGUMENT_DESC`,
-  `D3D12_GPU_VIRTUAL_ADDRESS_AND_STRIDE`, `D3D12_NODE_GPU_INPUT`,
-  `D3D12_MULTI_NODE_GPU_INPUT`, `D3D12_RAYTRACING_INSTANCE_DESC`,
-  **`D3D_PRIMITIVE_TOPOLOGY`**.
-  - Source leaks to fix in **common** code so the shims can die:
-    - `HAL.DescriptorHeap.ixx` — `Handle::get_cpu()/get_gpu()` return
-      `D3D12_CPU/GPU_DESCRIPTOR_HANDLE`. Introduce a neutral
-      `HAL::DescriptorPointer { uint64 cpu; uint64 gpu; }` (or opaque) and
-      change the common signature; each backend fills it.
-    - `HAL.Device.cpp` — logs `adapter->get_desc().Description`. Introduce a
-      neutral `HAL::AdapterInfo { std::wstring name; uint vendor, device; size_t vram; }`
-      returned by `Adapter::get_info()`, and switch the log + the "Basic"
-      device-selection heuristic to it.
-    - `API::StateObject::id` is `D3D12_PROGRAM_IDENTIFIER` (work-graph only) —
-      gate behind a neutral type once work-graphs are abstracted.
-    - **`RenderSystem/Scene/Scene.ixx` and `MeshAsset.ixx`** use
-      `D3D12_RAYTRACING_INSTANCE_DESC` as a `virtual_gpu_buffer<T>` element type
-      and as a field type.  The proper fix is to introduce a backend-neutral
-      `HAL::RaytracingInstanceDesc` (identical binary layout to both the D3D12
-      struct and `VkAccelerationStructureInstanceKHR`) and use it everywhere.
-      The common `HAL::InstanceDesc` already exists in Types.ixx as a partial
-      mirror — unify them and migrate the RenderSystem.
+`HAL.Vulkan.Utils.ixx` no longer defines D3D12/DXGI stand-ins. The common HAL uses neutral types instead:
+`HAL::CPUDescriptorAddress` / `GPUDescriptorAddress` (`Handle::get_cpu()/get_gpu()`), `HAL::AdapterInfo`
+(`Adapter::get_info()`), `HAL::NodeGPUInput` / `MultiNodeGPUInput` (work-graph inputs), and `HAL::PrimitiveTopologyType`.
+The D3D12 backend converts at its own call sites (`native_cpu()` / `native_gpu()` in `HAL.D3D12.CommandList.cpp`,
+`create_indirect_for` in `HAL.D3D12.IndirectCommand.ixx`).
 
 - `to_native(const ResourceAddress&)` is declared in `HAL.Vulkan.Utils.ixx`
   and defined in `HAL.Vulkan.Resource.Buffer.cpp` to mirror the D3D12 global.

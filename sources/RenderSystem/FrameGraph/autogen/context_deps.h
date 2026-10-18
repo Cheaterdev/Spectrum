@@ -35,7 +35,7 @@ namespace FrameGraph
 // .prism edit renumbers those enums, a plan from before the edit would not fail
 // to load, it would misapply -- wrong resource, wrong barriers. A plan whose
 // header does not carry this exact value must be rejected.
-constexpr unsigned long long generated_id_space_hash = 10368715043874216170ull;
+constexpr unsigned long long generated_id_space_hash = 13088206348554744531ull;
 
 // One bit per context field, in (struct, field) declaration order.
 enum class ContextFieldID : unsigned int
@@ -455,7 +455,7 @@ static inline const PassContextDeps pass_context_deps[] = {
 	{ PassID::ResultCreation,
 		  ContextField::None,
 		  ContextField::None,
-		true },
+		false },
 	{ PassID::NRD_GBufferPack,
 		  ContextField::RenderDeviceCapabilities_rtx_supported
 		| ContextField::UpscalerSelectors_upscaler_type,
@@ -707,6 +707,10 @@ static inline const PassContextDeps pass_context_deps[] = {
 		| ContextField::VSMSelectors_use_vsm_penumbra
 		| ContextField::VSMSelectors_shadow_source,
 		  ContextField::VSMSelectors_vsm_debug_view,
+		true },
+	{ PassID::SkyAmbient,
+		  ContextField::VSMSelectors_supported,
+		  ContextField::None,
 		true },
 	{ PassID::VSM_Unshadowed,
 		  ContextField::VSMSelectors_supported,

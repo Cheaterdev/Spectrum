@@ -8,9 +8,17 @@ import :Texture;
 import :Context;
 import :Asset;
 
-class MaterialAsset;
+export class MaterialAsset;   // defined below as exported; every declaration must agree (Clang)
 export namespace materials
 {
+
+	// A material always builds its mesh-shader pipelines; the vertex-stage GBuffer pipeline (for GPUs without
+	// mesh shaders) is built where mesh shaders are missing, and also when an offline tool asks for it so
+	// that the asset it saves carries it for such a device.
+	struct PipelineOptions
+	{
+		static bool& vertex_front_end() { static bool v = false; return v; }
+	};
 
 	class Pipeline
 	{
@@ -40,6 +48,11 @@ export namespace materials
 
 		// False while one of its shaders is still compiling: draws with it are skipped.
 		virtual bool is_built() const { return true; }
+
+		// Binds the GBuffer pipeline whose geometry stage is a vertex shader over a direct indexed draw (see
+		// PipelineOptions). Only pipelines that built one say so.
+		virtual void set_vertex_front_end(HAL::GraphicsContext& graphics) {}
+		virtual bool has_vertex_front_end() const { return false; }
 
         uint get_id();
 	private:

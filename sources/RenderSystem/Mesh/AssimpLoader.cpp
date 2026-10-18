@@ -1,34 +1,4 @@
-module;
-// Assimp macros don't propagate through the named module boundary — redefine them here.
-#define AI_SUCCESS              aiReturn_SUCCESS
-#define AI_MATKEY_COLOR_DIFFUSE "$clr.diffuse", 0, 0
-#define AI_MATKEY_SHININESS     "$mat.shininess", 0, 0
-#define AI_MATKEY_REFLECTIVITY  "$mat.reflectivity", 0, 0
-#define AI_MATKEY_OPACITY       "$mat.opacity", 0, 0
-#define AI_MATKEY_EMISSIVE_INTENSITY "$mat.emissiveIntensity", 0, 0
-#define AI_MATKEY_COLOR_SPECULAR "$clr.specular", 0, 0
-#define AI_MATKEY_GLOSSINESS_FACTOR "$mat.glossinessFactor", 0, 0
-// material.h defines aiGetMaterialFloat as static inline; static functions from
-// exported headers don't cross the module boundary into this TU, so include it
-// explicitly in the global module fragment to keep the definition reachable.
-#include <assimp/material.h>
-#ifndef AI_MATKEY_REFRACTI
-#define AI_MATKEY_REFRACTI "$mat.refracti", 0, 0
-#endif
-#ifndef AI_MATKEY_TRANSMISSION_FACTOR
-#define AI_MATKEY_TRANSMISSION_FACTOR "$mat.transmission.factor", 0, 0
-#endif
-#ifndef AI_MATKEY_VOLUME_THICKNESS_FACTOR
-#define AI_MATKEY_VOLUME_THICKNESS_FACTOR "$mat.volume.thicknessFactor", 0, 0
-#endif
-#ifndef AI_MATKEY_VOLUME_ATTENUATION_DISTANCE
-#define AI_MATKEY_VOLUME_ATTENUATION_DISTANCE "$mat.volume.attenuationDistance", 0, 0
-#endif
-// config.h is macro-only (importer property name strings), so it also has to be
-// included here rather than relied on through `import assimp`.
-#include <assimp/config.h>
-
-module Graphics;
+﻿module Graphics;
 import Core;
 import HAL;
 import GUI;
@@ -483,7 +453,7 @@ std::shared_ptr<MeshData> MeshData::load_assimp(const std::string& file_name, re
 
 	// The mesh loop assumes 3 indices per face; SortByPType with this property
 	// strips point/line primitives (including degenerates demoted by FindDegenerates).
-	importer.SetPropertyInteger(AI_CONFIG_PP_SBP_REMOVE, aiPrimitiveType_POINT | aiPrimitiveType_LINE);
+	importer.SetPropertyInteger(AiConfig::PP_SBP_REMOVE, aiPrimitiveType_POINT | aiPrimitiveType_LINE);
 
     //  auto file = FileSystem::get().get_file(file_name);
     const aiScene* scene;
@@ -544,7 +514,7 @@ std::shared_ptr<MeshData> MeshData::load_assimp(const std::string& file_name, re
 
 		auto check_assimp_texture = [&directory, &check_texture, &load_textures, &embedded_textures, &scene](aiMaterial*native_material, aiTextureType type) {
 			aiString path;
-			if (AI_SUCCESS == native_material->GetTexture(type, 0, &path))
+			if (aiReturn_SUCCESS == native_material->GetTexture(type, 0, &path))
 			{
 				auto native_path = resolve_texture_path(directory, path.C_Str());
 
@@ -580,8 +550,8 @@ std::shared_ptr<MeshData> MeshData::load_assimp(const std::string& file_name, re
 
 			aiString spec_path_probe;
 			aiColor3D spec_color_probe;
-			if (AI_SUCCESS == native_material->GetTexture(aiTextureType_SPECULAR, 0, &spec_path_probe)
-			 || AI_SUCCESS == native_material->Get(AI_MATKEY_COLOR_SPECULAR, spec_color_probe))
+			if (aiReturn_SUCCESS == native_material->GetTexture(aiTextureType_SPECULAR, 0, &spec_path_probe)
+			 || aiReturn_SUCCESS == ai_get(*native_material, AiKey::ColorSpecular, spec_color_probe))
 				settings.any_specular_source = true;
 		}
 
@@ -740,14 +710,14 @@ std::shared_ptr<MeshData> MeshData::load_assimp(const std::string& file_name, re
                 // since base_color/metallic are single-input graph outputs and
                 // must be linked exactly once, whichever workflow supplies them.
                 aiString metal_path, rough_path, spec_path;
-                bool has_metal_tex = AI_SUCCESS == native_material->GetTexture(aiTextureType_METALNESS, 0, &metal_path);
-                bool has_rough_tex = AI_SUCCESS == native_material->GetTexture(aiTextureType_DIFFUSE_ROUGHNESS, 0, &rough_path);
+                bool has_metal_tex = aiReturn_SUCCESS == native_material->GetTexture(aiTextureType_METALNESS, 0, &metal_path);
+                bool has_rough_tex = aiReturn_SUCCESS == native_material->GetTexture(aiTextureType_DIFFUSE_ROUGHNESS, 0, &rough_path);
                 bool packed = has_metal_tex && has_rough_tex && std::strcmp(metal_path.C_Str(), rough_path.C_Str()) == 0;
 
                 bool has_spec_tex = load_specular_textures
-                    && AI_SUCCESS == native_material->GetTexture(aiTextureType_SPECULAR, 0, &spec_path);
+                    && aiReturn_SUCCESS == native_material->GetTexture(aiTextureType_SPECULAR, 0, &spec_path);
                 aiColor3D spec_color;
-                bool has_spec_color = AI_SUCCESS == native_material->Get(AI_MATKEY_COLOR_SPECULAR, spec_color);
+                bool has_spec_color = aiReturn_SUCCESS == ai_get(*native_material, AiKey::ColorSpecular, spec_color);
 
                 // Whether the Specular texture's R/G/B are all still meant as a
                 // literal tint (the default, and the only shape SpecToMetNode's
@@ -769,8 +739,8 @@ std::shared_ptr<MeshData> MeshData::load_assimp(const std::string& file_name, re
 
                 FlowGraph::output::ptr albedo_source;
 
-                if (AI_SUCCESS == native_material->GetTexture(aiTextureType_DIFFUSE, 0, &path)
-                 || AI_SUCCESS == native_material->GetTexture(aiTextureType_BASE_COLOR, 0, &path))
+                if (aiReturn_SUCCESS == native_material->GetTexture(aiTextureType_DIFFUSE, 0, &path)
+                 || aiReturn_SUCCESS == native_material->GetTexture(aiTextureType_BASE_COLOR, 0, &path))
                 {
                    auto native_path = resolve_texture_path(directory, path.C_Str());
                     auto diff = get_texture(native_path);
@@ -782,7 +752,7 @@ std::shared_ptr<MeshData> MeshData::load_assimp(const std::string& file_name, re
                 else
                 {
                     aiColor3D albedo;
-                    native_material->Get(AI_MATKEY_COLOR_DIFFUSE, albedo);
+                    ai_get(*native_material, AiKey::ColorDiffuse, albedo);
                     auto value_node = std::make_shared<VectorNode>(vec4(albedo.r, albedo.g, albedo.b, 1));
                     graph->register_node(value_node);
                     albedo_source = value_node->get_output(0);
@@ -814,13 +784,13 @@ std::shared_ptr<MeshData> MeshData::load_assimp(const std::string& file_name, re
                     }
                 };
 
-                if (AI_SUCCESS == native_material->GetTexture(aiTextureType_NORMALS, 0, &path))
+                if (aiReturn_SUCCESS == native_material->GetTexture(aiTextureType_NORMALS, 0, &path))
                 {
 					auto native_path = resolve_texture_path(directory, path.C_Str());
 					link_normal_texture(get_texture(native_path));
                 }
 
-                else if (AI_SUCCESS == native_material->GetTexture(aiTextureType_HEIGHT, 0, &path))
+                else if (aiReturn_SUCCESS == native_material->GetTexture(aiTextureType_HEIGHT, 0, &path))
                 {
 					auto native_path = resolve_texture_path(directory, path.C_Str());
 					link_normal_texture(get_texture(native_path));
@@ -875,7 +845,7 @@ std::shared_ptr<MeshData> MeshData::load_assimp(const std::string& file_name, re
                 {
 					float albedo;
 
-					if (AI_SUCCESS == native_material->Get(AI_MATKEY_SHININESS, albedo))
+					if (aiReturn_SUCCESS == ai_get(*native_material, AiKey::Shininess, albedo))
 					{
 						albedo /= 255;
 
@@ -907,7 +877,7 @@ std::shared_ptr<MeshData> MeshData::load_assimp(const std::string& file_name, re
                     // AI_MATKEY_SHININESS's Phong exponent above, it needs no
                     // /255 normalization (dividing it crushed any material with
                     // ReflectionFactor above ~0.4 down to near-zero metallic).
-                    if (AI_SUCCESS == native_material->Get(AI_MATKEY_REFLECTIVITY, reflectivity))
+                    if (aiReturn_SUCCESS == ai_get(*native_material, AiKey::Reflectivity, reflectivity))
                     {
                         if (reflectivity > 1)
                             reflectivity = 1;
@@ -987,7 +957,7 @@ std::shared_ptr<MeshData> MeshData::load_assimp(const std::string& file_name, re
                     // AI_MATKEY_GLOSSINESS_FACTOR: 0 = completely rough, 1 =
                     // perfectly smooth -- inverse of the engine's roughness.
                     float glossiness;
-                    if (AI_SUCCESS == native_material->Get(AI_MATKEY_GLOSSINESS_FACTOR, glossiness))
+                    if (aiReturn_SUCCESS == ai_get(*native_material, AiKey::GlossinessFactor, glossiness))
                     {
                         auto value_node = std::make_shared<ScalarNode>(1.0f - glossiness);
                         graph->register_node(value_node);
@@ -995,8 +965,8 @@ std::shared_ptr<MeshData> MeshData::load_assimp(const std::string& file_name, re
                     }
                 }
 
-                if (AI_SUCCESS == native_material->GetTexture(aiTextureType_EMISSION_COLOR, 0, &path)
-                 || AI_SUCCESS == native_material->GetTexture(aiTextureType_EMISSIVE, 0, &path))
+                if (aiReturn_SUCCESS == native_material->GetTexture(aiTextureType_EMISSION_COLOR, 0, &path)
+                 || aiReturn_SUCCESS == native_material->GetTexture(aiTextureType_EMISSIVE, 0, &path))
                 {
                     auto node = make_sampling_node(graph.get(), get_texture(resolve_texture_path(directory, path.C_Str())), true);
 
@@ -1004,7 +974,7 @@ std::shared_ptr<MeshData> MeshData::load_assimp(const std::string& file_name, re
                     // emissive_intensity (FBX) -- an HDR multiplier on top of the
                     // [0,1] emissive texture, not present for most FBX materials.
                     float intensity;
-                    if (AI_SUCCESS == native_material->Get(AI_MATKEY_EMISSIVE_INTENSITY, intensity))
+                    if (aiReturn_SUCCESS == ai_get(*native_material, AiKey::EmissiveIntensity, intensity))
                     {
                         auto intensity_node = std::make_shared<ScalarNode>(intensity);
                         graph->register_node(intensity_node);
@@ -1038,14 +1008,14 @@ std::shared_ptr<MeshData> MeshData::load_assimp(const std::string& file_name, re
                     };
 
                     float transmission = 1.0f, transmission_factor = 0, opacity_factor = 1;
-                    bool has_opacity_texture = AI_SUCCESS == native_material->GetTexture(aiTextureType_OPACITY, 0, &path);
+                    bool has_opacity_texture = aiReturn_SUCCESS == native_material->GetTexture(aiTextureType_OPACITY, 0, &path);
 
-                    if (AI_SUCCESS == native_material->Get(AI_MATKEY_TRANSMISSION_FACTOR, transmission_factor) && transmission_factor > 0.0f)
+                    if (aiReturn_SUCCESS == ai_get(*native_material, AiKey::TransmissionFactor, transmission_factor) && transmission_factor > 0.0f)
                     {
                         translucent = true;
                         transmission = transmission_factor;
                     }
-                    else if (!has_opacity_texture && AI_SUCCESS == native_material->Get(AI_MATKEY_OPACITY, opacity_factor) && opacity_factor < 1.0f)
+                    else if (!has_opacity_texture && aiReturn_SUCCESS == ai_get(*native_material, AiKey::Opacity, opacity_factor) && opacity_factor < 1.0f)
                     {
                         translucent = true;
                         transmission = 1.0f - opacity_factor;
@@ -1055,25 +1025,25 @@ std::shared_ptr<MeshData> MeshData::load_assimp(const std::string& file_name, re
                     {
                         float ior = 1.5f;
                         float file_ior;
-                        if (AI_SUCCESS == native_material->Get(AI_MATKEY_REFRACTI, file_ior) && file_ior > 1.0f)
+                        if (aiReturn_SUCCESS == ai_get(*native_material, AiKey::Refracti, file_ior) && file_ior > 1.0f)
                             ior = file_ior;
                         link_scalar(ior, graph->get_ior(), "IOR");
                         link_scalar(transmission, graph->get_transmission_weight(), "transmission");
 
                         // glTF KHR_materials_volume: 0 = thin-walled, same convention as ours.
                         float thickness;
-                        if (AI_SUCCESS == native_material->Get(AI_MATKEY_VOLUME_THICKNESS_FACTOR, thickness) && thickness > 0.0f)
+                        if (aiReturn_SUCCESS == ai_get(*native_material, AiKey::VolumeThicknessFactor, thickness) && thickness > 0.0f)
                             link_scalar(thickness, graph->get_thickness(), "thickness");
 
                         float attenuation_distance;
-                        if (AI_SUCCESS == native_material->Get(AI_MATKEY_VOLUME_ATTENUATION_DISTANCE, attenuation_distance) && attenuation_distance > 0.0f)
+                        if (aiReturn_SUCCESS == ai_get(*native_material, AiKey::VolumeAttenuationDistance, attenuation_distance) && attenuation_distance > 0.0f)
                             link_scalar(attenuation_distance, graph->get_transmission_depth(), "transmission depth");
                     }
                 }
 
                 // Standalone grayscale map (R channel), same convention as the
                 // roughness/metalness standalone case above.
-                if (AI_SUCCESS == native_material->GetTexture(aiTextureType_OPACITY, 0, &path))
+                if (aiReturn_SUCCESS == native_material->GetTexture(aiTextureType_OPACITY, 0, &path))
                 {
                     auto node = make_sampling_node(graph.get(), get_texture(resolve_texture_path(directory, path.C_Str())));
                     node->get_output(1)->link(graph->get_opacity());

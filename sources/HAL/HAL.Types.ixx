@@ -975,9 +975,44 @@ PROCEDURAL
 		uint64 UpdateScratchDataSizeInBytes;
 	};
 
-	struct hwnd_provider
+	// Work-graph node inputs. Layouts mirror D3D12_GPU_VIRTUAL_ADDRESS_AND_STRIDE, D3D12_NODE_GPU_INPUT and
+	// D3D12_MULTI_NODE_GPU_INPUT (asserted in the D3D12 backend).
+	struct GPUAddressAndStride
 	{
-		virtual	HWND get_hwnd() const = 0;
+		GPUAddressPtr StartAddress = 0;
+		uint64_t StrideInBytes = 0;
+	};
+
+	struct NodeGPUInput
+	{
+		uint EntrypointIndex = 0;
+		uint NumRecords = 0;
+		GPUAddressAndStride Records;
+	};
+
+	struct MultiNodeGPUInput
+	{
+		uint NumNodeInputs = 0;
+		GPUAddressAndStride NodeInputs;
+	};
+
+	struct AdapterInfo
+	{
+		std::wstring name;
+		uint vendor_id = 0;
+		uint device_id = 0;
+		uint64_t dedicated_video_memory = 0;
+	};
+
+	// A descriptor's address in its heap, as the backend reports it: a real pointer on D3D12, the slot
+	// index on Vulkan. Same layout as D3D12_CPU/GPU_DESCRIPTOR_HANDLE.
+	struct CPUDescriptorAddress { size_t ptr = 0; };
+	struct GPUDescriptorAddress { uint64_t ptr = 0; };
+
+	// The platform's window handle, opaque here: HWND on Windows, ANativeWindow* on Android.
+	struct window_provider
+	{
+		virtual	void* get_native_window() const = 0;
 	};
 
 	// Capabilities of the display the swapchain's window is on. Defaults describe
@@ -999,8 +1034,8 @@ PROCEDURAL
 	{
 		int max_fps;
 		Format format;
-		hwnd_provider* window;
-		hwnd_provider* fullscreen;
+		window_provider* window;
+		window_provider* fullscreen;
 		bool stereo;
 	};
 

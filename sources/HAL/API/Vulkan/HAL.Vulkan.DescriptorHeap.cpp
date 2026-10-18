@@ -1,6 +1,3 @@
-module;
-#define VK_USE_PLATFORM_WIN32_KHR
-#include <vulkan/vulkan.h>
 module HAL:DescriptorHeap;
 
 import :Debug;
@@ -18,10 +15,10 @@ namespace HAL
     Descriptor::Descriptor(DescriptorHeap& heap, uint offset) : heap(heap), offset(offset)
     {
         // Vulkan has no CPU/GPU descriptor handles; the bindless slot index is
-        // carried in the stub handle value so the shared HAL::Handle interface
+        // carried in the address so the shared HAL::Handle interface
         // (get_cpu/get_gpu) keeps working unchanged.
-        cpu_handle = { static_cast<SIZE_T>(offset) };
-        gpu_handle = { static_cast<UINT64>(offset) };
+        cpu_handle = { static_cast<size_t>(offset) };
+        gpu_handle = { static_cast<uint64_t>(offset) };
     }
 
     // StructuredBuffers are sub-ranges (FirstElement..NumElements) of shared
@@ -136,7 +133,8 @@ namespace HAL
             const VkDeviceSize base = api_res.get_vk_buffer_offset();
             rec.type = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
             rec.acceleration_structure = heap.device.get_acceleration_structure(api_res.get_vk_buffer(),
-                base + rt->OffsetInBytes, base + v.Resource->get_desc().as_buffer().SizeInBytes);
+                base + rt->OffsetInBytes, base + v.Resource->get_desc().as_buffer().SizeInBytes,
+                VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR);
             ASSERT(rec.acceleration_structure != VK_NULL_HANDLE && "SRV: TLAS view without acceleration-structure support");
             if (rec.acceleration_structure == VK_NULL_HANDLE) return;
         }

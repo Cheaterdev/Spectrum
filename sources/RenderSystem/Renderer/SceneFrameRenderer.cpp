@@ -15,20 +15,20 @@ SceneFrameRenderer::SceneFrameRenderer(Scene::ptr scene)
 	// active then; re-parent the ones that are contexts, and nest everything
 	// constructed from here on (mesh_renderer, VoxelGI) under this renderer.
 	VariableContext::Scope self_scope(*this);
-	add_child(&m_forward_context);
-	add_child(&m_gpu_context);
+	add_child(m_forward_context.get());
+	add_child(m_gpu_context.get());
 	add_child(&m_vsm);
 
 	m_forward_renderer = std::make_shared<main_renderer>();
 	{
-		VariableContext::Scope scope(m_forward_context);
+		VariableContext::Scope scope(*m_forward_context);
 		m_forward_renderer->register_renderer(m_forward_meshes = std::make_shared<mesh_renderer>());
 	}
 
 	// The renderer the Scene pass draws the GBuffer with (SceneInfo::renderer).
 	m_gpu_renderer = std::make_shared<main_renderer>();
 	{
-		VariableContext::Scope scope(m_gpu_context);
+		VariableContext::Scope scope(*m_gpu_context);
 		m_gpu_renderer->register_renderer(m_main_view_meshes = std::make_shared<mesh_renderer>());
 	}
 

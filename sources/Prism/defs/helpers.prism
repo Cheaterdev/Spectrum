@@ -28,11 +28,10 @@ namespace Frame
 
 
 	[Static]
-	# This pass exists solely to create() ResultTexture -- it never renders
-	# anything itself. [RenderCondition = false] (not [SetupCondition]): setup()
-	# still runs and creates ResultTexture every frame, it just never
-	# NeedsRender.
-	[RenderCondition = false]
+	# Creates ResultTexture and clears it. The texture is transient (its memory is reused), so without the clear a
+	# pixel no lighting pass writes keeps whatever the memory held -- last frame's image, blended into this one.
+	# [RenderCondition = `true`] is what makes the generator emit setup() (a pass with no condition has to write its own).
+	[RenderCondition = `true`]
 	PassNode ResultCreation
 	{
 		[Always = RenderTarget] [Size = ViewportContext::frame_size] [Format = R16G16B16A16_FLOAT] Texture ResultTexture;

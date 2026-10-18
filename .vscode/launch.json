@@ -1,0 +1,48 @@
+{
+    // Debug the Android app from VS Code with the CodeLLDB extension (vadimcn.vscode-lldb).
+    // Build and install first (SpectrumAndroid.sln F7, or build/driver.py android build + package --install).
+    // The task starts the app and lldb-server and writes projects/android/<mode>/attach.lldb (with the
+    // app's pid); the commands below mirror build/platforms/android/debug.py: the target is the device's app_process64,
+    // editor breakpoints stay pending until `target symbols add` loads the unstripped libspectrum.so.
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Spectrum Android (debug, full symbols)",
+            "type": "lldb",
+            "request": "custom",
+            "preLaunchTask": "android: app + lldb-server (debug)",
+            "initCommands": [
+                "platform select remote-android",
+                "platform connect unix-abstract-connect:///com.spectrum/platform.sock",
+                "settings append target.exec-search-paths ${workspaceFolder}/projects/android/debug/lib",
+                "settings set target.max-children-depth 1",
+                "settings set plugin.jit-loader.gdb.enable off"
+            ],
+            "targetCreateCommands": [
+                "target create /system/bin/app_process64"
+            ],
+            "processCreateCommands": [
+                "command source ${workspaceFolder}/projects/android/debug/attach.lldb"
+            ]
+        },
+        {
+            "name": "Spectrum Android (profile, line tables only)",
+            "type": "lldb",
+            "request": "custom",
+            "preLaunchTask": "android: app + lldb-server (profile)",
+            "initCommands": [
+                "platform select remote-android",
+                "platform connect unix-abstract-connect:///com.spectrum/platform.sock",
+                "settings append target.exec-search-paths ${workspaceFolder}/projects/android/profile/lib",
+                "settings set target.max-children-depth 1",
+                "settings set plugin.jit-loader.gdb.enable off"
+            ],
+            "targetCreateCommands": [
+                "target create /system/bin/app_process64"
+            ],
+            "processCreateCommands": [
+                "command source ${workspaceFolder}/projects/android/profile/attach.lldb"
+            ]
+        }
+    ]
+}

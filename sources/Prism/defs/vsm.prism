@@ -713,6 +713,23 @@ namespace Shadows
 			#slope_scaled_depth_bias = 0.2;
 		}
 
+		# VSMDepthDraw for GPUs without mesh shaders: a vertex stage over direct indexed draws, one per (level, mesh
+		# part), instanced once per page of the level (see shadows/vsm/vertex_shader_vsm.hlsl). No culling stage:
+		# pages that are not redrawn, or have no slot, collapse to degenerate triangles.
+		GraphicsPSO VSMDepthDrawVS
+		{
+			root = DefaultLayout;
+
+			[Erase]
+			pixel = None;
+
+			[EntryPoint = VSVertex]
+			vertex = "shadows/vsm/vertex_shader_vsm.hlsl";
+
+			ds = D32_FLOAT;
+			cull = Front;
+		}
+
 		# Runtime A/B switch (VSM::use_vsm_conservative_raster) against VSMDepthDraw
 		# above -- byte-identical otherwise. conservative is a rasterizer-state field
 		# baked into the PSO at creation, not settable per-draw, so a genuine runtime
@@ -1235,8 +1252,41 @@ namespace Shadows
 			[Always = UnorderedAccess] Texture ResultTexture;
 		}
 
-		# Without sparse depth textures VSM does not run, and nothing else writes
-		# the direct lighting into ResultTexture: this does, unshadowed.
+		# The baked sky as the indirect light of a pipeline with no GI (ray tracing, voxel GI): diffuse ambient from the
+		# blurred top mip of the specular-filtered cube, and the reflection a metal shows. Added onto the direct light
+		# VSM_Combine / VSM_ShadowResolve (or VSM_Unshadowed's own sky term) wrote. Without it a metallic material
+		# (spec_to_metallic) has no diffuse term and renders black.
+		[Bind = DefaultLayout::Instance0]
+		struct SkyAmbientData
+		{
+			GBuffer gbuffer;
+			TextureCube<float4> sky;
+			RWTexture2D<float4> result;
+		}
+
+		ComputePSO SkyAmbient
+		{
+			root = DefaultLayout;
+
+			[EntryPoint = CS]
+			compute = "shadows/vsm/sky_ambient.hlsl";
+		}
+
+		[Compute]
+		[SetupCondition = VSMSelectors::supported]
+		PassNode SkyAmbient
+		{
+			[Always = Read] Texture GBuffer_Albedo;
+			[Always = Read] Texture GBuffer_Normals;
+			[Always = Read] Texture GBuffer_Specular;
+			[Always = Read] Texture GBuffer_Speed;
+			[Always = None] Texture GBuffer_DepthMips;
+			[Always = Read] TextureCube sky_cubemap_filtered;
+			[Always = UnorderedAccess] Texture ResultTexture;
+		}
+
+		# VSM turned off (VSM::enabled): nothing else writes the direct lighting into
+		# ResultTexture on a pipeline without ray tracing, so this does, unshadowed.
 		[Compute]
 		[SetupCondition = !VSMSelectors::supported]
 		PassNode VSM_Unshadowed
@@ -1248,6 +1298,11 @@ namespace Shadows
 			[Always = Read] Texture GBuffer_Speed;
 			[Always = None] Texture GBuffer_DepthMips;
 			[Always = UnorderedAccess] Texture ResultTexture;
+			# The baked sky (the specular-filtered cube) stands in for the indirect light the full pipeline gets from
+			# ray tracing and voxel GI: ambient and the reflection of metals (unshadowed_result, vsm.hlsl). Read through
+			# the pass itself so it is ordered after the bake and live when render() records; absent when no
+			# pipeline bakes one.
+			[Always = Read] [Optional = exists(sky_cubemap_filtered)] TextureCube sky_cubemap_filtered;
 		}
 
 		namespace Dev

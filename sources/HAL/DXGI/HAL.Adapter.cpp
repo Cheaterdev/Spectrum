@@ -28,6 +28,11 @@ namespace HAL
 
 	const DXGI_ADAPTER_DESC& Adapter::get_desc() const { return adapter_desc; }
 
+	AdapterInfo Adapter::get_info() const
+	{
+		return { adapter_desc.Description, adapter_desc.VendorId, adapter_desc.DeviceId, adapter_desc.DedicatedVideoMemory };
+	}
+
 	Adapters::Adapters()
 	{
 		CreateDXGIFactory2(0, IID_PPV_ARGS(&native_factory));

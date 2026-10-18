@@ -19,7 +19,7 @@ struct placement_info
 
 	}
 };
-std::optional<SlotID> get_slot(std::string_view slot_name);
+export std::optional<SlotID> get_slot(std::string_view slot_name);   // autogen.ixx exports it too; every declaration must agree (Clang)
 
 // Report a table slot that compiled with nothing bound, once per slot.
 //
@@ -299,7 +299,7 @@ public:
 			}
 
 			auto info = context->place_raw(offsets);
-			auto srv = info.resource->create_view<HAL::StructuredBufferView<UINT>>(*context, HAL::StructuredBufferViewDesc{ (uint)info.resource_offset, (uint)info.size,HAL::counterType::NONE }).structuredBuffer;
+			auto srv = info.resource->template create_view<HAL::StructuredBufferView<UINT>>(*context, HAL::StructuredBufferViewDesc{ (uint)info.resource_offset, (uint)info.size,HAL::counterType::NONE }).structuredBuffer;
 			if (srv.get_storage()->can_free())
 				descriptors.insert(srv.get_storage());
 			offset = srv.get_offset();
@@ -392,7 +392,7 @@ public:
 
 
 			auto info = context->place_raw(offsets);
-			auto srv = info.resource->create_view<HAL::StructuredBufferView<UINT>>(*context, HAL::StructuredBufferViewDesc{ (uint)info.resource_offset, (uint)info.size,HAL::counterType::NONE }).structuredBuffer;
+			auto srv = info.resource->template create_view<HAL::StructuredBufferView<UINT>>(*context, HAL::StructuredBufferViewDesc{ (uint)info.resource_offset, (uint)info.size,HAL::counterType::NONE }).structuredBuffer;
 			if (srv.get_storage()->can_free())
 				descriptors.insert(srv.get_storage());
 			offset = srv.get_offset();
@@ -521,19 +521,6 @@ export {
 
 			return compiled;
 		}
-				 #ifdef HAL_BACKEND_D3D12
-
-		static D3D12_INDIRECT_ARGUMENT_DESC create_indirect()
-		{
-			D3D12_INDIRECT_ARGUMENT_DESC desc;
-			desc.Type = D3D12_INDIRECT_ARGUMENT_TYPE_CONSTANT;
-			desc.Constant.RootParameterIndex = Slot::ID;
-			desc.Constant.DestOffsetIn32BitValues = 0;
-			desc.Constant.Num32BitValuesToSet = 1;
-
-			return desc;
-		}
-#endif
 	};
 
 	class UsedSlots
@@ -615,20 +602,19 @@ export {
 
 		HAL::ResourceAddress compile() const
 		{
-#ifdef HAL_BACKEND_D3D12						
 			if(records.empty())
 				return 	HAL::ResourceAddress{};
 
-			auto id_rec_data = context->place_data(sizeof(D3D12_NODE_GPU_INPUT) * records.size(), 256);
+			auto id_rec_data = context->place_data(sizeof(HAL::NodeGPUInput) * records.size(), 256);
 
-			auto rec_cpu = reinterpret_cast<D3D12_NODE_GPU_INPUT*>(id_rec_data.get_cpu_data());
+			auto rec_cpu = reinterpret_cast<HAL::NodeGPUInput*>(id_rec_data.get_cpu_data());
 
 			uint i = 0;
 			for (auto& [id, id_records] : records)
 			{
 
 
-				D3D12_NODE_GPU_INPUT& input = rec_cpu[i];
+				HAL::NodeGPUInput& input = rec_cpu[i];
 				input.EntrypointIndex = id;
 				input.NumRecords = id_records.count;
 
@@ -644,20 +630,20 @@ export {
 			}
 
 
-			auto res = context->place_data(sizeof(D3D12_MULTI_NODE_GPU_INPUT), 256);
+			auto res = context->place_data(sizeof(HAL::MultiNodeGPUInput), 256);
 
-			D3D12_MULTI_NODE_GPU_INPUT& t = *reinterpret_cast<D3D12_MULTI_NODE_GPU_INPUT*>(res.get_cpu_data());
+			HAL::MultiNodeGPUInput& t = *reinterpret_cast<HAL::MultiNodeGPUInput*>(res.get_cpu_data());
 			t.NumNodeInputs = uint(records.size());
 
 			t.NodeInputs.StartAddress = to_native(id_rec_data);
 
-			t.NodeInputs.StrideInBytes = sizeof(D3D12_NODE_GPU_INPUT);
+			t.NodeInputs.StrideInBytes = sizeof(HAL::NodeGPUInput);
 			//	std::memcpy(info2.get_cpu_data(), &t, sizeof(t));
 
 
 
 			//{
-			//	D3D12_NODE_GPU_INPUT t;
+			//	HAL::NodeGPUInput t;
 
 
 			//	t.EntrypointIndex = 0;
@@ -668,25 +654,21 @@ export {
 			//}
 
 
-			//auto info3 = context.place_data(Math::roundUp(sizeof(D3D12_MULTI_NODE_GPU_INPUT), 256), 256);
+			//auto info3 = context.place_data(Math::roundUp(sizeof(HAL::MultiNodeGPUInput), 256), 256);
 
 
 			//{
-			//	D3D12_MULTI_NODE_GPU_INPUT t;
+			//	HAL::MultiNodeGPUInput t;
 
 
 			//	t.NumNodeInputs = 1;
 			//	t.NodeInputs.StartAddress = to_native(info2);
 
-			//	t.NodeInputs.StrideInBytes = sizeof(D3D12_NODE_GPU_INPUT);
+			//	t.NodeInputs.StrideInBytes = sizeof(HAL::NodeGPUInput);
 
 			//	std::memcpy(info3.get_cpu_data(), &t, sizeof(t));
 			//}
 			return res;
-#else
-
-		   	return 	HAL::ResourceAddress{};
-#endif
 		}
 	};
 								 template<class T>

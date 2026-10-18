@@ -9,7 +9,7 @@ import FrameGraph;
 
 import :Camera;
 
-class GBuffer;
+export class GBuffer;   // defined below as exported; every declaration must agree (Clang)
 
 using namespace FrameGraph;
 export namespace materials

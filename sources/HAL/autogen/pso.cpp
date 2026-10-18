@@ -49,6 +49,7 @@ void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 	tasks.emplace_back(PSOBase::create<PSOS::FrameGraphTests::FGTAppendTiles>(device, pso[PSO::FGTAppendTiles]));
 	tasks.emplace_back(PSOBase::create<PSOS::Post::Upscale::FSR>(device, pso[PSO::FSR]));
 	tasks.emplace_back(PSOBase::create<PSOS::Post::Upscale::RCAS>(device, pso[PSO::RCAS]));
+	tasks.emplace_back(PSOBase::create<PSOS::Tests::AppendCounter>(device, pso[PSO::AppendCounter]));
 	tasks.emplace_back(PSOBase::create<PSOS::Post::LensFlareGhosts>(device, pso[PSO::LensFlareGhosts]));
 	tasks.emplace_back(PSOBase::create<PSOS::Post::LensFlareStreak>(device, pso[PSO::LensFlareStreak]));
 	tasks.emplace_back(PSOBase::create<PSOS::Meshes::GatherPipeline>(device, pso[PSO::GatherPipeline]));
@@ -145,6 +146,7 @@ void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 	tasks.emplace_back(PSOBase::create<PSOS::Shadows::VSM::VSMGatherDispatch>(device, pso[PSO::VSMGatherDispatch]));
 	tasks.emplace_back(PSOBase::create<PSOS::Shadows::VSM::VSMGatherDispatchMaterial>(device, pso[PSO::VSMGatherDispatchMaterial]));
 	tasks.emplace_back(PSOBase::create<PSOS::Shadows::VSM::VSMScreenSpaceShadow>(device, pso[PSO::VSMScreenSpaceShadow]));
+	tasks.emplace_back(PSOBase::create<PSOS::Shadows::VSM::SkyAmbient>(device, pso[PSO::SkyAmbient]));
 	tasks.emplace_back(PSOBase::create<PSOS::Shadows::VSM::VSMDepthAnalysis>(device, pso[PSO::VSMDepthAnalysis]));
 
 
@@ -152,6 +154,16 @@ void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 	tasks.emplace_back(PSOBase::create<PSOS::Dev::DebugLinesOccluded>(device, pso[PSO::DebugLinesOccluded]));
 	tasks.emplace_back(PSOBase::create<PSOS::Dev::DebugViewMesh>(device, pso[PSO::DebugViewMesh]));
 	tasks.emplace_back(PSOBase::create<PSOS::UI::Text::GlyphRender>(device, pso[PSO::GlyphRender]));
+	tasks.emplace_back(PSOBase::create<PSOS::Tests::TestTriangle>(device, pso[PSO::TestTriangle]));
+	tasks.emplace_back(PSOBase::create<PSOS::Tests::TestInstancing>(device, pso[PSO::TestInstancing]));
+	tasks.emplace_back(PSOBase::create<PSOS::Tests::TestCube>(device, pso[PSO::TestCube]));
+	tasks.emplace_back(PSOBase::create<PSOS::Tests::TestCullNone>(device, pso[PSO::TestCullNone]));
+	tasks.emplace_back(PSOBase::create<PSOS::Tests::TestCullBack>(device, pso[PSO::TestCullBack]));
+	tasks.emplace_back(PSOBase::create<PSOS::Tests::TestCullFront>(device, pso[PSO::TestCullFront]));
+	tasks.emplace_back(PSOBase::create<PSOS::Tests::TestGeometryShader>(device, pso[PSO::TestGeometryShader]));
+	tasks.emplace_back(PSOBase::create<PSOS::Tests::TestMeshDirect>(device, pso[PSO::TestMeshDirect]));
+	tasks.emplace_back(PSOBase::create<PSOS::Tests::TestSIGColor>(device, pso[PSO::TestSIGColor]));
+	tasks.emplace_back(PSOBase::create<PSOS::Tests::TestSIGCopy>(device, pso[PSO::TestSIGCopy]));
 	tasks.emplace_back(PSOBase::create<PSOS::Meshes::RenderBoxes>(device, pso[PSO::RenderBoxes]));
 	tasks.emplace_back(PSOBase::create<PSOS::Utility::RenderToDS>(device, pso[PSO::RenderToDS]));
 	tasks.emplace_back(PSOBase::create<PSOS::Utility::QualityColor>(device, pso[PSO::QualityColor]));
@@ -161,6 +173,7 @@ void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 	tasks.emplace_back(PSOBase::create<PSOS::Shadows::PSSM::PSSMMask>(device, pso[PSO::PSSMMask]));
 	tasks.emplace_back(PSOBase::create<PSOS::Shadows::PSSM::PSSMApply>(device, pso[PSO::PSSMApply]));
 	tasks.emplace_back(PSOBase::create<PSOS::Meshes::GBufferDraw>(device, pso[PSO::GBufferDraw]));
+	tasks.emplace_back(PSOBase::create<PSOS::Meshes::GBufferDrawVS>(device, pso[PSO::GBufferDrawVS]));
 	tasks.emplace_back(PSOBase::create<PSOS::Meshes::DepthDraw>(device, pso[PSO::DepthDraw]));
 	tasks.emplace_back(PSOBase::create<PSOS::GI::Voxel::Voxelization>(device, pso[PSO::Voxelization]));
 	tasks.emplace_back(PSOBase::create<PSOS::Environment::Sky>(device, pso[PSO::Sky]));
@@ -178,6 +191,7 @@ void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 	tasks.emplace_back(PSOBase::create<PSOS::Dev::StatGraphLines>(device, pso[PSO::StatGraphLines]));
 	tasks.emplace_back(PSOBase::create<PSOS::GI::Voxel::Dev::VoxelDebug>(device, pso[PSO::VoxelDebug]));
 	tasks.emplace_back(PSOBase::create<PSOS::Shadows::VSM::VSMDepthDraw>(device, pso[PSO::VSMDepthDraw]));
+	tasks.emplace_back(PSOBase::create<PSOS::Shadows::VSM::VSMDepthDrawVS>(device, pso[PSO::VSMDepthDrawVS]));
 	tasks.emplace_back(PSOBase::create<PSOS::Shadows::VSM::VSMDepthDrawConservative>(device, pso[PSO::VSMDepthDrawConservative]));
 	tasks.emplace_back(PSOBase::create<PSOS::Shadows::VSM::VSMDepthDrawMaterial>(device, pso[PSO::VSMDepthDrawMaterial]));
 

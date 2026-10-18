@@ -2,13 +2,12 @@
 
 export import "_cereal.h";
 export import stl.core;
+import magic_enum;   // imports must directly follow the module declaration (Clang)
 
 //export cereal::detail::msb_32bit;
 
 export using serialization_oarchive = cereal::BinaryOutputArchive;
 export using serialization_iarchive = cereal::BinaryInputArchive;
-
-import magic_enum;
 
 std::string _convert(std::wstring_view s)
 {
@@ -152,6 +151,8 @@ export
 		c.save(t);
 	};
 
+	} // end export: Clang rejects an out-of-class member definition inside `export { }`
+
 	template<class T>
 	void simple_log_archive::save(const cereal::NameValuePair<T>& t)
 	{
@@ -196,6 +197,7 @@ export
 		serial = true;
 	}
 
+	export {
 	CEREAL_REGISTER_ARCHIVE(simple_log_archive)
 
 	// ---- Macro-free polymorphic caster registration ----

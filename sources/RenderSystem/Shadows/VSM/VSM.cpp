@@ -182,7 +182,7 @@ void VSM::update_frame(FrameGraph::Graph& graph)
 	// Now every VSM pass's generated setup does, and nothing orders one pass's
 	// setup before another's.
 	auto& sel = graph.get_context<Table::Shadows::VSM::VSMSelectors>();
-	sel.supported              = RenderSystem::get().device().is_tiled_depth_supported();
+	sel.supported              = enabled;
 	sel.use_vsm_penumbra       = use_vsm_penumbra;
 	sel.use_vsm_contact_shadow = use_vsm_contact_shadow;
 	sel.vsm_debug_view         = vsm_debug_view;
@@ -213,13 +213,24 @@ void VSM::init_penumbra_dispatch_buffers()
 	upload->execute_and_wait();
 }
 
+bool VSM::atlas_resident()
+{
+	return !RenderSystem::get().device().is_tiled_depth_supported();
+}
+
 void VSM::pass_data(FrameGraph::TaskBuilder& builder)
 {
-	// The atlas is a sparse depth texture; without those, VSM's passes are off.
-	if (!RenderSystem::get().device().is_tiled_depth_supported())
-		return;
 	if (!vsm_atlas_tex)
-		vsm_atlas_tex.reset(new HAL::Texture(RenderSystem::get().device(), HAL::ResourceDesc::Tex2D(HAL::Format::R32_TYPELESS, uint2(page_table.page_size, page_table.page_size), (uint)MaxPhysicalSlots, 1, HAL::ResFlags::DepthStencil | HAL::ResFlags::ShaderResource | HAL::ResFlags::Virtual)));
+	{
+		// Sparse: MaxPhysicalSlots slices reserved, only the slots the page table hands out get memory. Without
+		// sparse depth textures the atlas is an ordinary texture holding exactly the pages the table can hand out.
+		const bool resident = atlas_resident();
+		const uint slices = resident ? (uint)page_table.physical_page_count : (uint)MaxPhysicalSlots;
+		HAL::ResFlags flags = HAL::ResFlags::DepthStencil | HAL::ResFlags::ShaderResource;
+		if (!resident)
+			flags = flags | HAL::ResFlags::Virtual;
+		vsm_atlas_tex.reset(new HAL::Texture(RenderSystem::get().device(), HAL::ResourceDesc::Tex2D(HAL::Format::R32_TYPELESS, uint2(page_table.page_size, page_table.page_size), slices, 1, flags)));
+	}
 	builder.pass_texture(FrameGraph::ResourceID::VSM_Atlas, vsm_atlas_tex->resource);
 }
 
@@ -718,7 +729,8 @@ VSM::VSM() : VariableContext(L"VSM")
 			PROFILE(L"vsm_tile_mapping");
 			std::vector<int> to_map, to_unmap;
 			page_table.take_pending_tile_changes(to_map, to_unmap);
-			if (!to_map.empty() || !to_unmap.empty())
+			// A resident atlas has every page backed already: nothing to map.
+			if (!atlas_resident() && (!to_map.empty() || !to_unmap.empty()))
 			{
 				auto& atlas_tiled = vsm_atlas_tex->resource->get_tiled_manager();
 				uint3 tile_dims = atlas_tiled.get_tiles_count();
@@ -869,11 +881,12 @@ VSM::VSM() : VariableContext(L"VSM")
 				                        true, false, 0, 0, /*whole_resource*/ true);
 		}
 
-		// Pages are still cleared above, so without mesh shaders VSM sees an
-		// empty shadow atlas rather than stale depth.
-		if (!any_dirty || !RenderSystem::get().device().is_mesh_shader_supported())
+		if (!any_dirty)
 			return;
 
+		const bool mesh_shaders = RenderSystem::get().device().is_mesh_shader_supported();
+
+		if (mesh_shaders)
 		{
 			PROFILE(L"vsm_draw");
 			// Dispatch entries were built and appended by VSM_GatherDispatch
@@ -934,6 +947,7 @@ VSM::VSM() : VariableContext(L"VSM")
 			//  rewrite, so the hazard it described no longer exists.)
 		}
 
+		if (mesh_shaders)
 		{
 			PROFILE(L"vsm_material_draw");
 			// Phase 5.19: alpha-cutout materials, batched <=8 distinct
@@ -1065,6 +1079,68 @@ VSM::VSM() : VariableContext(L"VSM")
 						exec_draw_mesh_indirect(graphics, vsm_material_commands_buffer[i], (UINT)MaxMaterialDispatchEntries);
 					}
 				}
+			}
+		}
+
+		if (!mesh_shaders)
+		{
+			PROFILE(L"vsm_draw_vertex");
+			// No culling stage: every redrawn level draws every mesh part, once per page of the level (instances);
+			// vertex_shader_vsm.hlsl collapses the pages that are not redrawn.
+			auto scene = context.graph->get_context<SceneInfo>().scene;
+			if (!scene)
+				return;
+
+			graphics.set_pipeline<PSOS::Shadows::VSM::VSMDepthDrawVS>();
+			{
+				Slots::Shadows::VSM::VSMPageTableData pageTableData;
+				pageTableData.GetPage_table()   = data.VSM_PageTable->texture2DArray;
+				pageTableData.GetPage_cameras() = data.VSM_PageCameras->structuredBuffer;
+				pageTableData.GetLevels()       = data.VSM_LevelDispatchInfo->structuredBuffer;
+				graphics.set(pageTableData);
+			}
+			{
+				Slots::Shadows::VSM::VSMPageHiZ pageHiZ;
+				pageHiZ.GetPage_hiz() = data.VSM_PageHiZ->texture2DArray;
+				graphics.set(pageHiZ);
+			}
+			graphics.set(scene->compiledScene);
+			{
+				RT::Frame::DepthOnly rt;
+				rt.GetDepth() = atlas_array_view.depthStencil;
+				graphics.set_rtv(rt, RTOptions::Default);
+			}
+			graphics.set_viewport(data.VSM_Atlas->get_viewport());
+			graphics.set_scissor(data.VSM_Atlas->get_scissor());
+			graphics.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::LIST);
+
+			for (int level = 0; level < VSM::MaxLevels; level++)
+			{
+				const LevelPlan& plan = m_plan[level];
+				if (!plan.valid || plan.dirty_mask == 0)
+					continue;
+
+				Slots::Shadows::VSM::VSMPageBatch batch;
+				batch.GetLevel()          = level;
+				batch.GetDirty_mask()     = (int)plan.dirty_mask;
+				batch.GetSkip_occlusion() = (int)plan.skip_occlusion_mask;
+				graphics.set(batch);
+
+				for (auto* instance : scene->mesh_objects)
+					for (auto& part : instance->rendering)
+					{
+						auto* material = dynamic_cast<materials::universal_material*>(part.material);
+						if (!material)
+							continue;
+						auto pipeline = material->get_pipeline();
+						if (pipeline && pipeline->get_transparency_mode() == Meshes::TransparencyMode::Translucent)
+							continue;
+
+						graphics.set(part.compiled_mesh_info);
+						graphics.set(part.mesh_instance_info);
+						graphics.set_index_buffer(part.index_buffer_view.get_index_buffer_view());
+						graphics.draw_indexed(part.draw_arguments.IndexCountPerInstance, 0, 0, (UINT)pages_per_level);
+					}
 			}
 		}
 	};
@@ -1201,6 +1277,8 @@ VSM::VSM() : VariableContext(L"VSM")
 
 	m_blockerclassify_render = [this](Passes::Shadows::VSM::VSM_BlockerClassify::Context& data, FrameGraph::FrameContext& context)
 	{
+		if (debug_pcss_stages < 1.0f)
+			return;
 		GBuffer gbuffer = GBufferViewDesc::actualize(data);
 
 		auto& list    = *context.get_list();
@@ -1295,6 +1373,8 @@ VSM::VSM() : VariableContext(L"VSM")
 
 	m_blockersearch_render = [this](Passes::Shadows::VSM::VSM_BlockerSearch::Context& data, FrameGraph::FrameContext& context)
 	{
+		if (debug_pcss_stages < 2.0f)
+			return;
 		GBuffer gbuffer = GBufferViewDesc::actualize(data);
 
 		auto& list    = *context.get_list();
@@ -1457,6 +1537,8 @@ VSM::VSM() : VariableContext(L"VSM")
 
 	m_shadowresolve_render = [this](Passes::Shadows::VSM::VSM_ShadowResolve::Context& data, FrameGraph::FrameContext& context)
 	{
+		if (debug_pcss_stages < 3.0f)
+			return;
 		GBuffer gbuffer = GBufferViewDesc::actualize(data);
 
 		auto& list    = *context.get_list();
@@ -1550,16 +1632,22 @@ VSM::VSM() : VariableContext(L"VSM")
 			tiles.GetTiles() = data.VSM_LitTiles->structuredBuffer;
 			compute.set(tiles);
 		}
-		compute.set_pipeline<PSOS::Shadows::VSM::VSMFullLit>();
-		compute.exec_indirect(lit_tiles_dispatch, 1);
+		if (debug_pcss_stages >= 3.0f)
+		{
+			compute.set_pipeline<PSOS::Shadows::VSM::VSMFullLit>();
+			compute.exec_indirect(lit_tiles_dispatch, 1);
+		}
 
 		{
 			Slots::Shadows::VSM::VSMTileListRead tiles;
 			tiles.GetTiles() = data.VSM_DarkTiles->structuredBuffer;
 			compute.set(tiles);
 		}
-		compute.set_pipeline<PSOS::Shadows::VSM::VSMFullShadow>();
-		compute.exec_indirect(dark_tiles_dispatch, 1);
+		if (debug_pcss_stages >= 4.0f)
+		{
+			compute.set_pipeline<PSOS::Shadows::VSM::VSMFullShadow>();
+			compute.exec_indirect(dark_tiles_dispatch, 1);
+		}
 
 		// Stage 2's own post-search confirmation -- a second, cheap full-lit
 		// dispatch (same PSO as above, just a different list stage 2 built
@@ -1571,8 +1659,11 @@ VSM::VSM() : VariableContext(L"VSM")
 			tiles.GetTiles() = data.VSM_ConfirmedLitTiles->structuredBuffer;
 			compute.set(tiles);
 		}
-		compute.set_pipeline<PSOS::Shadows::VSM::VSMFullLit>();
-		compute.exec_indirect(confirmed_lit_tiles_dispatch, 1);
+		if (debug_pcss_stages >= 5.0f)
+		{
+			compute.set_pipeline<PSOS::Shadows::VSM::VSMFullLit>();
+			compute.exec_indirect(confirmed_lit_tiles_dispatch, 1);
+		}
 
 		// The real blur target is VSM_BlurTiles now, not VSM_SearchTiles --
 		// stage 2 already carved out whatever turned out fully confirmed
@@ -1582,8 +1673,11 @@ VSM::VSM() : VariableContext(L"VSM")
 			tiles.GetTiles() = data.VSM_BlurTiles->structuredBuffer;
 			compute.set(tiles);
 		}
-		compute.set_pipeline<PSOS::Shadows::VSM::VSMShadowBlur>(PSOS::Shadows::VSM::VSMShadowBlur::VsmRtxVerify.Use(rtx_verify));
-		compute.exec_indirect(blur_tiles_dispatch, 1);
+		if (debug_pcss_stages >= 6.0f)
+		{
+			compute.set_pipeline<PSOS::Shadows::VSM::VSMShadowBlur>(PSOS::Shadows::VSM::VSMShadowBlur::VsmRtxVerify.Use(rtx_verify));
+			compute.exec_indirect(blur_tiles_dispatch, 1);
+		}
 	};
 
 	// ---- Combine lighting ------------------------------------------------
@@ -1605,6 +1699,27 @@ VSM::VSM() : VariableContext(L"VSM")
 		compute.set_pipeline<PSOS::Shadows::VSM::VSMUnshadowed>();
 		{
 			PROFILE_GPU(L"vsm_unshadowed");
+			compute.dispatch(context.graph->get_context<ViewportInfo>().frame_size, ivec2{ 16, 16 });
+		}
+	};
+
+	m_skyambient_render = [](Passes::Shadows::VSM::SkyAmbient::Context& data, FrameGraph::FrameContext& context)
+	{
+		GBuffer gbuffer = GBufferViewDesc::actualize(data);
+
+		auto& compute = context.get_list()->get_compute();
+		compute.set_signature(Layouts::DefaultLayout);
+		context.graph->set_slot(SlotID::FrameInfo, compute);
+
+		Slots::Shadows::VSM::SkyAmbientData ambient;
+		gbuffer.SetTable(ambient.GetGbuffer());
+		ambient.GetSky()    = data.sky_cubemap_filtered->textureCube;
+		ambient.GetResult() = data.ResultTexture->rwTexture2D;
+		compute.set(ambient);
+
+		compute.set_pipeline<PSOS::Shadows::VSM::SkyAmbient>();
+		{
+			PROFILE_GPU(L"vsm_sky_ambient");
 			compute.dispatch(context.graph->get_context<ViewportInfo>().frame_size, ivec2{ 16, 16 });
 		}
 	};

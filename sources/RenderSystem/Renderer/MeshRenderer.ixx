@@ -82,6 +82,9 @@ class mesh_renderer : public renderer, public Events::prop_handler, VariableCont
 		// capture_stage: when non-null, the gather stamps every mesh it draws into
 		// `capture` with this stage.
 		void  render_meshes(MeshRenderContext::ptr mesh_render_context, Scene::ptr scene, std::map<size_t, materials::Pipeline::ptr>& pipelines, Slots::Meshes::GatherPipelineGlobal::Compiled& gatherData, bool needCulling, HAL::StructuredBufferView<DispatchArguments>* dispatch_args, UINT direct_count, bool hiz_occlusion, std::optional<CullCapture::Stage> capture_stage = std::nullopt, bool walk_lod = false);
+		// The GBuffer draw on a GPU without mesh shaders: every mesh part of the scene drawn directly (indexed,
+		// one draw each, no GPU culling) through its material's vertex-stage pipeline.
+		void  render_vertex_front_end(MeshRenderContext::ptr mesh_render_context, Scene::ptr scene);
 		void  draw_boxes(MeshRenderContext::ptr mesh_render_context, Scene::ptr scene);
 		void  generate_boxes(MeshRenderContext::ptr mesh_render_context, Scene::ptr scene, Slots::Meshes::GatherPipelineGlobal::Compiled& gatherData, HAL::StructuredBufferView<DispatchArguments>* dispatch_args, UINT direct_count);
 		void  gather_rendered_boxes(MeshRenderContext::ptr mesh_render_context, Scene::ptr scene, bool invisibleToo);

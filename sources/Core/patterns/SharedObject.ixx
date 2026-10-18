@@ -49,13 +49,13 @@ export
 				o->objects.erase(this);
 		}
 
-		std::set<typename owner*>& get_owners()
+		std::set<owner*>& get_owners()
 		{
 			return owners;
 		}
 	private:
 		friend class owner;
-		std::set<typename owner*> owners;
+		std::set<owner*> owners;
 	};
 
 

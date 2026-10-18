@@ -1,0 +1,38 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "android: app + lldb-server (debug)",
+            "detail": "Restarts the app on the phone and starts lldb-server; READY means launch.json can attach. Stop the task to shut the server down.",
+            "type": "shell",
+            "command": "python",
+            "args": ["${workspaceFolder}/build/platforms/android/debug.py", "--mode", "debug", "--server", "--launch"],
+            "isBackground": true,
+            "problemMatcher": {
+                "pattern": { "regexp": "^never matches$" },
+                "background": {
+                    "activeOnStart": true,
+                    "beginsPattern": "^never matches$",
+                    "endsPattern": "^READY:"
+                }
+            },
+            "presentation": { "reveal": "silent", "panel": "dedicated" }
+        },
+        {
+            "label": "android: app + lldb-server (profile)",
+            "type": "shell",
+            "command": "python",
+            "args": ["${workspaceFolder}/build/platforms/android/debug.py", "--mode", "profile", "--server", "--launch"],
+            "isBackground": true,
+            "problemMatcher": {
+                "pattern": { "regexp": "^never matches$" },
+                "background": {
+                    "activeOnStart": true,
+                    "beginsPattern": "^never matches$",
+                    "endsPattern": "^READY:"
+                }
+            },
+            "presentation": { "reveal": "silent", "panel": "dedicated" }
+        }
+    ]
+}

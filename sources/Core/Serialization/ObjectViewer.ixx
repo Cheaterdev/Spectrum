@@ -1,6 +1,5 @@
 export module Core:ObjectViewer;
 export import :serialization;
-using serialization_exception = cereal::Exception;
 import :Log;
 import :Utils;
 import :crc32;
@@ -9,6 +8,8 @@ import :Data;
 import windows;
 import :Tree;
 import :my_unique_vector;
+
+using serialization_exception = cereal::Exception;   // after all imports (Clang)
 
 export
 {
@@ -112,7 +113,7 @@ export
 
 				current->add_child(member);
 
-				member->type = convert(get_typename<T::value_type>());
+				member->type = convert(get_typename<typename T::value_type>());
 
 				current = member;
 				if constexpr (can_save<ObjectTreeSerializer, T>)
@@ -180,6 +181,8 @@ export
 
 
 
+} // end export: Clang rejects an out-of-class member definition inside `export { }`
+
 	template<class T>
 	void ObjectTreeSerializer::save(const cereal::NameValuePair<T>& t)
 	{
@@ -207,6 +210,8 @@ export
 		current = prev;
 
 	}
+
+export {   // reopened so the original closing brace below still pairs
 
 
 

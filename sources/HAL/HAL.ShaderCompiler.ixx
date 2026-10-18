@@ -20,7 +20,14 @@ export namespace HAL
 		SERIALIZE()
 			{
 				ar& NVP(name);
-				ar& NVP(wname);
+
+				// Archived as UTF-16 so a blob compiled on Windows loads on Android (wchar_t width).
+				std::u16string wname16;
+				IF_SAVE()
+					wname16 = cereal::wide_detail::to_utf16(wname);
+				ar& NVP(wname16);
+				IF_LOAD()
+					wname = cereal::wide_detail::from_utf16(wname16);
 
 				ar& NVP(slots);
 			}

@@ -7,6 +7,7 @@ import :BinaryAsset;
 import Core;
 
 import GUI;
+import ppl;   // concurrency::task; MSVC gets it textually
 
 namespace GUI
 {

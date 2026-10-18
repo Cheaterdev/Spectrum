@@ -304,7 +304,7 @@ namespace GUI
 		c.command_list->write<Vertex>(data, vertexes);
 
 
-		auto view = data.resource->create_view<HAL::StructuredBufferView<Table::UI::vertex_input>>(*c.command_list, StructuredBufferViewDesc{ (UINT)data.resource_offset, (UINT)data.size,counterType::NONE });
+		auto view = data.resource->create_view<HAL::StructuredBufferView<::Table::UI::vertex_input>>(*c.command_list, StructuredBufferViewDesc{ (UINT)data.resource_offset, (UINT)data.size,counterType::NONE });
 
 		{
 			Slots::UI::NinePatch patch_data;

@@ -361,7 +361,7 @@ bool stencil_renderer::on_drop(GUI::drag_n_drop_package::ptr p, vec2 m)
 	}
 
 	return true;
-	//throw std::exception("The method or operation is not implemented.");
+	//throw std::runtime_error("The method or operation is not implemented.");
 }
 
 void stencil_renderer::build_rings(float radius, float thickness)
