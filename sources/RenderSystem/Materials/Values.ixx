@@ -450,6 +450,11 @@ class MaterialGraph : public MaterialFunction
         FlowGraph::output::ptr i_glow;
         // Registered after i_glow so they append to the end of the generated
         // COMPILED_FUNC output list (keeps existing output order stable).
+        // Transparency, in MaterialX's vocabulary. The members keep their original
+        // names (they are the serialization keys); the ports and getters are named
+        // after MaterialX: i_refraction is "ior", i_transmission "transmission
+        // weight", i_absorption_distance "transmission depth". thickness is 0 for a
+        // thin-walled surface and positive for a solid one (MaterialX thin_walled).
         FlowGraph::output::ptr i_opacity;
         FlowGraph::output::ptr i_refraction;
         FlowGraph::output::ptr i_thickness;
@@ -476,6 +481,19 @@ class MaterialGraph : public MaterialFunction
         // How far the sheen colour follows the base colour: 0 white, 1 tinted like it.
         // Registered last so graphs saved before it existed gain it at the same position.
         FlowGraph::output::ptr i_sheen_tint;
+        // Colour of transmitted light / what a solid absorbs to over the depth.
+        // Negative (the default) means "use the base colour", which is what graphs
+        // saved before this output existed did.
+        FlowGraph::output::ptr i_transmission_color;
+        // Where opacity cuts out (UsdPreviewSurface's opacityThreshold, glTF's
+        // alpha cutoff). Left unwired it is 0.5, the old fixed cutout. Wired to a
+        // constant 0 the material is blended instead: see
+        // universal_material::resolve_transparency_mode.
+        FlowGraph::output::ptr i_opacity_threshold;
+        // Thin-film interference on the specular layer (shading model THINFILM):
+        // film thickness in nanometres (0 = none) and its index of refraction.
+        FlowGraph::output::ptr i_thin_film_thickness;
+        FlowGraph::output::ptr i_thin_film_ior;
 
         void set_translucent_defaults();
         void restore_coat_outputs();
@@ -510,10 +528,14 @@ class MaterialGraph : public MaterialFunction
            FlowGraph::output::ptr get_roughness();
     FlowGraph::output::ptr get_tess_displacement();
         FlowGraph::output::ptr get_opacity();
-        FlowGraph::output::ptr get_refraction();
+        FlowGraph::output::ptr get_ior();
         FlowGraph::output::ptr get_thickness();
-        FlowGraph::output::ptr get_transmission();
-        FlowGraph::output::ptr get_absorption_distance();
+        FlowGraph::output::ptr get_transmission_weight();
+        FlowGraph::output::ptr get_transmission_color();
+        FlowGraph::output::ptr get_transmission_depth();
+        FlowGraph::output::ptr get_opacity_threshold();
+        FlowGraph::output::ptr get_thin_film_thickness();
+        FlowGraph::output::ptr get_thin_film_ior();
         FlowGraph::output::ptr get_coat();
         FlowGraph::output::ptr get_coat_roughness();
         FlowGraph::output::ptr get_sheen();

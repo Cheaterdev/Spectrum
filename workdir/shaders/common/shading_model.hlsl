@@ -12,6 +12,7 @@
 //   ANISOTROPIC-- r: anisotropy, g: tangent angle / pi in the normal's own frame
 //                 (see material_frame / aniso_encode_tangent), b: unused
 //   SUBSURFACE -- rgb: scatter radius per channel, sqrt-encoded (sss_encode_radius)
+//   THINFILM   -- r: film thickness / THINFILM_MAX_NM, g: (film index - 1) / 2
 //
 // A material has one model, not a combination: that is what keeps this at four
 // bytes per pixel.
@@ -21,6 +22,11 @@
 #define SHADING_MODEL_SHEEN     2
 #define SHADING_MODEL_ANISOTROPIC 3
 #define SHADING_MODEL_SUBSURFACE  4
+#define SHADING_MODEL_THINFILM    5
+
+// Film thickness is stored in nanometres / this, so 8 bits give ~4 nm steps -- fine
+// enough for the colour shifts, which change over tens of nm.
+#define THINFILM_MAX_NM 1000.0
 
 // Scatter radius is stored as sqrt(radius / SSS_MAX_RADIUS): 8 bits linear would
 // resolve nothing below 1/255 of the maximum, and skin-like radii are small.
@@ -88,14 +94,25 @@ float3 sss_decode_radius(float3 encoded)
     return encoded * encoded * SSS_MAX_RADIUS;
 }
 
+float thinfilm_thickness(float4 packed)
+{
+    return packed.r * THINFILM_MAX_NM;
+}
+
+float thinfilm_ior(float4 packed)
+{
+    return 1.0 + packed.g * 2.0;
+}
+
 // What the material graph's extra outputs select. A lobe that is effectively
 // off stays STANDARD so lighting skips it. One model per material, in priority
-// order: coat, sheen, anisotropy, subsurface. `rotation` is the tangent's turn
+// order: coat, sheen, anisotropy, subsurface, thin film. `rotation` is the tangent's turn
 // about N in turns; N and T are the shading normal and the mesh tangent; the
 // subsurface radius is weight * scale * radius, in scene units.
 float4 pack_material_from_graph(float coat, float coat_roughness, float sheen, float sheen_roughness,
                                 float anisotropy, float rotation,
                                 float sss_weight, float3 sss_radius, float sss_scale, float sheen_tint,
+                                float film_thickness, float film_ior,
                                 float3 N, float3 T)
 {
     if (coat > 0.001)
@@ -115,7 +132,19 @@ float4 pack_material_from_graph(float coat, float coat_roughness, float sheen, f
     if (sss_weight > 0.001)
         return pack_material(SHADING_MODEL_SUBSURFACE, sss_encode_radius(sss_radius * (sss_scale * sss_weight)));
 
+    if (film_thickness > 1.0)
+        return pack_material(SHADING_MODEL_THINFILM, float3(film_thickness / THINFILM_MAX_NM, (film_ior - 1.0) / 2.0, 0.0));
+
     return pack_material(SHADING_MODEL_STANDARD, 0.0);
+}
+
+// Without a thin film.
+float4 pack_material_from_graph(float coat, float coat_roughness, float sheen, float sheen_roughness,
+                                float anisotropy, float rotation,
+                                float sss_weight, float3 sss_radius, float sss_scale, float sheen_tint,
+                                float3 N, float3 T)
+{
+    return pack_material_from_graph(coat, coat_roughness, sheen, sheen_roughness, anisotropy, rotation, sss_weight, sss_radius, sss_scale, sheen_tint, 0.0, 1.5, N, T);
 }
 
 // Without a sheen tint.

@@ -48,7 +48,14 @@ namespace
         while (std::getline(ss, item, ','))
         {
             try { res.push_back(std::stof(item)); }
-            catch (const std::exception&) {}
+            catch (const std::exception&)
+            {
+                // MaterialX booleans.
+                if (item.find("true") != std::string::npos)
+                    res.push_back(1.0f);
+                else if (item.find("false") != std::string::npos)
+                    res.push_back(0.0f);
+            }
         }
 
         return res;
@@ -894,8 +901,8 @@ namespace
 
     // Which parameter of each surface shader feeds which output of the
     // material graph. The graph has one base color, metallic, roughness,
-    // glow, opacity and normal; everything else the shader models (sheen,
-    // coat, subsurface, transmission, ...) is dropped.
+    // glow, opacity and normal, plus the lobes and transmission outputs listed
+    // below; everything else the shader models is dropped.
     struct SurfaceMapping
     {
         const char* category;
@@ -918,14 +925,26 @@ namespace
         const char* subsurface_radius; // colour: mean free path per channel
         const char* subsurface_scale;  // float multiplier on the radius
         const char* subsurface_color;  // diffuse colour of the scattering part; "" = none
+        const char* transmission;       // weight; "" = none
+        const char* transmission_color; // tint / absorption colour
+        const char* transmission_depth; // distance over which a solid absorbs to that colour
+        const char* ior;
+        const char* thin_walled;        // bool: true = thin-walled, false = solid volume
+        const char* thickness;          // gltf_pbr: volume thickness, 0 = thin-walled
+        const char* alpha_mode;         // gltf_pbr: 0 opaque, 1 mask, 2 blend; "" = decide from the opacity itself
+        const char* alpha_cutoff;       // gltf_pbr
+        const char* opacity_threshold;  // UsdPreviewSurface: > 0 cuts out at it, 0 blends
+        const char* film_weight;        // thin film weight; "" = always on when there is a thickness
+        const char* film_thickness;     // nanometres
+        const char* film_ior;
     };
 
     const SurfaceMapping surface_mappings[] =
     {
-        { "standard_surface",  "base_color",   "base",        "metalness",      "specular_roughness", "emission_color", "emission",             "opacity",          "normal",          "coat",         "coat_roughness", "sheen",       "sheen_roughness", "sheen_color", "specular_anisotropy", "specular_rotation", "subsurface", "subsurface_radius", "subsurface_scale", "subsurface_color" },
-        { "open_pbr_surface",  "base_color",   "base_weight", "base_metalness", "specular_roughness", "emission_color", "emission_luminance",   "geometry_opacity", "geometry_normal", "coat_weight",  "coat_roughness", "fuzz_weight", "fuzz_roughness", "fuzz_color", "specular_roughness_anisotropy", "", "subsurface_weight", "subsurface_radius_scale", "subsurface_radius", "subsurface_color" },
-        { "gltf_pbr",          "base_color",   "",            "metallic",       "roughness",          "emissive",       "emissive_strength",    "alpha",            "normal",          "clearcoat",    "clearcoat_roughness", "sheen_color", "sheen_roughness", "sheen_color", "", "", "", "", "", "" },
-        { "UsdPreviewSurface", "diffuseColor", "",            "metallic",       "roughness",          "emissiveColor",  "",                     "opacity",          "normal",          "clearcoat",    "clearcoatRoughness", "",            "", "", "", "", "", "", "", "" },
+        { "standard_surface",  "base_color",   "base",        "metalness",      "specular_roughness", "emission_color", "emission",             "opacity",          "normal",          "coat",         "coat_roughness", "sheen",       "sheen_roughness", "sheen_color", "specular_anisotropy", "specular_rotation", "subsurface", "subsurface_radius", "subsurface_scale", "subsurface_color", "transmission", "transmission_color", "transmission_depth", "specular_IOR", "thin_walled", "", "", "", "", "", "thin_film_thickness", "thin_film_IOR" },
+        { "open_pbr_surface",  "base_color",   "base_weight", "base_metalness", "specular_roughness", "emission_color", "emission_luminance",   "geometry_opacity", "geometry_normal", "coat_weight",  "coat_roughness", "fuzz_weight", "fuzz_roughness", "fuzz_color", "specular_roughness_anisotropy", "", "subsurface_weight", "subsurface_radius_scale", "subsurface_radius", "subsurface_color", "transmission_weight", "transmission_color", "transmission_depth", "specular_ior", "geometry_thin_walled", "", "", "", "", "thin_film_weight", "thin_film_thickness", "thin_film_ior" },
+        { "gltf_pbr",          "base_color",   "",            "metallic",       "roughness",          "emissive",       "emissive_strength",    "alpha",            "normal",          "clearcoat",    "clearcoat_roughness", "sheen_color", "sheen_roughness", "sheen_color", "", "", "", "", "", "", "transmission", "attenuation_color", "attenuation_distance", "ior", "", "thickness", "alpha_mode", "alpha_cutoff", "", "iridescence", "iridescence_thickness", "iridescence_ior" },
+        { "UsdPreviewSurface", "diffuseColor", "",            "metallic",       "roughness",          "emissiveColor",  "",                     "opacity",          "normal",          "clearcoat",    "clearcoatRoughness", "",            "", "", "", "", "", "", "", "", "", "", "", "ior", "", "", "", "", "opacityThreshold", "", "", "" },
     };
 
     class MtlxImporter
@@ -955,6 +974,14 @@ namespace
             if (in->hasInterfaceName())
                 if (auto iface = in->getInterfaceInput())
                     return iface->getResolvedValueString();
+
+            // A <constant> node is its value. It is folded here because a node with
+            // no connected input never runs in the graph, so one built as a node
+            // would feed the shader a value that was never declared.
+            if (auto n = in->getConnectedNode())
+                if (n->getCategory() == "constant")
+                    if (auto v = n->getInput("value"))
+                        return v->getResolvedValueString();
 
             return in->getResolvedValueString();
         }
@@ -1024,7 +1051,12 @@ namespace
                 return nullptr;
 
             if (auto n = in->getConnectedNode())
+            {
+                if (n->getCategory() == "constant")
+                    return nullptr;   // see value_string
+
                 return build(n, in->getOutputString(), depth);
+            }
 
             if (auto o = in->getConnectedOutput())
                 if (auto n = o->getConnectedNode())
@@ -1321,6 +1353,7 @@ namespace
             // packs weight * scale * radius. subsurface_color is not applied --
             // the base colour is what gets blurred.
             auto subsurface = channel(shader, map->subsurface, d);
+            bool subsurfaced = false;
 
             if (nonzero(subsurface))
             {
@@ -1328,6 +1361,7 @@ namespace
                     Log::get() << Log::LEVEL_WARNING << "MaterialX import: material has subsurface and another shading model; subsurface is dropped" << Log::endl;
                 else
                 {
+                    subsurfaced = true;
                     emit(subsurface, graph->get_subsurface_weight(), 1);
                     emit(channel(shader, map->subsurface_radius, d), graph->get_subsurface_radius(), 4);
                     emit(channel(shader, map->subsurface_scale, d), graph->get_subsurface_scale(), 1);
@@ -1340,7 +1374,48 @@ namespace
                 }
             }
 
+            // Thin film (anodised metal, oil): the lowest-priority shading model. A
+            // film weight of zero, or no thickness, is no film.
+            auto film = channel(shader, map->film_thickness, d);
+            auto film_weight = channel(shader, map->film_weight, d);
+            const bool filmed = nonzero(film) && (!*map->film_weight || nonzero(film_weight));
+
+            if (filmed)
+            {
+                if (coated || sheened || anisotropic || subsurfaced)
+                    Log::get() << Log::LEVEL_WARNING << "MaterialX import: material has a thin film and another shading model; the film is dropped" << Log::endl;
+                else
+                {
+                    emit(film, graph->get_thin_film_thickness(), 1);
+                    emit(channel(shader, map->film_ior, d), graph->get_thin_film_ior(), 1);
+                }
+            }
+
             emit(base_color, graph->get_base_color(), 4);
+
+            // Transmission: the weight being wired is what makes the material
+            // translucent (universal_material::resolve_transparency_mode). A
+            // solid (not thin-walled) surface gets a positive thickness, which is
+            // how the graph tells it from a thin one.
+            auto transmission = channel(shader, map->transmission, d);
+
+            if (nonzero(transmission))
+            {
+                emit(transmission, graph->get_transmission_weight(), 1);
+                emit(channel(shader, map->ior, d), graph->get_ior(), 1);
+                emit(channel(shader, map->transmission_color, d), graph->get_transmission_color(), 4);
+                emit(channel(shader, map->transmission_depth, d), graph->get_transmission_depth(), 1);
+
+                if (*map->thin_walled)
+                {
+                    auto thin = channel(shader, map->thin_walled, d);
+
+                    if (!thin.src && !thin.value.empty() && thin.value[0] < 0.5f)
+                        emit({ nullptr, { 1.0f } }, graph->get_thickness(), 1);
+                }
+                else if (*map->thickness)
+                    emit(channel(shader, map->thickness, d), graph->get_thickness(), 1);
+            }
 
             auto opacity = channel(shader, map->opacity, d);
 
@@ -1351,8 +1426,55 @@ namespace
             for (float v : opacity.value)
                 opaque &= v >= 0.999f;
 
+            // Cutout (foliage: discard below a threshold) or blend (partial
+            // coverage, drawn as a thin translucent layer). glTF and USD say which;
+            // otherwise a constant opacity blends and a textured one cuts out.
+            enum class Alpha { Auto, Cutout, Blend } alpha = Alpha::Auto;
+            float cutoff = 0.5f;
+
+            if (*map->alpha_mode)
+            {
+                auto mode = channel(shader, map->alpha_mode, d).value;
+                const int m = mode.empty() ? 0 : (int)mode[0];
+
+                if (m == 0)
+                    opaque = true;
+                else if (m == 1)
+                {
+                    alpha = Alpha::Cutout;
+                    auto c = channel(shader, map->alpha_cutoff, d).value;
+
+                    if (!c.empty())
+                        cutoff = c[0];
+                }
+                else
+                    alpha = Alpha::Blend;
+            }
+            else if (*map->opacity_threshold)
+            {
+                auto t = channel(shader, map->opacity_threshold, d).value;
+
+                if (!t.empty() && t[0] > 0.0f)
+                {
+                    alpha = Alpha::Cutout;
+                    cutoff = t[0];
+                }
+                else
+                    alpha = Alpha::Blend;
+            }
+
             if (!opaque)
+            {
                 emit(opacity, graph->get_opacity(), 1);
+
+                if (alpha == Alpha::Auto)
+                    alpha = opacity.src ? Alpha::Cutout : Alpha::Blend;
+
+                if (alpha == Alpha::Blend)
+                    emit({ nullptr, { 0.0f } }, graph->get_opacity_threshold(), 1);
+                else if (std::abs(cutoff - 0.5f) > 1e-4f)
+                    emit({ nullptr, { cutoff } }, graph->get_opacity_threshold(), 1);
+            }
 
             if (auto normal = shader->getInput(map->normal))
             {

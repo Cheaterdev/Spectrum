@@ -69,7 +69,7 @@ float4 sample(uint itex, SamplerState s, float2 tc, float lod)
 }
 #endif 
 
-void COMPILED_FUNC(in float3 a, in float2 b, out float4 c, out float d, out float e, out float4 f, out float4 g, out float h, out float ior, out float thickness, out float transmission, out float absorption_distance, out float coat, out float coat_roughness, out float sheen, out float sheen_roughness, out float anisotropy, out float aniso_rotation, out float sss_weight, out float3 sss_radius, out float sss_scale, out float sheen_tint, float lod);
+void COMPILED_FUNC(in float3 a, in float2 b, out float4 c, out float d, out float e, out float4 f, out float4 g, out float h, out float ior, out float thickness, out float transmission, out float absorption_distance, out float coat, out float coat_roughness, out float sheen, out float sheen_roughness, out float anisotropy, out float aniso_rotation, out float sss_weight, out float3 sss_radius, out float sss_scale, out float sheen_tint, out float3 transmission_color, out float opacity_threshold, out float thin_film_thickness, out float thin_film_ior, float lod);
 
 // World-space shading frame for MaterialX geometry nodes (see mx_stdlib.hlsl).
 // Only valid in hit shaders: ObjectToWorld3x4() needs a hit.
@@ -84,7 +84,7 @@ void SetMaterialXGeometry(mesh_vertex_input v)
 
 // Evaluate the material at the current hit and return just what a shadow ray
 // needs: surface colour (tint) and opacity. Mirrors the setup in the color hit.
-void ShadowSurface(in MyAttributes attr, out float4 color, out float opacity, out float surface_transmission)
+void ShadowSurface(in MyAttributes attr, out float4 color, out float opacity, out float surface_transmission, out float cutoff)
 {
 	SceneData sceneData = CreateSceneData();
 	RaytraceInstanceInfo instance = sceneData.GetRaytraceInstanceInfo()[InstanceID()];
@@ -104,11 +104,20 @@ void ShadowSurface(in MyAttributes attr, out float4 color, out float opacity, ou
 	t.v.pos = WorldRayOrigin() + WorldRayDirection() * RayTCurrent();
 
 	color = 1; opacity = 1;
-	float  metallic = 1, roughness = 1, refraction = 1, thickness = 0, transmission = 1, absorption_distance = 1, coat = 0, coat_roughness = 0.1, sheen = 0, sheen_roughness = 0.3, anisotropy = 0, aniso_rotation = 0, sss_weight = 0, sss_scale = 1, sheen_tint = 0; float3 sss_radius = float3(1, 1, 1);
+	float  metallic = 1, roughness = 1, refraction = 1, thickness = 0, transmission = 1, absorption_distance = 1, coat = 0, coat_roughness = 0.1, sheen = 0, sheen_roughness = 0.3, anisotropy = 0, aniso_rotation = 0, sss_weight = 0, sss_scale = 1, sheen_tint = 0; float3 sss_radius = float3(1, 1, 1), transmission_color = float3(-1, -1, -1); float opacity_threshold = 0.5, thin_film_thickness = 0, thin_film_ior = 1.5;
 	float4 normal = 0, glow = 0;
 	SetMaterialXGeometry(t.v);
-	COMPILED_FUNC(t.v.pos, t.v.tc, color, metallic, roughness, normal, glow, opacity, refraction, thickness, transmission, absorption_distance, coat, coat_roughness, sheen, sheen_roughness, anisotropy, aniso_rotation, sss_weight, sss_radius, sss_scale, sheen_tint, t.lod);
+	COMPILED_FUNC(t.v.pos, t.v.tc, color, metallic, roughness, normal, glow, opacity, refraction, thickness, transmission, absorption_distance, coat, coat_roughness, sheen, sheen_roughness, anisotropy, aniso_rotation, sss_weight, sss_radius, sss_scale, sheen_tint, transmission_color, opacity_threshold, thin_film_thickness, thin_film_ior, t.lod);
 	surface_transmission = transmission;
+	cutoff = opacity_threshold;
+#if defined(TRANSLUCENT_BLEND)
+	// Blended opacity: light passes in proportion to what is not covered.
+	surface_transmission = 1 - saturate(opacity);
+	transmission_color = float3(1, 1, 1);
+#endif
+	// An unset transmission colour (negative) means the base colour tints it.
+	if (transmission_color.x >= 0)
+		color.rgb = transmission_color;
 }
 
 
@@ -166,20 +175,20 @@ float3 vsm_shadow_lookup(float3 wpos, float3 normal, float3 light_dir)
 [shader("anyhit")]
 void MyAnyHitShader(inout RayPayload payload, in MyAttributes attr)
 {
-	float4 color; float opacity, surface_transmission;
-	ShadowSurface(attr, color, opacity, surface_transmission);
+	float4 color; float opacity, surface_transmission, cutoff;
+	ShadowSurface(attr, color, opacity, surface_transmission, cutoff);
 
-	if (opacity < 0.5)
+	if (opacity < cutoff)
 		IgnoreHit();
 }
 
 [shader("anyhit")]
 void ColorShadowAnyHitShader([raypayload] inout ColorShadowPayload payload, in MyAttributes attr)
 {
-	float4 color; float opacity, surface_transmission;
-	ShadowSurface(attr, color, opacity, surface_transmission);
+	float4 color; float opacity, surface_transmission, cutoff;
+	ShadowSurface(attr, color, opacity, surface_transmission, cutoff);
 
-	if (opacity < 0.5)
+	if (opacity < cutoff)
 		IgnoreHit();
 }
 
@@ -193,13 +202,13 @@ void ColorShadowClosestHitShader([raypayload] inout ColorShadowPayload payload, 
 	payload.dist = RayTCurrent(); // report the occluder distance to the caller.
 
 #if defined(TRANSLUCENT)
-	float4 color; float opacity, surface_transmission;
-	ShadowSurface(attr, color, opacity, surface_transmission);
+	float4 color; float opacity, surface_transmission, cutoff;
+	ShadowSurface(attr, color, opacity, surface_transmission, cutoff);
 
 	payload.transmittance *= saturate(color.rgb) * saturate(surface_transmission);
 #elif defined(TRANSPARENT)
-	float4 color; float opacity, surface_transmission;
-	ShadowSurface(attr, color, opacity, surface_transmission);
+	float4 color; float opacity, surface_transmission, cutoff;
+	ShadowSurface(attr, color, opacity, surface_transmission, cutoff);
 
 	// Light through the glass is tinted by its colour; opacity darkens it (full
 	// opacity == opaque == blocks). The caller advances past and keeps tracing.
@@ -230,19 +239,29 @@ void TranslucentClosestHitShader([raypayload] inout TranslucentPayload payload, 
 	t.v.pos = WorldRayOrigin() + WorldRayDirection() * RayTCurrent();
 
 	float4 color = 1;
-	float metallic = 0, roughness = 0, opacity = 1, refraction = 1, thickness = 0, transmission = 1, absorption_distance = 1, coat = 0, coat_roughness = 0.1, sheen = 0, sheen_roughness = 0.3, anisotropy = 0, aniso_rotation = 0, sss_weight = 0, sss_scale = 1, sheen_tint = 0; float3 sss_radius = float3(1, 1, 1);
+	float metallic = 0, roughness = 0, opacity = 1, refraction = 1, thickness = 0, transmission = 1, absorption_distance = 1, coat = 0, coat_roughness = 0.1, sheen = 0, sheen_roughness = 0.3, anisotropy = 0, aniso_rotation = 0, sss_weight = 0, sss_scale = 1, sheen_tint = 0; float3 sss_radius = float3(1, 1, 1), transmission_color = float3(-1, -1, -1); float opacity_threshold = 0.5, thin_film_thickness = 0, thin_film_ior = 1.5;
 	float4 normal = 0, glow = 0;
 	SetMaterialXGeometry(t.v);
-	COMPILED_FUNC(t.v.pos, t.v.tc, color, metallic, roughness, normal, glow, opacity, refraction, thickness, transmission, absorption_distance, coat, coat_roughness, sheen, sheen_roughness, anisotropy, aniso_rotation, sss_weight, sss_radius, sss_scale, sheen_tint, t.lod);
+	COMPILED_FUNC(t.v.pos, t.v.tc, color, metallic, roughness, normal, glow, opacity, refraction, thickness, transmission, absorption_distance, coat, coat_roughness, sheen, sheen_roughness, anisotropy, aniso_rotation, sss_weight, sss_radius, sss_scale, sheen_tint, transmission_color, opacity_threshold, thin_film_thickness, thin_film_ior, t.lod);
 
 	// Inverse-transpose of the node's full local->world matrix (row-vector
 	// multiply by the inverse), so non-uniform scale doesn't skew it either.
 	node_data node = sceneData.GetNodes()[instance.GetNode_offset()];
 	float3 world_normal = normalize(mul(t.v.normal, (float3x3)node.GetNode_inverse_matrix()));
 
+#if defined(TRANSLUCENT_BLEND)
+	// Blended opacity is a thin, non-refracting layer: what the surface does not
+	// cover shows what is behind it.
+	transmission = 1 - saturate(opacity);
+	transmission_color = float3(1, 1, 1);
+	refraction = 1;
+	thickness = 0;
+#endif
+
 	payload.dist        = RayTCurrent();
 	payload.normal      = world_normal;
 	payload.albedo      = color.rgb;
+	payload.transmission_color = transmission_color.x >= 0 ? transmission_color : color.rgb;
 	payload.roughness   = roughness;
 	payload.ior                 = refraction;
 	payload.thickness           = thickness;
@@ -295,7 +314,7 @@ void MyClosestHitShader(inout RayPayload payload, in MyAttributes attr)
 	float4 normal = 0;
 	float4 glow = 0;
 	float opacity = 1;
-	float refraction = 1, thickness = 0, transmission = 1, absorption_distance = 1, coat = 0, coat_roughness = 0.1, sheen = 0, sheen_roughness = 0.3, anisotropy = 0, aniso_rotation = 0, sss_weight = 0, sss_scale = 1, sheen_tint = 0; float3 sss_radius = float3(1, 1, 1);
+	float refraction = 1, thickness = 0, transmission = 1, absorption_distance = 1, coat = 0, coat_roughness = 0.1, sheen = 0, sheen_roughness = 0.3, anisotropy = 0, aniso_rotation = 0, sss_weight = 0, sss_scale = 1, sheen_tint = 0; float3 sss_radius = float3(1, 1, 1), transmission_color = float3(-1, -1, -1); float opacity_threshold = 0.5, thin_film_thickness = 0, thin_film_ior = 1.5;
 
 
 	t.lod += log2(abs(payload.cone.width + payload.cone.angle * RayTCurrent()));
@@ -303,7 +322,7 @@ void MyClosestHitShader(inout RayPayload payload, in MyAttributes attr)
 
 
 	SetMaterialXGeometry(t.v);
-	COMPILED_FUNC(t.v.pos, t.v.tc, color, metallic, roughness, normal, glow, opacity, refraction, thickness, transmission, absorption_distance, coat, coat_roughness, sheen, sheen_roughness, anisotropy, aniso_rotation, sss_weight, sss_radius, sss_scale, sheen_tint, t.lod);
+	COMPILED_FUNC(t.v.pos, t.v.tc, color, metallic, roughness, normal, glow, opacity, refraction, thickness, transmission, absorption_distance, coat, coat_roughness, sheen, sheen_roughness, anisotropy, aniso_rotation, sss_weight, sss_radius, sss_scale, sheen_tint, transmission_color, opacity_threshold, thin_film_thickness, thin_film_ior, t.lod);
 
 	// Transparent-aware sun visibility (float3 transmittance instead of a bool).
 	// Iterate the shadow ray through transparent occluders (advancing past each

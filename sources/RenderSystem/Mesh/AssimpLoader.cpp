@@ -1,4 +1,4 @@
-﻿module;
+module;
 // Assimp macros don't propagate through the named module boundary — redefine them here.
 #define AI_SUCCESS              aiReturn_SUCCESS
 #define AI_MATKEY_COLOR_DIFFUSE "$clr.diffuse", 0, 0
@@ -1057,8 +1057,8 @@ std::shared_ptr<MeshData> MeshData::load_assimp(const std::string& file_name, re
                         float file_ior;
                         if (AI_SUCCESS == native_material->Get(AI_MATKEY_REFRACTI, file_ior) && file_ior > 1.0f)
                             ior = file_ior;
-                        link_scalar(ior, graph->get_refraction(), "IOR -> refraction");
-                        link_scalar(transmission, graph->get_transmission(), "transmission");
+                        link_scalar(ior, graph->get_ior(), "IOR");
+                        link_scalar(transmission, graph->get_transmission_weight(), "transmission");
 
                         // glTF KHR_materials_volume: 0 = thin-walled, same convention as ours.
                         float thickness;
@@ -1067,7 +1067,7 @@ std::shared_ptr<MeshData> MeshData::load_assimp(const std::string& file_name, re
 
                         float attenuation_distance;
                         if (AI_SUCCESS == native_material->Get(AI_MATKEY_VOLUME_ATTENUATION_DISTANCE, attenuation_distance) && attenuation_distance > 0.0f)
-                            link_scalar(attenuation_distance, graph->get_absorption_distance(), "absorption distance");
+                            link_scalar(attenuation_distance, graph->get_transmission_depth(), "transmission depth");
                     }
                 }
 

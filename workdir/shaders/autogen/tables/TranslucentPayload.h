@@ -15,6 +15,7 @@ namespace Raytrace
 		float dist : read(closesthit,miss,caller) : write(closesthit,miss,caller);
 		float3 normal : read(closesthit,caller) : write(closesthit,caller);
 		float3 albedo : read(closesthit,caller) : write(closesthit,caller);
+		float3 transmission_color : read(closesthit,caller) : write(closesthit,caller);
 		float roughness : read(closesthit,caller) : write(closesthit,caller);
 		float ior : read(closesthit,caller) : write(closesthit,caller);
 		float thickness : read(closesthit,caller) : write(closesthit,caller);
@@ -24,6 +25,7 @@ namespace Raytrace
 		float GetDist() { return dist; }
 		float3 GetNormal() { return normal; }
 		float3 GetAlbedo() { return albedo; }
+		float3 GetTransmission_color() { return transmission_color; }
 		float GetRoughness() { return roughness; }
 		float GetIor() { return ior; }
 		float GetThickness() { return thickness; }

@@ -190,7 +190,7 @@ void MaterialContext::start(std::string orig_file, MaterialGraph* graph)
 	graph->get_base_color()->set_enabled(true);
 	graph->get_roughness()->set_enabled(true);
 	graph->get_opacity()->set_enabled(true);
-	graph->get_refraction()->set_enabled(true);
+	graph->get_ior()->set_enabled(true);
 	graph->set_translucent_outputs_enabled(true);
 
 	graph->get_tess_displacement()->set_enabled(false);
@@ -239,7 +239,7 @@ void MaterialContext::start(std::string orig_file, MaterialGraph* graph)
 		graph->get_mettalic()->set_enabled(false);
 		graph->get_roughness()->set_enabled(false);
 		graph->get_opacity()->set_enabled(false);
-		graph->get_refraction()->set_enabled(false);
+		graph->get_ior()->set_enabled(false);
 		graph->set_translucent_outputs_enabled(false);
 
 		graph->get_base_color()->set_enabled(false);
@@ -273,7 +273,7 @@ void MaterialContext::start(std::string orig_file, MaterialGraph* graph)
 		graph->get_base_color()->set_enabled(true);
 		graph->get_roughness()->set_enabled(true);
 		graph->get_opacity()->set_enabled(true);
-		graph->get_refraction()->set_enabled(true);
+		graph->get_ior()->set_enabled(true);
 		graph->set_translucent_outputs_enabled(true);
 		graph->get_tess_displacement()->set_enabled(false);
 
@@ -716,11 +716,11 @@ MaterialGraph::MaterialGraph()
 	i_glow = register_output(/*ShaderParams::get().FLOAT4, */"glow", ShaderParams::get().FLOAT4);
 	// Registered after glow so they append to the end of the COMPILED_FUNC output list.
 	i_opacity = register_output("opacity", ShaderParams::get().FLOAT1);
-	i_refraction = register_output("refraction", ShaderParams::get().FLOAT1);
+	i_refraction = register_output("ior", ShaderParams::get().FLOAT1);
 	// Translucent-only (refraction wired): see TranslucentRTX, raytracing.prism.
 	i_thickness = register_output("thickness", ShaderParams::get().FLOAT1);
-	i_transmission = register_output("transmission", ShaderParams::get().FLOAT1);
-	i_absorption_distance = register_output("absorption distance", ShaderParams::get().FLOAT1);
+	i_transmission = register_output("transmission weight", ShaderParams::get().FLOAT1);
+	i_absorption_distance = register_output("transmission depth", ShaderParams::get().FLOAT1);
 	i_coat = register_output("coat weight", ShaderParams::get().FLOAT1);
 	i_coat_roughness = register_output("coat roughness", ShaderParams::get().FLOAT1);
 	i_coat->default_value = shader_parameter("0.0", ShaderParams::get().FLOAT1);
@@ -741,6 +741,14 @@ MaterialGraph::MaterialGraph()
 	i_sss_scale->default_value = shader_parameter("1.0", ShaderParams::get().FLOAT1);
 	i_sheen_tint = register_output("sheen tint", ShaderParams::get().FLOAT1);
 	i_sheen_tint->default_value = shader_parameter("0.0", ShaderParams::get().FLOAT1);
+	i_transmission_color = register_output("transmission color", ShaderParams::get().FLOAT3);
+	i_transmission_color->default_value = shader_parameter("float3(-1,-1,-1)", ShaderParams::get().FLOAT3);
+	i_opacity_threshold = register_output("opacity threshold", ShaderParams::get().FLOAT1);
+	i_opacity_threshold->default_value = shader_parameter("0.5", ShaderParams::get().FLOAT1);
+	i_thin_film_thickness = register_output("thin film thickness", ShaderParams::get().FLOAT1);
+	i_thin_film_ior = register_output("thin film ior", ShaderParams::get().FLOAT1);
+	i_thin_film_thickness->default_value = shader_parameter("0.0", ShaderParams::get().FLOAT1);
+	i_thin_film_ior->default_value = shader_parameter("1.5", ShaderParams::get().FLOAT1);
 
 	i_base_color->default_value = shader_parameter("float4(0,0,0,1)", ShaderParams::get().FLOAT4);
 	i_metallic->default_value = shader_parameter("0.0", ShaderParams::get().FLOAT1);
@@ -818,7 +826,7 @@ FlowGraph::output::ptr MaterialGraph::get_opacity()
 	return i_opacity;
 }
 
-FlowGraph::output::ptr MaterialGraph::get_refraction()
+FlowGraph::output::ptr MaterialGraph::get_ior()
 {
 	return i_refraction;
 }
@@ -828,14 +836,34 @@ FlowGraph::output::ptr MaterialGraph::get_thickness()
 	return i_thickness;
 }
 
-FlowGraph::output::ptr MaterialGraph::get_transmission()
+FlowGraph::output::ptr MaterialGraph::get_transmission_weight()
 {
 	return i_transmission;
 }
 
-FlowGraph::output::ptr MaterialGraph::get_absorption_distance()
+FlowGraph::output::ptr MaterialGraph::get_transmission_color()
+{
+	return i_transmission_color;
+}
+
+FlowGraph::output::ptr MaterialGraph::get_transmission_depth()
 {
 	return i_absorption_distance;
+}
+
+FlowGraph::output::ptr MaterialGraph::get_opacity_threshold()
+{
+	return i_opacity_threshold;
+}
+
+FlowGraph::output::ptr MaterialGraph::get_thin_film_thickness()
+{
+	return i_thin_film_thickness;
+}
+
+FlowGraph::output::ptr MaterialGraph::get_thin_film_ior()
+{
+	return i_thin_film_ior;
 }
 
 FlowGraph::output::ptr MaterialGraph::get_coat()
@@ -919,9 +947,21 @@ void MaterialGraph::restore_coat_outputs()
 	i_sss_radius.reset();
 	i_sss_scale.reset();
 	i_sheen_tint.reset();
+	i_transmission_color.reset();
+	i_opacity_threshold.reset();
+	i_thin_film_thickness.reset();
+	i_thin_film_ior.reset();
 
 	for (auto& out : output_parametres)
 	{
+		// Transparency ports were renamed to MaterialX's names.
+		if (out->name == "refraction")
+			out->name = "ior";
+		else if (out->name == "transmission")
+			out->name = "transmission weight";
+		else if (out->name == "absorption distance")
+			out->name = "transmission depth";
+
 		if (out->name == "coat weight")
 			i_coat = out;
 		else if (out->name == "coat roughness")
@@ -942,6 +982,14 @@ void MaterialGraph::restore_coat_outputs()
 			i_sss_scale = out;
 		else if (out->name == "sheen tint")
 			i_sheen_tint = out;
+		else if (out->name == "transmission color")
+			i_transmission_color = out;
+		else if (out->name == "opacity threshold")
+			i_opacity_threshold = out;
+		else if (out->name == "thin film thickness")
+			i_thin_film_thickness = out;
+		else if (out->name == "thin film ior")
+			i_thin_film_ior = out;
 	}
 
 	if (!i_coat)
@@ -974,6 +1022,18 @@ void MaterialGraph::restore_coat_outputs()
 	if (!i_sheen_tint)
 		i_sheen_tint = register_output("sheen tint", ShaderParams::get().FLOAT1);
 
+	if (!i_transmission_color)
+		i_transmission_color = register_output("transmission color", ShaderParams::get().FLOAT3);
+
+	if (!i_opacity_threshold)
+		i_opacity_threshold = register_output("opacity threshold", ShaderParams::get().FLOAT1);
+
+	if (!i_thin_film_thickness)
+		i_thin_film_thickness = register_output("thin film thickness", ShaderParams::get().FLOAT1);
+
+	if (!i_thin_film_ior)
+		i_thin_film_ior = register_output("thin film ior", ShaderParams::get().FLOAT1);
+
 	i_coat->default_value = shader_parameter("0.0", ShaderParams::get().FLOAT1);
 	i_coat_roughness->default_value = shader_parameter("0.1", ShaderParams::get().FLOAT1);
 	i_sheen->default_value = shader_parameter("0.0", ShaderParams::get().FLOAT1);
@@ -984,6 +1044,10 @@ void MaterialGraph::restore_coat_outputs()
 	i_sss_radius->default_value = shader_parameter("float3(1,1,1)", ShaderParams::get().FLOAT3);
 	i_sss_scale->default_value = shader_parameter("1.0", ShaderParams::get().FLOAT1);
 	i_sheen_tint->default_value = shader_parameter("0.0", ShaderParams::get().FLOAT1);
+	i_transmission_color->default_value = shader_parameter("float3(-1,-1,-1)", ShaderParams::get().FLOAT3);
+	i_opacity_threshold->default_value = shader_parameter("0.5", ShaderParams::get().FLOAT1);
+	i_thin_film_thickness->default_value = shader_parameter("0.0", ShaderParams::get().FLOAT1);
+	i_thin_film_ior->default_value = shader_parameter("1.5", ShaderParams::get().FLOAT1);
 }
 
 // Toggled together with the coat outputs: both are "extra" outputs that every
@@ -995,6 +1059,10 @@ void MaterialGraph::set_translucent_outputs_enabled(bool enabled)
 	i_thickness->set_enabled(enabled);
 	i_transmission->set_enabled(enabled);
 	i_absorption_distance->set_enabled(enabled);
+	i_transmission_color->set_enabled(enabled);
+	i_opacity_threshold->set_enabled(enabled);
+	i_thin_film_thickness->set_enabled(enabled);
+	i_thin_film_ior->set_enabled(enabled);
 }
 
 void MaterialGraph::start(MaterialContext* context)

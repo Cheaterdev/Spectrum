@@ -90,7 +90,11 @@ void CS(uint3 dispatchID : SV_DispatchThreadID)
 	// reconstruction/denoising on this exact signal (see RTXCombine's own
 	// comment, voxel.prism).
 	float3 reflection = GetRTXCombine().GetReflection()[tc].rgb;
-	float3 refl_color = get_PBR(albedo.rgb, reflection, normal, v, roughness, metallic) * base_attenuation;
+	float3 specular_color = albedo.rgb;
+	if (material_model(material) == SHADING_MODEL_THINFILM)
+		specular_color = iridescent_f0(saturate(dot(normal, -v)), thinfilm_thickness(material), thinfilm_ior(material), albedo.rgb);
+
+	float3 refl_color = get_PBR(specular_color, reflection, normal, v, roughness, metallic) * base_attenuation;
 
 	// Indirect GI: diffuse bounce light, weighted by the surface's own
 	// albedo (diffuse response) rather than the specular BRDF above, and

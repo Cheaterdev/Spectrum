@@ -403,7 +403,7 @@ float frame_probe() { mx_set_time(2.0); return mx_frame(); }
 		auto dir = to_path(L"shaders/common");
 		std::string lobes;
 
-		for (const char* name : { "shading_model.hlsl", "coat.hlsl", "sheen.hlsl", "aniso.hlsl", "lobes.hlsl" })
+		for (const char* name : { "shading_model.hlsl", "coat.hlsl", "sheen.hlsl", "aniso.hlsl", "iridescence.hlsl", "lobes.hlsl", "medium.hlsl" })
 		{
 			auto text = mx_detail::read_text(dir / name);
 
@@ -485,6 +485,22 @@ float frame_probe() { mx_set_time(2.0); return mx_frame(); }
 			{ "sheen ambient radiance",    "sheen_indirect(" + sheen + ", " + up + ", " + up + ", 1.0, 3.0) / sheen_indirect(" + sheen + ", " + up + ", " + up + ", 1.0, 1.0)", { 3, 3, 3, 0 }, 1e-4f },
 			{ "sheen ambient other model", "sheen_indirect(" + coated + ", " + up + ", " + up + ", 1.0, 1.0)", { 0, 0, 0, 0 } },
 			{ "sheen ambient bounded",     "float3(sheen_directional_albedo(1.0, 0.25) > 0 && sheen_directional_albedo(1.0, 0.25) < 1, sheen_directional_albedo(0.2, 0.25) > 0 && sheen_directional_albedo(0.2, 0.25) < 1, 0)", { 1, 1, 0, 0 } },
+			// Absorbing solids: the tint is reached after `depth`; depth 0 is no volume, with the
+			// tint taken once at the interface instead (not an absorption over zero distance).
+			{ "medium sigma",          "medium_sigma(float3(0.5, 0.25, 1.0), 1.0)", { 0.693147f, 1.386294f, 0, 0 }, 1e-4f },
+			{ "medium sigma, deeper",  "medium_sigma(float3(0.5, 0.25, 1.0), 2.0)", { 0.346574f, 0.693147f, 0, 0 }, 1e-4f },
+			{ "medium without depth",  "medium_sigma(float3(0.5, 0.25, 1.0), 0.0)", { 0, 0, 0, 0 } },
+			{ "entry tint, volume",    "medium_entry_tint(float3(0.5, 0.25, 1.0), 1.0)", { 1, 1, 1, 0 } },
+			{ "entry tint, no depth",  "medium_entry_tint(float3(0.5, 0.25, 1.0), 0.0)", { 0.5f, 0.25f, 1.0f, 0 } },
+			// Thin film (iridescence.hlsl). No film is the plain Schlick Fresnel:
+			// 0.7 + 0.3 * 0.4^5. The coloured results are the same algorithm evaluated
+			// independently in double precision (titanium F0 under a 2.488 film).
+			{ "film: none",            "iridescent_fresnel(0.6, 0.0, 1.5, float3(0.7, 0.7, 0.7))", { 0.703072f, 0.703072f, 0.703072f, 0 }, 1e-4f },
+			{ "film: 20 nm titanium",  "iridescent_fresnel(1.0, 20.0, 2.488, float3(0.441, 0.4, 0.361))", { 0.4143f, 0.3210f, 0.2540f, 0 }, 5e-3f },
+			{ "film: 80 nm titanium",  "iridescent_fresnel(1.0, 80.0, 2.488, float3(0.441, 0.4, 0.361))", { 0.0610f, 0.2420f, 0.3360f, 0 }, 5e-3f },
+			{ "film: F0 round trip",   "iri_schlick(iridescent_f0(0.8, 80.0, 2.488, float3(0.441, 0.4, 0.361)), 0.8) - iridescent_fresnel(0.8, 80.0, 2.488, float3(0.441, 0.4, 0.361))", { 0, 0, 0, 0 }, 2e-3f },
+			{ "film: packed",          "float3(thinfilm_thickness(pack_material_from_graph(0.0, 0.1, 0.0, 0.3, 0.0, 0.0, 0.0, float3(1, 1, 1), 1.0, 0.0, 80.0, 2.0, " + up + ", float3(1, 0, 0))), thinfilm_ior(pack_material_from_graph(0.0, 0.1, 0.0, 0.3, 0.0, 0.0, 0.0, float3(1, 1, 1), 1.0, 0.0, 80.0, 2.0, " + up + ", float3(1, 0, 0))), material_model(pack_material_from_graph(0.0, 0.1, 0.0, 0.3, 0.0, 0.0, 0.0, float3(1, 1, 1), 1.0, 0.0, 80.0, 2.0, " + up + ", float3(1, 0, 0))))", { 80.0f, 2.0f, 5.0f, 0 }, 1e-3f },
+			{ "film: metal highlight", "base_sun_specular(pack_material(SHADING_MODEL_THINFILM, float3(0.08, 0.744, 0.0)), " + up + ", " + up + ", " + up + ", 1.0, float3(0.441, 0.4, 0.361), 0.5, 1.0)", { 0.244f, 0.968f, 1.344f, 0 }, 2e-2f },
 			// The coat takes F of the light before the base layer sees it: 1 - weight * F.
 			{ "coat attenuation head-on", "coat_base_attenuation(" + coated + ", " + up + ", " + up + ")", { 0.96f, 0, 0, 0 }, 1e-4f },
 			{ "coat attenuation grazing", "coat_base_attenuation(" + coated + ", " + up + ", float3(1, 0, 0))", { 0.0f, 0, 0, 0 }, 1e-4f },
@@ -950,6 +966,205 @@ float frame_probe() { mx_set_time(2.0); return mx_frame(); }
 		ASSERT_TRUE(source(plain[0].second->get_subsurface_weight()) == nullptr);
 	}
 
+	// Transmission maps onto the graph's transparency outputs, in MaterialX's own
+	// names. A wired transmission weight is what makes the material translucent.
+	TEST(MaterialX.GPU, Transmission)
+	{
+		using namespace mx_import;
+
+		auto glass = build(surface("standard_surface",
+			R"(<input name="transmission" type="float" value="0.8" />
+			   <input name="transmission_color" type="color3" value="0.9, 0.95, 1.0" />
+			   <input name="transmission_depth" type="float" value="0.4" />
+			   <input name="specular_IOR" type="float" value="1.33" />)"));
+		ASSERT_EQ(size_t(1), glass.size());
+		auto& g = glass[0].second;
+		ASSERT_EQ(std::string(), close({ source_as<ScalarNode>(g->get_transmission_weight())->get_value() }, { 0.8f }));
+		ASSERT_EQ(std::string(), close({ source_as<ScalarNode>(g->get_ior())->get_value() }, { 1.33f }));
+		ASSERT_EQ(std::string(), close({ source_as<ScalarNode>(g->get_transmission_depth())->get_value() }, { 0.4f }));
+		auto tint = source_as<VectorNode>(g->get_transmission_color())->get_value();
+		ASSERT_EQ(std::string(), close({ tint.x, tint.y, tint.z }, { 0.9f, 0.95f, 1.0f }));
+		// thin_walled defaults to false: a solid volume, which the graph expresses as thickness > 0.
+		ASSERT_TRUE(source(g->get_thickness()) != nullptr);
+
+		auto thin = build(surface("standard_surface",
+			R"(<input name="transmission" type="float" value="1.0" />
+			   <input name="thin_walled" type="boolean" value="true" />)"));
+		ASSERT_EQ(size_t(1), thin.size());
+		ASSERT_TRUE(source(thin[0].second->get_transmission_weight()) != nullptr);
+		ASSERT_TRUE(source(thin[0].second->get_thickness()) == nullptr);
+
+		auto openpbr = build(surface("open_pbr_surface",
+			R"(<input name="transmission_weight" type="float" value="0.6" />
+			   <input name="specular_ior" type="float" value="1.45" />)"));
+		ASSERT_EQ(size_t(1), openpbr.size());
+		ASSERT_EQ(std::string(), close({ source_as<ScalarNode>(openpbr[0].second->get_transmission_weight())->get_value() }, { 0.6f }));
+		ASSERT_EQ(std::string(), close({ source_as<ScalarNode>(openpbr[0].second->get_ior())->get_value() }, { 1.45f }));
+
+		auto gltf = build(surface("gltf_pbr",
+			R"(<input name="transmission" type="float" value="0.5" />
+			   <input name="thickness" type="float" value="0.2" />
+			   <input name="attenuation_distance" type="float" value="2.0" />)"));
+		ASSERT_EQ(size_t(1), gltf.size());
+		ASSERT_EQ(std::string(), close({ source_as<ScalarNode>(gltf[0].second->get_thickness())->get_value() }, { 0.2f }));
+		ASSERT_EQ(std::string(), close({ source_as<ScalarNode>(gltf[0].second->get_transmission_depth())->get_value() }, { 2.0f }));
+
+		// No transmission: the material stays opaque.
+		auto opaque = build(surface("standard_surface", ""));
+		ASSERT_EQ(size_t(1), opaque.size());
+		ASSERT_TRUE(source(opaque[0].second->get_transmission_weight()) == nullptr);
+		ASSERT_TRUE(source(opaque[0].second->get_ior()) == nullptr);
+	}
+
+	// Thin film maps onto the graph's film outputs; it is the lowest-priority
+	// shading model, so another one wins.
+	TEST(MaterialX.GPU, ThinFilm)
+	{
+		using namespace mx_import;
+
+		auto film = build(surface("standard_surface",
+			R"(<input name="metalness" type="float" value="1.0" />
+			   <input name="thin_film_thickness" type="float" value="20" />
+			   <input name="thin_film_IOR" type="float" value="2.488" />)"));
+		ASSERT_EQ(size_t(1), film.size());
+		ASSERT_EQ(std::string(), close({ source_as<ScalarNode>(film[0].second->get_thin_film_thickness())->get_value() }, { 20.0f }));
+		ASSERT_EQ(std::string(), close({ source_as<ScalarNode>(film[0].second->get_thin_film_ior())->get_value() }, { 2.488f }));
+
+		auto none = build(surface("standard_surface", ""));
+		ASSERT_EQ(size_t(1), none.size());
+		ASSERT_TRUE(source(none[0].second->get_thin_film_thickness()) == nullptr);
+
+		auto coated = build(surface("standard_surface",
+			R"(<input name="coat" type="float" value="1.0" />
+			   <input name="thin_film_thickness" type="float" value="20" />)"));
+		ASSERT_EQ(size_t(1), coated.size());
+		ASSERT_TRUE(source(coated[0].second->get_thin_film_thickness()) == nullptr);
+
+		// OpenPBR's film weight gates it.
+		auto off = build(surface("open_pbr_surface",
+			R"(<input name="thin_film_weight" type="float" value="0.0" />
+			   <input name="thin_film_thickness" type="float" value="400" />)"));
+		ASSERT_EQ(size_t(1), off.size());
+		ASSERT_TRUE(source(off[0].second->get_thin_film_thickness()) == nullptr);
+	}
+
+	// The transparency mode follows from the wiring: transmission (or IOR) wired
+	// -> Translucent, else opacity wired -> Masked, else Opaque. Generating the
+	// material also builds the translucent hit shader variant for the first.
+	TEST(MaterialX.GPU, TransparencyModes)
+	{
+		using namespace mx_import;
+
+		auto mode_of = [&](const std::string& inputs, const std::string& extra = "", const std::string& category = "standard_surface")
+		{
+			auto graphs = build(surface(category, inputs, extra));
+
+			if (graphs.size() != 1)
+				throw Test::TestFailure("import produced " + std::to_string(graphs.size()) + " graphs");
+
+			materials::universal_material material(graphs[0].second);
+			material.generate_material();
+			return material.get_transparency_mode();
+		};
+
+		ASSERT_EQ((int)Meshes::TransparencyMode::Opaque, (int)mode_of(""));
+		ASSERT_EQ((int)Meshes::TransparencyMode::Translucent, (int)mode_of(R"(<input name="transmission" type="float" value="0.7" />)"));
+
+		// A constant opacity is a blended surface; one driven by a node is a cutout.
+		ASSERT_EQ((int)Meshes::TransparencyMode::Translucent, (int)mode_of(R"(<input name="opacity" type="color3" value="0.5, 0.5, 0.5" />)"));
+		ASSERT_EQ((int)Meshes::TransparencyMode::Masked, (int)mode_of(
+			R"(<input name="opacity" type="float" nodename="mask" />)", R"(<noise2d name="mask" type="float" />)"));
+
+		// glTF says which: mask cuts out, blend blends, the default ignores alpha.
+		ASSERT_EQ((int)Meshes::TransparencyMode::Masked, (int)mode_of(R"(<input name="alpha" type="float" value="0.5" /><input name="alpha_mode" type="integer" value="1" />)", "", "gltf_pbr"));
+		ASSERT_EQ((int)Meshes::TransparencyMode::Translucent, (int)mode_of(R"(<input name="alpha" type="float" value="0.5" /><input name="alpha_mode" type="integer" value="2" />)", "", "gltf_pbr"));
+		ASSERT_EQ((int)Meshes::TransparencyMode::Opaque, (int)mode_of(R"(<input name="alpha" type="float" value="0.5" />)", "", "gltf_pbr"));
+	}
+
+	// A constant node feeding a matching-type input generates a shader that builds.
+	TEST(MaterialX.GPU, ConstantNodeInput)
+	{
+		using namespace mx_import;
+
+		auto graphs = build(surface("standard_surface",
+			R"(<input name="specular_roughness" type="float" nodename="rough" />)",
+			R"(<constant name="rough" type="float"><input name="value" type="float" value="0.35" /></constant>)"));
+		ASSERT_EQ(size_t(1), graphs.size());
+
+		materials::universal_material material(graphs[0].second);
+		material.generate_material();
+		// Folded into the input's constant rather than built as a node.
+		auto* rough = source_as<ScalarNode>(graphs[0].second->get_roughness());
+		ASSERT_TRUE(rough != nullptr);
+		ASSERT_EQ(std::string(), close({ rough->get_value() }, { 0.35f }));
+	}
+
+	TEST(MaterialX.GPU, TempBeerProbe)   // TEMP-DEBUG
+	{
+		using namespace mx_import;
+		mx_detail::ensure_library();
+		auto graphs = MaterialXLibrary::get().build_graphs("C:/Users/Cheat/Downloads/Beer_Pale_Lager.mtlx");
+		std::ofstream out("beer_probe.temp");
+		out << "graphs " << graphs.size() << "\n";
+		for (auto& [name, g] : graphs)
+		{
+			auto dump = [&](const char* label, auto port)
+			{
+				out << label << ": ";
+				if (auto* sc = source_as<ScalarNode>(port)) out << "scalar " << sc->get_value();
+				else if (auto* v = source_as<VectorNode>(port)) { auto x = v->get_value(); out << "vector " << x.x << "," << x.y << "," << x.z << "," << x.w; }
+				else if (source(port)) out << "other node";
+				else out << "unwired";
+				out << "\n";
+			};
+			dump("base_color", g->get_base_color());
+			dump("roughness", g->get_roughness());
+			dump("ior", g->get_ior());
+			dump("thickness", g->get_thickness());
+			dump("transmission_weight", g->get_transmission_weight());
+			dump("transmission_color", g->get_transmission_color());
+			dump("transmission_depth", g->get_transmission_depth());
+		}
+	}
+
+	// Opacity's cutoff: a blended surface wires the threshold to 0, a cutout keeps
+	// the default 0.5 unless the file sets another.
+	TEST(MaterialX.GPU, OpacityThreshold)
+	{
+		using namespace mx_import;
+
+		auto threshold = [&](const std::string& category, const std::string& inputs) -> std::pair<bool, float>
+		{
+			auto graphs = build(surface(category, inputs));
+
+			if (graphs.size() != 1)
+				throw Test::TestFailure("import produced " + std::to_string(graphs.size()) + " graphs");
+
+			auto* node = source_as<ScalarNode>(graphs[0].second->get_opacity_threshold());
+			return { node != nullptr, node ? node->get_value() : 0.5f };
+		};
+
+		auto blend = threshold("standard_surface", R"(<input name="opacity" type="color3" value="0.4, 0.4, 0.4" />)");
+		ASSERT_TRUE(blend.first);
+		ASSERT_EQ(std::string(), close({ blend.second }, { 0.0f }));
+
+		auto cutout = threshold("gltf_pbr", R"(<input name="alpha" type="float" value="0.5" /><input name="alpha_mode" type="integer" value="1" /><input name="alpha_cutoff" type="float" value="0.3" />)");
+		ASSERT_TRUE(cutout.first);
+		ASSERT_EQ(std::string(), close({ cutout.second }, { 0.3f }));
+
+		// The default cutoff is the graph's own default, so nothing is wired.
+		ASSERT_TRUE(!threshold("gltf_pbr", R"(<input name="alpha" type="float" value="0.5" /><input name="alpha_mode" type="integer" value="1" />)").first);
+
+		auto usd_cutout = threshold("UsdPreviewSurface", R"(<input name="opacity" type="float" value="0.5" /><input name="opacityThreshold" type="float" value="0.2" />)");
+		ASSERT_TRUE(usd_cutout.first);
+		ASSERT_EQ(std::string(), close({ usd_cutout.second }, { 0.2f }));
+
+		// USD: a zero threshold blends.
+		auto usd_blend = threshold("UsdPreviewSurface", R"(<input name="opacity" type="float" value="0.5" />)");
+		ASSERT_TRUE(usd_blend.first);
+		ASSERT_EQ(std::string(), close({ usd_blend.second }, { 0.0f }));
+	}
+
 	// A shader input wired to a <nodegraph> output (nodegraph="g" output="out"), the
 	// way most exported materials are written, builds the graph's nodes instead of
 	// being dropped: the inputs end up driven, not at constant defaults.
@@ -961,8 +1176,8 @@ float frame_probe() { mx_set_time(2.0); return mx_frame(); }
 			R"(<input name="base_color" type="color3" nodegraph="paint" output="paint_out" />
 			   <input name="specular_roughness" type="float" nodegraph="paint" output="rough_out" />)",
 			R"(<nodegraph name="paint">
-			     <constant name="tint" type="color3"><input name="value" type="color3" value="0.2, 0.4, 0.6" /></constant>
-			     <multiply name="scaled" type="float"><input name="in1" type="float" value="0.5" /><input name="in2" type="float" value="0.5" /></multiply>
+			     <noise2d name="tint" type="color3" />
+			     <noise2d name="scaled" type="float" />
 			     <output name="paint_out" type="color3" nodename="tint" />
 			     <output name="rough_out" type="float" nodename="scaled" />
 			   </nodegraph>)"));

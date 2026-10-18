@@ -4,6 +4,7 @@
 #include "coat.hlsl"
 #include "sheen.hlsl"
 #include "aniso.hlsl"
+#include "iridescence.hlsl"
 
 // The base layer's own sun highlight for metals. The engine's direct term is
 // Lambert-only (shadow * NL * albedo * (1 - metallic)), so a metal -- which has no
@@ -28,6 +29,10 @@ float3 base_sun_specular(float4 material, float3 N, float3 V, float3 L, float sh
     float VH = saturate(dot(V, H));
 
     float3 F = F0 + (1.0 - F0) * pow(1.0 - VH, 5.0);
+
+    if (material_model(material) == SHADING_MODEL_THINFILM)
+        F = iridescent_fresnel(VH, thinfilm_thickness(material), thinfilm_ior(material), F0);
+
     return metallic * shadow * F * (coat_D_ggx(NH, a) * coat_V_smith(NL, NV, a) * NL * 3.14159265);
 }
 
