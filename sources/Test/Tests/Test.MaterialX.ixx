@@ -1099,34 +1099,6 @@ float frame_probe() { mx_set_time(2.0); return mx_frame(); }
 		ASSERT_EQ(std::string(), close({ rough->get_value() }, { 0.35f }));
 	}
 
-	TEST(MaterialX.GPU, TempBeerProbe)   // TEMP-DEBUG
-	{
-		using namespace mx_import;
-		mx_detail::ensure_library();
-		auto graphs = MaterialXLibrary::get().build_graphs("C:/Users/Cheat/Downloads/Beer_Pale_Lager.mtlx");
-		std::ofstream out("beer_probe.temp");
-		out << "graphs " << graphs.size() << "\n";
-		for (auto& [name, g] : graphs)
-		{
-			auto dump = [&](const char* label, auto port)
-			{
-				out << label << ": ";
-				if (auto* sc = source_as<ScalarNode>(port)) out << "scalar " << sc->get_value();
-				else if (auto* v = source_as<VectorNode>(port)) { auto x = v->get_value(); out << "vector " << x.x << "," << x.y << "," << x.z << "," << x.w; }
-				else if (source(port)) out << "other node";
-				else out << "unwired";
-				out << "\n";
-			};
-			dump("base_color", g->get_base_color());
-			dump("roughness", g->get_roughness());
-			dump("ior", g->get_ior());
-			dump("thickness", g->get_thickness());
-			dump("transmission_weight", g->get_transmission_weight());
-			dump("transmission_color", g->get_transmission_color());
-			dump("transmission_depth", g->get_transmission_depth());
-		}
-	}
-
 	// Opacity's cutoff: a blended surface wires the threshold to 0, a cutout keeps
 	// the default 0.5 unless the file sets another.
 	TEST(MaterialX.GPU, OpacityThreshold)
