@@ -100,6 +100,10 @@ TARGETS = {
     ),
 }
 
+# Platform-specific code sits in folders named after the platform (HAL/API/Vulkan/Android, ...): the Android
+# build compiles those named Android (like everything else) and skips the other platforms' folders.
+OTHER_PLATFORM_FOLDERS = {"Windows"}
+
 # Files that cannot build on Android yet (Windows-only etc.), relative to sources/.
 EXCLUDE = {
     # Renders the full scene through Graphics::SceneFrameRenderer, which is still unported on Android (calls an unported stub).
@@ -108,9 +112,6 @@ EXCLUDE = {
     "HAL/HAL.Streamline.ixx", "HAL/HAL.Streamline.cpp", "HAL/API/Vulkan/HAL.Vulkan.Streamline.ixx",
     "HAL/HAL.DLSS.ixx", "HAL/HAL.DLSS.cpp", "HAL/HAL.DLSSRR.ixx", "HAL/HAL.DLSSRR.cpp",
     "HAL/HAL.NRD.ixx", "HAL/HAL.NRD.cpp",
-    # DirectXTex / WIC are Windows-only; Android's PNG codec (libpng) is sources/Platform/Android/HAL.Android.TextureData.cpp.
-    # The rest of texture_data (HAL.Vulkan.TextureData.cpp) is portable and is built here.
-    "HAL/HAL.DirectXTexLoad.cpp", "HAL/API/Vulkan/HAL.Vulkan.TextureData.Windows.cpp",
     # needs DXC's reflection API
     "HAL/API/Vulkan/HAL.Vulkan.ShaderReflection.cpp",
     # 3D pass bodies. They define PassDefault<Passes::X>::render()/setup(), members of classes
@@ -142,8 +143,9 @@ EXCLUDE = {
 # Compiled as plain translation units: vulkan.cpp only provides VMA's implementation
 # through global-module-fragment includes. Mixing those textual includes with the
 # combined header unit hides bionic's cdefs macros (__BEGIN_DECLS...), and VMA's
-# functions have ordinary global linkage either way, so the module line is dropped.
-PLAIN_TU = {"Modules/vulkan/vulkan.cpp"}
+# functions have ordinary global linkage either way, so the module line is dropped. The platform
+# files in HAL/API/Vulkan/Android are plain TUs from the start and keep their own vulkan.h include.
+PLAIN_TU = {"Modules/vulkan/vulkan.cpp", "HAL/API/Vulkan/Android/HAL.Vulkan.Surface.cpp"}
 
 # Other TUs include <vulkan/vulkan.h> textually in their global module fragment. That
 # clashes with the combined header unit (the textual bionic headers are treated as
@@ -215,6 +217,7 @@ IMPORT_RE = re.compile(r'(?:^|;)[ \t]*(?:export\s+)?import\s+(<[^>]+>|"[^"]+")\s
 
 
 INCLUDE_ROOTS = [SRC]
+PLATFORM_INCLUDE = SRC / "Core" / "Android"   # Core/Defines.h's "Defines.Platform.h"
 
 
 def base_flags(mode):
@@ -222,7 +225,9 @@ def base_flags(mode):
          "-Wno-experimental-header-units", "-Wno-unknown-attributes",
          "-fdeclspec",   # CACHE_ALIGN() etc. use __declspec(align(...))
          "-Wno-unused-command-line-argument",   # -I / -include are ignored when compiling a .pcm to an object
-         *[f"-I{fwd(d)}" for d in INCLUDE_ROOTS]]
+         *[f"-I{fwd(d)}" for d in INCLUDE_ROOTS],
+         # searched after every -I, so a relative include such as "../defines.h" is not captured by this folder's parent
+         f"-idirafter{fwd(PLATFORM_INCLUDE)}"]
     f += ["-DSPECTRUM_PLATFORM_ANDROID", "-DSPECTRUM_ENABLE_EXCEPTIONS", "-DHAL_BACKEND_VULKAN", "-DLEAK_TEST_ENABLE"]
     if mode == "debug":
         # full debug info (locals and types) for build/platforms/android/debug.py; package.py strips it from the APK
@@ -262,6 +267,8 @@ def gather(target_names):
         for d in TARGETS[n]["dirs"]:
             base = SRC / d
             for p in sorted(list(base.rglob("*.ixx")) + list(base.rglob("*.cpp"))):
+                if OTHER_PLATFORM_FOLDERS.intersection(p.relative_to(SRC).parts[:-1]):
+                    continue
                 if rel(p) in EXCLUDE or any(rel(p).startswith(x + "/") for x in TARGETS[n].get("exclude_dirs", [])):
                     continue
                 lst.append(p)

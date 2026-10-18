@@ -5,7 +5,7 @@ import GUI;
 import HAL;
 
 import <windows/windows.h>;
-class Window : public HAL::hwnd_provider
+class Window : public HAL::window_provider
 {
 	HWND hwnd;
 	wchar_t high_surrogate = 0;
@@ -32,7 +32,8 @@ protected:
 public:
 	void redraw();
 	ivec2 get_size() const;
-	virtual	HWND get_hwnd() const { return hwnd; }
+	HWND get_hwnd() const { return hwnd; }
+	void* get_native_window() const override { return hwnd; }
 	virtual LRESULT MsgProc(MSG msg);
 
 	static void process_messages();

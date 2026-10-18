@@ -14,13 +14,9 @@ export namespace Exceptions
 	class Exception : public std::exception
 	{
 		stack_trace stack;
-#ifndef _WIN32
-		std::string message;   // MSVC's std::exception(const char*) extension doesn't exist in libc++
-#endif
+		std::string message;   // not std::exception(const char*): that MSVC extension doesn't exist in libc++
 	public:
-#ifndef _WIN32
 		const char* what() const noexcept override { return message.c_str(); }
-#endif
 		Exception(std::string_view wtf);
 		stack_trace get_stack_trace();
 	};

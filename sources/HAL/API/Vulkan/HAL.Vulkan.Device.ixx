@@ -1,8 +1,3 @@
-module;
-// Global module fragment: extension types (e.g. VkMutableDescriptorTypeCreateInfoEXT)
-// are not reliably visible through the `vulkan` header unit, so include the header directly.
-#define VK_USE_PLATFORM_WIN32_KHR
-#include <vulkan/vulkan.h>
 export module HAL:API.Device;
 
 import stl.core;

@@ -1,9 +1,7 @@
-module;
-#define VK_USE_PLATFORM_WIN32_KHR
-#include <vulkan/vulkan.h>
 module HAL:Impl;
 
 import stl.core;
+import vulkan;
 import Core;
 import :Adapter;
 import :Debug;
@@ -18,7 +16,7 @@ namespace
     VkInstance                   g_instance        = VK_NULL_HANDLE;
     VkDebugUtilsMessengerEXT     g_debug_messenger = VK_NULL_HANDLE;
 
-    VKAPI_ATTR VkBool32 VKAPI_CALL debug_callback(
+    VkBool32 debug_callback(
         VkDebugUtilsMessageSeverityFlagBitsEXT      severity,
         VkDebugUtilsMessageTypeFlagsEXT             type,
         const VkDebugUtilsMessengerCallbackDataEXT* data,

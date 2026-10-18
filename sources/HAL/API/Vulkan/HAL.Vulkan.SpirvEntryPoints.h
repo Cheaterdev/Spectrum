@@ -3,10 +3,7 @@
 // A DXR library compiled to SPIR-V carries one per raygen/miss/hit shader; the
 // ray tracing pipeline needs each one's stage, which nothing else records.
 
-#include <cstdint>
-#include <cstring>
-#include <string>
-#include <vector>
+// Included after `import stl.core;` — the standard library comes from the module, not from headers here.
 
 namespace HAL::Spirv
 {

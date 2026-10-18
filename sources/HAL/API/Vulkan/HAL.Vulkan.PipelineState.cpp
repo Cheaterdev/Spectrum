@@ -1,16 +1,15 @@
-module;
-#define VK_USE_PLATFORM_WIN32_KHR
-#include <vulkan/vulkan.h>
-#include "HAL.Vulkan.SpirvEntryPoints.h"
 module HAL:PipelineState;
 
+import stl.core;
 import vulkan;
 import Core;
+#include "HAL.Vulkan.SpirvEntryPoints.h"
 import :Types;
 import :Utils;
 import :Device;
 import :RootSignature;
 import :Shader;
+import :ShaderCompiler;   // ShaderCompiler::can_compile
 import :PipelineState;
 import :API.Device;
 
@@ -203,12 +202,11 @@ namespace HAL
 
         if (stages.empty() || !all_stages_ready)
         {
-#ifdef SPECTRUM_PLATFORM_ANDROID
-            // With no shader compiler an empty shader never fills in later (on Windows it does: material shaders are
+            // With no shader compiler an empty shader never fills in later (with one it does: material shaders are
             // async), and every draw with this pipeline is then skipped without a word.
-            Log::get() << Log::LEVEL_ERROR << "pipeline '" << desc.name << "' not built: a shader has no blob "
-                       << "(precompiled shader missing from the cache)" << Log::endl;
-#endif
+            if (!ShaderCompiler::can_compile)
+                Log::get() << Log::LEVEL_ERROR << "pipeline '" << desc.name << "' not built: a shader has no blob "
+                           << "(precompiled shader missing from the cache)" << Log::endl;
             for (VkShaderModule m : modules_to_destroy)
                 vkDestroyShaderModule(vk_dev, m, nullptr);
             return; // vk_pipeline stays null; draws with it are skipped until the shaders land

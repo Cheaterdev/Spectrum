@@ -10,15 +10,6 @@ import :Exceptions;
 export
 {
 
-#ifndef _WIN32
-	// On Windows this is an inline function in Core/Defines.h; there the forced include must stay
-	// macro-only (Clang rejects declarations ahead of `module X;`), so it lives here instead.
-	namespace Core
-	{
-		[[noreturn]] void assert_fail(const char* expr, const char* file, int line);
-	}
-#endif
-
 	struct BuildOptions
 	{
 		static constexpr bool Debug = true;

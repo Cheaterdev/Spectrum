@@ -1,9 +1,6 @@
-module;
-#define VK_USE_PLATFORM_WIN32_KHR
-#include <vulkan/vulkan.h>
-#include <vma/vk_mem_alloc.h>
 module HAL:Resource;
 
+import vulkan;
 import Core;
 
 import :Utils;          // to_native(Format)

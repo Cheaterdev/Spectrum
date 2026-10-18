@@ -20,10 +20,10 @@ import Demo;
 
 namespace
 {
-	struct Win32Window : HAL::hwnd_provider
+	struct Win32Window : HAL::window_provider
 	{
 		HWND hwnd = nullptr;
-		HWND get_hwnd() const override { return hwnd; }
+		void* get_native_window() const override { return hwnd; }
 	};
 
 	struct Input

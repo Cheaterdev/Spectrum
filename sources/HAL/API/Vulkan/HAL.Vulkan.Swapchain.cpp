@@ -1,10 +1,14 @@
-module;
-#define VK_USE_PLATFORM_WIN32_KHR
-#include <vulkan/vulkan.h>
 module HAL:SwapChain;
 
+import stl.core;
+import vulkan;
 import Core;
 import HAL;
+
+// The window system's half of swapchain creation, one definition per platform in
+// HAL/API/Vulkan/<Platform>/HAL.Vulkan.Surface.cpp (plain translation units, so extern "C++").
+extern "C++" VkSurfaceKHR hal_create_window_surface(VkInstance instance, void* native_window);
+extern "C++" VkExtent2D   hal_query_window_extent(void* native_window, VkExtent2D min_extent, VkExtent2D max_extent);
 
 // ============================================================================
 //  Vulkan swapchain implementation (Phase 2).
@@ -114,21 +118,7 @@ namespace HAL
         owner_device   = api_dev.vk_device;
         owner_instance = instance;
 
-#ifdef _WIN32
-        // ---- Win32 surface --------------------------------------------------
-        VkWin32SurfaceCreateInfoKHR surface_ci{
-            VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR };
-        surface_ci.hinstance = GetModuleHandle(nullptr);
-        surface_ci.hwnd      = c_desc.window->get_hwnd();
-        vkCreateWin32SurfaceKHR(instance, &surface_ci, nullptr, &vk_surface);
-#else
-        // ---- Android surface ------------------------------------------------
-        // On Android the "HWND" handed out by the window is its ANativeWindow*.
-        VkAndroidSurfaceCreateInfoKHR surface_ci{
-            VK_STRUCTURE_TYPE_ANDROID_SURFACE_CREATE_INFO_KHR };
-        surface_ci.window = static_cast<ANativeWindow*>(c_desc.window->get_hwnd());
-        vkCreateAndroidSurfaceKHR(instance, &surface_ci, nullptr, &vk_surface);
-#endif
+        vk_surface = hal_create_window_surface(instance, c_desc.window->get_native_window());
 
         // ---- Surface capabilities + format ----------------------------------
         VkSurfaceCapabilitiesKHR caps{};
@@ -210,29 +200,16 @@ namespace HAL
 
         // Extent: when currentExtent is not the "app chooses" sentinel
         // (0xFFFFFFFF) the compositor dictates the size — use it directly.
-        // Otherwise fall back to GetClientRect, clamped to surface limits.
+        // Otherwise ask the window system for the client size, clamped to surface limits.
         VkExtent2D extent{};
-        if (caps.currentExtent.width != UINT32_MAX &&
-            caps.currentExtent.height != UINT32_MAX)
+        constexpr uint32_t undefined_extent = std::numeric_limits<uint32_t>::max();
+        if (caps.currentExtent.width != undefined_extent &&
+            caps.currentExtent.height != undefined_extent)
         {
             extent = caps.currentExtent;
         }
         else
-        {
-#ifdef _WIN32
-            RECT r{};
-            GetClientRect(c_desc.window->get_hwnd(), &r);
-            extent = {
-                std::clamp(static_cast<uint32_t>(std::max(0L, r.right  - r.left)),
-                           caps.minImageExtent.width,  caps.maxImageExtent.width),
-                std::clamp(static_cast<uint32_t>(std::max(0L, r.bottom - r.top)),
-                           caps.minImageExtent.height, caps.maxImageExtent.height)
-            };
-#else
-            // Android surfaces always report a definite currentExtent; this is unreachable there.
-            extent = caps.minImageExtent;
-#endif
-        }
+            extent = hal_query_window_extent(c_desc.window->get_native_window(), caps.minImageExtent, caps.maxImageExtent);
 
         Log::get() << "[Vulkan swapchain] caps.currentExtent="
                    << caps.currentExtent.width << "x" << caps.currentExtent.height
@@ -396,7 +373,7 @@ namespace HAL
                             uint32_t& out_image, uint32_t& out_frame_index)
     {
         VkResult r = vkAcquireNextImageKHR(vk_device, vk_swapchain,
-                                            UINT64_MAX, sem,
+                                            std::numeric_limits<uint64_t>::max(), sem,
                                             VK_NULL_HANDLE, &out_image);
         API::check_device_lost(r, "vkAcquireNextImageKHR");
         if (r == VK_SUCCESS || r == VK_SUBOPTIMAL_KHR)
@@ -478,7 +455,7 @@ namespace HAL::API
 
             uint32_t img_idx = 0;
             VkResult r = vkAcquireNextImageKHR(vk_dev, vk_swapchain,
-                                               UINT64_MAX, acq_sem,
+                                               std::numeric_limits<uint64_t>::max(), acq_sem,
                                                VK_NULL_HANDLE, &img_idx);
             if (r != VK_SUCCESS && r != VK_SUBOPTIMAL_KHR) break;
 

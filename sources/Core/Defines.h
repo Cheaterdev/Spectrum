@@ -15,40 +15,14 @@
 // non-macro content, so the macro and its helper live here directly)
 // ============================================================================
 
-#ifdef _WIN32
-#include <cstdio>   // assert_fail diagnostics (fopen/fprintf)
-#endif
+// The per-platform half (CORE_ASSERT_FAIL, and on Windows the inline assert_fail it calls) is
+// Core/<Platform>/Defines.Platform.h; the project's include path picks the folder.
+#include "Defines.Platform.h"
 
 #ifndef DEV
 #  define ASSERT(expr)  ((void)0)
-#elif !defined(_WIN32)
-// Clang rejects declarations in a forced include ahead of `module X;`
-// ("module declaration must occur at the start of the translation unit"), so
-// this header must stay macro-only off MSVC: no <cstdio>, no assert_fail().
-#  define ASSERT(expr)  ((!!(expr)) ? (void)0 : __builtin_debugtrap())
 #else
-#  define ASSERT(expr) \
-       ((!!(expr)) ? (void)0 : ::Core::assert_fail(#expr, __FILE__, __LINE__))
-#endif
-
-// Core::assert_fail — called by ASSERT on failure (DEV builds only).
-// The #ifndef guard prevents a redefinition when Core_defs.h is also
-// compiled into the same TU (the antlr generated header still imports it).
-#if defined(_WIN32) && !defined(CORE_ASSERT_FAIL_DEFINED)
-#define CORE_ASSERT_FAIL_DEFINED
-namespace Core {
-    [[noreturn]] inline void assert_fail(const char* expr, const char* file, int line) noexcept {
-        // Record where the assert fired before breaking — WER only reports the
-        // __debugbreak address inside this function, not the failing call site.
-        if (FILE* f = std::fopen("assert.txt", "a")) {
-            std::fprintf(f, "ASSERT FAILED: (%s)  at %s:%d\n", expr, file, line);
-            std::fclose(f);
-        }
-        std::fprintf(stderr, "ASSERT FAILED: (%s)  at %s:%d\n", expr, file, line);
-        std::fflush(stderr);
-        __debugbreak();
-    }
-}
+#  define ASSERT(expr)  ((!!(expr)) ? (void)0 : CORE_ASSERT_FAIL(#expr, __FILE__, __LINE__))
 #endif
 
 // ============================================================================

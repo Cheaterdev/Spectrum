@@ -213,6 +213,15 @@ namespace Spectrum
             conf.ProjectPath = @"[project.RootPath]";
 
             conf.IncludePaths.Add(SourceRootPath);
+
+            // Platform-specific code sits in folders named after the platform (HAL/API/Vulkan/Android, ...). A Windows
+            // project builds none of the other platforms' folders; the Android build (build.py) does the inverse.
+            foreach (string folder in BuildPlatforms.NonWindowsFolders)
+                conf.SourceFilesBuildExcludeRegex.Add(@".*\\" + folder + @"\\.*");
+
+            // Core/Defines.h includes "Defines.Platform.h"; the include path decides whose (Core/Android has the other).
+            conf.IncludePaths.Add(@"[project.SharpmakeCsPath]\sources\Core\Windows");
+
             // Repository sources root — allows cross-project Defines.h chains
             // (e.g. HAL/Defines.h can #include "Core/Defines.h").
             conf.IncludePaths.Add(@"[project.SharpmakeCsPath]\sources");
@@ -741,6 +750,9 @@ namespace Spectrum
     // the scripts that build and run it are build/platforms/<name>/, started through build/driver.py.
     public static class BuildPlatforms
     {
+        // Folder names (anywhere under sources/) that hold one platform's code; the Windows projects skip these.
+        public static readonly string[] NonWindowsFolders = { "Android" };
+
         public const string AndroidSources = @"[project.SharpmakeCsPath]\sources\Platform\Android";
         public const string AndroidScripts = @"[project.SharpmakeCsPath]\build\platforms\android";
         public const string Tooling = @"[project.SharpmakeCsPath]\build";

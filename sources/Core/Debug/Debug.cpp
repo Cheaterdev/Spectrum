@@ -4,17 +4,6 @@ import stl.core;
 import stl.threading;
 import :Log;
 
-#ifndef _WIN32
-namespace Core
-{
-	void assert_fail(const char* expr, const char* file, int line)
-	{
-		Log::get() << "ASSERT FAILED: (" << expr << ") at " << file << ":" << line << Log::endl;
-		__builtin_trap();
-	}
-}
-#endif
-
 bool ObjectTracker::alive = true;
 
 Object::Object()

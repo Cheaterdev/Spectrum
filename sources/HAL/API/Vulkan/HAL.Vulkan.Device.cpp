@@ -1,7 +1,3 @@
-module;
-#define VK_USE_PLATFORM_WIN32_KHR
-#include <vulkan/vulkan.h>
-#include <vma/vk_mem_alloc.h>
 module HAL:Device;
 
 import :Debug;
@@ -11,6 +7,7 @@ import :Sampler;
 import :HeapAllocators;
 
 import stl.core;
+import vulkan;
 import Core;
 
 namespace
@@ -235,30 +232,31 @@ namespace HAL
             std::vector<VkQueueFamilyProperties> qf_props(qf_count);
             vkGetPhysicalDeviceQueueFamilyProperties(vk_physical, &qf_count, qf_props.data());
 
-            uint32_t graphics_family = UINT32_MAX;
-            uint32_t compute_family  = UINT32_MAX;
-            uint32_t transfer_family = UINT32_MAX;
+            constexpr uint32_t invalid_family = std::numeric_limits<uint32_t>::max();
+            uint32_t graphics_family = invalid_family;
+            uint32_t compute_family  = invalid_family;
+            uint32_t transfer_family = invalid_family;
 
             for (uint32_t i = 0; i < qf_count; ++i)
             {
-                if (graphics_family == UINT32_MAX &&
+                if (graphics_family == invalid_family &&
                     (qf_props[i].queueFlags & VK_QUEUE_GRAPHICS_BIT))
                     graphics_family = i;
 
-                if (compute_family == UINT32_MAX &&
+                if (compute_family == invalid_family &&
                     (qf_props[i].queueFlags & VK_QUEUE_COMPUTE_BIT) &&
                     !(qf_props[i].queueFlags & VK_QUEUE_GRAPHICS_BIT))
                     compute_family = i;
 
-                if (transfer_family == UINT32_MAX &&
+                if (transfer_family == invalid_family &&
                     (qf_props[i].queueFlags & VK_QUEUE_TRANSFER_BIT) &&
                     !(qf_props[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) &&
                     !(qf_props[i].queueFlags & VK_QUEUE_COMPUTE_BIT))
                     transfer_family = i;
             }
             // Fall back to graphics queue if dedicated queues not found
-            if (compute_family  == UINT32_MAX) compute_family  = graphics_family;
-            if (transfer_family == UINT32_MAX) transfer_family = graphics_family;
+            if (compute_family  == invalid_family) compute_family  = graphics_family;
+            if (transfer_family == invalid_family) transfer_family = graphics_family;
 
             // Store for Queue::construct() and CommandAllocator, indexed by
             // HAL::CommandListType. The async compute queues (COMPUTE2/3) take

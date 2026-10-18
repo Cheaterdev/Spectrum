@@ -636,11 +636,6 @@ export namespace Test
 	// derivatives.
 	TEST(Core.HAL, Sampler_FilteringProbe)
 	{
-#ifdef SPECTRUM_PLATFORM_ANDROID
-		// The two anisotropic columns (4 and 7) differ from the NVIDIA golden by up to 83/255 on Adreno
-		// (the other seven match within 4); the engine does not use anisotropic filtering.
-		throw Test::TestSkipped("anisotropic filtering is vendor-specific and unused; the golden is NVIDIA's");
-#endif
 		auto& device = RenderSystem::get().device();
 		auto data = load_mipped_test_texture();
 		auto texture = HAL::Texture::create(device, data);
@@ -672,7 +667,8 @@ export namespace Test
 		// selection rounds by each vendor's fixed-point LOD: AMD against the
 		// NVIDIA golden differs on ~140 pixels there (point picks the other
 		// mip; trilinear by 3/255). NVIDIA D3D12 vs Vulkan is exact.
-		ASSERT_TEXTURE_EX(output.get(), "sampler_probe", .max_mismatch_fraction = 0.0005);
+		// Adreno against the NVIDIA golden: up to 4/255 (its fixed-point LOD blend), nothing beyond.
+		ASSERT_TEXTURE_EX(output.get(), "sampler_probe", .tolerance = 4, .max_mismatch_fraction = 0.0005);
 	}
 
 	// Vulkan keeps Append/Consume counters in their own binding, written apart

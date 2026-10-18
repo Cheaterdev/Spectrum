@@ -141,12 +141,12 @@ namespace
 	HAL::Device* g_device = nullptr;   // owned by RenderSystem
 	std::shared_ptr<HAL::SwapChain> g_swap;
 
-	// The Activity's SurfaceView surface as an ANativeWindow*; get_hwnd() is what the Vulkan
+	// The Activity's SurfaceView surface as an ANativeWindow*; get_native_window() is what the Vulkan
 	// swapchain turns into a VkAndroidSurfaceKHR.
-	struct AndroidWindow : HAL::hwnd_provider
+	struct AndroidWindow : HAL::window_provider
 	{
 		void* window = nullptr;
-		void* get_hwnd() const override { return window; }   // HWND is void* on Android
+		void* get_native_window() const override { return window; }
 	} g_window;
 
 	// jni.h is deliberately not included; JNIEnv*/jobject cross as void*. The asm label keeps this
@@ -394,6 +394,7 @@ extern "C"
 	{
 		const char* filter = libc_getenv("SPECTRUM_TEST_FILTER");
 		Application::test_mode = true;
+		HAL::Samplers::make_anisotropic_trilinear();   // the same as the desktop test runner; before any device exists
 
 		auto& registry = Test::TestRegistry::Instance();
 		// MainActivity paints this file as a progress bar on the screen: "done total current-test" (current is "-" once finished), then one failed test per line.

@@ -1,9 +1,7 @@
-module;
-#define VK_USE_PLATFORM_WIN32_KHR
-#include <vulkan/vulkan.h>
 module HAL:API.CommandList;
 
 import stl.core;
+import vulkan;
 import Core;
 import :CommandAllocator;   // full definition needed: allocator.vk_command_pool
 import :RootSignature;      // HAL::RootSignature (owns no Vulkan objects)

@@ -10,6 +10,7 @@ export namespace HAL
     {
         struct ShaderCompiler
         {
+            static constexpr bool can_compile = false;
         };
     }
 }

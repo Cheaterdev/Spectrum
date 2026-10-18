@@ -1,9 +1,7 @@
-module;
-#define VK_USE_PLATFORM_WIN32_KHR
-#include <vulkan/vulkan.h>
-#include <fstream>
 module HAL:API.Queue;
 
+import stl.core;
+import vulkan;
 import Core;
 import HAL;
 #undef THIS

@@ -1,9 +1,6 @@
-module;
-#define VK_USE_PLATFORM_WIN32_KHR
-#include <vulkan/vulkan.h>
-#include <vma/vk_mem_alloc.h>
 module HAL:Heap;
 
+import vulkan;
 import HAL;
 import Core;
 

@@ -3,11 +3,7 @@ module Core:Exceptions;
 namespace Exceptions
 {
 
-#ifdef _WIN32
-	Exception::Exception(std::string_view wtf) : std::exception((std::string(wtf) + "\n At:").c_str())
-#else
 	Exception::Exception(std::string_view wtf) : message(std::string(wtf) + "\n At:")
-#endif
 	{
 	}
 

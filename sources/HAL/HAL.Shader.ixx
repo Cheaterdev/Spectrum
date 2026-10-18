@@ -248,10 +248,9 @@ export
 						HAL::shader_include In(header.file_name, depender);
 						res_blob = ShaderCompiler::get().Compile_Shader_File(header.file_name, header.macros, compile_code_dxil, header.entry_point,header.flags,  &In);
 					}
-#ifdef __ANDROID__
-					// The retry loop exists for editing a broken shader live. With no compiler on the
-					// device a failure is permanent, so give back an empty shader instead of spinning.
-					if (!res_blob)
+					// The retry loop exists for editing a broken shader live. With no compiler
+					// a failure is permanent, so give back an empty shader instead of spinning.
+					if (!res_blob && !ShaderCompiler::can_compile)
 					{
 						std::string macros;
 						for (auto& m : header.macros)
@@ -263,7 +262,6 @@ export
 						empty->header = header;
 						return empty;
 					}
-#endif
 				}
 
 				auto result = std::make_shared<_shader_type>();

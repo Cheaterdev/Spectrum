@@ -975,9 +975,10 @@ PROCEDURAL
 		uint64 UpdateScratchDataSizeInBytes;
 	};
 
-	struct hwnd_provider
+	// The platform's window handle, opaque here: HWND on Windows, ANativeWindow* on Android.
+	struct window_provider
 	{
-		virtual	HWND get_hwnd() const = 0;
+		virtual	void* get_native_window() const = 0;
 	};
 
 	// Capabilities of the display the swapchain's window is on. Defaults describe
@@ -999,8 +1000,8 @@ PROCEDURAL
 	{
 		int max_fps;
 		Format format;
-		hwnd_provider* window;
-		hwnd_provider* fullscreen;
+		window_provider* window;
+		window_provider* fullscreen;
 		bool stereo;
 	};
 

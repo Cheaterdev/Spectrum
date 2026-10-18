@@ -24,7 +24,7 @@ export namespace HAL
 
 		std::vector<Frame> frames;
 		Device& device;
-		HWND hwnd = nullptr;
+		void* native_window = nullptr;
 		DisplayInfo display_info;
 	public:
 		using ptr = std::shared_ptr<SwapChain>;
