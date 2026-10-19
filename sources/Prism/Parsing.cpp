@@ -7,9 +7,8 @@ import Core;
 using Ast = PrismNode;
 
 // Walks the AST in source order and builds the Parsed model. Every rule of the
-// grammar is an AST node, so each handler sees the same nodes in the same order
-// the ANTLR parse tree walker used to deliver them: `enter_x` before a node's
-// children, `exit_x` after.
+// grammar is an AST node, so handlers fire in source order: `enter_x` before a
+// node's children, `exit_x` after.
 class TreeShapeListener
 {
 public:
@@ -43,8 +42,8 @@ public:
 				collect_text(*child, out);
 	}
 
-	// The concatenated token texts, which is what ANTLR's getText() returned:
-	// whitespace and comments between tokens are not part of it.
+	// The concatenated token texts: whitespace and comments between tokens are
+	// not part of it.
 	static std::string text_of(const Ast& node)
 	{
 		std::string out;

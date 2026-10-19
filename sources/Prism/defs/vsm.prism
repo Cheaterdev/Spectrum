@@ -18,7 +18,7 @@ namespace Shadows
 		# Fixed clipmap-level storage budget, shared between C++ (VSM.ixx,
 		# VSMInvalidationTracker.ixx -- both used to hand-declare their own copy of
 		# this same number) and the FrameGraph resource sizing below (VSM_DispatchCommands),
-		# via the generated Constants:: namespace (see Prism.g4's const_definition /
+		# via the generated Constants:: namespace (see PrismGrammar.h's const_definition /
 		# constants.jinja) -- one source of truth instead of three.
 		const MaxLevels = 26;
 		# Upper bound on per-frame (active level x scene mesh) indirect draw entries

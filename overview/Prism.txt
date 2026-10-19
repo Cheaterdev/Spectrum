@@ -649,7 +649,7 @@ Install bin/editor/prism.vsix (built by
 `python sources/Prism/editor/gen_vs_extension.py`; needs the VS Installer's
 "Visual Studio extension development" workload). It provides:
 
-  - syntax highlighting (generated from Prism.g4: keywords, built-in types,
+  - syntax highlighting (generated from PrismGrammar.h: keywords, built-in types,
     formats and [Always]/[RecreateFlags] flags in the #define colour, options,
     user-declared names via the language server) with the C++ grammar inside
     HLSL bodies

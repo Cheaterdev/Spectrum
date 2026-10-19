@@ -1,6 +1,6 @@
 # Prism — Robustness TODO
 
-Prism's architecture is sound: ANTLR grammar → semantic model (`Parsed`) →
+Prism's architecture is sound: PEG grammar → semantic model (`Parsed`) →
 jinja templates. That three-stage split is what mainstream codegen tools
 (FlatBuffers, protobuf) use, and it is why a new output like `context_deps.h`
 costs one template plus two accessors instead of surgery across the emitter.
@@ -40,7 +40,7 @@ strings, checked against workdir/shaders.
 
 | Concern | Location |
 |---|---|
-| Grammar | `PrismGrammar.h` (cpp-peglib; this file's other references to ANTLR and `Prism.g4` predate that move) |
+| Grammar | `PrismGrammar.h` (cpp-peglib) |
 | Parse entry point | `Parsing.cpp:507` (`parse()`) |
 | Listener / element stack | `Parsing.cpp` (`TreeShapeListener`) |
 | Stack accessor | `Parsing.cpp:70` (`get_elem<T>()`) |
@@ -64,9 +64,8 @@ destroyed.
 
 Original notes:
 
-`parse()` (`Parsing.cpp:507`) installs no error listener and never checks
-`parser.getNumberOfSyntaxErrors()`. ANTLR's default listener prints to stderr
-and then **recovers** — so a malformed `.prism` parses partially, the listener
+`parse()` installed no error handler and never checked for syntax errors. The
+old parser's default listener printed to stderr and then **recovered** — so a malformed `.prism` parses partially, the listener
 walks a half-built tree, and the generator writes output from an incomplete
 model and exits 0.
 
@@ -81,7 +80,7 @@ run looks successful, and the damage is discovered later somewhere unrelated.
   write a single output file. Partial regeneration of `autogen/` is worse than
   no regeneration, because the tree is then internally inconsistent and the
   next person's `git diff` is noise.
-- Return a non-zero exit code so `generate_prism_parser.bat` / CI can detect it.
+- Return a non-zero exit code so CI can detect it.
 
 Roughly ten lines, and it is a prerequisite for taking anything else here
 seriously.
@@ -96,8 +95,8 @@ block starts. Neither is serialized, so neither can reach generated output.
 
 Original notes:
 
-`getLine()` / `getCharPositionInLine()` appear nowhere in `Parsing.cpp`. ANTLR
-hands these out for free on every token and they are discarded.
+Token line/column appeared nowhere in `Parsing.cpp`. The parser hands them out
+for free on every token and they were discarded.
 
 `have_name::source_file` stamps the owning `.prism` path onto top-level items
 (`Main.cpp`, in the `tag()` lambda), which is enough for an
@@ -231,17 +230,16 @@ mechanical.
 
 Not breaking anything today; all of it is latent.
 
-- **`value_id` alternative order** (`Prism.g4:129`) lists `ID` before
-  `function_id`, so a bare identifier wins over a call. This is why `cond_term`
-  has to list `function_id` ahead of `value_id` explicitly — otherwise
-  `exists(X)` parses as an identifier followed by stray parentheses. Reordering
-  `value_id` itself would remove the trap, but needs checking against every
-  existing option that relies on the current order.
+- **`value_id` alternative order** (`PrismGrammar.h`) used to list `ID` before
+  `function_id`, so a bare identifier won over a call. In the PEG grammar
+  `function_id` comes first and `ID` last (words that are also keywords sit
+  before both), so the trap is gone; `cond_term` still lists `function_id`
+  ahead of `value_id`, which is now just consistent.
 - **Non-greedy `option_block*?`** appears 16 times. A non-greedy subrule in a
   parser grammar usually means an ambiguity is being suppressed rather than
   expressed. Worth understanding why it was needed; it may be masking a real
   ambiguity that will surface as a confusing parse later.
-- **`cond_op` (`Prism.g4:66`) has no arithmetic.** Only boolean/comparison
+- **`cond_op` (`PrismGrammar.h`) has no arithmetic.** Only boolean/comparison
   operators and parentheses. See item 6.
 
 ---
@@ -354,9 +352,9 @@ known-generated directories, and only files carrying the DO-NOT-EDIT banner.
 - **`output.txt` is committed noise.** One line, containing a shell error from a
   mistyped `prismc.exe` invocation. It is git-tracked and is not an input to
   anything. Delete it.
-- **`generate_prism_parser.bat` regenerates the ANTLR parser, not the sig output.** The
-  actual generator is `prismc.exe` run from this directory. The name invites
-  the wrong assumption; either rename it or have it do both.
+- **Resolved: there is no separate parser-generation step any more.** The
+  grammar is compiled into `prismc.exe`, which is the only thing to run from
+  this directory.
 - **`[Static]` vs `[Multiple]` require different C++ wiring shapes, and
   nothing says so.** A `[Static]` `PassNode` gets a generated
   `PassDefault<T>::render` specialization to define; a `[Multiple=N]` one
