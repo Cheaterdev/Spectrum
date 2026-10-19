@@ -50,6 +50,15 @@ export namespace GUI
 		float  shine_phase = -1.0f;        // 0..1 sweep position, < 0 off
 		float  shine_strength = 0.0f;
 		float  shine_width = 0.18f;        // band half-width as a fraction of the sweep length
+		float2 ripple_origin = { 0, 0 };   // window pixels
+		float  ripple_phase = -1.0f;       // 0..1 wave position, < 0 off
+		float  ripple_strength = 0.0f;
+		float  focus_strength = 0.0f;      // accent ring just inside the edge
+		float  focus_width = 2.0f;         // UI px
+		float3 focus_color = { 0.21f, 0.45f, 0.79f };   // sRGB
+		float  inner_strength = 0.0f;      // darkening inside the edge
+		float  inner_size = 10.0f;         // falloff, UI px
+		float  inner_offset = 2.0f;        // pushes the shadow down from the top edge, UI px
 	};
 
 	class Renderer

@@ -184,6 +184,9 @@ namespace GUI
         bool  reveal = false;   // soft light following the cursor while hovered
         bool  border = false;   // lit rim, brightest near the cursor
         bool  shine  = false;   // one diagonal sweep when the hover starts
+        bool  ripple = false;   // a wave from the press point
+        bool  focus  = false;   // accent ring while the element has keyboard focus
+        bool  inner  = false;   // darkening just inside the edge (depth)
         float radius = 4.0f;    // corner radius
     };
 
@@ -425,6 +428,12 @@ namespace GUI
             OverlayFx fx;
             float fx_hover = 0.0f;
             float fx_shine = -1.0f;
+            // fx_ripple runs 0..1 after a press (-1 idle) from fx_ripple_origin;
+            // fx_focus eases 0..1 with keyboard focus.
+            float fx_ripple = -1.0f;
+            vec2  fx_ripple_origin = { 0, 0 };
+            bool  fx_was_pressed = false;
+            float fx_focus = 0.0f;
             void update_fx(float dt);
             // For panels that are mostly covered by their own controls: while
             // this element's blur is active, the controls under it (buttons,
@@ -742,6 +751,14 @@ namespace GUI
             Variable<bool>  shine_enabled    = { true, "Shine sweep", effects_context.get() };
             Variable<float> shine_strength   = { 0.28f, "Shine strength", effects_context.get(), 0.0f, 1.0f };
             Variable<float> shine_duration   = { 0.7f, "Shine duration (s)", effects_context.get(), 0.1f, 3.0f };
+            Variable<bool>  ripple_enabled   = { true, "Press ripple", effects_context.get() };
+            Variable<float> ripple_strength  = { 0.25f, "Ripple strength", effects_context.get(), 0.0f, 1.0f };
+            Variable<float> ripple_duration  = { 0.55f, "Ripple duration (s)", effects_context.get(), 0.1f, 2.0f };
+            Variable<bool>  focus_enabled    = { true, "Focus ring", effects_context.get() };
+            Variable<float> focus_strength   = { 0.9f, "Focus ring strength", effects_context.get(), 0.0f, 1.0f };
+            Variable<bool>  inner_enabled    = { true, "Inner shadow", effects_context.get() };
+            Variable<float> inner_strength   = { 0.35f, "Inner shadow strength", effects_context.get(), 0.0f, 1.0f };
+            Variable<float> inner_size       = { 10.0f, "Inner shadow size (px)", effects_context.get(), 1.0f, 48.0f };
 
             // Hands each backdrop element its own snapshot slot for the frame:
             // two elements recorded into different command lists must not

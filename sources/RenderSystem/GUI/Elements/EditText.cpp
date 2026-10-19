@@ -42,6 +42,8 @@ GUI::Elements::edit_text::edit_text() : edit_text(edit_style)
 GUI::Elements::edit_text::edit_text(Text::Style style) : style(style), editor(style)
 {
 	clickable = true;
+	fx.focus = true;
+	fx.radius = 3.0f;
 
 	// Control characters never enter the text, whatever the user filter says;
 	// a multiline field lets newlines and tabs through (typed or pasted). '\r'

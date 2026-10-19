@@ -330,7 +330,9 @@ namespace GUI
     void Renderer::draw_fx(base::Context& c, rect r, const FxParams& p)
     {
         const bool shine = p.shine_phase >= 0.0f && p.shine_strength > 0.0f;
-        if ((p.reveal_strength <= 0.0f && p.border_strength <= 0.0f && !shine)
+        const bool ripple = p.ripple_phase >= 0.0f && p.ripple_strength > 0.0f;
+        if ((p.reveal_strength <= 0.0f && p.border_strength <= 0.0f && !shine && !ripple
+             && p.focus_strength <= 0.0f && p.inner_strength <= 0.0f)
             || c.window_size.x <= 0 || c.window_size.y <= 0)
             return;
 
@@ -358,6 +360,10 @@ namespace GUI
         data.GetReveal()      = float4(p.cursor.x, p.cursor.y, p.reveal_size * k, p.reveal_strength);
         data.GetBorder()      = float4(p.border_size * k, p.border_strength, p.border_width * k, 0.0f);
         data.GetShine()       = float4(shine ? p.shine_phase : -1.0f, p.shine_width, p.shine_strength, 0.0f);
+        data.GetRipple()      = float4(p.ripple_origin.x, p.ripple_origin.y, ripple ? p.ripple_phase : -1.0f, p.ripple_strength);
+        data.GetFocus()       = float4(p.focus_width * k, p.focus_strength, 0.0f, 0.0f);
+        data.GetFocus_color() = float4(p.focus_color.x, p.focus_color.y, p.focus_color.z, 1.0f);
+        data.GetInner()       = float4(p.inner_size * k, p.inner_strength, p.inner_offset * k, 0.0f);
         data.GetWindow_size() = float2(c.window_size.x, c.window_size.y);
         data.GetRadius()      = p.radius * k;
         graphics.set(data);

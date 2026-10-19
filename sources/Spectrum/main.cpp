@@ -2027,6 +2027,75 @@ public:
 							}
 							add_row("Toasts", toasts);
 
+							// Procedural shadow and glow (Properties > UI Effects). They are drawn
+							// outside the element, so the cards keep margins around them.
+							auto shadow_row = std::make_shared<layouts::horizontal>();
+							auto add_panel = [&](GUI::base::ptr row, const std::string& caption, bool shadow, bool glow)
+								{
+									auto card = std::make_shared<colored_rect>();
+									card->color = float4(0.14f, 0.16f, 0.22f, 1.0f);
+									card->width_size = GUI::size_type::FIXED;
+									card->height_size = GUI::size_type::FIXED;
+									card->size = { 96, 44 };
+									card->margin = { 8, 8, 22, 12 };
+									card->shadow.enabled = shadow;
+									card->glow.enabled = glow;
+									card->glow.color = float4(0.21f, 0.45f, 0.79f, 1.0f);
+									card->shadow.radius = card->glow.radius = 4.0f;
+
+									auto text = std::make_shared<label>();
+									text->docking = GUI::dock::FILL;
+									text->magnet_text = FW1_CENTER | FW1_VCENTER | FW1_NOWORDWRAP;
+									text->text = caption;
+									card->add_child(text);
+									row->add_child(card);
+								};
+							add_panel(shadow_row, "Shadow", true, false);
+							add_panel(shadow_row, "Glow", false, true);
+							add_panel(shadow_row, "Both", true, true);
+							add_row("Shadow & glow", shadow_row);
+
+							// Backdrop blur: a translucent panel over loud stripes, so what the
+							// blur does (radius, saturation, tint, grain in Properties > UI
+							// Backdrop) is visible on hard edges.
+							auto blur_stage = std::make_shared<GUI::base>();
+							blur_stage->width_size = GUI::size_type::FIXED;
+							blur_stage->height_size = GUI::size_type::FIXED;
+							blur_stage->size = { 330, 110 };
+							blur_stage->margin = { 0, 0, 0, 6 };
+							const float4 stripe_colors[] = { float4(0.92f, 0.22f, 0.22f, 1), float4(0.05f, 0.05f, 0.08f, 1),
+							                                  float4(0.25f, 0.85f, 0.35f, 1), float4(0.95f, 0.95f, 0.95f, 1),
+							                                  float4(0.22f, 0.42f, 0.95f, 1), float4(0.05f, 0.05f, 0.08f, 1) };
+							for (int i = 0; i < 27; i++)
+							{
+								auto stripe = std::make_shared<colored_rect>();
+								stripe->color = stripe_colors[i % 6];
+								stripe->docking = GUI::dock::LEFT;
+								stripe->width_size = GUI::size_type::FIXED;
+								stripe->height_size = GUI::size_type::MATCH_PARENT;
+								stripe->size = { 12, 0 };
+								blur_stage->add_child(stripe);
+							}
+
+							auto blur_panel = std::make_shared<colored_rect>();
+							blur_panel->color = float4(0.04f, 0.05f, 0.08f, 0.25f);
+							blur_panel->docking = GUI::dock::NONE;
+							blur_panel->width_size = GUI::size_type::FIXED;
+							blur_panel->height_size = GUI::size_type::FIXED;
+							blur_panel->size = { 220, 64 };
+							blur_panel->pos = { 55, 23 };
+							blur_panel->backdrop_blur = true;
+							blur_panel->shadow.enabled = true;
+							blur_panel->fx.inner = true;
+							blur_panel->fx.radius = 4.0f;
+							auto blur_text = std::make_shared<label>();
+							blur_text->docking = GUI::dock::FILL;
+							blur_text->magnet_text = FW1_CENTER | FW1_VCENTER | FW1_NOWORDWRAP;
+							blur_text->text = "Blur test";
+							blur_panel->add_child(blur_text);
+							blur_stage->add_child(blur_panel);
+							add_row("Backdrop blur", blur_stage);
+
 							status->docking = GUI::dock::TOP;
 							status->text = "Commit a value (Enter / click away) or pick something.";
 							split->first()->add_child(status);
@@ -2071,7 +2140,7 @@ public:
 							auto hint = std::make_shared<label>();
 							hint->docking = GUI::dock::TOP;
 							hint->margin = { 0, 0, 0, 12 };
-							hint->text = "Move the cursor over the cards. Strength, size and on/off are in Properties > UI Effects. Shine replays each time the cursor enters a card.";
+							hint->text = "Hover the cards, click the ripple cards, click a text field for its focus ring. Strength, size and on/off are in Properties > UI Effects.";
 							page->add_child(hint);
 
 							auto add_row = [&](float height)
@@ -2092,8 +2161,8 @@ public:
 									card->docking = GUI::dock::LEFT;
 									card->width_size = GUI::size_type::FIXED;
 									card->height_size = GUI::size_type::FIXED;
-									card->size = { 200, 96 };
-									card->margin = { 0, 0, 14, 0 };
+									card->size = { 180, 66 };
+									card->margin = { 0, 0, 10, 0 };
 									card->fx.reveal = reveal;
 									card->fx.border = border;
 									card->fx.shine = shine;
@@ -2108,13 +2177,23 @@ public:
 									return card;
 								};
 
-							auto singles = add_row(96);
+							auto singles = add_row(66);
 							add_card(singles, "Reveal highlight", true, false, false);
 							add_card(singles, "Edge light", false, true, false);
 							add_card(singles, "Shine sweep", false, false, true);
 
-							auto combined = add_row(96);
+							auto combined = add_row(66);
 							add_card(combined, "All three", true, true, true);
+
+							// Cheap effects: a click wave, and depth from an inner shadow.
+							auto cheap = add_row(66);
+							auto ripple_card = add_card(cheap, "Press ripple (click)", false, false, false);
+							ripple_card->fx.ripple = true;
+							auto inner_card = add_card(cheap, "Inner shadow", false, false, false);
+							inner_card->fx.inner = true;
+							auto both_card = add_card(cheap, "Ripple + inner", false, false, false);
+							both_card->fx.ripple = true;
+							both_card->fx.inner = true;
 
 							auto buttons = add_row(36);
 							for (const char* name : { "Buttons", "get", "reveal", "and edge" })
@@ -2137,8 +2216,8 @@ public:
 								auto field = std::make_shared<edit_text>();
 								field->docking = GUI::dock::LEFT;
 								field->width_size = GUI::size_type::FIXED;
-								field->size = { 200, 30 };
-								field->margin = { 0, 0, 14, 0 };
+								field->size = { 180, 30 };
+								field->margin = { 0, 0, 10, 0 };
 								field->placeholder = hint_text;
 								field->fx.reveal = field_index != 1;
 								field->fx.border = field_index != 1;

@@ -24,6 +24,10 @@ export namespace Table
 			float4 reveal;
 			float4 border;
 			float4 shine;
+			float4 ripple;
+			float4 focus;
+			float4 focus_color;
+			float4 inner;
 			float2 window_size;
 			float radius;
 			float4& GetQuad() { return quad; }
@@ -31,6 +35,10 @@ export namespace Table
 			float4& GetReveal() { return reveal; }
 			float4& GetBorder() { return border; }
 			float4& GetShine() { return shine; }
+			float4& GetRipple() { return ripple; }
+			float4& GetFocus() { return focus; }
+			float4& GetFocus_color() { return focus_color; }
+			float4& GetInner() { return inner; }
 			float2& GetWindow_size() { return window_size; }
 			float& GetRadius() { return radius; }
 			static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
@@ -42,6 +50,10 @@ export namespace Table
 				compiler.compile(reveal, "UIFx::reveal");
 				compiler.compile(border, "UIFx::border");
 				compiler.compile(shine, "UIFx::shine");
+				compiler.compile(ripple, "UIFx::ripple");
+				compiler.compile(focus, "UIFx::focus");
+				compiler.compile(focus_color, "UIFx::focus_color");
+				compiler.compile(inner, "UIFx::inner");
 				compiler.compile(window_size, "UIFx::window_size");
 				compiler.compile(radius, "UIFx::radius");
 			}
@@ -59,6 +71,10 @@ export namespace Table
 				ar& NVP(reveal);
 				ar& NVP(border);
 				ar& NVP(shine);
+				ar& NVP(ripple);
+				ar& NVP(focus);
+				ar& NVP(focus_color);
+				ar& NVP(inner);
 				ar& NVP(window_size);
 				ar& NVP(radius);
 			}

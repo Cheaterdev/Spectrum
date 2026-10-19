@@ -880,7 +880,7 @@ namespace GUI
             if (backdrop_blur && user_ui && user_ui->backdrop_enabled)
                 backdrop_slot = user_ui->backdrop_counter++;
 
-            if (fx.reveal || fx.border || fx.shine)
+            if (fx.reveal || fx.border || fx.shine || fx.ripple || fx.focus)
                 update_fx(c.delta_time);
 
            on_pre_render(c);
@@ -1141,7 +1141,9 @@ namespace GUI
         draw(c);
 
         // Over the element's own draw, under its children (labels stay readable).
-        if (user_ui && (fx.reveal || fx.border || fx.shine) && (fx_hover > 0.003f || fx_shine >= 0.0f))
+        if (user_ui && (fx.reveal || fx.border || fx.shine || fx.ripple || fx.focus || fx.inner)
+            && (fx_hover > 0.003f || fx_shine >= 0.0f || fx_ripple >= 0.0f || fx_focus > 0.003f
+                || (fx.inner && user_ui->inner_enabled)))
         {
             FxParams p;
             p.radius = fx.radius;
@@ -1164,6 +1166,22 @@ namespace GUI
             {
                 p.shine_phase = fx_shine;
                 p.shine_strength = user_ui->shine_strength;
+            }
+
+            if (fx.ripple && user_ui->ripple_enabled && fx_ripple >= 0.0f)
+            {
+                p.ripple_origin = float2(fx_ripple_origin.x, fx_ripple_origin.y);
+                p.ripple_phase = fx_ripple;
+                p.ripple_strength = user_ui->ripple_strength;
+            }
+
+            if (fx.focus && user_ui->focus_enabled)
+                p.focus_strength = user_ui->focus_strength * fx_focus;
+
+            if (fx.inner && user_ui->inner_enabled)
+            {
+                p.inner_strength = user_ui->inner_strength;
+                p.inner_size = user_ui->inner_size;
             }
 
             c.renderer->draw_fx(c, get_render_bounds(), p);
@@ -1204,6 +1222,34 @@ namespace GUI
                 if (fx_shine >= 1.0f)
                     fx_shine = -1.0f;
             }
+        }
+
+        // A press starts the ripple at the cursor; it then runs out on its own.
+        if (fx.ripple && user_ui)
+        {
+            if (pressed && !fx_was_pressed)
+            {
+                fx_ripple = 0.0f;
+                fx_ripple_origin = user_ui->get_mouse_pos();
+            }
+            else if (fx_ripple >= 0.0f)
+            {
+                fx_ripple += dt / std::max(float(user_ui->ripple_duration), 0.05f);
+
+                if (fx_ripple >= 1.0f)
+                    fx_ripple = -1.0f;
+            }
+        }
+
+        fx_was_pressed = pressed;
+
+        if (fx.focus)
+        {
+            const float focus_target = is_focused() ? 1.0f : 0.0f;
+            fx_focus += (focus_target - fx_focus) * (1.0f - std::exp(-dt * 14.0f));
+
+            if (std::abs(focus_target - fx_focus) < 0.003f)
+                fx_focus = focus_target;
         }
     }
 

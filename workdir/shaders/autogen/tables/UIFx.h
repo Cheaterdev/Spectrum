@@ -16,6 +16,10 @@ namespace UI
 		float4 reveal; // float4
 		float4 border; // float4
 		float4 shine; // float4
+		float4 ripple; // float4
+		float4 focus; // float4
+		float4 focus_color; // float4
+		float4 inner; // float4
 		float2 window_size; // float2
 		float radius; // float
 		float4 GetQuad() { return quad; }
@@ -23,6 +27,10 @@ namespace UI
 		float4 GetReveal() { return reveal; }
 		float4 GetBorder() { return border; }
 		float4 GetShine() { return shine; }
+		float4 GetRipple() { return ripple; }
+		float4 GetFocus() { return focus; }
+		float4 GetFocus_color() { return focus_color; }
+		float4 GetInner() { return inner; }
 		float2 GetWindow_size() { return window_size; }
 		float GetRadius() { return radius; }
 	};

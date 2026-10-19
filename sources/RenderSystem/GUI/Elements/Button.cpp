@@ -37,6 +37,7 @@ namespace GUI
         {
             fx.reveal = true;
             fx.border = true;
+            fx.ripple = true;
             fx.radius = 3.0f;
             clickable = true;
             clip_child = true;

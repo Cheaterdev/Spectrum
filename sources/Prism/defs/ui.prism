@@ -212,6 +212,13 @@ namespace UI
 		float4 border;
 		# x sweep phase (< 0 = off), y band half-width (fraction of the sweep), z strength.
 		float4 shine;
+		# xy origin (window px), z phase (< 0 = off), w strength. A wave expanding from the origin.
+		float4 ripple;
+		# x ring width (px), y strength. Drawn in focus_color (sRGB rgb) just inside the edge.
+		float4 focus;
+		float4 focus_color;
+		# x size (px), y strength, z vertical offset (px). Darkening inside the edge, deepest at the top.
+		float4 inner;
 		float2 window_size;
 		float radius;
 	}

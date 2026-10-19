@@ -16,8 +16,10 @@ void GUI::Elements::menu_list::draw(Context& c)
 GUI::Elements::menu_list::menu_list(bool vertical)
 {
     this->vertical = vertical;
-    // Popups blur what is behind them; the menu strip is a flat bar.
+    // Popups blur what is behind them and sit slightly recessed; the menu strip is a flat bar.
     backdrop_blur = vertical;
+    fx.inner = vertical;
+    fx.radius = 0.0f;
     shadow.enabled = vertical;
     padding = { 1, 1, 1, 1 };
     docking = GUI::dock::NONE;
@@ -134,6 +136,7 @@ GUI::Elements::menu_list_element::menu_list_element(bool on_strip)
 {
     fx.reveal = true;
     fx.border = true;
+    fx.ripple = true;
     fx.radius = 0.0f;
     this->on_strip = on_strip;
 }

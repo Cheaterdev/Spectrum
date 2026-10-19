@@ -55,6 +55,15 @@ float4 PS(vs_out i) : SV_TARGET0
 
     float cursor_distance = length(i.wp - d.GetReveal().xy);
 
+    // Inner shadow: darkening just inside the edge, deepest at the top. Drawn
+    // first so the light and the focus ring sit on top of it.
+    float inner_a = 0.0;
+    if (d.GetInner().y > 0.0)
+    {
+        float sd_shifted = sd_round_box(i.wp - float2(0.0, d.GetInner().z), d.GetShape(), d.GetRadius());
+        inner_a = saturate(d.GetInner().y * exp(min(sd_shifted, 0.0) / max(d.GetInner().x, 0.5)));
+    }
+
     // Soft spot at the cursor.
     float light = d.GetReveal().w * gaussian(cursor_distance, d.GetReveal().z);
 
@@ -78,10 +87,37 @@ float4 PS(vs_out i) : SV_TARGET0
         light += d.GetShine().z * exp(-t * t);
     }
 
-    float a = saturate(light) * inside;
-    if (a <= 0.0)
+    // Press ripple: a wave leaving the press point, fading as it goes, with a
+    // soft fill behind its front.
+    float ripple_phase = d.GetRipple().z;
+    if (ripple_phase >= 0.0)
+    {
+        float2 corner_far = max(abs(d.GetRipple().xy - d.GetShape().xy),
+                                abs(d.GetRipple().xy - (d.GetShape().xy + d.GetShape().zw)));
+        float max_reach = length(corner_far);
+        float front = saturate(ripple_phase) * max_reach;
+        float ripple_distance = length(i.wp - d.GetRipple().xy);
+        float wave = gaussian(ripple_distance - front, 0.12 * max_reach + 4.0);
+        float fill = saturate((front - ripple_distance) / (0.4 * front + 1.0));
+        light += d.GetRipple().w * (1.0 - ripple_phase) * (wave + 0.35 * fill * (1.0 - ripple_phase));
+    }
+
+    // Focus ring: accent-coloured, just inside the edge.
+    float ring_a = d.GetFocus().y * saturate(1.0 + sd / max(d.GetFocus().x, 0.5));
+
+    // Over-composite: inner shadow (black) < light (white) < focus ring (accent).
+    float light_a = saturate(light);
+    float4 under = float4(0.0, 0.0, 0.0, inner_a);
+    float4 white = float4(1.0, 1.0, 1.0, light_a);
+    float a_lw = white.a + under.a * (1.0 - white.a);
+    float3 c_lw = a_lw > 0.0 ? (white.rgb * white.a + under.rgb * under.a * (1.0 - white.a)) / a_lw : float3(0.0, 0.0, 0.0);
+
+    float3 ring_rgb = d.GetFocus_color().rgb;
+    float a_total = ring_a + a_lw * (1.0 - ring_a);
+    if (a_total <= 0.0)
         discard;
 
-    return float4(ui_output(float4(1.0, 1.0, 1.0, 1.0)).rgb, a);
+    float3 srgb = (ring_rgb * ring_a + c_lw * a_lw * (1.0 - ring_a)) / a_total;
+    return float4(ui_output(float4(srgb, 1.0)).rgb, saturate(a_total) * inside);
 }
 #endif

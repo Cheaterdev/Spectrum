@@ -144,11 +144,11 @@ namespace
 	{
 		HAL::texture_data::ptr data;
 
-		float at(uint x, uint y) const
+		float at(uint x, uint y, uint channel = 0) const
 		{
 			const auto& mip = *data->array[0]->mips[0];
 			const uint16_t* row = reinterpret_cast<const uint16_t*>(mip.data.data() + size_t(y) * mip.width_stride);
-			const uint32_t h = row[x * 4];
+			const uint32_t h = row[x * 4 + channel];
 			const uint32_t e = (h >> 10) & 0x1f, m = h & 0x3ff;
 			return e == 0 ? std::ldexp(float(m), -24) : std::ldexp(float(m | 0x400), int(e) - 25);
 		}
@@ -1479,5 +1479,114 @@ export namespace Test
 		const auto off = render_fx(p);
 		ASSERT_TRUE(off.at(128, 64) < 0.06f);
 		ASSERT_TRUE(off.at(70, 64) < 0.06f);
+	}
+
+	// Press ripple: a ring expanding from the press point; the centre is only
+	// lightly filled and the far side has not been reached yet.
+	TEST(Core.HAL, GUIFx_Ripple)
+	{
+		THREAD_SCOPE(GUI);
+
+		GUI::FxParams p;
+		p.ripple_origin = float2(128.0f, 64.0f);
+		p.ripple_strength = 0.8f;
+
+		p.ripple_phase = 0.4f;   // front about 29 px out
+		const auto img = render_fx(p);
+		ASSERT_TRUE(img.at(156, 64) > 0.35f);               // on the front
+		ASSERT_TRUE(img.at(156, 64) > img.at(128, 64));     // brighter than the centre
+		ASSERT_TRUE(img.at(185, 64) < 0.12f);               // beyond it
+
+		p.ripple_phase = -1.0f;
+		const auto off = render_fx(p);
+		ASSERT_TRUE(off.at(156, 64) < 0.06f);
+	}
+
+	// Focus ring: accent blue just inside the edge, nothing in the middle.
+	TEST(Core.HAL, GUIFx_FocusRing)
+	{
+		THREAD_SCOPE(GUI);
+
+		GUI::FxParams p;
+		p.focus_strength = 1.0f;
+		p.focus_width = 2.0f;
+		const auto img = render_fx(p);
+
+		ASSERT_TRUE(img.at(64, 64, 2) > 0.3f);                         // blue at the edge
+		ASSERT_TRUE(img.at(64, 64, 2) > 3.0f * img.at(64, 64, 0));     // and it is blue, not white
+		ASSERT_TRUE(img.at(128, 64, 2) < 0.06f);                       // centre untouched
+	}
+
+	// Inner shadow: darker at the edges than in the middle, and deeper along the top.
+	TEST(Core.HAL, GUIFx_InnerShadow)
+	{
+		THREAD_SCOPE(GUI);
+
+		GUI::FxParams p;
+		p.inner_strength = 0.6f;
+		p.inner_size = 10.0f;
+		p.inner_offset = 2.0f;
+		const auto img = render_fx(p);
+
+		ASSERT_TRUE(img.at(128, 64) > 0.028f);                  // middle keeps the base grey (~0.033)
+		ASSERT_TRUE(img.at(64, 64) < 0.02f);                    // left edge darkened
+		ASSERT_TRUE(img.at(128, 34) < img.at(128, 93));         // top darker than bottom
+	}
+
+	// The state behind the press ripple and the focus ring: a press starts the
+	// ripple at the cursor and it runs out on its own; focus eases the ring in
+	// and out. No GPU needed.
+	TEST(Core.HAL, GUIFx_PressAndFocusState)
+	{
+		THREAD_SCOPE(GUI);
+
+		auto ui_owner = std::make_shared<GUI::user_interface>();
+		auto& ui = *ui_owner;
+		ui.size = vec2(400.0f, 200.0f);
+
+		auto card = std::make_shared<GUI::Elements::colored_rect>();
+		card->docking     = GUI::dock::NONE;
+		card->width_size  = GUI::size_type::FIXED;
+		card->height_size = GUI::size_type::FIXED;
+		card->size        = vec2(200.0f, 100.0f);
+		card->pos         = vec2(20.0f, 20.0f);
+		card->fx.ripple = true;
+		card->fx.focus  = true;
+		ui.add_child(card);
+
+		auto frame = [&](float dt)
+		{
+			ui.process_ui(dt);
+			FrameGraph::Graph graph;
+			ui.create_graph(graph);
+		};
+
+		frame(0.03f);
+		ASSERT_TRUE(card->fx_ripple < 0.0f);
+		ASSERT_TRUE(card->fx_focus == 0.0f);
+
+		const rect b = card->get_render_bounds();
+		const vec2 press_at(b.x + b.w * 0.25f, b.y + b.h * 0.5f);
+		ui.mouse_move_event_internal(press_at);
+		ui.mouse_action_event_internal(mouse_action::DOWN, mouse_button::LEFT, press_at);
+
+		frame(0.03f);
+		ASSERT_TRUE(card->fx_ripple >= 0.0f);                                   // started
+		ASSERT_TRUE(std::abs(card->fx_ripple_origin.x - press_at.x) < 1.0f);    // at the cursor
+		ASSERT_TRUE(std::abs(card->fx_ripple_origin.y - press_at.y) < 1.0f);
+
+		for (int i = 0; i < 25; i++)
+			frame(0.03f);
+		ASSERT_TRUE(card->fx_ripple < 0.0f);                                    // ran out (0.55 s)
+
+		card->focus();
+		for (int i = 0; i < 14; i++)
+			frame(0.03f);
+		ASSERT_TRUE(card->fx_focus > 0.95f);
+
+		card->unfocus();
+		for (int i = 0; i < 14; i++)
+			frame(0.03f);
+		ASSERT_TRUE(card->fx_focus < 0.05f);
 	}
 }
