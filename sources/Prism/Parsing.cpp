@@ -25,7 +25,9 @@ public:
 
 	void walk(const Ast& node)
 	{
-		enter(node);
+		if (!enter(node))
+			return; // a rejected statement: its subtree is skipped, and so is its leave()
+
 		for (const auto& child : node.nodes)
 			walk(*child);
 		leave(node);
@@ -189,14 +191,104 @@ public:
 #define ENTER_ONLY_RULES(X) \
 	X(name_id) X(shader_path) X(inherit_id) X(class_no_template) X(owner_id) X(template_id) X(value_id) \
 	X(raw_value) X(cond_term) X(call_arg) X(paren_group) X(pso_param_id) X(node_param_id) X(array) X(pointer) \
-	X(array_count_id) X(insert_block) X(shader_type)
+	X(array_count_id) X(insert_block) X(shader_type) X(template_nested)
 
 #define ENTER_AND_EXIT_RULES(X) X(namespace_header) X(function_definition) X(node_output_decl)
 
 #define EXIT_ONLY_RULES(X) X(namespace_definition) X(call) X(paren_group)
 
-	void enter(const Ast& n)
+	// All PSO kinds share one statement list in the grammar; this is which statements
+	// each kind actually takes.
+	struct PsoKind
 	{
+		unsigned tag;
+		const char* keyword;
+		std::vector<unsigned> allowed;
+	};
+
+	static const PsoKind* pso_kind_of(unsigned tag)
+	{
+		static const PsoKind kinds[] = {
+			{ prism_tag("compute_pso_definition"), "ComputePSO",
+				{ prism_tag("root_sig"), prism_tag("shader"), prism_tag("define_declaration") } },
+			{ prism_tag("graphics_pso_definition"), "GraphicsPSO",
+				{ prism_tag("root_sig"), prism_tag("shader"), prism_tag("define_declaration"),
+				  prism_tag("rtv_formats_declaration"), prism_tag("blends_declaration"), prism_tag("pso_param") } },
+			{ prism_tag("rtx_pso_definition"), "RaytracePSO", { prism_tag("root_sig") } },
+			{ prism_tag("workgraph_pso_definition"), "WorkgraphPSO",
+				{ prism_tag("root_sig"), prism_tag("shader"), prism_tag("define_declaration"), prism_tag("node_definition") } },
+			{ prism_tag("rtx_pass_definition"), "RaytracePass", { prism_tag("shader"), prism_tag("pso_param") } },
+			{ prism_tag("rtx_raygen_definition"), "RaytraceRaygen", { prism_tag("shader") } },
+		};
+		for (const auto& k : kinds)
+			if (k.tag == tag)
+				return &k;
+		return nullptr;
+	}
+
+	// The innermost PSO definition being walked, and its name for messages.
+	struct OpenPso
+	{
+		const PsoKind* kind;
+		std::string name;
+	};
+	std::vector<OpenPso> open_pso;
+
+	static const Ast* find_descendant(const Ast& node, std::string_view name)
+	{
+		for (const auto& child : node.nodes)
+		{
+			if (child->name == name)
+				return child.get();
+			if (auto* found = find_descendant(*child, name))
+				return found;
+		}
+		return nullptr;
+	}
+
+	// Returns false when the node is a statement its PSO does not take: it is
+	// reported and the walk skips it.
+	bool allowed_in_pso(const Ast& n)
+	{
+		if (open_pso.empty())
+			return true;
+
+		const char* statement = nullptr;
+		switch (n.tag)
+		{
+		case prism_tag("root_sig"): statement = "root"; break;
+		case prism_tag("shader"): statement = "shader"; break;
+		case prism_tag("define_declaration"): statement = "define"; break;
+		case prism_tag("rtv_formats_declaration"): statement = "rtv"; break;
+		case prism_tag("blends_declaration"): statement = "blend"; break;
+		case prism_tag("pso_param"): statement = ""; break;
+		case prism_tag("node_definition"): statement = "Node"; break;
+		default: return true;
+		}
+
+		const OpenPso& pso = open_pso.back();
+		if (std::find(pso.kind->allowed.begin(), pso.kind->allowed.end(), n.tag) != pso.kind->allowed.end())
+			return true;
+
+		std::string what = statement;
+		if (n.tag == prism_tag("pso_param"))
+			if (auto* id = find_descendant(n, "pso_param_id"))
+				what = text_of(*id);
+
+		diagnostics().error(loc_of(n), std::format("'{}' is not allowed in {} '{}'", what, pso.kind->keyword, pso.name));
+		return false;
+	}
+
+	bool enter(const Ast& n)
+	{
+		if (auto* kind = pso_kind_of(n.tag))
+		{
+			auto* name = child_of(n, "name_id");
+			open_pso.push_back({ kind, name ? text_of(*name) : std::string() });
+		}
+		else if (!allowed_in_pso(n))
+			return false;
+
 		switch (n.tag)
 		{
 #define CASE_GENERATED(r) case prism_tag(#r): enter_body_##r(n); stamp(n); break;
@@ -209,10 +301,14 @@ public:
 		default:
 			break;
 		}
+		return true;
 	}
 
 	void leave(const Ast& n)
 	{
+		if (pso_kind_of(n.tag))
+			open_pso.pop_back();
+
 		switch (n.tag)
 		{
 #define CASE_GENERATED(r) case prism_tag(#r): end_elem(); break;
@@ -500,7 +596,14 @@ public:
 		if (child_of(ctx, "STRING"))
 		{
 			std::string text = text_of(ctx);
-			elem.path_literal = text.substr(1, text.size() - 2);
+			elem.path_literal.clear();
+			for (size_t i = 1; i + 1 < text.size(); ++i)
+			{
+				// \" and \\ are escapes; any other backslash stays a backslash.
+				if (text[i] == '\\' && i + 2 < text.size() && (text[i + 1] == '"' || text[i + 1] == '\\'))
+					++i;
+				elem.path_literal += text[i];
+			}
 			elem.path_quoted = true;
 			elem.path_loc = loc_of(ctx, 1);
 
@@ -536,7 +639,7 @@ public:
 		elem.owner_name = text_of(ctx);
 	}
 
-	ENTER(template_id)
+	void add_template_arg(const Ast& ctx)
 	{
 		auto& elem = get_elem<have_type>();
 
@@ -547,11 +650,23 @@ public:
 		elem.detect_type(find_elem<have_options>());
 	}
 
+	ENTER(template_id)
+	{
+		add_template_arg(ctx);
+	}
+
+	// A nested argument such as Bar<int>: its source text is the argument.
+	ENTER(template_nested)
+	{
+		add_template_arg(ctx);
+	}
+
 	ENTER(value_id)
 	{
 		auto& elem = get_elem<have_expr>();
 		elem.expr = text_of(ctx);
-		elem.is_literal = child_of(ctx, "INT_SCALAR") || child_of(ctx, "FLOAT_SCALAR") || child_of(ctx, "bool_type");
+		elem.is_literal = child_of(ctx, "INT_SCALAR") || child_of(ctx, "FLOAT_SCALAR") || child_of(ctx, "bool_type")
+			|| child_of(ctx, "signed_number");
 	}
 
 	ENTER(raw_value)
@@ -691,7 +806,9 @@ public:
 	{
 		{
 			auto& elem = get_elem<have_array>();
-			elem.array_count = std::atoi(text_of(ctx).c_str());
+			// Hex needs its prefix honoured; base 10 otherwise, so 010 stays ten.
+			std::string count = text_of(ctx);
+			elem.array_count = static_cast<int>(std::strtol(count.c_str(), nullptr, count.starts_with("0x") || count.starts_with("0X") ? 16 : 10));
 		}
 		{
 			auto& elem = get_elem<have_type>();

@@ -20,7 +20,7 @@
 
 static const std::string& grammar_text()
 {
-	static const std::string text = std::string(prism_grammar_a) + prism_grammar_b;
+	static const std::string text = std::string(prism_grammar_a) + prism_grammar_b + prism_grammar_c;
 	return text;
 }
 

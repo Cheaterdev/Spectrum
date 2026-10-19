@@ -51,7 +51,9 @@ SCOPE = "source.prism"
 # Lexer token -> scope, plus an optional embedded grammar for begin/end spans.
 # VS ships no HLSL TextMate grammar; source.cpp is the closest one it does ship.
 SCOPES = {
-    "COMMENT":      {"name": "comment.line.number-sign.prism"},
+    "HASH_COMMENT":  {"name": "comment.line.number-sign.prism"},
+    "LINE_COMMENT":  {"name": "comment.line.double-slash.prism"},
+    "BLOCK_COMMENT": {"name": "comment.block.prism", "plain": True},
     "STRING":       {"name": "string.quoted.double.prism"},
     "RAWEXPR":      {"name": "string.interpolated.raw.prism", "embed": "source.cpp"},
     "INSERT_BLOCK": {"name": "meta.embedded.block.hlsl.prism", "embed": "source.cpp"},
@@ -61,10 +63,14 @@ SCOPES = {
 
 # Parser rules that are pure literal alternatives -> scope for those words.
 KEYWORD_GROUP_SCOPES = {
-    "shader_type":   "support.type.shader-stage.prism",
-    "pso_param_id":  "variable.parameter.prism",
-    "node_param_id": "variable.parameter.prism",
-    "bool_type":     "constant.language.prism",
+    "shader_type":         "support.type.shader-stage.prism",
+    "bool_pso_param_id":   "variable.parameter.prism",
+    "num_pso_param_id":    "variable.parameter.prism",
+    "enum_pso_param_id":   "variable.parameter.prism",
+    "id_node_param_id":    "variable.parameter.prism",
+    "bool_node_param_id":  "variable.parameter.prism",
+    "array_node_param_id": "variable.parameter.prism",
+    "bool_type":           "constant.language.prism",
 }
 
 # Built-in type names. The grammar cannot supply these: every type is a plain ID
@@ -180,13 +186,8 @@ def split_rules(text):
     rules = {}
     for i, m in enumerate(starts):
         end = starts[i + 1].start() if i + 1 < len(starts) else len(text)
-        rules[m.group(1)] = " ".join(text[m.end():end].split())
-
-    # Comments are not a token of their own in a PEG: they are one alternative
-    # of %whitespace (`'#' [^\r\n]*`). Lift it out so SCOPES can name it.
-    m = re.search(r"""'[^'\s]+'\s*\[\^[^\]]*\]\*""", rules.get("%whitespace", ""))
-    if m:
-        rules["COMMENT"] = m.group(0)
+        body = re.sub(r"\{\s*ast_name\s*:[^}]*\}", "", text[m.end():end])  # tree-shape instruction, not syntax
+        rules[m.group(1)] = " ".join(body.split())
     return rules
 
 
@@ -444,7 +445,9 @@ def build_grammar(rules, a):
             continue
         ast = lexer_ast(tok, rules)
         be = begin_end(ast)
-        if be and ("embed" in cfg or "[\\s\\S]" in to_regex(ast)):
+        if be and cfg.get("plain"):
+            p = {"name": cfg["name"], "begin": re_escape(be[0]), "end": re_escape(be[1])}
+        elif be and ("embed" in cfg or "[\\s\\S]" in to_regex(ast)):
             # Leading \s* on the end: the embedded C++ grammar has rules that
             # start matching at the indentation before `}%`, and the earliest
             # match wins -- without it the block never closes.
@@ -461,6 +464,11 @@ def build_grammar(rules, a):
             p = {"name": cfg["name"], "match": rx}
         repo[tok.lower()] = p
         token_patterns.append(tok.lower())
+
+    # The comment forms are one repository entry, which the other patterns include by name.
+    comment_tokens = [t for t in token_patterns if t.endswith("_comment")]
+    repo["comment"] = {"patterns": [{"include": "#" + t} for t in comment_tokens]}
+    token_patterns = ["comment"] + [t for t in token_patterns if t not in comment_tokens]
 
     # Float before int, so `1.5` is one token.
     order = ["comment", "insert_block", "rawexpr", "string", "float_scalar", "int_scalar"]
@@ -580,8 +588,8 @@ def build_grammar(rules, a):
 
 
 def build_language_configuration(rules, a):
-    comment = begin_end(lexer_ast("COMMENT", rules))
-    line_comment = literal_of(flatten(lexer_ast("COMMENT", rules))[1][0]) if not comment else None
+    line_comment = literal_of(flatten(lexer_ast("HASH_COMMENT", rules))[1][0])
+    block_comment = begin_end(lexer_ast("BLOCK_COMMENT", rules))
     quotes = []
     for tok in ("STRING", "RAWEXPR"):
         if tok in rules:
@@ -592,7 +600,7 @@ def build_language_configuration(rules, a):
     # Auto-closing `%{` would race the `{` pair and produce `%{}}%`.
     single = [p for p in pairs if len(p[0]) == 1]
     return {
-        "comments": {"lineComment": line_comment},
+        "comments": {"lineComment": line_comment, "blockComment": list(block_comment)},
         "brackets": pairs,
         "autoClosingPairs": [{"open": o, "close": c} for o, c in single + quotes],
         "surroundingPairs": [[o, c] for o, c in single + quotes],

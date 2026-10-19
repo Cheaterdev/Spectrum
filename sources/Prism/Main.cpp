@@ -535,6 +535,26 @@ int main(int argc, char** argv)
 	if (argc > 1 && std::string_view(argv[1]) == "--lsp")
 		return run_lsp();
 
+	// `prismc --check a.prism b.prism`: parse only (no validation, nothing generated),
+	// for working on the grammar.
+	if (argc > 1 && std::string_view(argv[1]) == "--check")
+	{
+		for (int i = 2; i < argc; ++i)
+		{
+			try
+			{
+				parse(std::filesystem::path(argv[i]).wstring());
+			}
+			catch (std::exception& e)
+			{
+				diagnostics().error(::SourceLocation{ argv[i] }, e.what());
+			}
+		}
+
+		diagnostics().print();
+		return diagnostics().empty() ? 0 : 1;
+	}
+
 	std::map<std::string, ValuesList> user_lists;
 	int result = 0;
 

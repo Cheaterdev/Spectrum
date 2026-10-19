@@ -24,7 +24,9 @@ The grammar is a cpp-peglib (PEG) string in `sources/Prism/PrismGrammar.h`; ther
 is just a rebuild of the Prism project. `peglib.h` (vcpkg port `cpp-peglib`) is included only by the plain, non-module
 `sources/Prism/PrismBridge.cpp` (a header unit of it leaves its static string constants null), which hands `Parsing.cpp` a
 small AST (`PrismAst.h`). Keywords are contextual (`!IDCHAR`-guarded tokens), so where a keyword-led alternative follows an
-`ID`-led one, order them keyword first (see `rt_stat`, `value_id`).
+`ID`-led one, order them keyword first (see `rt_stat`, `value_id`). All PSO kinds share one `pso_block`; which statements
+each kind takes is checked in `Parsing.cpp` (`PsoKind`), and PSO/node parameters are typed by name in the grammar.
+`prismc --check a.prism` parses files without validating or generating anything, for trying grammar changes.
 
 ### Build
 Open `projects/Spectrum.sln` in Visual Studio 2026. Three configurations: **Debug**, **Profile**, **Retail**.
