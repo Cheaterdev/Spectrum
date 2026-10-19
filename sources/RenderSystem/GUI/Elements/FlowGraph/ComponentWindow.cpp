@@ -68,6 +68,7 @@ void GUI::Elements::FlowGraph::component_window::draw(Context& c)
 GUI::Elements::FlowGraph::component_window::component_window(canvas* canva, ::FlowGraph::Node* node, window_type type)
 {
 	thinkable = true;
+	backdrop_blur = true;
 	this->node = node;
 	this->type = type;
 	this->canva = canva;

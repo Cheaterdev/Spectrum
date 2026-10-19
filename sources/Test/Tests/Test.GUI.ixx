@@ -539,7 +539,7 @@ export namespace Test
 			c.window_size = ui_ctx.scaled_size;
 
 			if (e.before)
-				e.elem->draw(c);
+				e.elem->draw_before(c);
 			else
 				e.elem->draw_after(c);
 		}
@@ -719,7 +719,7 @@ export namespace Test
 			c.window_size = ui_ctx.scaled_size;
 
 			if (e.before)
-				e.elem->draw(c);
+				e.elem->draw_before(c);
 			else
 				e.elem->draw_after(c);
 		}
@@ -903,5 +903,402 @@ export namespace Test
 
 		list->execute_and_wait();
 		ASSERT_TEXTURE_EX(tex.get(), "text_engine_direct_draw", .tolerance = 24);
+	}
+
+	// Backdrop blur: a hard red|blue seam is drawn first, then a blurred panel
+	// over part of it. Inside the panel the seam must be smeared (blue leaks
+	// into the red side); outside it the seam must stay sharp. Checked on read-
+	// back pixel values, not a golden: the point is that the snapshot, the blur
+	// chain and the composite really ran in order on one command list.
+	TEST(Core.HAL, GUIRenderer_BackdropBlur)
+	{
+		THREAD_SCOPE(GUI);
+		auto& device = RenderSystem::get().device();
+		constexpr uint WIDTH = 256, HEIGHT = 128;
+
+		auto tex = std::make_shared<HAL::TextureResource>(device,
+			HAL::ResourceDesc::Tex2D(UI_RT_FORMAT, {WIDTH, HEIGHT}, 1, 1,
+				HAL::ResFlags::RenderTarget),
+			HAL::HeapType::DEFAULT);
+
+		auto& queue = device.get_queue(HAL::CommandListType::DIRECT);
+		auto list = queue->get_free_list();
+		list->begin(L"GUIRenderer_BackdropBlur");
+
+		HAL::Texture2DView view(tex, *list);
+		set_ui_target(list, view, vec4(0.0f, 0.0f, 0.0f, 1.0f));
+
+		sizer_long full_vp;
+		full_vp.left   = 0;
+		full_vp.top    = 0;
+		full_vp.right  = (long)WIDTH;
+		full_vp.bottom = (long)HEIGHT;
+
+		GUI::Renderer renderer;
+		GUIInfo c;
+		c.renderer     = &renderer;
+		c.command_list = list;
+		c.target       = view;
+		c.ui_scale     = 1.0f;
+		c.window_size  = vec2((float)WIDTH, (float)HEIGHT);
+		c.offset       = vec2(0.0f, 0.0f);
+		c.ui_clipping  = full_vp;
+		c.scissors     = full_vp;
+		c.scale        = 1.0f;
+		c.delta_time   = 0.0f;
+
+		renderer.draw_color(c, float4(1.0f, 0.0f, 0.0f, 1.0f), rect{ vec2(0.0f, 0.0f),   vec2(128.0f, 128.0f) });
+		renderer.draw_color(c, float4(0.0f, 0.0f, 1.0f, 1.0f), rect{ vec2(128.0f, 0.0f), vec2(128.0f, 128.0f) });
+
+		GUI::BackdropBlurParams params;
+		params.radius = 16.0f;
+		params.tint = float4(0.0f, 0.0f, 0.0f, 0.0f);
+		params.saturation = 1.0f;
+		renderer.draw_backdrop_blur(c, 0, rect{ vec2(64.0f, 32.0f), vec2(128.0f, 64.0f) }, params);
+		renderer.flush(c);
+
+		list->execute_and_wait();
+
+		auto data = readback_texture(tex.get());
+		ASSERT_TRUE(data && !data->array.empty() && !data->array[0]->mips.empty());
+		const auto& mip = *data->array[0]->mips[0];
+
+		auto half_to_float = [](uint16_t h)
+		{
+			const uint32_t e = (h >> 10) & 0x1f, m = h & 0x3ff;
+			float v = e == 0 ? std::ldexp(float(m), -24)
+			                 : std::ldexp(float(m | 0x400), int(e) - 25);
+			return (h & 0x8000) ? -v : v;
+		};
+
+		auto channel = [&](uint x, uint y, uint ch)
+		{
+			const uint16_t* row = reinterpret_cast<const uint16_t*>(mip.data.data() + size_t(y) * mip.width_stride);
+			return half_to_float(row[x * 4 + ch]);
+		};
+
+		const uint y = 64;
+
+		// Outside the panel: the seam is untouched.
+		ASSERT_TRUE(channel(40, y, 0) > 0.9f);
+		ASSERT_TRUE(channel(40, y, 2) < 0.05f);
+		ASSERT_TRUE(channel(220, y, 2) > 0.9f);
+		ASSERT_TRUE(channel(220, y, 0) < 0.05f);
+
+		// Inside the panel, 8 px left of the seam: blue has leaked across, red has dimmed.
+		ASSERT_TRUE(channel(120, y, 2) > 0.08f);
+		ASSERT_TRUE(channel(120, y, 0) < 0.92f);
+
+		// Same distance on the other side, mirrored.
+		ASSERT_TRUE(channel(136, y, 0) > 0.08f);
+		ASSERT_TRUE(channel(136, y, 2) < 0.92f);
+
+		// Far from the seam inside the panel the blur must not wash the colours out.
+		ASSERT_TRUE(channel(70, y, 0) > 0.8f);
+		ASSERT_TRUE(channel(186, y, 2) > 0.8f);
+	}
+
+	// The real menu element through the production draw path (create_graph →
+	// draw_infos → draw, the loop UI_Render runs): a popup menu straddling a
+	// hard red|blue seam must show it blurred. Its item rects are translucent
+	// dark plates, so without the backdrop pass the blue channel just left of
+	// the seam is exactly 0.
+	TEST(Core.HAL, GUIMenuList_BackdropBlur)
+	{
+		THREAD_SCOPE(GUI);
+		auto& device = RenderSystem::get().device();
+		constexpr uint W = 512, H = 256;
+		constexpr float seam = 256.0f;
+
+		auto tex = std::make_shared<HAL::TextureResource>(device,
+			HAL::ResourceDesc::Tex2D(UI_RT_FORMAT, {W, H}, 1, 1,
+				HAL::ResFlags::RenderTarget),
+			HAL::HeapType::DEFAULT);
+
+		GUI::user_interface ui;
+		ui.size = vec2((float)W, (float)H);
+		ui.backdrop_radius = 18.0f;   // the assertions below look 8 px either side of the seam
+
+		{
+			auto left = std::make_shared<GUI::Elements::colored_rect>();
+			left->color       = float4(1.0f, 0.0f, 0.0f, 1.0f);
+			left->docking     = GUI::dock::LEFT;
+			left->width_size  = GUI::size_type::FIXED;
+			left->size        = vec2(seam, 0.0f);
+			ui.add_child(left);
+
+			auto right = std::make_shared<GUI::Elements::colored_rect>();
+			right->color   = float4(0.0f, 0.0f, 1.0f, 1.0f);
+			right->docking = GUI::dock::FILL;
+			ui.add_child(right);
+		}
+
+		auto menu = std::make_shared<GUI::Elements::menu_list>();
+		menu->add_item("Open");
+		menu->add_item("Save");
+		menu->add_item("Close");
+		ui.add_child(menu);
+		ui.process_ui(0.0f);
+
+		// Centre the popup on the seam; its size is only known after a layout pass.
+		const rect first = menu->get_render_bounds();
+		menu->pos = vec2(seam - first.w / 2.0f, 60.0f);
+		ui.process_ui(0.0f);
+		const rect mb = menu->get_render_bounds();
+		ASSERT_TRUE(mb.x < seam - 16.0f && mb.x + mb.w > seam + 16.0f);
+
+		FrameGraph::Graph graph;
+		ui.create_graph(graph);
+		device.get_queue(HAL::CommandListType::DIRECT)->signal_and_wait();
+
+		auto& predraw = graph.get_context<GUI::UIContext>();
+		if (!predraw.pre_draw_infos.empty())
+		{
+			auto& queue = device.get_queue(HAL::CommandListType::DIRECT);
+			auto pre_draw_list = queue->get_free_list();
+			pre_draw_list->begin(L"pre_draw");
+			GUI::user_interface::run_pre_draw(predraw.pre_draw_infos, pre_draw_list);
+			pre_draw_list->end();
+			pre_draw_list->execute_and_wait();
+		}
+
+		auto& queue = device.get_queue(HAL::CommandListType::DIRECT);
+		auto list = queue->get_free_list();
+		list->begin(L"GUIMenuList_BackdropBlur");
+
+		HAL::Texture2DView view(tex, *list);
+		set_ui_target(list, view, vec4(0.0f, 0.0f, 0.0f, 1.0f));
+
+		sizer_long full_vp;
+		full_vp.left   = 0;
+		full_vp.top    = 0;
+		full_vp.right  = (long)W;
+		full_vp.bottom = (long)H;
+		list->get_graphics().set_scissors(full_vp);
+
+		GUI::Renderer renderer;
+		GUIInfo c;
+		c.renderer     = &renderer;
+		c.command_list = list;
+		c.target       = view;
+		c.ui_scale     = 1.0f;
+		c.window_size  = vec2((float)W, (float)H);
+		c.offset       = vec2(0.0f, 0.0f);
+		c.ui_clipping  = full_vp;
+		c.scissors     = full_vp;
+		c.scale        = 1.0f;
+		c.delta_time   = 0.0f;
+
+		auto& ui_ctx = graph.get_context<GUI::UIContext>();
+		for (auto& e : ui_ctx.draw_infos)
+		{
+			if (c.scissors != e.scissors)
+			{
+				renderer.flush(c);
+				list->get_graphics().set_scissors(e.scissors);
+			}
+			c.scale       = e.scale;
+			c.ui_clipping = e.clip;
+			c.offset      = e.offset;
+			c.scissors    = e.scissors;
+			c.window_size = ui_ctx.scaled_size;
+
+			if (e.before)
+				e.elem->draw_before(c);
+			else
+				e.elem->draw_after(c);
+		}
+		renderer.flush(c);
+
+		list->execute_and_wait();
+
+		auto data = readback_texture(tex.get());
+		ASSERT_TRUE(data && !data->array.empty() && !data->array[0]->mips.empty());
+		const auto& mip = *data->array[0]->mips[0];
+
+		auto half_to_float = [](uint16_t h)
+		{
+			const uint32_t e = (h >> 10) & 0x1f, m = h & 0x3ff;
+			float v = e == 0 ? std::ldexp(float(m), -24)
+			                 : std::ldexp(float(m | 0x400), int(e) - 25);
+			return (h & 0x8000) ? -v : v;
+		};
+
+		auto channel = [&](uint x, uint y, uint ch)
+		{
+			const uint16_t* row = reinterpret_cast<const uint16_t*>(mip.data.data() + size_t(y) * mip.width_stride);
+			return half_to_float(row[x * 4 + ch]);
+		};
+
+		// A row inside the first item's top padding: dark plate over the backdrop, no glyphs.
+		const uint y = (uint)(mb.y + 2.0f);
+
+		// Outside the menu the seam is hard.
+		const uint outside = (uint)(mb.x - 6.0f);
+		ASSERT_TRUE(channel(outside, y, 0) > 0.9f);
+		ASSERT_TRUE(channel(outside, y, 2) < 0.02f);
+
+		// Inside, either side of the seam: the other colour has leaked across the
+		// 0.41-transmittance plate (the plate is alpha 150/255 dark over the blur).
+		ASSERT_TRUE(channel((uint)seam - 8, y, 2) > 0.03f);
+		ASSERT_TRUE(channel((uint)seam + 8, y, 0) > 0.03f);
+
+		// And it is a smooth transition, not a step: monotonic red falloff across the seam.
+		float prev = channel((uint)seam - 16, y, 0);
+		for (uint x = (uint)seam - 15; x <= (uint)seam + 16; x += 4)
+		{
+			const float cur = channel(x, y, 0);
+			ASSERT_TRUE(cur <= prev + 0.01f);
+			prev = cur;
+		}
+	}
+
+	// A floating window goes through the same generic path (base::backdrop_blur
+	// + draw_before). Its skin body is 80% black, so only ~20% of the blurred
+	// backdrop shows through: without the blur the blue channel just left of the
+	// seam is exactly 0.
+	TEST(Core.HAL, GUIWindow_BackdropBlur)
+	{
+		THREAD_SCOPE(GUI);
+		auto& device = RenderSystem::get().device();
+		constexpr uint W = 512, H = 256;
+		constexpr float seam = 256.0f;
+
+		auto tex = std::make_shared<HAL::TextureResource>(device,
+			HAL::ResourceDesc::Tex2D(UI_RT_FORMAT, {W, H}, 1, 1,
+				HAL::ResFlags::RenderTarget),
+			HAL::HeapType::DEFAULT);
+
+		GUI::user_interface ui;
+		ui.size = vec2((float)W, (float)H);
+		ui.backdrop_radius = 12.0f;   // wide enough to show well above the skin's 20% transmittance
+
+		{
+			auto left = std::make_shared<GUI::Elements::colored_rect>();
+			left->color       = float4(1.0f, 0.0f, 0.0f, 1.0f);
+			left->docking     = GUI::dock::LEFT;
+			left->width_size  = GUI::size_type::FIXED;
+			left->size        = vec2(seam, 0.0f);
+			ui.add_child(left);
+
+			auto right = std::make_shared<GUI::Elements::colored_rect>();
+			right->color   = float4(0.0f, 0.0f, 1.0f, 1.0f);
+			right->docking = GUI::dock::FILL;
+			ui.add_child(right);
+		}
+
+		auto win = std::make_shared<GUI::Elements::window>();
+		win->width_size  = GUI::size_type::FIXED;
+		win->height_size = GUI::size_type::FIXED;
+		win->size        = vec2(240.0f, 140.0f);
+		win->pos         = vec2(seam - 120.0f, 50.0f);
+		ui.add_child(win);
+		ui.process_ui(0.0f);
+
+		const rect wb = win->get_render_bounds();
+		ASSERT_TRUE(wb.x < seam - 40.0f && wb.x + wb.w > seam + 40.0f);
+
+		FrameGraph::Graph graph;
+		ui.create_graph(graph);
+		device.get_queue(HAL::CommandListType::DIRECT)->signal_and_wait();
+
+		auto& predraw = graph.get_context<GUI::UIContext>();
+		if (!predraw.pre_draw_infos.empty())
+		{
+			auto& queue = device.get_queue(HAL::CommandListType::DIRECT);
+			auto pre_draw_list = queue->get_free_list();
+			pre_draw_list->begin(L"pre_draw");
+			GUI::user_interface::run_pre_draw(predraw.pre_draw_infos, pre_draw_list);
+			pre_draw_list->end();
+			pre_draw_list->execute_and_wait();
+		}
+
+		auto& queue = device.get_queue(HAL::CommandListType::DIRECT);
+		auto list = queue->get_free_list();
+		list->begin(L"GUIWindow_BackdropBlur");
+
+		HAL::Texture2DView view(tex, *list);
+		set_ui_target(list, view, vec4(0.0f, 0.0f, 0.0f, 1.0f));
+
+		sizer_long full_vp;
+		full_vp.left   = 0;
+		full_vp.top    = 0;
+		full_vp.right  = (long)W;
+		full_vp.bottom = (long)H;
+		list->get_graphics().set_scissors(full_vp);
+
+		GUI::Renderer renderer;
+		GUIInfo c;
+		c.renderer     = &renderer;
+		c.command_list = list;
+		c.target       = view;
+		c.ui_scale     = 1.0f;
+		c.window_size  = vec2((float)W, (float)H);
+		c.offset       = vec2(0.0f, 0.0f);
+		c.ui_clipping  = full_vp;
+		c.scissors     = full_vp;
+		c.scale        = 1.0f;
+		c.delta_time   = 0.0f;
+
+		auto& ui_ctx = graph.get_context<GUI::UIContext>();
+		for (auto& e : ui_ctx.draw_infos)
+		{
+			if (c.scissors != e.scissors)
+			{
+				renderer.flush(c);
+				list->get_graphics().set_scissors(e.scissors);
+			}
+			c.scale       = e.scale;
+			c.ui_clipping = e.clip;
+			c.offset      = e.offset;
+			c.scissors    = e.scissors;
+			c.window_size = ui_ctx.scaled_size;
+
+			if (e.before)
+				e.elem->draw_before(c);
+			else
+				e.elem->draw_after(c);
+		}
+		renderer.flush(c);
+
+		list->execute_and_wait();
+
+		auto data = readback_texture(tex.get());
+		ASSERT_TRUE(data && !data->array.empty() && !data->array[0]->mips.empty());
+		const auto& mip = *data->array[0]->mips[0];
+
+		auto half_to_float = [](uint16_t h)
+		{
+			const uint32_t e = (h >> 10) & 0x1f, m = h & 0x3ff;
+			float v = e == 0 ? std::ldexp(float(m), -24)
+			                 : std::ldexp(float(m | 0x400), int(e) - 25);
+			return (h & 0x8000) ? -v : v;
+		};
+
+		auto channel = [&](uint x, uint y, uint ch)
+		{
+			const uint16_t* row = reinterpret_cast<const uint16_t*>(mip.data.data() + size_t(y) * mip.width_stride);
+			return half_to_float(row[x * 4 + ch]);
+		};
+
+		// A row in the window body, below the title bar.
+		const uint y = (uint)(wb.y + 90.0f);
+
+		// Far outside the window the seam is untouched.
+		ASSERT_TRUE(channel(20, y, 0) > 0.9f);
+		ASSERT_TRUE(channel(20, y, 2) < 0.02f);
+
+		// Inside the body the other colour has leaked across (through the skin's ~20% transmittance).
+		ASSERT_TRUE(channel((uint)seam - 6, y, 2) > 0.015f);
+		ASSERT_TRUE(channel((uint)seam + 6, y, 0) > 0.015f);
+
+		// A step would be exactly 0 either side of it; blur makes the transition monotonic.
+		float prev = channel((uint)seam - 24, y, 0);
+		for (uint x = (uint)seam - 20; x <= (uint)seam + 24; x += 4)
+		{
+			const float cur = channel(x, y, 0);
+			ASSERT_TRUE(cur <= prev + 0.005f);
+			prev = cur;
+		}
 	}
 }

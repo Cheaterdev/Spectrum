@@ -29,6 +29,13 @@ export namespace GUI
 		static void reset();
 	};
 
+	struct BackdropBlurParams
+	{
+		float  radius     = 18.0f;                          // blur radius, px at UI scale 1
+		float4 tint       = { 0.02f, 0.02f, 0.03f, 0.35f }; // sRGB rgb, alpha = strength
+		float  saturation = 1.25f;
+	};
+
 	class Renderer
 	{
 		NinePatch nine_patch;
@@ -51,6 +58,18 @@ export namespace GUI
 
 		void draw(base::Context& c, GUI::Texture& item, rect r);
 		void draw(base::Context& c, HAL::PipelineState::ptr state, rect r);
+
+		// Draws what is behind `r` (everything already drawn into the target
+		// this frame), blurred, tinted and desaturated, over `r`. `slot` is the
+		// element's per-frame snapshot slot (user_interface::backdrop_counter):
+		// elements recorded into different command lists must not share one.
+		// Falls back to a flat translucent tint when the target can't be read
+		// (tests, previews rendering the UI somewhere else).
+		void draw_backdrop_blur(base::Context& c, uint32_t slot, rect r, const BackdropBlurParams& params);
+
+		// Drops the snapshot textures; call before the device goes away.
+		static void reset_backdrop();
+
 		Renderer();
 
 		// Without the Skin's area/virtual/container textures (and the asset system loading them): for hosts that

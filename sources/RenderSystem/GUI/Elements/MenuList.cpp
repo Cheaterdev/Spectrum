@@ -5,12 +5,19 @@ import :Renderer;
 
 void GUI::Elements::menu_list::draw(Context& c)
 {
+    // The blurred backdrop (drawn by draw_before) replaces the skinned
+    // container; without a target the container stays.
+    if (backdrop_active(c))
+        return;
+
     c.renderer->draw_container(get_ptr(), c);
 }
 
 GUI::Elements::menu_list::menu_list(bool vertical)
 {
     this->vertical = vertical;
+    // Popups blur what is behind them; the menu strip is a flat bar.
+    backdrop_blur = vertical;
     padding = { 1, 1, 1, 1 };
     docking = GUI::dock::NONE;
     if (!vertical)

@@ -775,14 +775,22 @@ namespace GUI
 class debug_toolbar_panel : public GUI::base
 {
 public:
+	debug_toolbar_panel()
+	{
+		// The combo boxes cover all but the 4 px padding, so they go glass too.
+		backdrop_blur = true;
+		glass_children = true;
+	}
+
 	void draw(GUI::base::Context& c) override
 	{
 		GUI::Texture shadow = Skin::get().Shadow;
 		shadow.margins = { 12, 12, 12, 12 };
 		c.renderer->draw(c, shadow, get_render_bounds());
 
+		// Translucent over the blurred backdrop, so it reads as frosted glass.
 		GUI::Texture bg = Skin::get().FlowWindow.Inactive;
-		bg.mul_color = float4(22, 28, 38, 255) / 255.0f;
+		bg.mul_color = float4(22, 28, 38, backdrop_active(c) ? 150 : 255) / 255.0f;
 		c.renderer->draw(c, bg, get_render_bounds());
 	}
 };

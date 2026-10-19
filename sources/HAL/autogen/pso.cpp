@@ -112,6 +112,7 @@ void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 	tasks.emplace_back(PSOBase::create<PSOS::Post::TonemapHistogramBuild>(device, pso[PSO::TonemapHistogramBuild]));
 	tasks.emplace_back(PSOBase::create<PSOS::Post::TonemapExposureAdapt>(device, pso[PSO::TonemapExposureAdapt]));
 	tasks.emplace_back(PSOBase::create<PSOS::Post::TonemapApply>(device, pso[PSO::TonemapApply]));
+	tasks.emplace_back(PSOBase::create<PSOS::UI::BackdropBlur>(device, pso[PSO::BackdropBlur]));
 	tasks.emplace_back(PSOBase::create<PSOS::Dev::FrameGraph_Debug_Texture2D>(device, pso[PSO::FrameGraph_Debug_Texture2D]));
 	tasks.emplace_back(PSOBase::create<PSOS::Dev::FrameGraph_Debug_Texture2DArray>(device, pso[PSO::FrameGraph_Debug_Texture2DArray]));
 	tasks.emplace_back(PSOBase::create<PSOS::Dev::FrameGraph_Debug_Texture3D>(device, pso[PSO::FrameGraph_Debug_Texture3D]));
@@ -187,6 +188,7 @@ void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 	tasks.emplace_back(PSOBase::create<PSOS::UI::NinePatch>(device, pso[PSO::NinePatch]));
 	tasks.emplace_back(PSOBase::create<PSOS::UI::SimpleRect>(device, pso[PSO::SimpleRect]));
 	tasks.emplace_back(PSOBase::create<PSOS::UI::CanvasBack>(device, pso[PSO::CanvasBack]));
+	tasks.emplace_back(PSOBase::create<PSOS::UI::BackdropDraw>(device, pso[PSO::BackdropDraw]));
 	tasks.emplace_back(PSOBase::create<PSOS::UI::CanvasLines>(device, pso[PSO::CanvasLines]));
 	tasks.emplace_back(PSOBase::create<PSOS::Dev::StatGraphLines>(device, pso[PSO::StatGraphLines]));
 	tasks.emplace_back(PSOBase::create<PSOS::GI::Voxel::Dev::VoxelDebug>(device, pso[PSO::VoxelDebug]));
@@ -219,6 +221,7 @@ void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 //decltype(PSOS::MipMapping::NonPowerOfTwo) PSOS::MipMapping::NonPowerOfTwo;
 //decltype(PSOS::MipMapping::Gamma) PSOS::MipMapping::Gamma;
 //decltype(PSOS::MipMapping::Slices) PSOS::MipMapping::Slices;
+//decltype(PSOS::BackdropBlur::Up) PSOS::BackdropBlur::Up;
 //decltype(PSOS::Lighting::SecondBounce) PSOS::Lighting::SecondBounce;
 //decltype(PSOS::VoxelDownsample::Count) PSOS::VoxelDownsample::Count;
 //decltype(PSOS::VSMShadowBlur::VsmRtxVerify) PSOS::VSMShadowBlur::VsmRtxVerify;

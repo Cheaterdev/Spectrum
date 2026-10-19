@@ -877,6 +877,9 @@ namespace GUI
 
         if (visibility)
 		{
+            if (backdrop_blur && user_ui && user_ui->backdrop_enabled)
+                backdrop_slot = user_ui->backdrop_counter++;
+
            on_pre_render(c);
             user_ui->draw_infos.emplace_back(c.ui_clipping, entry_scissors,c.scale,this,c.offset,true);
 		//	rec_c.execute([this](Context &c) {
@@ -1064,6 +1067,46 @@ namespace GUI
     {
     }
 
+    // Without a target (hosts that draw the UI elsewhere) there is nothing to
+    // snapshot, and elements fall back to their regular look.
+    bool base::backdrop_active(const Context& c) const
+    {
+        if (!(backdrop_blur && user_ui && user_ui->backdrop_enabled && c.target.resource))
+            return false;
+
+        if (backdrop_standalone_only)
+            for (auto p = const_cast<base*>(this)->get_parent(); p; p = p->get_parent())
+                if (p->backdrop_blur)
+                    return false;
+
+        return true;
+    }
+
+    float base::control_opacity(const Context& c)
+    {
+        for (auto p = get_parent(); p; p = p->get_parent())
+            if (p->glass_children)
+                return p->backdrop_active(c) ? p->glass_opacity : 1.0f;
+        return 1.0f;
+    }
+
+    void base::draw_before(Context& c)
+    {
+        if (backdrop_active(c))
+        {
+            BackdropBlurParams params;
+            params.radius = user_ui->backdrop_radius;
+            params.saturation = user_ui->backdrop_saturation;
+            params.tint.w = user_ui->backdrop_tint;
+
+            rect r = get_render_bounds();
+            if (r.w > 0 && r.h > 0)
+                c.renderer->draw_backdrop_blur(c, backdrop_slot, r, params);
+        }
+
+        draw(c);
+    }
+
     
 
      void user_interface::process_ui(float delta_time)
@@ -1143,6 +1186,7 @@ namespace GUI
 
         draw_infos.clear();
         pre_draw_infos.clear();
+        backdrop_counter = 0;
         draw_recursive(c);
         drag.draw(c);
      }
@@ -2161,10 +2205,15 @@ void PassDefault<Passes::UI::UI_Render>::render(
         command_list->get_graphics().set_rtv(rt, rt_options);
     }
 
+    const float ui_scale = [&]
     {
         const auto& display = context.graph->get_context<::Table::UI::DisplayState>();
+        return display.hdr ? display.sdr_white_nits / 80.0f : 1.0f;
+    }();
+
+    {
         Slots::UI::DisplayOutput output;
-        output.GetUi_scale() = display.hdr ? display.sdr_white_nits / 80.0f : 1.0f;
+        output.GetUi_scale() = ui_scale;
         command_list->get_graphics().set(output);
     }
 
@@ -2172,6 +2221,8 @@ void PassDefault<Passes::UI::UI_Render>::render(
     GUIInfo c;
     c.renderer   = &renderer;
     c.command_list = command_list;
+    c.target     = texture;
+    c.ui_scale   = ui_scale;
     c.delta_time = ui_ctx.dt;
     // data.ResultTexture, not a context lookup: need() resolved this field to
     // whatever the override selected (or to ResultTexture itself), so setup and
@@ -2198,7 +2249,7 @@ void PassDefault<Passes::UI::UI_Render>::render(
             c.window_size = ui_ctx.scaled_size;
 
             if (e.before)
-                e.elem->draw(c);
+                e.elem->draw_before(c);
             else
                 e.elem->draw_after(c);
         }

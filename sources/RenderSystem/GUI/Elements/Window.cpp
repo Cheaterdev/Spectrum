@@ -10,13 +10,19 @@ void GUI::Elements::window::set_title(std::string title)
 void GUI::Elements::window::draw(Context& c)
 {
 	// skin->draw(this, c);
-	c.renderer->draw(c, skin.Active, get_render_bounds());
+	// The skin's frame and title bar are opaque, which hid the blur everywhere
+	// but the content area; translucent while blurring so the whole window is glass.
+	GUI::Texture t = skin.Active;
+	if (backdrop_active(c))
+		t.mul_color.w *= 0.6f;
+	c.renderer->draw(c, t, get_render_bounds());
 	label_text->color = pressed ? float4(200, 200, 200, 255) / 255.0f : float4(1, 1, 1, 1);
 }
 
 GUI::Elements::window::window() : GUI::Elements::resizable()
 {
 	margin = { 20, 20, 20, 20 };
+	backdrop_blur = true;
 	clickable = false;
 	clip_child = true;
 	label_text.reset(new label());

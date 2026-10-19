@@ -109,12 +109,9 @@ bool GUI::Elements::combo_box::on_mouse_action(mouse_action action, mouse_button
 }
 void GUI::Elements::combo_box::draw(Context& c)
 {
-    if (is_pressed())
-        c.renderer->draw(c, skin.Pressed, get_render_bounds());
-    else if (is_hovered())
-        c.renderer->draw(c, skin.Hover, get_render_bounds());
-    else
-        c.renderer->draw(c, skin.Normal, get_render_bounds());
+    GUI::Texture t = is_pressed() ? skin.Pressed : is_hovered() ? skin.Hover : skin.Normal;
+    t.mul_color.w *= control_opacity(c);
+    c.renderer->draw(c, t, get_render_bounds());
 }
 
 

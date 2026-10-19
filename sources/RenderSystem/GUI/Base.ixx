@@ -26,6 +26,12 @@ export
         float scale = 1;
         HAL::Texture2DView result_texture_srv;
 
+        // What the UI is drawing into. Backdrop effects snapshot it mid-pass;
+        // an empty view (tests, previews that render the UI elsewhere) makes
+        // them fall back to their flat tint.
+        HAL::Texture2DView target;
+        float ui_scale = 1;
+
         GUIInfo() = default;
         GUIInfo(HAL::CommandList::ptr list);
     };
@@ -373,6 +379,27 @@ namespace GUI
 
          virtual void draw(Context&); // override;;
             virtual void draw_after(Context&);;
+
+            // Blurs what is behind the element's render bounds, just before its
+            // own draw() (the draw loops call draw_before). Skin shadows are
+            // drawn as margins outside the bounds, so the bounds are the shape.
+            bool  backdrop_blur = false;
+            // Only blur when no ancestor already does: for plain panels that are
+            // their own frosted surface when standalone but just part of an
+            // already back-blurred window otherwise.
+            bool  backdrop_standalone_only = false;
+            uint32_t backdrop_slot = 0;
+            bool backdrop_active(const Context& c) const;
+            // For panels that are mostly covered by their own controls: while
+            // this element's blur is active, the controls under it (buttons,
+            // combo boxes) draw their backgrounds at glass_opacity so the blur
+            // shows through them instead of only through the padding.
+            bool  glass_children = false;
+            float glass_opacity = 0.5f;
+            // Background opacity for a control: the nearest glass_children
+            // ancestor's glass_opacity while its blur is active, else 1.
+            float control_opacity(const Context& c);
+            void draw_before(Context& c);
 			virtual sizer update_layout(sizer r, float scale);
             virtual void update_childs_layout(sizer& r, float scale);
               virtual void update_childs_layout_after(sizer &r, float scale);
@@ -646,6 +673,21 @@ namespace GUI
 
             std::vector<base*> pre_draw_infos;
             std::vector<draw_info> draw_infos;
+
+            // Backdrop blur (any element with backdrop_blur set). Not a
+            // VariableContext base: user_interface is already a GUI::base and
+            // its add_child would become ambiguous.
+            std::unique_ptr<VariableContext> backdrop_context = VariableContext::create(L"UI Backdrop");
+            Variable<bool>  backdrop_enabled    = { true, "Blur backgrounds", backdrop_context.get() };
+            Variable<float> backdrop_radius     = { 3.0f, "Blur radius (px)", backdrop_context.get(), 0.0f, 96.0f };
+            Variable<float> backdrop_saturation = { 1.0f, "Blur saturation", backdrop_context.get(), 0.0f, 2.0f };
+            Variable<float> backdrop_tint       = { 0.12f, "Blur tint strength", backdrop_context.get(), 0.0f, 1.0f };
+
+            // Hands each backdrop element its own snapshot slot for the frame:
+            // two elements recorded into different command lists must not
+            // share a texture. Reset when the draw list is collected.
+            uint32_t backdrop_counter = 0;
+
             using ptr = s_ptr<user_interface>;
             using wptr = w_ptr<user_interface>;
             std::mutex m;

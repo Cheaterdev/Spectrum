@@ -135,6 +135,62 @@ namespace UI
 		blend = { AlphaBlend };
 	}
 
+	# One step of the backdrop blur (Dual Kawase): src mip -> dst mip. The same
+	# kernel pair serves every radius -- the caller picks how many down/up steps
+	# to run and the sample offset (fractional spread between whole octaves).
+	[Bind = DefaultLayout::Instance0]
+	struct BackdropBlur
+	{
+		Texture2D<float4> src;
+		RWTexture2D<float4> dst;
+		uint2 dst_size;
+		float2 src_texel;
+		float offset;
+	}
+
+	ComputePSO BackdropBlur
+	{
+		root = DefaultLayout;
+
+		[EntryPoint = CS]
+		compute = "gui/backdrop_blur.hlsl";
+
+		# Up: 8-tap tent upsample of the smaller mip; off: 5-tap downsample.
+		[rename = BACKDROP_UP]
+		[CS]
+		define Up;
+	}
+
+	# Composites the blurred snapshot back over the element's rect. `map`
+	# turns a window-space position (the same units as `rect`) into a UV of the
+	# blurred texture: uv = window_pos * map.xy + map.zw.
+	[Bind = DefaultLayout::Instance0]
+	struct BackdropDraw
+	{
+		Texture2D<float4> blurred;
+		float4 rect;
+		float4 map;
+		float2 window_size;
+		float4 tint;
+		float saturation;
+	}
+
+	GraphicsPSO BackdropDraw
+	{
+		root = DefaultLayout;
+
+		[EntryPoint = VS]
+		vertex = "gui/backdrop_draw.hlsl";
+
+		[EntryPoint = PS]
+		pixel = "gui/backdrop_draw.hlsl";
+
+		rtv = { R16G16B16A16_FLOAT };
+		blend = { AlphaBlend };
+		cull = None;
+		enable_depth = false;
+	}
+
 	struct VSLine
 	{
 		float2 pos;
