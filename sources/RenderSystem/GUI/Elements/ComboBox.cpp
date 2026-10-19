@@ -95,7 +95,9 @@ bool GUI::Elements::combo_box::on_mouse_action(mouse_action action, mouse_button
             menu->docking = dock::NONE;
             menu->width_size = size_type::FIXED;
 
-            user_ui->add_child(menu);
+            // Fades in, or comes back if the press that reached this click
+            // closed it a moment ago and it is still fading out.
+            menu->self_open(user_ui);
 
             if (search)
             {
@@ -124,7 +126,8 @@ void GUI::Elements::combo_box::close_menus()
 
     base::close_menus();
 
-    menu->remove_from_parent();
+    // Fades out, then leaves the tree (immediately when fades are off).
+    menu->self_close();
 }
 
 GUI::Elements::combo_box::combo_box()

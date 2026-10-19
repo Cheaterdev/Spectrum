@@ -19,18 +19,22 @@ export namespace PSOS
 		struct BackdropDraw: public PSOBase
 		{
 			struct Keys {
+				KeyValue<int, Nullable> Direct;
 				GEN_DEF_COMP(Keys);
 			private:
 				SERIALIZE()
 				{
+					ar&NVP(Direct);
 				}
 			};
 
-			GEN_GRAPHICS_PSO(BackdropDraw)
+			GEN_GRAPHICS_PSO(BackdropDraw, Direct)
+			GEN_KEY(Direct, true);
 
 
 			SimplePSO init_pso(Keys & key, std::function<void(SimplePSO&, Keys&)> f)
 			{
+				static const ShaderDefine<&Keys::Direct,&SimpleGraphicsPSO::pixel> Direct = "BACKDROP_DIRECT";
 
 
 				SimplePSO mpso("BackdropDraw");
@@ -46,6 +50,7 @@ export namespace PSOS
 				mpso.pixel.entry_point = "PS";
 				mpso.pixel.flags = HAL::ShaderOptions::None;
 			
+				Direct.Apply(mpso, key);
 
 				mpso.rtv_formats = { HAL::Format::R16G16B16A16_FLOAT };	
 				mpso.blend = { HAL::Blends::AlphaBlend };

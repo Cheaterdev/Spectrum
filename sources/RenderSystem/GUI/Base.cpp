@@ -1111,6 +1111,7 @@ namespace GUI
 
     void base::fade_to(float target, float seconds)
     {
+        on_fade_end = nullptr;   // a new fade replaces whatever the old one was going to do
         fade_from = layer_opacity;
         fade_target = target;
         fade_duration = std::max(seconds, 0.001f);
@@ -1125,6 +1126,13 @@ namespace GUI
         fade_t = std::min(1.0f, fade_t + dt / fade_duration);
         const float smooth = fade_t * fade_t * (3.0f - 2.0f * fade_t);
         layer_opacity = fade_from + (fade_target - fade_from) * smooth;
+
+        if (fade_t >= 1.0f && on_fade_end)
+        {
+            auto done = std::move(on_fade_end);
+            on_fade_end = nullptr;
+            run_on_ui(std::move(done));
+        }
     }
 
     bool base::layer_wanted() const

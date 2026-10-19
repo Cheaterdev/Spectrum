@@ -18,6 +18,7 @@ namespace UI
 		float saturation; // float
 		float luminosity; // float
 		float noise; // float
+		float4 direct; // float4
 		uint blurred; // Texture2D<float4>
 		float4 GetRect() { return rect; }
 		float4 GetMap() { return map; }
@@ -26,6 +27,7 @@ namespace UI
 		float GetSaturation() { return saturation; }
 		float GetLuminosity() { return luminosity; }
 		float GetNoise() { return noise; }
+		float4 GetDirect() { return direct; }
 		Texture2D<float4> GetBlurred() { return ResourceDescriptorHeap[blurred]; }
 	};
 }

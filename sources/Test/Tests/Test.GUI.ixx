@@ -199,7 +199,7 @@ namespace
 	// Lays out and draws a whole user_interface the way UI_Render does (create_graph,
 	// the pre-draw pass, then the draw list in one command list) into a W x H
 	// target cleared to black, and reads it back.
-	fx_image render_ui(GUI::user_interface& ui, uint W, uint H)
+	fx_image render_ui(GUI::user_interface& ui, uint W, uint H, double* record_and_execute_ms = nullptr, double* record_ms = nullptr)
 	{
 		auto& device = RenderSystem::get().device();
 
@@ -222,6 +222,8 @@ namespace
 			pre_draw_list->end();
 			pre_draw_list->execute_and_wait();
 		}
+
+		const auto timer_start = std::chrono::steady_clock::now();
 
 		auto list = device.get_queue(HAL::CommandListType::DIRECT)->get_free_list();
 		list->begin(L"render_ui");
@@ -273,7 +275,14 @@ namespace
 		}
 		renderer.flush(c);
 
+		if (record_ms)
+			*record_ms = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - timer_start).count();
+
 		list->execute_and_wait();
+
+		if (record_and_execute_ms)
+			*record_and_execute_ms = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - timer_start).count();
+
 		return { Test::readback_texture(tex.get()) };
 	}
 }
@@ -1142,6 +1151,69 @@ export namespace Test
 		ASSERT_TRUE(channel(186, y, 2) > 0.8f);
 	}
 
+	// Small radii take the direct path (the composite filters the snapshot itself,
+	// no blur chain): at the default 3-4 px the seam is smeared over a few pixels
+	// only, and nothing further away is touched.
+	TEST(Core.HAL, GUIRenderer_BackdropBlurDirect)
+	{
+		THREAD_SCOPE(GUI);
+		auto& device = RenderSystem::get().device();
+		constexpr uint WIDTH = 256, HEIGHT = 128;
+
+		auto tex = std::make_shared<HAL::TextureResource>(device,
+			HAL::ResourceDesc::Tex2D(UI_RT_FORMAT, {WIDTH, HEIGHT}, 1, 1,
+				HAL::ResFlags::RenderTarget),
+			HAL::HeapType::DEFAULT);
+
+		auto list = device.get_queue(HAL::CommandListType::DIRECT)->get_free_list();
+		list->begin(L"GUIRenderer_BackdropBlurDirect");
+
+		HAL::Texture2DView view(tex, *list);
+		set_ui_target(list, view, vec4(0.0f, 0.0f, 0.0f, 1.0f));
+
+		sizer_long full_vp;
+		full_vp.left   = 0;
+		full_vp.top    = 0;
+		full_vp.right  = (long)WIDTH;
+		full_vp.bottom = (long)HEIGHT;
+
+		GUI::Renderer renderer;
+		GUIInfo c;
+		c.renderer     = &renderer;
+		c.command_list = list;
+		c.target       = view;
+		c.ui_scale     = 1.0f;
+		c.window_size  = vec2((float)WIDTH, (float)HEIGHT);
+		c.offset       = vec2(0.0f, 0.0f);
+		c.ui_clipping  = full_vp;
+		c.scissors     = full_vp;
+		c.scale        = 1.0f;
+		c.delta_time   = 0.0f;
+
+		renderer.draw_color(c, float4(1.0f, 0.0f, 0.0f, 1.0f), rect{ vec2(0.0f, 0.0f),   vec2(128.0f, 128.0f) });
+		renderer.draw_color(c, float4(0.0f, 0.0f, 1.0f, 1.0f), rect{ vec2(128.0f, 0.0f), vec2(128.0f, 128.0f) });
+
+		GUI::BackdropBlurParams params;
+		params.radius = 4.0f;
+		params.tint = float4(0.0f, 0.0f, 0.0f, 0.0f);
+		params.saturation = 1.0f;
+		renderer.draw_backdrop_blur(c, 0, rect{ vec2(64.0f, 32.0f), vec2(128.0f, 64.0f) }, params);
+		renderer.flush(c);
+
+		list->execute_and_wait();
+
+		const auto img = fx_image{ readback_texture(tex.get()) };
+		const uint y = 64;
+
+		ASSERT_TRUE(img.at(127, y, 2) > 0.05f);     // blue has leaked 1 px across the seam
+		ASSERT_TRUE(img.at(127, y, 2) < 0.5f);      // but it is a smear, not a swap
+		ASSERT_TRUE(img.at(128, y, 0) > 0.05f);     // and the same the other way
+		ASSERT_TRUE(img.at(112, y, 2) < 0.02f);     // 16 px from the seam: untouched
+		ASSERT_TRUE(img.at(112, y, 0) > 0.95f);
+		ASSERT_TRUE(img.at(144, y, 2) > 0.95f);
+		ASSERT_TRUE(img.at(40, y, 0) > 0.95f);      // outside the panel: untouched
+	}
+
 	// The real menu element through the production draw path (create_graph →
 	// draw_infos → draw, the loop UI_Render runs): a popup menu straddling a
 	// hard red|blue seam must show it blurred. Its item rects are translucent
@@ -2005,5 +2077,182 @@ export namespace Test
 		ui.fade_enabled = false;
 		card->layer_opacity = 0.3f;
 		ASSERT_TRUE(!layered(0.1f));                 // the setting turns layers off
+	}
+
+	// A popup that is closed fades out first and leaves the tree only when the
+	// fade ends; reopening it mid-fade brings the same popup back instead of
+	// adding it twice. No GPU needed.
+	TEST(Core.HAL, GUILayer_PopupFadesOutOnClose)
+	{
+		THREAD_SCOPE(GUI);
+
+		// Shared-owned: closing and hit testing call get_ptr() on the root.
+		auto ui_owner = std::make_shared<GUI::user_interface>();
+		auto& ui = *ui_owner;
+		ui.size = vec2(400.0f, 200.0f);
+
+		auto strip = std::make_shared<GUI::Elements::menu_strip>();
+		auto file = strip->add_item("File");
+		auto popup = file->get_menu();
+		popup->add_item("New");
+		ui.add_child(strip);
+
+		auto frame = [&](float dt)
+		{
+			ui.process_ui(dt);
+			FrameGraph::Graph graph;
+			ui.create_graph(graph);
+		};
+
+		frame(0.03f);
+		file->open_menu();
+		for (int i = 0; i < 8; i++)
+			frame(0.03f);
+		ASSERT_TRUE(popup->get_parent() != nullptr);
+		ASSERT_TRUE(popup->layer_opacity == 1.0f);          // faded in
+
+		file->close_menu();
+		frame(0.03f);
+		ASSERT_TRUE(popup->get_parent() != nullptr);        // still there, fading
+		ASSERT_TRUE(popup->layer_opacity < 1.0f && popup->layer_opacity > 0.0f);
+
+		for (int i = 0; i < 8; i++)
+			frame(0.03f);
+		ASSERT_TRUE(popup->get_parent() == nullptr);        // gone once the fade ended
+		ASSERT_TRUE(popup->layer_opacity == 1.0f);          // ready for the next open
+
+		// Reopen while it is fading out: the same popup comes back, once.
+		file->open_menu();
+		for (int i = 0; i < 8; i++)
+			frame(0.03f);
+		file->close_menu();
+		frame(0.03f);
+		file->open_menu();
+		for (int i = 0; i < 12; i++)
+			frame(0.03f);
+		ASSERT_TRUE(popup->get_parent() != nullptr);
+		ASSERT_TRUE(popup->layer_opacity == 1.0f);
+
+		// Drawn once, not twice: it was never added a second time.
+		ui.process_ui(0.03f);
+		FrameGraph::Graph graph;
+		ui.create_graph(graph);
+		int copies = 0;
+		for (const auto& e : graph.get_context<GUI::UIContext>().draw_infos)
+			if (e.elem == popup.get() && e.before)
+				copies++;
+		ASSERT_TRUE(copies == 1);
+
+		// With fades off a close is immediate.
+		ui.fade_enabled = false;
+		file->close_menu();
+		frame(0.03f);
+		ASSERT_TRUE(popup->get_parent() == nullptr);
+	}
+
+	// Context menus open through menu_list::self_open and close through
+	// close_menus: both fade now, like submenus do.
+	TEST(Core.HAL, GUILayer_ContextMenuFades)
+	{
+		THREAD_SCOPE(GUI);
+
+		auto ui_owner = std::make_shared<GUI::user_interface>();
+		auto& ui = *ui_owner;
+		ui.size = vec2(400.0f, 200.0f);
+
+		auto frame = [&](float dt)
+		{
+			ui.process_ui(dt);
+			FrameGraph::Graph graph;
+			ui.create_graph(graph);
+		};
+
+		auto menu = std::make_shared<GUI::Elements::menu_list>();
+		menu->add_item("Cut");
+		menu->add_item("Copy");
+
+		frame(0.03f);
+		menu->self_open(&ui);
+		frame(0.03f);
+		ASSERT_TRUE(menu->layer_opacity > 0.0f && menu->layer_opacity < 1.0f);   // fading in
+		for (int i = 0; i < 8; i++)
+			frame(0.03f);
+		ASSERT_TRUE(menu->get_parent() != nullptr);
+		ASSERT_TRUE(menu->layer_opacity == 1.0f);
+
+		ui.close_menus();   // a press elsewhere
+		frame(0.03f);
+		ASSERT_TRUE(menu->get_parent() != nullptr);                               // still fading out
+		ASSERT_TRUE(menu->layer_opacity < 1.0f);
+		for (int i = 0; i < 8; i++)
+			frame(0.03f);
+		ASSERT_TRUE(menu->get_parent() == nullptr);
+
+		// Opened again right after a close: the same popup comes back.
+		menu->self_open(&ui);
+		for (int i = 0; i < 8; i++)
+			frame(0.03f);
+		ui.close_menus();
+		frame(0.03f);
+		menu->self_open(&ui);
+		for (int i = 0; i < 12; i++)
+			frame(0.03f);
+		ASSERT_TRUE(menu->get_parent() != nullptr);
+		ASSERT_TRUE(menu->layer_opacity == 1.0f);
+	}
+
+	// A combo box dropdown is a menu_list too: it fades in on the click that opens
+	// it and fades out when closed, and the click that closes-and-reopens it (the
+	// press closes, the release opens) keeps one dropdown, not two.
+	TEST(Core.HAL, GUILayer_ComboDropdownFades)
+	{
+		THREAD_SCOPE(GUI);
+
+		auto ui_owner = std::make_shared<GUI::user_interface>();
+		auto& ui = *ui_owner;
+		ui.size = vec2(400.0f, 200.0f);
+
+		auto frame = [&](float dt)
+		{
+			ui.process_ui(dt);
+			FrameGraph::Graph graph;
+			ui.create_graph(graph);
+		};
+
+		auto combo = std::make_shared<GUI::Elements::combo_box>();
+		combo->add_item("Alpha");
+		combo->add_item("Beta");
+		combo->docking = GUI::dock::NONE;
+		combo->width_size = GUI::size_type::FIXED;
+		combo->size = vec2(160.0f, 25.0f);
+		combo->pos = vec2(20.0f, 20.0f);
+		ui.add_child(combo);
+		frame(0.03f);
+		ASSERT_TRUE(!combo->is_menu_open());
+
+		combo->on_mouse_action(mouse_action::UP, mouse_button::LEFT, vec2(10.0f, 10.0f));   // the click
+		frame(0.03f);
+		ASSERT_TRUE(combo->is_menu_open());
+		for (int i = 0; i < 8; i++)
+			frame(0.03f);
+		ASSERT_TRUE(combo->is_menu_open());
+
+		combo->close_menus();
+		frame(0.03f);
+		ASSERT_TRUE(combo->is_menu_open());           // fading out, not gone yet
+		for (int i = 0; i < 8; i++)
+			frame(0.03f);
+		ASSERT_TRUE(!combo->is_menu_open());          // gone once the fade ended
+
+		// Press closes, release opens: the dropdown that was closing comes back.
+		combo->on_mouse_action(mouse_action::UP, mouse_button::LEFT, vec2(10.0f, 10.0f));
+		for (int i = 0; i < 8; i++)
+			frame(0.03f);
+		combo->close_menus();
+		frame(0.03f);
+		combo->on_mouse_action(mouse_action::UP, mouse_button::LEFT, vec2(10.0f, 10.0f));
+		for (int i = 0; i < 12; i++)
+			frame(0.03f);
+		ASSERT_TRUE(combo->is_menu_open());
 	}
 }

@@ -33,7 +33,22 @@ float4 PS(vs_out i) : SV_TARGET0
 
     // The snapshot is a copy of the swapchain, so it is already in output
     // space (scRGB, ui_scale applied); only the tint is authored sRGB.
+#ifdef BACKDROP_DIRECT
+    // 5x5 binomial kernel (1 4 6 4 1) at `spacing` texels per tap; the bilinear
+    // filter smooths between taps. Sigma comes out at one spacing.
+    float3 c = float3(0.0, 0.0, 0.0);
+    const float weights[5] = { 1.0, 4.0, 6.0, 4.0, 1.0 };
+    float2 step_uv = d.GetDirect().xy * d.GetDirect().z;
+
+    [unroll] for (int y = -2; y <= 2; y++)
+        [unroll] for (int x = -2; x <= 2; x++)
+            c += d.GetBlurred().SampleLevel(linearClampSampler, uv + float2(x, y) * step_uv, 0).rgb
+                 * (weights[x + 2] * weights[y + 2]);
+
+    c /= 256.0;
+#else
     float3 c = d.GetBlurred().SampleLevel(linearClampSampler, uv, 0).rgb;
+#endif
 
     const float3 rec709 = float3(0.2126, 0.7152, 0.0722);
     float luma = dot(c, rec709);

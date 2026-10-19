@@ -235,3 +235,4 @@ void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 //decltype(PSOS::GBufferDraw::ClusterLod) PSOS::GBufferDraw::ClusterLod;
 //decltype(PSOS::DepthDraw::HiZOcclusion) PSOS::DepthDraw::HiZOcclusion;
 //decltype(PSOS::Voxelization::Dynamic) PSOS::Voxelization::Dynamic;
+//decltype(PSOS::BackdropDraw::Direct) PSOS::BackdropDraw::Direct;

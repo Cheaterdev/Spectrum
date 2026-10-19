@@ -343,7 +343,13 @@ namespace GUI
         uint32_t levels = 0;
         float offset = 1.0f;
 
-        if (radius_px >= 0.5f && slot.levels > 0)
+        // Small radii skip the chain: the composite pass filters the snapshot
+        // itself (BackdropDraw::Direct), which saves two compute dispatches and
+        // the mip views and UAV transitions around them for every element.
+        constexpr float direct_radius_max = 8.0f;
+        const bool direct = radius_px >= 0.5f && radius_px <= direct_radius_max;
+
+        if (!direct && radius_px >= 0.5f && slot.levels > 0)
         {
             levels = (uint32_t)std::clamp((int)std::ceil(std::log2(std::max(radius_px, 1.0f) / 2.0f)), 1, (int)slot.levels);
             offset = std::clamp(radius_px / (float(1u << levels) * 1.2f), 0.5f, 3.0f);
@@ -424,9 +430,11 @@ namespace GUI
             data.GetSaturation() = p.saturation;
             data.GetLuminosity() = p.luminosity;
             data.GetNoise() = p.noise;
+            // Binomial taps: sigma = one spacing, and the radius is about two sigma.
+            data.GetDirect() = float4(1.0f / region_w, 1.0f / region_h, std::max(radius_px * 0.5f, 0.25f), 0.0f);
             graphics.set(data);
 
-            graphics.set_pipeline<PSOS::UI::BackdropDraw>();
+            graphics.set_pipeline<PSOS::UI::BackdropDraw>(PSOS::UI::BackdropDraw::Direct.Use(direct));
             graphics.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::STRIP);
             graphics.draw(4);
         }

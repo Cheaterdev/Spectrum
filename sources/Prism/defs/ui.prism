@@ -179,6 +179,9 @@ namespace UI
 		float luminosity;
 		# Acrylic: strength of the static per-pixel grain.
 		float noise;
+		# Direct mode (small radii): xy = one texel of `blurred` in uv, z = tap
+		# spacing in texels. `blurred` is then the raw snapshot, filtered here.
+		float4 direct;
 	}
 
 	# Procedural soft shadow / glow (Renderer::draw_shadow). All positions and
@@ -298,6 +301,13 @@ namespace UI
 
 		[EntryPoint = PS]
 		pixel = "gui/backdrop_draw.hlsl";
+
+		# Small radii: filter the snapshot right here with a 5x5 binomial kernel
+		# instead of running the blur chain -- same look at the default radius,
+		# and no compute dispatches or UAV transitions per element.
+		[rename = BACKDROP_DIRECT]
+		[PS]
+		define Direct;
 
 		rtv = { R16G16B16A16_FLOAT };
 		blend = { AlphaBlend };

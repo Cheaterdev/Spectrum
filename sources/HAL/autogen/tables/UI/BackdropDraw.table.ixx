@@ -26,6 +26,7 @@ export namespace Table
 			float saturation;
 			float luminosity;
 			float noise;
+			float4 direct;
 			HLSL::Texture2D<float4> blurred;
 			HLSL::Texture2D<float4>& GetBlurred() { return blurred; }
 			float4& GetRect() { return rect; }
@@ -35,6 +36,7 @@ export namespace Table
 			float& GetSaturation() { return saturation; }
 			float& GetLuminosity() { return luminosity; }
 			float& GetNoise() { return noise; }
+			float4& GetDirect() { return direct; }
 			static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 			template<class Compiler>
 			void compile(Compiler& compiler) const
@@ -46,6 +48,7 @@ export namespace Table
 				compiler.compile(saturation, "BackdropDraw::saturation");
 				compiler.compile(luminosity, "BackdropDraw::luminosity");
 				compiler.compile(noise, "BackdropDraw::noise");
+				compiler.compile(direct, "BackdropDraw::direct");
 				compiler.compile(blurred, "BackdropDraw::blurred");
 			}
 			struct Compiled
@@ -57,6 +60,7 @@ export namespace Table
 				float saturation; // float
 				float luminosity; // float
 				float noise; // float
+				float4 direct; // float4
 				uint blurred; // Texture2D<float4>
 
 			
@@ -70,6 +74,7 @@ export namespace Table
 					ar& NVP(saturation);
 					ar& NVP(luminosity);
 					ar& NVP(noise);
+					ar& NVP(direct);
 				}
 
 
@@ -89,6 +94,7 @@ export namespace Table
 				ar& NVP(saturation);
 				ar& NVP(luminosity);
 				ar& NVP(noise);
+				ar& NVP(direct);
 			}
 
 		};

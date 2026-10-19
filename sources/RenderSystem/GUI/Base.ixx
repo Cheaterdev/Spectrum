@@ -450,6 +450,9 @@ namespace GUI
             // is drawn as one unit and blended back with this opacity
             // (Renderer::begin_layer). fade_to animates it.
             float layer_opacity = 1.0f;
+            // Runs once, as a UI task (not inside the draw walk, which iterates
+            // the parent's children), when the current fade reaches its target.
+            std::function<void()> on_fade_end;
             void  fade_to(float target, float seconds);
             void  update_fade(float dt);
             bool  layer_wanted() const;
@@ -796,6 +799,7 @@ namespace GUI
             // Group fades (base::layer_opacity): menu popups and message boxes fade in.
             Variable<bool>  fade_enabled     = { true, "Group fades", effects_context.get() };
             Variable<float> fade_in_duration = { 0.14f, "Fade-in duration (s)", effects_context.get(), 0.02f, 1.5f };
+            Variable<float> fade_out_duration = { 0.10f, "Fade-out duration (s)", effects_context.get(), 0.02f, 1.5f };
 
             // Hands each backdrop element its own snapshot slot for the frame:
             // two elements recorded into different command lists must not
