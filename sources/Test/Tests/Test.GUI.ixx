@@ -138,6 +138,63 @@ namespace
 		list->execute_and_wait();
 		return rt;
 	}
+
+	// Red channel of a read-back R16G16B16A16_FLOAT target.
+	struct fx_image
+	{
+		HAL::texture_data::ptr data;
+
+		float at(uint x, uint y) const
+		{
+			const auto& mip = *data->array[0]->mips[0];
+			const uint16_t* row = reinterpret_cast<const uint16_t*>(mip.data.data() + size_t(y) * mip.width_stride);
+			const uint32_t h = row[x * 4];
+			const uint32_t e = (h >> 10) & 0x1f, m = h & 0x3ff;
+			return e == 0 ? std::ldexp(float(m), -24) : std::ldexp(float(m | 0x400), int(e) - 25);
+		}
+	};
+
+	// A flat grey rect at (64,32) 128x64 on black, then draw_fx over it.
+	fx_image render_fx(const GUI::FxParams& params)
+	{
+		constexpr uint W = 256, H = 128;
+		auto& device = RenderSystem::get().device();
+
+		auto tex = std::make_shared<HAL::TextureResource>(device,
+			HAL::ResourceDesc::Tex2D(UI_RT_FORMAT, {W, H}, 1, 1, HAL::ResFlags::RenderTarget),
+			HAL::HeapType::DEFAULT);
+
+		auto list = device.get_queue(HAL::CommandListType::DIRECT)->get_free_list();
+		list->begin(L"render_fx");
+
+		HAL::Texture2DView view(tex, *list);
+		set_ui_target(list, view, vec4(0.0f, 0.0f, 0.0f, 1.0f));
+
+		sizer_long full_vp;
+		full_vp.left   = 0;
+		full_vp.top    = 0;
+		full_vp.right  = (long)W;
+		full_vp.bottom = (long)H;
+
+		GUI::Renderer renderer;
+		GUIInfo c;
+		c.renderer     = &renderer;
+		c.command_list = list;
+		c.window_size  = vec2((float)W, (float)H);
+		c.offset       = vec2(0.0f, 0.0f);
+		c.ui_clipping  = full_vp;
+		c.scissors     = full_vp;
+		c.scale        = 1.0f;
+		c.delta_time   = 0.0f;
+
+		const rect shape{ vec2(64.0f, 32.0f), vec2(128.0f, 64.0f) };
+		renderer.draw_color(c, float4(0.2f, 0.2f, 0.2f, 1.0f), shape);
+		renderer.draw_fx(c, shape, params);
+		renderer.flush(c);
+
+		list->execute_and_wait();
+		return { Test::readback_texture(tex.get()) };
+	}
 }
 
 export namespace Test
@@ -1018,6 +1075,7 @@ export namespace Test
 		GUI::user_interface ui;
 		ui.size = vec2((float)W, (float)H);
 		ui.backdrop_radius = 18.0f;   // the assertions below look 8 px either side of the seam
+		ui.shadows_enabled = false;   // the popup's shadow would darken the "outside stays hard" pixel
 
 		{
 			auto left = std::make_shared<GUI::Elements::colored_rect>();
@@ -1300,5 +1358,126 @@ export namespace Test
 			ASSERT_TRUE(cur <= prev + 0.005f);
 			prev = cur;
 		}
+	}
+
+	// Reveal highlight: a soft spot at the cursor, nothing far from it or
+	// outside the shape. (Base grey is ~0.033 linear.)
+	TEST(Core.HAL, GUIFx_Reveal)
+	{
+		THREAD_SCOPE(GUI);
+
+		GUI::FxParams p;
+		p.cursor = float2(96.0f, 64.0f);
+		p.reveal_strength = 0.6f;
+		p.reveal_size = 14.0f;
+		const auto img = render_fx(p);
+
+		ASSERT_TRUE(img.at(96, 64) > 0.4f);
+		ASSERT_TRUE(img.at(96, 64) > img.at(112, 64));
+		ASSERT_TRUE(img.at(112, 64) > img.at(130, 64));
+		ASSERT_TRUE(img.at(170, 64) < 0.06f);    // far from the cursor: just the base grey
+		ASSERT_TRUE(img.at(20, 64) < 0.01f);     // outside the shape: untouched black
+		ASSERT_TRUE(img.at(96, 20) < 0.01f);
+	}
+
+	// Edge light: the rim lights up near the cursor and stays dark far from it;
+	// the inside of the shape is not lit.
+	TEST(Core.HAL, GUIFx_EdgeLight)
+	{
+		THREAD_SCOPE(GUI);
+
+		GUI::FxParams p;
+		p.cursor = float2(64.0f, 64.0f);   // on the left edge
+		p.border_strength = 1.0f;
+		p.border_size = 40.0f;
+		p.border_width = 2.0f;
+		const auto img = render_fx(p);
+
+		ASSERT_TRUE(img.at(64, 64) > 0.5f);      // rim at the cursor
+		ASSERT_TRUE(img.at(128, 64) < 0.06f);    // centre: not lit
+		ASSERT_TRUE(img.at(191, 64) < 0.08f);    // rim on the far side: out of the cursor's reach
+		ASSERT_TRUE(img.at(64, 64) > img.at(64, 90));   // falls off along the rim
+	}
+
+	// The hover state behind the effects: with the cursor over an element (or its
+	// child) fx_hover eases to 1 within a few frames and fx_shine starts; moving
+	// away eases it back to 0. No GPU needed.
+	TEST(Core.HAL, GUIFx_HoverState)
+	{
+		THREAD_SCOPE(GUI);
+
+		// Shared-owned: hit testing calls get_ptr() on the root, which a stack
+		// user_interface (as the other tests use) cannot answer.
+		auto ui_owner = std::make_shared<GUI::user_interface>();
+		auto& ui = *ui_owner;
+		ui.size = vec2(400.0f, 200.0f);
+
+		auto card = std::make_shared<GUI::Elements::colored_rect>();
+		card->docking     = GUI::dock::NONE;
+		card->width_size  = GUI::size_type::FIXED;
+		card->height_size = GUI::size_type::FIXED;
+		card->size        = vec2(200.0f, 100.0f);
+		card->pos         = vec2(20.0f, 20.0f);
+		card->fx.reveal = true;
+		card->fx.border = true;
+		card->fx.shine  = true;
+
+		auto child = std::make_shared<GUI::base>();   // what the cursor really hits
+		child->docking = GUI::dock::FILL;
+		card->add_child(child);
+		ui.add_child(card);
+
+		auto frame = [&](float dt)
+		{
+			ui.process_ui(dt);
+			FrameGraph::Graph graph;
+			ui.create_graph(graph);
+		};
+
+		frame(0.03f);
+		ASSERT_TRUE(card->fx_hover == 0.0f);
+		ASSERT_TRUE(card->fx_shine < 0.0f);
+
+		const rect b = card->get_render_bounds();
+		ui.mouse_move_event_internal(vec2(b.x + b.w * 0.5f, b.y + b.h * 0.5f));
+
+		frame(0.03f);
+		ASSERT_TRUE(card->fx_hover > 0.2f);      // started easing in
+		ASSERT_TRUE(card->fx_shine >= 0.0f);     // the sweep began
+
+		for (int i = 0; i < 12; i++)
+			frame(0.03f);
+		ASSERT_TRUE(card->fx_hover > 0.95f);     // settled
+
+		ui.mouse_move_event_internal(vec2(390.0f, 190.0f));   // off the card
+		for (int i = 0; i < 14; i++)
+			frame(0.03f);
+		ASSERT_TRUE(card->fx_hover < 0.05f);
+	}
+
+	// Shine: a band at the sweep phase, moving across the shape; off at phase < 0.
+	TEST(Core.HAL, GUIFx_Shine)
+	{
+		THREAD_SCOPE(GUI);
+
+		GUI::FxParams p;
+		p.shine_strength = 0.8f;
+		p.shine_width = 0.18f;
+
+		p.shine_phase = 0.5f;   // band centred
+		const auto mid = render_fx(p);
+		ASSERT_TRUE(mid.at(128, 64) > 0.5f);
+		ASSERT_TRUE(mid.at(70, 64) < 0.06f);
+		ASSERT_TRUE(mid.at(186, 64) < 0.06f);
+
+		p.shine_phase = 0.1f;   // band near the start
+		const auto early = render_fx(p);
+		ASSERT_TRUE(early.at(70, 64) > 0.2f);
+		ASSERT_TRUE(early.at(128, 64) < 0.06f);
+
+		p.shine_phase = -1.0f;  // idle
+		const auto off = render_fx(p);
+		ASSERT_TRUE(off.at(128, 64) < 0.06f);
+		ASSERT_TRUE(off.at(70, 64) < 0.06f);
 	}
 }

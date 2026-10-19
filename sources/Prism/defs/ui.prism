@@ -173,6 +173,79 @@ namespace UI
 		float2 window_size;
 		float4 tint;
 		float saturation;
+		# Acrylic: how far the blur's luminance is pulled toward the tint's, so
+		# bright and dark backdrops read evenly under the glass (Fluent's
+		# luminosity layer).
+		float luminosity;
+		# Acrylic: strength of the static per-pixel grain.
+		float noise;
+	}
+
+	# Procedural soft shadow / glow (Renderer::draw_shadow). All positions and
+	# sizes are window pixels (the same space as BackdropDraw.rect).
+	[Bind = DefaultLayout::Instance0]
+	struct UIShadow
+	{
+		# The quad drawn: the shape grown by the blur reach.
+		float4 quad;
+		# The element's own rect: nothing is drawn inside it.
+		float4 element;
+		# The shadow's rect: element moved by the offset and grown by spread.
+		float4 shape;
+		float4 color;
+		float2 window_size;
+		float radius;
+		float sigma;
+	}
+
+	# Cursor-driven light inside a rounded rect (Renderer::draw_fx). All
+	# positions and sizes are window pixels; a zero strength turns that part off.
+	[Bind = DefaultLayout::Instance0]
+	struct UIFx
+	{
+		# The quad drawn: the element's rect clipped to its parent.
+		float4 quad;
+		float4 shape;
+		# xy cursor, z Gaussian sigma, w strength.
+		float4 reveal;
+		# x sigma of the rim's falloff from the cursor, y strength, z rim width.
+		float4 border;
+		# x sweep phase (< 0 = off), y band half-width (fraction of the sweep), z strength.
+		float4 shine;
+		float2 window_size;
+		float radius;
+	}
+
+	GraphicsPSO UIFx
+	{
+		root = DefaultLayout;
+
+		[EntryPoint = VS]
+		vertex = "gui/fx.hlsl";
+
+		[EntryPoint = PS]
+		pixel = "gui/fx.hlsl";
+
+		rtv = { R16G16B16A16_FLOAT };
+		blend = { AlphaBlend };
+		cull = None;
+		enable_depth = false;
+	}
+
+	GraphicsPSO UIShadow
+	{
+		root = DefaultLayout;
+
+		[EntryPoint = VS]
+		vertex = "gui/shadow.hlsl";
+
+		[EntryPoint = PS]
+		pixel = "gui/shadow.hlsl";
+
+		rtv = { R16G16B16A16_FLOAT };
+		blend = { AlphaBlend };
+		cull = None;
+		enable_depth = false;
 	}
 
 	GraphicsPSO BackdropDraw

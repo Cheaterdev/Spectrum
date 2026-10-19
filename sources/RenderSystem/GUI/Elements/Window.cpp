@@ -23,6 +23,7 @@ GUI::Elements::window::window() : GUI::Elements::resizable()
 {
 	margin = { 20, 20, 20, 20 };
 	backdrop_blur = true;
+	shadow.enabled = true;
 	clickable = false;
 	clip_child = true;
 	label_text.reset(new label());

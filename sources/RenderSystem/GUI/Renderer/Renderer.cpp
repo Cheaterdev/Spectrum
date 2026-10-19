@@ -265,6 +265,8 @@ namespace GUI
             data.GetWindow_size() = float2(c.window_size.x, c.window_size.y);
             data.GetTint() = p.tint;
             data.GetSaturation() = p.saturation;
+            data.GetLuminosity() = p.luminosity;
+            data.GetNoise() = p.noise;
             graphics.set(data);
 
             graphics.set_pipeline<PSOS::UI::BackdropDraw>();
@@ -273,6 +275,97 @@ namespace GUI
         }
     }
 
+
+    void Renderer::draw_shadow(base::Context& c, rect r, const ShadowStyle& s)
+    {
+        if (!s.enabled || s.color.w <= 0.0f || c.window_size.x <= 0 || c.window_size.y <= 0)
+            return;
+
+        PROFILE(L"ui_shadow");
+
+        // Same space as the backdrop composite: render bounds + draw offset,
+        // in window pixels; style sizes are UI pixels at scale 1.
+        const float k      = c.scale;
+        const float sigma  = std::max(s.blur * k, 0.5f);
+        const float spread = s.spread * k;
+        const float2 offset = s.offset * k;
+
+        const float4 element = float4(r.x + c.offset.x, r.y + c.offset.y, r.w, r.h);
+        const float4 shape   = float4(element.x + offset.x - spread, element.y + offset.y - spread,
+                                      element.z + 2 * spread, element.w + 2 * spread);
+        // 3 sigma covers >99.8% of the falloff.
+        const float reach = 3.0f * sigma + 1.0f;
+
+        // Clipped to the parent's clip rect like the backdrop composite: the
+        // shadow reaches outside the element, and the scissor alone can be
+        // wider than the parent (it would spill over neighbouring UI).
+        const float2 quad_lt = float2::max(float2(shape.x - reach, shape.y - reach),
+                                           float2(float(c.ui_clipping.left), float(c.ui_clipping.top)));
+        const float2 quad_rb = float2::min(float2(shape.x + shape.z + reach, shape.y + shape.w + reach),
+                                           float2(float(c.ui_clipping.right), float(c.ui_clipping.bottom)));
+        if (quad_rb.x <= quad_lt.x || quad_rb.y <= quad_lt.y)
+            return;
+        const float4 quad = float4(quad_lt.x, quad_lt.y, quad_rb.x - quad_lt.x, quad_rb.y - quad_lt.y);
+
+        // Everything batched so far goes under the shadow.
+        nine_patch.flush(c);
+
+        auto& graphics = c.command_list->get_graphics();
+
+        Slots::UI::UIShadow data;
+        data.GetQuad()        = quad;
+        data.GetElement()     = element;
+        data.GetShape()       = shape;
+        data.GetColor()       = s.color;
+        data.GetWindow_size() = float2(c.window_size.x, c.window_size.y);
+        data.GetRadius()      = s.radius * k;
+        data.GetSigma()       = sigma;
+        graphics.set(data);
+
+        graphics.set_pipeline<PSOS::UI::UIShadow>();
+        graphics.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::STRIP);
+        graphics.draw(4);
+    }
+
+    void Renderer::draw_fx(base::Context& c, rect r, const FxParams& p)
+    {
+        const bool shine = p.shine_phase >= 0.0f && p.shine_strength > 0.0f;
+        if ((p.reveal_strength <= 0.0f && p.border_strength <= 0.0f && !shine)
+            || c.window_size.x <= 0 || c.window_size.y <= 0)
+            return;
+
+        PROFILE(L"ui_fx");
+
+        const float k = c.scale;
+        const float4 shape = float4(r.x + c.offset.x, r.y + c.offset.y, r.w, r.h);
+
+        // Clipped to the parent like the shadow: the scissor alone can be wider.
+        const float2 quad_lt = float2::max(float2(shape.x, shape.y),
+                                           float2(float(c.ui_clipping.left), float(c.ui_clipping.top)));
+        const float2 quad_rb = float2::min(float2(shape.x + shape.z, shape.y + shape.w),
+                                           float2(float(c.ui_clipping.right), float(c.ui_clipping.bottom)));
+        if (quad_rb.x <= quad_lt.x || quad_rb.y <= quad_lt.y)
+            return;
+
+        // The element's own fill is batched; the light goes over it.
+        nine_patch.flush(c);
+
+        auto& graphics = c.command_list->get_graphics();
+
+        Slots::UI::UIFx data;
+        data.GetQuad()        = float4(quad_lt.x, quad_lt.y, quad_rb.x - quad_lt.x, quad_rb.y - quad_lt.y);
+        data.GetShape()       = shape;
+        data.GetReveal()      = float4(p.cursor.x, p.cursor.y, p.reveal_size * k, p.reveal_strength);
+        data.GetBorder()      = float4(p.border_size * k, p.border_strength, p.border_width * k, 0.0f);
+        data.GetShine()       = float4(shine ? p.shine_phase : -1.0f, p.shine_width, p.shine_strength, 0.0f);
+        data.GetWindow_size() = float2(c.window_size.x, c.window_size.y);
+        data.GetRadius()      = p.radius * k;
+        graphics.set(data);
+
+        graphics.set_pipeline<PSOS::UI::UIFx>();
+        graphics.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::STRIP);
+        graphics.draw(4);
+    }
 
     void Renderer::draw_area(base::ptr obj, base::Context& c)
     {

@@ -270,6 +270,23 @@ themselves — say exactly which toggle(s)/GUI setting(s) to flip and to what
 value (e.g. "Shadow Src → RTX Ref"), and what to look for. Don't flip runtime
 defaults, rebuild, and run the app repeatedly to eyeball it in their place.
 
+## Say which rule you are following
+
+When a rule in this file changes what you do — you ask instead of acting,
+stop to ask for a visual check, don't clean up yet, decline a step — say so in
+the reply itself, naming the rule by its section heading (e.g. "Per the
+*Off-topic requests* rule in CLAUDE.md, …"). The user must be able to tell a
+rule-driven question from an ordinary one by reading the reply, not by
+guessing; reasoning that never reaches the reply doesn't count.
+
+## Off-topic requests
+
+Several sessions often run side by side, each on its own subject, and a
+message can land in the wrong one. When a request has nothing to do with what
+this session has been working on, ask first whether it was meant for this
+session or for another one, before starting on it. Proceed once the user
+confirms it belongs here.
+
 ## Status reports
 
 End every report on a piece of work with these five sections, in this order,

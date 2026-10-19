@@ -880,6 +880,9 @@ namespace GUI
             if (backdrop_blur && user_ui && user_ui->backdrop_enabled)
                 backdrop_slot = user_ui->backdrop_counter++;
 
+            if (fx.reveal || fx.border || fx.shine)
+                update_fx(c.delta_time);
+
            on_pre_render(c);
             user_ui->draw_infos.emplace_back(c.ui_clipping, entry_scissors,c.scale,this,c.offset,true);
 		//	rec_c.execute([this](Context &c) {
@@ -1074,8 +1077,9 @@ namespace GUI
         if (!(backdrop_blur && user_ui && user_ui->backdrop_enabled && c.target.resource))
             return false;
 
+        // Raw parent pointers for the same reason as control_opacity().
         if (backdrop_standalone_only)
-            for (auto p = const_cast<base*>(this)->get_parent(); p; p = p->get_parent())
+            for (const base* p = parent; p; p = p->parent)
                 if (p->backdrop_blur)
                     return false;
 
@@ -1084,7 +1088,10 @@ namespace GUI
 
     float base::control_opacity(const Context& c)
     {
-        for (auto p = get_parent(); p; p = p->get_parent())
+        // Raw parent pointers, not get_parent(): that returns parent->get_ptr()
+        // (shared_from_this), which throws for a root not owned by a shared_ptr
+        // -- e.g. a user_interface on the stack in the GUI tests.
+        for (const base* p = parent; p; p = p->parent)
             if (p->glass_children)
                 return p->backdrop_active(c) ? p->glass_opacity : 1.0f;
         return 1.0f;
@@ -1098,13 +1105,106 @@ namespace GUI
             params.radius = user_ui->backdrop_radius;
             params.saturation = user_ui->backdrop_saturation;
             params.tint.w = user_ui->backdrop_tint;
+            params.luminosity = user_ui->backdrop_luminosity;
+            params.noise = user_ui->backdrop_noise;
 
             rect r = get_render_bounds();
             if (r.w > 0 && r.h > 0)
                 c.renderer->draw_backdrop_blur(c, backdrop_slot, r, params);
         }
 
+        // After the blur: the blur snapshot reads a little beyond the element,
+        // and a shadow already drawn there would be blurred into the glass.
+        if (user_ui && (shadow.enabled || glow.enabled))
+        {
+            rect r = get_render_bounds();
+
+            if (shadow.enabled && user_ui->shadows_enabled)
+            {
+                ShadowStyle s = shadow;
+                s.color.w = user_ui->shadow_opacity;
+                s.blur    = user_ui->shadow_blur;
+                s.offset  = float2(0.0f, float(user_ui->shadow_offset));
+                c.renderer->draw_shadow(c, r, s);
+            }
+
+            if (glow.enabled && user_ui->glow_enabled)
+            {
+                ShadowStyle g = glow;
+                g.color.w *= user_ui->glow_strength;
+                g.blur     = user_ui->glow_size;
+                g.offset   = float2(0.0f, 0.0f);
+                c.renderer->draw_shadow(c, r, g);
+            }
+        }
+
         draw(c);
+
+        // Over the element's own draw, under its children (labels stay readable).
+        if (user_ui && (fx.reveal || fx.border || fx.shine) && (fx_hover > 0.003f || fx_shine >= 0.0f))
+        {
+            FxParams p;
+            p.radius = fx.radius;
+            const vec2 mouse = user_ui->get_mouse_pos();
+            p.cursor = float2(mouse.x, mouse.y);
+
+            if (fx.reveal && user_ui->reveal_enabled)
+            {
+                p.reveal_strength = user_ui->reveal_strength * fx_hover;
+                p.reveal_size = user_ui->reveal_size;
+            }
+
+            if (fx.border && user_ui->border_enabled)
+            {
+                p.border_strength = user_ui->border_strength * fx_hover;
+                p.border_size = user_ui->border_size;
+            }
+
+            if (fx.shine && user_ui->shine_enabled && fx_shine >= 0.0f)
+            {
+                p.shine_phase = fx_shine;
+                p.shine_strength = user_ui->shine_strength;
+            }
+
+            c.renderer->draw_fx(c, get_render_bounds(), p);
+        }
+    }
+
+    void base::update_fx(float dt)
+    {
+        // Hovered when the cursor is over this element or anything inside it
+        // (a button's label is what the hit test finds). Raw parent pointers:
+        // see control_opacity().
+        bool hovered_now = false;
+
+        if (user_ui)
+            if (auto h = user_ui->get_hovered().lock())
+                for (const base* p = h.get(); p; p = p->parent)
+                    if (p == this)
+                    {
+                        hovered_now = true;
+                        break;
+                    }
+
+        const float target = hovered_now ? 1.0f : 0.0f;
+        const float previous = fx_hover;
+        fx_hover += (target - fx_hover) * (1.0f - std::exp(-dt * 14.0f));
+
+        if (std::abs(target - fx_hover) < 0.003f)
+            fx_hover = target;
+
+        if (fx.shine && user_ui)
+        {
+            if (previous <= 0.0f && fx_hover > 0.0f)
+                fx_shine = 0.0f;
+            else if (fx_shine >= 0.0f)
+            {
+                fx_shine += dt / std::max(float(user_ui->shine_duration), 0.05f);
+
+                if (fx_shine >= 1.0f)
+                    fx_shine = -1.0f;
+            }
+        }
     }
 
     

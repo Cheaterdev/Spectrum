@@ -131,6 +131,8 @@ std::optional<SlotID> get_slot(std::string_view slot_name)
 	if(slot_name == "FlowGraph") return SlotID::FlowGraph;
 	if(slot_name == "BackdropBlur") return SlotID::BackdropBlur;
 	if(slot_name == "BackdropDraw") return SlotID::BackdropDraw;
+	if(slot_name == "UIShadow") return SlotID::UIShadow;
+	if(slot_name == "UIFx") return SlotID::UIFx;
 	if(slot_name == "LineRender") return SlotID::LineRender;
 	if(slot_name == "FrameGraph_Debug_Common") return SlotID::FrameGraph_Debug_Common;
 	if(slot_name == "FrameGraph_Debug_Texture2D") return SlotID::FrameGraph_Debug_Texture2D;
@@ -428,6 +430,10 @@ uint get_table_index(SlotID id)
 
 	if(id == SlotID::BackdropDraw) return Slots::UI::BackdropDraw::Slot::ID;
 
+	if(id == SlotID::UIShadow) return Slots::UI::UIShadow::Slot::ID;
+
+	if(id == SlotID::UIFx) return Slots::UI::UIFx::Slot::ID;
+
 	if(id == SlotID::LineRender) return Slots::UI::LineRender::Slot::ID;
 
 	if(id == SlotID::FrameGraph_Debug_Common) return Slots::Dev::FrameGraph_Debug_Common::Slot::ID;
@@ -648,6 +654,8 @@ std::string get_slot_name(SlotID id)
 	if(id == SlotID::FlowGraph) return "FlowGraph";
 	if(id == SlotID::BackdropBlur) return "BackdropBlur";
 	if(id == SlotID::BackdropDraw) return "BackdropDraw";
+	if(id == SlotID::UIShadow) return "UIShadow";
+	if(id == SlotID::UIFx) return "UIFx";
 	if(id == SlotID::LineRender) return "LineRender";
 	if(id == SlotID::FrameGraph_Debug_Common) return "FrameGraph_Debug_Common";
 	if(id == SlotID::FrameGraph_Debug_Texture2D) return "FrameGraph_Debug_Texture2D";

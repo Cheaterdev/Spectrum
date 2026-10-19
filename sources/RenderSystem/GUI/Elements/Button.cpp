@@ -35,6 +35,9 @@ namespace GUI
 
         button::button()
         {
+            fx.reveal = true;
+            fx.border = true;
+            fx.radius = 3.0f;
             clickable = true;
             clip_child = true;
             label_text.reset(new label());

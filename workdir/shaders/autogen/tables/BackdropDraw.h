@@ -16,12 +16,16 @@ namespace UI
 		float2 window_size; // float2
 		float4 tint; // float4
 		float saturation; // float
+		float luminosity; // float
+		float noise; // float
 		uint blurred; // Texture2D<float4>
 		float4 GetRect() { return rect; }
 		float4 GetMap() { return map; }
 		float2 GetWindow_size() { return window_size; }
 		float4 GetTint() { return tint; }
 		float GetSaturation() { return saturation; }
+		float GetLuminosity() { return luminosity; }
+		float GetNoise() { return noise; }
 		Texture2D<float4> GetBlurred() { return ResourceDescriptorHeap[blurred]; }
 	};
 }

@@ -34,6 +34,22 @@ export namespace GUI
 		float  radius     = 18.0f;                          // blur radius, px at UI scale 1
 		float4 tint       = { 0.02f, 0.02f, 0.03f, 0.35f }; // sRGB rgb, alpha = strength
 		float  saturation = 1.25f;
+		float  luminosity = 0.0f;   // 0..1, pull toward the tint's luminance
+		float  noise      = 0.0f;   // grain strength
+	};
+
+	struct FxParams
+	{
+		float2 cursor = { 0, 0 };          // window pixels
+		float  radius = 4.0f;              // corner radius, UI px at scale 1
+		float  reveal_strength = 0.0f;
+		float  reveal_size = 48.0f;        // Gaussian sigma, UI px
+		float  border_strength = 0.0f;
+		float  border_size = 70.0f;        // Gaussian sigma of the rim's falloff from the cursor, UI px
+		float  border_width = 1.5f;        // rim thickness, UI px
+		float  shine_phase = -1.0f;        // 0..1 sweep position, < 0 off
+		float  shine_strength = 0.0f;
+		float  shine_width = 0.18f;        // band half-width as a fraction of the sweep length
 	};
 
 	class Renderer
@@ -59,6 +75,11 @@ export namespace GUI
 		void draw(base::Context& c, GUI::Texture& item, rect r);
 		void draw(base::Context& c, HAL::PipelineState::ptr state, rect r);
 
+		// Soft shadow/glow around the rounded rect r (render-bounds space, like
+		// draw()), drawn outside the shape only so translucent elements on top
+		// are not darkened. Sizes in s are UI pixels at scale 1.
+		void draw_shadow(base::Context& c, rect r, const ShadowStyle& s);
+
 		// Draws what is behind `r` (everything already drawn into the target
 		// this frame), blurred, tinted and desaturated, over `r`. `slot` is the
 		// element's per-frame snapshot slot (user_interface::backdrop_counter):
@@ -66,6 +87,11 @@ export namespace GUI
 		// Falls back to a flat translucent tint when the target can't be read
 		// (tests, previews rendering the UI somewhere else).
 		void draw_backdrop_blur(base::Context& c, uint32_t slot, rect r, const BackdropBlurParams& params);
+
+		// Cursor-driven light over `r` (a rounded rect), inside the shape only: a
+		// soft spot at the cursor, a lit rim brightest near it, and a diagonal
+		// sweep. A strength of 0 (shine: phase < 0) turns that part off.
+		void draw_fx(base::Context& c, rect r, const FxParams& params);
 
 		// Drops the snapshot textures; call before the device goes away.
 		static void reset_backdrop();

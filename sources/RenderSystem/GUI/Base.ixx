@@ -161,7 +161,31 @@ namespace GUI
         NONE = 0, WIDTH = 1, HEIGHT = 2, ALL = 3
     };
 
-	
+
+
+    // A soft procedural shadow or glow around an element's rounded rect,
+    // drawn outside the shape only (see Renderer::draw_shadow). Sizes are in
+    // UI pixels at scale 1; color is sRGB, alpha = strength.
+    struct ShadowStyle
+    {
+        bool   enabled = false;
+        float4 color   = { 0, 0, 0, 0.5f };
+        float2 offset  = { 0, 0 };
+        float  blur    = 12.0f;   // Gaussian sigma
+        float  spread  = 0.0f;    // grows the shape before blurring
+        float  radius  = 4.0f;    // corner radius
+    };
+
+    // Procedural light effects on an element's rounded rect (Renderer::draw_fx),
+    // drawn over its own draw() and under its children. Which ones apply is per
+    // element; strengths and sizes come from the UI Effects settings.
+    struct OverlayFx
+    {
+        bool  reveal = false;   // soft light following the cursor while hovered
+        bool  border = false;   // lit rim, brightest near the cursor
+        bool  shine  = false;   // one diagonal sweep when the hover starts
+        float radius = 4.0f;    // corner radius
+    };
 
     class base;
     class drag_n_drop_package
@@ -390,6 +414,18 @@ namespace GUI
             bool  backdrop_standalone_only = false;
             uint32_t backdrop_slot = 0;
             bool backdrop_active(const Context& c) const;
+            // Drawn by draw_before after the backdrop blur, before draw(). Only
+            // `enabled` and the shape (radius) are per element; strength,
+            // softness and offset come from the UI Effects settings.
+            ShadowStyle shadow;
+            ShadowStyle glow;
+            // Cursor-driven light effects, drawn by draw_before after draw().
+            // fx_hover eases 0..1 with the cursor over the element or a
+            // descendant; fx_shine runs 0..1 after the hover starts, -1 when idle.
+            OverlayFx fx;
+            float fx_hover = 0.0f;
+            float fx_shine = -1.0f;
+            void update_fx(float dt);
             // For panels that are mostly covered by their own controls: while
             // this element's blur is active, the controls under it (buttons,
             // combo boxes) draw their backgrounds at glass_opacity so the blur
@@ -682,6 +718,30 @@ namespace GUI
             Variable<float> backdrop_radius     = { 3.0f, "Blur radius (px)", backdrop_context.get(), 0.0f, 96.0f };
             Variable<float> backdrop_saturation = { 1.0f, "Blur saturation", backdrop_context.get(), 0.0f, 2.0f };
             Variable<float> backdrop_tint       = { 0.12f, "Blur tint strength", backdrop_context.get(), 0.0f, 1.0f };
+            // Acrylic finish: luminosity pull toward the tint, and static grain.
+            Variable<float> backdrop_luminosity = { 0.25f, "Blur luminosity", backdrop_context.get(), 0.0f, 1.0f };
+            Variable<float> backdrop_noise      = { 0.03f, "Blur grain", backdrop_context.get(), 0.0f, 0.2f };
+
+            // Procedural shadows and glow (ShadowStyle on elements).
+            std::unique_ptr<VariableContext> effects_context = VariableContext::create(L"UI Effects");
+            Variable<bool>  shadows_enabled  = { true, "Shadows", effects_context.get() };
+            Variable<float> shadow_opacity   = { 0.45f, "Shadow opacity", effects_context.get(), 0.0f, 1.0f };
+            Variable<float> shadow_blur      = { 10.0f, "Shadow softness (px)", effects_context.get(), 0.5f, 48.0f };
+            Variable<float> shadow_offset    = { 3.0f, "Shadow offset (px)", effects_context.get(), 0.0f, 24.0f };
+            Variable<bool>  glow_enabled     = { true, "Glow", effects_context.get() };
+            Variable<float> glow_strength    = { 0.8f, "Glow strength", effects_context.get(), 0.0f, 2.0f };
+            Variable<float> glow_size        = { 5.0f, "Glow size (px)", effects_context.get(), 0.5f, 32.0f };
+
+            // Cursor-driven light effects (OverlayFx on elements).
+            Variable<bool>  reveal_enabled   = { true, "Reveal highlight", effects_context.get() };
+            Variable<float> reveal_strength  = { 0.16f, "Reveal strength", effects_context.get(), 0.0f, 1.0f };
+            Variable<float> reveal_size      = { 48.0f, "Reveal size (px)", effects_context.get(), 4.0f, 200.0f };
+            Variable<bool>  border_enabled   = { true, "Edge light", effects_context.get() };
+            Variable<float> border_strength  = { 0.8f, "Edge light strength", effects_context.get(), 0.0f, 1.0f };
+            Variable<float> border_size      = { 70.0f, "Edge light size (px)", effects_context.get(), 4.0f, 300.0f };
+            Variable<bool>  shine_enabled    = { true, "Shine sweep", effects_context.get() };
+            Variable<float> shine_strength   = { 0.28f, "Shine strength", effects_context.get(), 0.0f, 1.0f };
+            Variable<float> shine_duration   = { 0.7f, "Shine duration (s)", effects_context.get(), 0.1f, 3.0f };
 
             // Hands each backdrop element its own snapshot slot for the frame:
             // two elements recorded into different command lists must not

@@ -780,14 +780,11 @@ public:
 		// The combo boxes cover all but the 4 px padding, so they go glass too.
 		backdrop_blur = true;
 		glass_children = true;
+		shadow.enabled = true;
 	}
 
 	void draw(GUI::base::Context& c) override
 	{
-		GUI::Texture shadow = Skin::get().Shadow;
-		shadow.margins = { 12, 12, 12, 12 };
-		c.renderer->draw(c, shadow, get_render_bounds());
-
 		// Translucent over the blurred backdrop, so it reads as frosted glass.
 		GUI::Texture bg = Skin::get().FlowWindow.Inactive;
 		bg.mul_color = float4(22, 28, 38, backdrop_active(c) ? 150 : 255) / 255.0f;
@@ -2059,6 +2056,99 @@ public:
 							split->second()->add_child(list);
 
 							docker->get_tabs()->add_page("Widgets", split);
+						};
+
+					// The cursor-driven light effects (Properties > UI Effects) on plain
+					// cards, so each one can be looked at alone and together.
+					test->add_item("Effects")->on_click = [this](GUI::Elements::menu_list_element::ptr)
+						{
+							using namespace GUI::Elements;
+
+							GUI::base::ptr page(new GUI::base());
+							page->docking = GUI::dock::FILL;
+							page->padding = { 16, 16, 16, 16 };
+
+							auto hint = std::make_shared<label>();
+							hint->docking = GUI::dock::TOP;
+							hint->margin = { 0, 0, 0, 12 };
+							hint->text = "Move the cursor over the cards. Strength, size and on/off are in Properties > UI Effects. Shine replays each time the cursor enters a card.";
+							page->add_child(hint);
+
+							auto add_row = [&](float height)
+								{
+									auto row = std::make_shared<GUI::base>();
+									row->docking = GUI::dock::TOP;
+									row->height_size = GUI::size_type::FIXED;
+									row->size = { 0, height };
+									row->margin = { 0, 0, 0, 14 };
+									page->add_child(row);
+									return row;
+								};
+
+							auto add_card = [&](GUI::base::ptr row, const std::string& caption, bool reveal, bool border, bool shine)
+								{
+									auto card = std::make_shared<colored_rect>();
+									card->color = float4(0.10f, 0.12f, 0.17f, 1.0f);
+									card->docking = GUI::dock::LEFT;
+									card->width_size = GUI::size_type::FIXED;
+									card->height_size = GUI::size_type::FIXED;
+									card->size = { 200, 96 };
+									card->margin = { 0, 0, 14, 0 };
+									card->fx.reveal = reveal;
+									card->fx.border = border;
+									card->fx.shine = shine;
+									card->fx.radius = 6.0f;
+
+									auto text = std::make_shared<label>();
+									text->docking = GUI::dock::FILL;
+									text->magnet_text = FW1_CENTER | FW1_VCENTER | FW1_NOWORDWRAP;
+									text->text = caption;
+									card->add_child(text);
+									row->add_child(card);
+									return card;
+								};
+
+							auto singles = add_row(96);
+							add_card(singles, "Reveal highlight", true, false, false);
+							add_card(singles, "Edge light", false, true, false);
+							add_card(singles, "Shine sweep", false, false, true);
+
+							auto combined = add_row(96);
+							add_card(combined, "All three", true, true, true);
+
+							auto buttons = add_row(36);
+							for (const char* name : { "Buttons", "get", "reveal", "and edge" })
+							{
+								auto b = std::make_shared<button>();
+								b->get_label()->text = name;
+								b->docking = GUI::dock::LEFT;
+								b->width_size = GUI::size_type::FIXED;
+								b->size = { 110, 30 };
+								b->margin = { 0, 0, 10, 0 };
+								buttons->add_child(b);
+							}
+
+							// Edit text fields with the effects: a text box is an element too,
+							// so the same flags apply (opt-in here; text boxes default to none).
+							auto fields = add_row(30);
+							int field_index = 0;
+							for (const char* hint_text : { "Reveal + edge light", "Shine on hover", "All three" })
+							{
+								auto field = std::make_shared<edit_text>();
+								field->docking = GUI::dock::LEFT;
+								field->width_size = GUI::size_type::FIXED;
+								field->size = { 200, 30 };
+								field->margin = { 0, 0, 14, 0 };
+								field->placeholder = hint_text;
+								field->fx.reveal = field_index != 1;
+								field->fx.border = field_index != 1;
+								field->fx.shine = field_index >= 1;
+								field->fx.radius = 3.0f;
+								fields->add_child(field);
+								field_index++;
+							}
+
+							docker->get_tabs()->add_page("Effects demo", page);
 						};
 
 					GUI::Elements::Debug::OutputWindow::on_open_file = [this](std::string file, int line, int column)

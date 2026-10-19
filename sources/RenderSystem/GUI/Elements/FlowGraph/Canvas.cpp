@@ -70,14 +70,11 @@ namespace
 			// The buttons cover all but the 4 px padding, so they go glass too.
 			backdrop_blur = true;
 			glass_children = true;
+			shadow.enabled = true;
 		}
 
 		void draw(GUI::base::Context& c) override
 		{
-			GUI::Texture shadow = Skin::get().Shadow;
-			shadow.margins = { 12, 12, 12, 12 };
-			c.renderer->draw(c, shadow, get_render_bounds());
-
 			// Translucent over the blurred backdrop, so it reads as frosted glass.
 			GUI::Texture bg = Skin::get().FlowWindow.Inactive;
 			bg.mul_color = float4(22, 28, 38, backdrop_active(c) ? 150 : 255) / 255.0f;

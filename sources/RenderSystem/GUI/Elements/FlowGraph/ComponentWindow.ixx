@@ -68,6 +68,9 @@ export namespace GUI
                     using wptr = w_ptr<component_window>;
 
                     virtual void draw(Context& c) override;
+                    // Syncs the selection glow: `selected` is set from several
+                    // places in canvas, so it is mirrored once per frame here.
+                    virtual void on_pre_render(Context& c) override;
                     component_window(canvas* canva, ::FlowGraph::Node* node, window_type type);
 
                     s_ptr<link_item> add_input(::FlowGraph::parameter* p);
