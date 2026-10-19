@@ -53,6 +53,13 @@ namespace GUI
         map_to_pixels = map_to_pixels && base_parent->map_to_pixels;
         need_update_layout = true;
 
+        if (fade_on_add && user_ui && user_ui->fade_enabled && user_ui->window_animations)
+        {
+            fade_closing = false;
+            layer_opacity = 0.0f;
+            fade_to(1.0f, user_ui->fade_in_duration);
+        }
+
         if (user_ui && thinkable)
             user_ui->thinking.insert(this);
 
@@ -849,7 +856,8 @@ namespace GUI
 
 
         bool visibility = true;
-        rect r_bounds = render_bounds.get();
+        const rect collected_bounds = render_bounds.get();
+        rect r_bounds = collected_bounds;
         r_bounds.x += c.offset.x;
         r_bounds.y += c.offset.y;
 
@@ -875,10 +883,29 @@ namespace GUI
         if (self_scissor.has_value())
             entry_scissors = intersect(entry_scissors, math::convert(*self_scissor));
 
+        // Decided once per frame here, so the before and after entries agree.
+        bool layered = false;
+        uint32_t layer_index = 0;
+        float layer_alpha = 1.0f;
+
         if (visibility)
 		{
+            update_fade(c.delta_time);
+            layered = layer_wanted();
+            layer_alpha = layer_opacity;
+
+            if (layered)
+                layer_index = user_ui->layer_counter++;
+
+            for (auto& e : effects)
+                if (e->enabled)
+                {
+                    e->collect(*this);
+                    e->update(*this, c.delta_time);
+                }
+
            on_pre_render(c);
-            user_ui->draw_infos.emplace_back(c.ui_clipping, entry_scissors,c.scale,this,c.offset,true);
+            user_ui->draw_infos.emplace_back(c.ui_clipping, entry_scissors,c.scale,this,c.offset,true,layered,layer_index,layer_alpha,collected_bounds);
 		//	rec_c.execute([this](Context &c) {
 		//		draw(c);
 		//	});
@@ -927,7 +954,7 @@ namespace GUI
 
     //    if (visibility)
     //        draw_after(c);
-        user_ui->draw_infos.emplace_back(c.ui_clipping, entry_scissors,c.scale, this, c.offset, false);
+        user_ui->draw_infos.emplace_back(c.ui_clipping, entry_scissors,c.scale, this, c.offset, false, layered, layer_index, layer_alpha, collected_bounds);
 
 		/*rec_c.execute([this](Context &c) {
 			draw_after(c);
@@ -1009,8 +1036,31 @@ namespace GUI
         return package;
     }
 
+    namespace
+    {
+        // Set by draw_bounds_scope on the thread that is drawing an element.
+        thread_local const base* draw_bounds_owner = nullptr;
+        thread_local rect draw_bounds_value;
+    }
+
+    draw_bounds_scope::draw_bounds_scope(const base* owner, const rect& bounds)
+        : previous_owner(draw_bounds_owner), previous_bounds(draw_bounds_value)
+    {
+        draw_bounds_owner = owner;
+        draw_bounds_value = bounds;
+    }
+
+    draw_bounds_scope::~draw_bounds_scope()
+    {
+        draw_bounds_owner = previous_owner;
+        draw_bounds_value = previous_bounds;
+    }
+
     rect base::get_render_bounds()
     {
+        if (draw_bounds_owner == this)
+            return draw_bounds_value;
+
         return render_bounds.get();
     }
 
@@ -1062,6 +1112,370 @@ namespace GUI
 
     void base::draw_after(Context&)
     {
+    }
+
+    // Without a target (hosts that draw the UI elsewhere) there is nothing to
+    // snapshot, and elements fall back to their regular look.
+    bool base::backdrop_active(const Context& c) const
+    {
+        auto* blur = find_effect<BackdropBlur>();
+        return blur && blur->active(*this, c);
+    }
+
+    bool BackdropBlur::active(const base& e, const GUIInfo& c) const
+    {
+        if (!(enabled && e.user_ui && e.user_ui->backdrop_enabled && c.target.resource))
+            return false;
+
+        // Raw parent pointers for the same reason as control_opacity().
+        if (standalone_only)
+            for (const base* p = e.parent; p; p = p->parent)
+                if (p->find_effect<BackdropBlur>())
+                    return false;
+
+        return true;
+    }
+
+    float base::control_opacity(const Context& c)
+    {
+        // Raw parent pointers, not get_parent(): that returns parent->get_ptr()
+        // (shared_from_this), which throws for a root not owned by a shared_ptr
+        // -- e.g. a user_interface on the stack in the GUI tests.
+        for (const base* p = parent; p; p = p->parent)
+            if (auto* blur = p->find_effect<BackdropBlur>(); blur && blur->glass_children)
+                return blur->active(*p, c) ? blur->glass_opacity : 1.0f;
+        return 1.0f;
+    }
+
+    void base::fade_to(float target, float seconds)
+    {
+        on_fade_end = nullptr;   // a new fade replaces whatever the old one was going to do
+        fade_from = layer_opacity;
+        fade_target = target;
+        fade_duration = std::max(seconds, 0.001f);
+        fade_t = 0.0f;
+    }
+
+    void base::update_fade(float dt)
+    {
+        if (fade_t >= 1.0f)
+            return;
+
+        fade_t = std::min(1.0f, fade_t + dt / fade_duration);
+        const float smooth = fade_t * fade_t * (3.0f - 2.0f * fade_t);
+        layer_opacity = fade_from + (fade_target - fade_from) * smooth;
+
+        if (fade_t >= 1.0f && on_fade_end)
+        {
+            auto done = std::move(on_fade_end);
+            on_fade_end = nullptr;
+            run_on_ui(std::move(done));
+        }
+    }
+
+    void base::fade_close()
+    {
+        if (fade_closing)
+            return;
+
+        if (!user_ui || !user_ui->fade_enabled || !user_ui->window_animations || !get_parent())
+        {
+            remove_from_parent();
+            return;
+        }
+
+        fade_closing = true;
+        fade_to(0.0f, user_ui->fade_out_duration);
+
+        // fade_to dropped any earlier callback, so this is set after it.
+        on_fade_end = [self = get_ptr()]()
+        {
+            if (!self->fade_closing)
+                return;   // cancel_fade_close() came in between
+
+            self->fade_closing = false;
+            self->remove_from_parent();
+            self->layer_opacity = 1.0f;
+        };
+    }
+
+    void base::cancel_fade_close()
+    {
+        if (!fade_closing)
+            return;
+
+        fade_closing = false;
+        fade_to(1.0f, user_ui ? float(user_ui->fade_in_duration) : 0.1f);
+    }
+
+    bool base::layer_wanted() const
+    {
+        return layer_opacity < 0.999f && user_ui && user_ui->fade_enabled;
+    }
+
+    void base::draw_end(Context& c)
+    {
+        draw_after(c);
+
+        if (layer_open)
+        {
+            layer_open = false;
+            c.renderer->end_layer(c, c.layer_opacity);
+        }
+    }
+
+    void base::draw_before(Context& c)
+    {
+        // The group opens first, so the blur, shadow and the element itself are
+        // all part of it. The shadow reaches outside the bounds, so the
+        // snapshot is grown by it.
+        layer_open = false;
+
+        if (c.layer && c.target.resource)
+        {
+            float pad = 2.0f;
+
+            for (auto& e : effects)
+                if (e->enabled)
+                    pad = std::max(pad, e->extent(*this));
+
+            layer_open = c.renderer->begin_layer(c, c.layer_slot, get_render_bounds(), pad);
+        }
+
+        for (auto& e : effects)
+            if (e->enabled)
+                e->draw_under(c, *this);
+
+        draw(c);
+
+        for (auto& e : effects)
+            if (e->enabled)
+                e->draw_over(c, *this);
+    }
+
+    void BackdropBlur::collect(base& e)
+    {
+        if (e.user_ui && e.user_ui->backdrop_enabled)
+            slot = e.user_ui->backdrop_counter++;
+    }
+
+    void BackdropBlur::draw_under(GUIInfo& c, base& e)
+    {
+        if (!active(e, c))
+            return;
+
+        BackdropBlurParams params;
+        params.radius = e.user_ui->backdrop_radius;
+        params.saturation = e.user_ui->backdrop_saturation;
+        params.tint.w = e.user_ui->backdrop_tint;
+        params.luminosity = e.user_ui->backdrop_luminosity;
+        params.noise = e.user_ui->backdrop_noise;
+
+        rect r = e.get_render_bounds();
+        if (r.w > 0 && r.h > 0)
+            c.renderer->draw_backdrop_blur(c, slot, r, params);
+    }
+
+    void SlidingHighlight::update(bool present, float target_y, float target_h, float dt, bool snap)
+    {
+        const float k = snap ? 1.0f : 1.0f - std::exp(-dt * 22.0f);
+
+        if (!present)
+        {
+            alpha += (0.0f - alpha) * k;
+            if (alpha < 0.003f)
+                alpha = 0.0f;
+            return;
+        }
+
+        // Nothing visible yet: appear where the row is, don't fly in from the last place.
+        if (!valid || alpha == 0.0f)
+        {
+            y = target_y;
+            h = target_h;
+            valid = true;
+        }
+        else
+        {
+            y += (target_y - y) * k;
+            h += (target_h - h) * k;
+        }
+
+        alpha += (1.0f - alpha) * k;
+        if (alpha > 0.997f)
+            alpha = 1.0f;
+    }
+
+    float Shadow::extent(const base& e) const
+    {
+        if (!e.user_ui->shadows_enabled)
+            return 0.0f;
+
+        return (3.0f * float(e.user_ui->shadow_blur) + float(e.user_ui->shadow_offset)) * (1.0f + 1.2f * lift) + 2.0f;
+    }
+
+    void Shadow::update(base&, float dt)
+    {
+        if (lift == lift_target)
+            return;
+
+        const float step = dt / 0.12f;
+        lift = lift < lift_target ? std::min(lift + step, lift_target) : std::max(lift - step, lift_target);
+    }
+
+    void Shadow::draw_under(GUIInfo& c, base& e)
+    {
+        if (!e.user_ui || !e.user_ui->shadows_enabled)
+            return;
+
+        ShadowStyle s = style;
+        s.color.w = std::min(1.0f, float(e.user_ui->shadow_opacity) * (1.0f + 0.4f * lift));
+        s.blur    = float(e.user_ui->shadow_blur) * (1.0f + 0.8f * lift);
+        s.offset  = float2(0.0f, float(e.user_ui->shadow_offset) * (1.0f + 1.2f * lift));
+        c.renderer->draw_shadow(c, e.get_render_bounds(), s);
+    }
+
+    float Glow::extent(const base& e) const
+    {
+        return e.user_ui->glow_enabled ? 3.0f * float(e.user_ui->glow_size) + 2.0f : 0.0f;
+    }
+
+    void Glow::draw_under(GUIInfo& c, base& e)
+    {
+        if (!e.user_ui || !e.user_ui->glow_enabled)
+            return;
+
+        ShadowStyle g = style;
+        g.color.w *= e.user_ui->glow_strength;
+        g.blur     = e.user_ui->glow_size;
+        g.offset   = float2(0.0f, 0.0f);
+        c.renderer->draw_shadow(c, e.get_render_bounds(), g);
+    }
+
+    void LightOverlay::draw_over(GUIInfo& c, base& e)
+    {
+        auto* ui = e.user_ui;
+
+        if (!ui || !(reveal || border || shine || ripple || focus || inner))
+            return;
+
+        if (!(hover > 0.003f || shine_t >= 0.0f || ripple_t >= 0.0f || focus_t > 0.003f
+              || (inner && ui->inner_enabled)))
+            return;
+
+        FxParams p;
+        p.radius = radius;
+        p.light_color = light;
+        const vec2 mouse = ui->get_mouse_pos();
+        p.cursor = float2(mouse.x, mouse.y);
+
+        if (reveal && ui->reveal_enabled)
+        {
+            p.reveal_strength = ui->reveal_strength * hover;
+            p.reveal_size = ui->reveal_size;
+        }
+
+        if (border && ui->border_enabled)
+        {
+            p.border_strength = ui->border_strength * hover;
+            p.border_size = ui->border_size;
+        }
+
+        if (shine && ui->shine_enabled && shine_t >= 0.0f)
+        {
+            p.shine_phase = shine_t;
+            p.shine_strength = ui->shine_strength;
+        }
+
+        if (ripple && ui->ripple_enabled && ripple_t >= 0.0f)
+        {
+            p.ripple_origin = float2(ripple_origin.x, ripple_origin.y);
+            p.ripple_phase = ripple_t;
+            p.ripple_strength = ui->ripple_strength;
+        }
+
+        if (focus && ui->focus_enabled)
+            p.focus_strength = ui->focus_strength * focus_t;
+
+        if (inner && ui->inner_enabled)
+        {
+            p.inner_strength = ui->inner_strength;
+            p.inner_size = ui->inner_size;
+        }
+
+        c.renderer->draw_fx(c, e.get_render_bounds(), p);
+    }
+
+    void LightOverlay::update(base& e, float dt)
+    {
+        // Only the cursor-driven parts have state to advance.
+        if (!(reveal || border || shine || ripple || focus))
+            return;
+
+        auto* ui = e.user_ui;
+
+        // Hovered when the cursor is over this element or anything inside it
+        // (a button's label is what the hit test finds). Raw parent pointers:
+        // see control_opacity().
+        bool hovered_now = false;
+
+        if (ui)
+            if (auto h = ui->get_hovered().lock())
+                for (const base* p = h.get(); p; p = p->parent)
+                    if (p == &e)
+                    {
+                        hovered_now = true;
+                        break;
+                    }
+
+        const float target = hovered_now ? 1.0f : 0.0f;
+        const float previous = hover;
+        hover += (target - hover) * (1.0f - std::exp(-dt * 14.0f));
+
+        if (std::abs(target - hover) < 0.003f)
+            hover = target;
+
+        if (shine && ui)
+        {
+            if (previous <= 0.0f && hover > 0.0f)
+                shine_t = 0.0f;
+            else if (shine_t >= 0.0f)
+            {
+                shine_t += dt / std::max(float(ui->shine_duration), 0.05f);
+
+                if (shine_t >= 1.0f)
+                    shine_t = -1.0f;
+            }
+        }
+
+        // A press starts the ripple at the cursor; it then runs out on its own.
+        const bool pressed_now = e.pressed;
+        if (ripple && ui)
+        {
+            if (pressed_now && !was_pressed)
+            {
+                ripple_t = 0.0f;
+                ripple_origin = ui->get_mouse_pos();
+            }
+            else if (ripple_t >= 0.0f)
+            {
+                ripple_t += dt / std::max(float(ui->ripple_duration), 0.05f);
+
+                if (ripple_t >= 1.0f)
+                    ripple_t = -1.0f;
+            }
+        }
+
+        was_pressed = pressed_now;
+
+        if (focus)
+        {
+            const float focus_target = e.is_focused() ? 1.0f : 0.0f;
+            focus_t += (focus_target - focus_t) * (1.0f - std::exp(-dt * 14.0f));
+
+            if (std::abs(focus_target - focus_t) < 0.003f)
+                focus_t = focus_target;
+        }
     }
 
     
@@ -1143,6 +1557,8 @@ namespace GUI
 
         draw_infos.clear();
         pre_draw_infos.clear();
+        backdrop_counter = 0;
+        layer_counter = 0;
         draw_recursive(c);
         drag.draw(c);
      }
@@ -1171,9 +1587,40 @@ namespace GUI
         {
             const uint32_t size     = (uint32_t)ui_ctx.draw_infos.size();
             const uint32_t per_pass = ui_per_thread(size);
+
+            // One contiguous range per instance. A group-opacity layer copies the
+            // target when it opens and draws it back when it closes, so both
+            // have to be recorded in the same command list: a range that would
+            // end inside a layer runs on to the layer's end.
+            auto& chunks = ui_ctx.chunks;
+            chunks.clear();
+
+            const uint32_t max_chunks = Passes::UI::UI_Render::MaxCount;
+            uint32_t start = 0;
+            int depth = 0;
+
+            while (start < size)
+            {
+                uint32_t end = chunks.size() + 1 >= max_chunks ? size : std::min(start + per_pass, size);
+
+                for (uint32_t i = start; i < end; i++)
+                    if (ui_ctx.draw_infos[i].layer)
+                        depth += ui_ctx.draw_infos[i].before ? 1 : -1;
+
+                while (depth > 0 && end < size)
+                {
+                    if (ui_ctx.draw_infos[end].layer)
+                        depth += ui_ctx.draw_infos[end].before ? 1 : -1;
+                    end++;
+                }
+
+                chunks.emplace_back(start, end);
+                start = end;
+            }
+
             auto& ui_render_ctx = graph.get_context<::Table::UI::UIRenderState>();
             ui_render_ctx.per_pass      = per_pass;
-            ui_render_ctx.passes_needed = (size + per_pass - 1) / per_pass;
+            ui_render_ctx.passes_needed = (uint32_t)chunks.size();
         }
 
         ui_ctx.dt          = dt;
@@ -1701,9 +2148,14 @@ namespace GUI
 				mouse_move_event_internal(pos);
 			});
 
+		apply_cursor();
+	}
+
+	void user_interface::apply_cursor()
+	{
 		::SetCursor(LoadCursor(nullptr, cursors[static_cast<int>(cursor)]));
 	}
-	
+
 	void user_interface::mouse_action_event(mouse_action action, mouse_button button, vec2 pos)
 	{
 		run_on_ui([this, action, button, pos]()
@@ -1809,6 +2261,8 @@ namespace GUI
         {
             back->to_front();
             back->visible = true;
+            exit_window->layer_opacity = 0.0f;
+            exit_window->fade_to(1.0f, fade_in_duration);
             add_child(exit_window);
         });
         return pr->get_future();
@@ -2143,10 +2597,12 @@ void PassDefault<Passes::UI::UI_Render>::render(
 
     auto& ui_ctx = context.graph->get_context<GUI::UIContext>();
 
-    const uint32_t size      = (uint32_t)ui_ctx.draw_infos.size();
-    const uint32_t per_pass  = context.graph->get_context<::Table::UI::UIRenderState>().per_pass;
-    const uint32_t start     = data.pass_index * per_pass;
-    const uint32_t end       = std::min(start + per_pass, size);
+    // This instance's range, chosen in create_graph so no layer is split.
+    if (data.pass_index >= ui_ctx.chunks.size())
+        return;
+
+    const uint32_t start     = ui_ctx.chunks[data.pass_index].first;
+    const uint32_t end       = ui_ctx.chunks[data.pass_index].second;
 
     auto command_list = context.get_list();
     auto texture = (*data.swapchain);
@@ -2161,10 +2617,15 @@ void PassDefault<Passes::UI::UI_Render>::render(
         command_list->get_graphics().set_rtv(rt, rt_options);
     }
 
+    const float ui_scale = [&]
     {
         const auto& display = context.graph->get_context<::Table::UI::DisplayState>();
+        return display.hdr ? display.sdr_white_nits / 80.0f : 1.0f;
+    }();
+
+    {
         Slots::UI::DisplayOutput output;
-        output.GetUi_scale() = display.hdr ? display.sdr_white_nits / 80.0f : 1.0f;
+        output.GetUi_scale() = ui_scale;
         command_list->get_graphics().set(output);
     }
 
@@ -2172,6 +2633,8 @@ void PassDefault<Passes::UI::UI_Render>::render(
     GUIInfo c;
     c.renderer   = &renderer;
     c.command_list = command_list;
+    c.target     = texture;
+    c.ui_scale   = ui_scale;
     c.delta_time = ui_ctx.dt;
     // data.ResultTexture, not a context lookup: need() resolved this field to
     // whatever the override selected (or to ResultTexture itself), so setup and
@@ -2196,11 +2659,18 @@ void PassDefault<Passes::UI::UI_Render>::render(
             c.offset      = e.offset;
             c.scissors    = e.scissors;
             c.window_size = ui_ctx.scaled_size;
+            c.layer         = e.layer;
+            c.layer_slot    = e.layer_slot;
+            c.layer_opacity = e.layer_opacity;
+
+            // The element is drawn where it was when this entry was collected,
+            // not where the GUI thread has since moved it.
+            draw_bounds_scope bounds_scope(e.elem, e.bounds);
 
             if (e.before)
-                e.elem->draw(c);
+                e.elem->draw_before(c);
             else
-                e.elem->draw_after(c);
+                e.elem->draw_end(c);
         }
     }
 

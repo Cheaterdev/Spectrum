@@ -12,12 +12,9 @@ namespace GUI
             if (background_style == view_style::DEFAULT)
             {
                 //skin->draw(this, c);
-                if (is_pressed())
-                    c.renderer->draw(c, skin.Pressed, get_render_bounds());
-                else if (is_hovered())
-                    c.renderer->draw(c, skin.Hover, get_render_bounds());
-                else
-                    c.renderer->draw(c, skin.Normal, get_render_bounds());
+                GUI::Texture t = is_pressed() ? skin.Pressed : is_hovered() ? skin.Hover : skin.Normal;
+                t.mul_color.w *= control_opacity(c);
+                c.renderer->draw(c, t, get_render_bounds());
             }
 
             if (background_style == view_style::FLAT)
@@ -38,11 +35,17 @@ namespace GUI
 
         button::button()
         {
+            auto& light = add_effect<LightOverlay>();
+            light.reveal = true;
+            light.border = true;
+            light.ripple = true;
+            light.radius = 3.0f;
             clickable = true;
             clip_child = true;
             label_text.reset(new label());
             label_text->text = "click me!";
             label_text->docking = dock::FILL;
+            label_text->magnet_text = FW1_CENTER | FW1_VCENTER | FW1_NOWORDWRAP;
             add_child(label_text);
             padding = {3, 3, 3, 3};
             im.reset(new image());

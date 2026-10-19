@@ -26,6 +26,17 @@ export
         float scale = 1;
         HAL::Texture2DView result_texture_srv;
 
+        // What the UI is drawing into. Backdrop effects snapshot it mid-pass;
+        // an empty view (tests, previews that render the UI elsewhere) makes
+        // them fall back to their flat tint.
+        HAL::Texture2DView target;
+        float ui_scale = 1;
+
+        // Group opacity of the entry being drawn, from its draw_info.
+        bool  layer = false;
+        uint32_t layer_slot = 0;
+        float layer_opacity = 1.0f;
+
         GUIInfo() = default;
         GUIInfo(HAL::CommandList::ptr list);
     };
@@ -76,6 +87,10 @@ struct InputHandler
 
 	virtual	void key_action_event(key_action action, long key, key_mods mods) = 0;
 	virtual	void char_event(char32_t ch) = 0;
+
+	// Puts the hovered element's cursor on screen. Called from WM_SETCURSOR as well as after input,
+	// so the window's default arrow never gets a frame in between.
+	virtual	void apply_cursor() {}
 };
 
 namespace GUI
@@ -155,9 +170,149 @@ namespace GUI
         NONE = 0, WIDTH = 1, HEIGHT = 2, ALL = 3
     };
 
-	
+
+
+    // A soft procedural shadow or glow around an element's rounded rect,
+    // drawn outside the shape only (see Renderer::draw_shadow). Sizes are in
+    // UI pixels at scale 1; color is sRGB, alpha = strength.
+    struct ShadowStyle
+    {
+        float4 color   = { 0, 0, 0, 0.5f };
+        float2 offset  = { 0, 0 };
+        float  blur    = 12.0f;   // Gaussian sigma
+        float  spread  = 0.0f;    // grows the shape before blurring
+        float  radius  = 4.0f;    // corner radius
+    };
+
+    // Procedural light effects on an element's rounded rect (Renderer::draw_fx),
+    // drawn over its own draw() and under its children. Which ones apply is per
+    // element; strengths and sizes come from the UI Effects settings.
+    struct OverlayFx
+    {
+        bool  reveal = false;   // soft light following the cursor while hovered
+        bool  border = false;   // lit rim, brightest near the cursor
+        bool  shine  = false;   // one diagonal sweep when the hover starts
+        bool  ripple = false;   // a wave from the press point
+        bool  focus  = false;   // accent ring while the element has keyboard focus
+        bool  inner  = false;   // darkening just inside the edge (depth)
+        float radius = 4.0f;    // corner radius
+        float3 light = { 1.0f, 1.0f, 1.0f };   // sRGB colour of reveal / edge light / shine; tint it on light surfaces
+    };
+
+    // An eased highlight bar for single selection in lists and trees: it slides from
+    // the old row to the new one instead of jumping, fades out when nothing is
+    // selected, and appears in place the first time. y and h are relative to the
+    // scrolled content's origin, so scrolling moves the bar with its rows (easing
+    // them in screen space would make it lag behind).
+    struct SlidingHighlight
+    {
+        float y = 0.0f, h = 0.0f;
+        float alpha = 0.0f;       // 0..1, eased
+        bool  valid = false;
+
+        // `snap` skips the easing (animations off).
+        void update(bool present, float target_y, float target_h, float dt, bool snap);
+        // The selected row itself moved (a tree row pushed by an expanding branch):
+        // the bar goes with it at once instead of trailing a few frames behind.
+        void follow(float target_y, float target_h) { y = target_y; h = target_h; }
+    };
 
     class base;
+
+    // One visual effect of an element: backdrop blur, shadow, glow, light overlay.
+    // An element holds an ordered stack of them (base::add_effect) -- most hold
+    // none -- and base::draw_before runs them around the element's own draw():
+    //   draw_under  before draw(), in stack order (blur first, then shadow: the blur
+    //               snapshot reads a little beyond the element and a shadow already
+    //               drawn there would be blurred into the glass),
+    //   draw()      the element itself,
+    //   draw_over   after draw(), under the children (labels stay readable).
+    // collect() and update() run on the thread that builds the draw list, once per
+    // visible element per frame; draw_* run on the render threads.
+    // Group opacity (fades) is not an effect: it wraps the whole sequence below and
+    // one layer must stay inside one command list, so it stays on the element.
+    class effect
+    {
+        public:
+            bool enabled = true;
+            virtual ~effect() = default;
+
+            virtual void  collect(base&) {}
+            virtual void  update(base&, float /*dt*/) {}
+            // How far outside the render bounds it draws, in UI px (sizes the fade layer).
+            virtual float extent(const base&) const { return 0.0f; }
+            virtual void  draw_under(GUIInfo&, base&) {}
+            virtual void  draw_over(GUIInfo&, base&) {}
+    };
+
+    // Blurs what is behind the element's render bounds. Skin shadows are drawn as
+    // margins outside the bounds, so the bounds are the shape.
+    class BackdropBlur : public effect
+    {
+        public:
+            // Only blur when no ancestor already does: for plain panels that are
+            // their own frosted surface when standalone but just part of an
+            // already back-blurred window otherwise.
+            bool standalone_only = false;
+            // For panels that are mostly covered by their own controls: while the
+            // blur is active, the controls under it (buttons, combo boxes) draw
+            // their backgrounds at glass_opacity so the blur shows through them
+            // instead of only through the padding.
+            bool  glass_children = false;
+            float glass_opacity = 0.5f;
+            uint32_t slot = 0;
+
+            bool active(const base& e, const GUIInfo& c) const;
+            void collect(base& e) override;
+            void draw_under(GUIInfo& c, base& e) override;
+    };
+
+    // Soft drop shadow. Only the shape (style.radius, colour) is per element;
+    // strength, softness and offset come from the UI Effects settings.
+    class Shadow : public effect
+    {
+        public:
+            ShadowStyle style;
+            // 0..1 elevation: a lifted element (a dragged window) casts a larger,
+            // softer, stronger shadow. Eases toward lift_target over ~0.12 s.
+            float lift = 0.0f;
+            float lift_target = 0.0f;
+
+            float extent(const base& e) const override;
+            void  update(base& e, float dt) override;
+            void  draw_under(GUIInfo& c, base& e) override;
+    };
+
+    // Soft glow around the shape (a selection ring, for instance).
+    class Glow : public effect
+    {
+        public:
+            ShadowStyle style;
+
+            float extent(const base& e) const override;
+            void  draw_under(GUIInfo& c, base& e) override;
+    };
+
+    // Cursor-driven light on the element's rounded rect (reveal, edge light, shine,
+    // ripple, focus ring, inner shadow): the flags of OverlayFx choose which.
+    class LightOverlay : public effect, public OverlayFx
+    {
+        public:
+            // hover eases 0..1 with the cursor over the element or a descendant;
+            // shine_t runs 0..1 after the hover starts, -1 when idle.
+            float hover = 0.0f;
+            float shine_t = -1.0f;
+            // ripple_t runs 0..1 after a press (-1 idle) from ripple_origin;
+            // focus_t eases 0..1 with keyboard focus.
+            float ripple_t = -1.0f;
+            vec2  ripple_origin = { 0, 0 };
+            bool  was_pressed = false;
+            float focus_t = 0.0f;
+
+            void update(base& e, float dt) override;
+            void draw_over(GUIInfo& c, base& e) override;
+    };
+
     class drag_n_drop_package
     {
 
@@ -373,6 +528,79 @@ namespace GUI
 
          virtual void draw(Context&); // override;;
             virtual void draw_after(Context&);;
+
+            // The element's effect stack (see `effect`), drawn by draw_before around
+            // draw(). Empty for most elements. Set up when the element is built;
+            // it is read by the draw-list thread, so don't change it while the
+            // element is in the tree.
+            std::vector<std::unique_ptr<effect>> effects;
+
+            // The effect of type T, or null.
+            template<class T>
+            T* find_effect() const
+            {
+                for (auto& e : effects)
+                    if (auto* t = dynamic_cast<T*>(e.get()))
+                        return t;
+                return nullptr;
+            }
+
+            // Appends a T to the stack (or returns the one already there) and returns it.
+            template<class T>
+            T& add_effect()
+            {
+                if (auto* t = find_effect<T>())
+                    return *t;
+                effects.push_back(std::make_unique<T>());
+                return static_cast<T&>(*effects.back());
+            }
+
+            // Whether the element's backdrop blur is on and drawing right now. Elements
+            // use it to switch to a translucent look.
+            bool backdrop_active(const Context& c) const;
+
+            // The parent without get_ptr(): get_parent() throws for a root that no
+            // shared_ptr owns (a user_interface on the stack in the GUI tests).
+            base* get_raw_parent() const { return parent; }
+
+            friend class effect;
+            friend class BackdropBlur;
+            friend class Shadow;
+            friend class Glow;
+            friend class LightOverlay;
+
+            float fade_from = 1.0f;
+            float fade_target = 1.0f;
+            float fade_t = 1.0f;            // 0..1 along the fade, 1 = not fading
+            float fade_duration = 0.1f;
+
+            // Group opacity: while below 1 the element and everything inside it
+            // is drawn as one unit and blended back with this opacity
+            // (Renderer::begin_layer). fade_to animates it.
+            float layer_opacity = 1.0f;
+            // Runs once, as a UI task (not inside the draw walk, which iterates
+            // the parent's children), when the current fade reaches its target.
+            std::function<void()> on_fade_end;
+            void  fade_to(float target, float seconds);
+            void  update_fade(float dt);
+            bool  layer_wanted() const;
+            // Windows and graph nodes set this: when added they fade in as a group.
+            bool  fade_on_add = false;
+            // Fades out as a group and removes the element when the fade ends (it
+            // stays in the tree and keeps drawing until then). Without fades it is
+            // removed at once. Repeated calls are harmless.
+            void  fade_close();
+            // Changed mind mid fade_close(): fade back in and stay.
+            void  cancel_fade_close();
+            bool  is_fade_closing() const { return fade_closing; }
+            bool  fade_closing = false;
+            bool  layer_open = false;       // between draw_before and draw_end
+            // draw_after, then closes the layer opened by draw_before.
+            void  draw_end(Context& c);
+            // Background opacity for a control: the nearest ancestor's
+            // BackdropBlur::glass_opacity while its blur is active, else 1.
+            float control_opacity(const Context& c);
+            void draw_before(Context& c);
 			virtual sizer update_layout(sizer r, float scale);
             virtual void update_childs_layout(sizer& r, float scale);
               virtual void update_childs_layout_after(sizer &r, float scale);
@@ -587,11 +815,41 @@ namespace GUI
         base* elem;
         vec2 offset;
         bool before;
+        // The element is a group-opacity layer: its before entry opens the
+        // layer, its after entry closes it. Everything in between must be
+        // recorded in the same command list.
+        bool layer = false;
+        // Captured with the entry: the render thread reads these, not the
+        // element's live state, which the GUI thread is already updating for
+        // the next frame.
+        uint32_t layer_slot = 0;
+        float layer_opacity = 1.0f;
+        // The element's render bounds when the entry was collected. Draws use
+        // these (see draw_bounds_scope), so geometry matches the clip above.
+        rect bounds;
+    };
+
+    // While alive on a draw thread, owner->get_render_bounds() returns `bounds`
+    // (the geometry captured when the draw list was built) instead of the live
+    // value. The GUI thread lays the next frame out while this one is still being
+    // recorded, so a moving element's live bounds run ahead of the clip rectangles
+    // in the draw list: its blur, shadow and fill would then be placed against
+    // different edges. Layout code runs on other threads and is unaffected.
+    class draw_bounds_scope
+    {
+            const base* previous_owner;
+            rect        previous_bounds;
+        public:
+            draw_bounds_scope(const base* owner, const rect& bounds);
+            ~draw_bounds_scope();
     };
 
     struct UIContext
     {
         std::vector<draw_info> draw_infos;
+        // [begin, end) ranges of draw_infos, one per UI_Render instance, never
+        // splitting a layer.
+        std::vector<std::pair<uint32_t, uint32_t>> chunks;
         std::vector<base*> pre_draw_infos;
 
         float dt = 0;
@@ -646,6 +904,61 @@ namespace GUI
 
             std::vector<base*> pre_draw_infos;
             std::vector<draw_info> draw_infos;
+
+            // Backdrop blur (any element with backdrop_blur set). Not a
+            // VariableContext base: user_interface is already a GUI::base and
+            // its add_child would become ambiguous.
+            std::unique_ptr<VariableContext> backdrop_context = VariableContext::create(L"UI Backdrop");
+            Variable<bool>  backdrop_enabled    = { true, "Blur backgrounds", backdrop_context.get() };
+            Variable<float> backdrop_radius     = { 3.0f, "Blur radius (px)", backdrop_context.get(), 0.0f, 96.0f };
+            Variable<float> backdrop_saturation = { 1.0f, "Blur saturation", backdrop_context.get(), 0.0f, 2.0f };
+            Variable<float> backdrop_tint       = { 0.12f, "Blur tint strength", backdrop_context.get(), 0.0f, 1.0f };
+            // Acrylic finish: luminosity pull toward the tint, and static grain.
+            Variable<float> backdrop_luminosity = { 0.25f, "Blur luminosity", backdrop_context.get(), 0.0f, 1.0f };
+            Variable<float> backdrop_noise      = { 0.03f, "Blur grain", backdrop_context.get(), 0.0f, 0.2f };
+
+            // Procedural shadows and glow (ShadowStyle on elements).
+            std::unique_ptr<VariableContext> effects_context = VariableContext::create(L"UI Effects");
+            Variable<bool>  shadows_enabled  = { true, "Shadows", effects_context.get() };
+            Variable<float> shadow_opacity   = { 0.45f, "Shadow opacity", effects_context.get(), 0.0f, 1.0f };
+            Variable<float> shadow_blur      = { 10.0f, "Shadow softness (px)", effects_context.get(), 0.5f, 48.0f };
+            Variable<float> shadow_offset    = { 3.0f, "Shadow offset (px)", effects_context.get(), 0.0f, 24.0f };
+            Variable<bool>  glow_enabled     = { true, "Glow", effects_context.get() };
+            Variable<float> glow_strength    = { 0.8f, "Glow strength", effects_context.get(), 0.0f, 2.0f };
+            Variable<float> glow_size        = { 5.0f, "Glow size (px)", effects_context.get(), 0.5f, 32.0f };
+
+            // Cursor-driven light effects (OverlayFx on elements).
+            Variable<bool>  reveal_enabled   = { true, "Reveal highlight", effects_context.get() };
+            Variable<float> reveal_strength  = { 0.16f, "Reveal strength", effects_context.get(), 0.0f, 1.0f };
+            Variable<float> reveal_size      = { 48.0f, "Reveal size (px)", effects_context.get(), 4.0f, 200.0f };
+            Variable<bool>  border_enabled   = { true, "Edge light", effects_context.get() };
+            Variable<float> border_strength  = { 0.8f, "Edge light strength", effects_context.get(), 0.0f, 1.0f };
+            Variable<float> border_size      = { 70.0f, "Edge light size (px)", effects_context.get(), 4.0f, 300.0f };
+            Variable<bool>  shine_enabled    = { true, "Shine sweep", effects_context.get() };
+            Variable<float> shine_strength   = { 0.28f, "Shine strength", effects_context.get(), 0.0f, 1.0f };
+            Variable<float> shine_duration   = { 0.7f, "Shine duration (s)", effects_context.get(), 0.1f, 3.0f };
+            Variable<bool>  ripple_enabled   = { true, "Press ripple", effects_context.get() };
+            Variable<float> ripple_strength  = { 0.25f, "Ripple strength", effects_context.get(), 0.0f, 1.0f };
+            Variable<float> ripple_duration  = { 0.55f, "Ripple duration (s)", effects_context.get(), 0.1f, 2.0f };
+            Variable<bool>  focus_enabled    = { true, "Focus ring", effects_context.get() };
+            Variable<float> focus_strength   = { 0.9f, "Focus ring strength", effects_context.get(), 0.0f, 1.0f };
+            Variable<bool>  inner_enabled    = { true, "Inner shadow", effects_context.get() };
+            Variable<float> inner_strength   = { 0.35f, "Inner shadow strength", effects_context.get(), 0.0f, 1.0f };
+            Variable<float> inner_size       = { 10.0f, "Inner shadow size (px)", effects_context.get(), 1.0f, 48.0f };
+
+            // Group fades (base::layer_opacity): menu popups and message boxes fade in.
+            Variable<bool>  fade_enabled     = { true, "Group fades", effects_context.get() };
+            Variable<float> fade_in_duration = { 0.14f, "Fade-in duration (s)", effects_context.get(), 0.02f, 1.5f };
+            Variable<float> fade_out_duration = { 0.10f, "Fade-out duration (s)", effects_context.get(), 0.02f, 1.5f };
+            Variable<bool>  window_animations = { true, "Window open/close fades", effects_context.get() };
+
+            // Hands each backdrop element its own snapshot slot for the frame:
+            // two elements recorded into different command lists must not
+            // share a texture. Reset when the draw list is collected.
+            uint32_t backdrop_counter = 0;
+            // The same for group-opacity layers (one snapshot texture each).
+            uint32_t layer_counter = 0;
+
             using ptr = s_ptr<user_interface>;
             using wptr = w_ptr<user_interface>;
             std::mutex m;
@@ -675,6 +988,7 @@ namespace GUI
             virtual void mouse_wheel_event(mouse_wheel type, float value, vec2 pos);
             virtual void key_action_event(key_action action, long key, key_mods mods);
             virtual void char_event(char32_t ch);
+            virtual void apply_cursor() override;
 
          //   virtual void draw_ui(Context&);
 

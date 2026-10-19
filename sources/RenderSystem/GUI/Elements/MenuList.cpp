@@ -5,12 +5,26 @@ import :Renderer;
 
 void GUI::Elements::menu_list::draw(Context& c)
 {
+    // The blurred backdrop (drawn by draw_before) replaces the skinned
+    // container; without a target the container stays.
+    if (backdrop_active(c))
+        return;
+
     c.renderer->draw_container(get_ptr(), c);
 }
 
 GUI::Elements::menu_list::menu_list(bool vertical)
 {
     this->vertical = vertical;
+    // Popups blur what is behind them and sit slightly recessed; the menu strip is a flat bar.
+    if (vertical)
+    {
+        add_effect<BackdropBlur>();
+        add_effect<Shadow>();
+        auto& light = add_effect<LightOverlay>();
+        light.inner = true;
+        light.radius = 0.0f;
+    }
     padding = { 1, 1, 1, 1 };
     docking = GUI::dock::NONE;
     if (!vertical)
@@ -99,12 +113,50 @@ bool GUI::Elements::menu_list::is_self_open()
 
 void GUI::Elements::menu_list::self_open(user_interface* ui)
 {
+    // Closed a moment ago and still fading out: bring the same popup back
+    // instead of adding it a second time.
+    if (get_parent())
+    {
+        cancel_close();
+        return;
+    }
+
     ui->add_child(get_ptr());
+
+    // Every popup (submenus, context menus, dropdowns) fades in as one group:
+    // the blur, the shadow and the items together.
+    layer_opacity = 0.0f;
+    fade_to(1.0f, ui->fade_in_duration);
 }
 
 void GUI::Elements::menu_list::self_close()
 {
-    remove_from_parent();
+    // Without fades (or a tree to draw it in) the popup just goes.
+    if (!user_ui || !user_ui->fade_enabled || !get_parent())
+    {
+        remove_from_parent();
+        return;
+    }
+
+    if (fading_out)
+        return;
+
+    fading_out = true;
+    fade_to(0.0f, user_ui->fade_out_duration);
+
+    // fade_to dropped any earlier callback; set ours after it.
+    on_fade_end = [self = get_ptr<menu_list>()]()
+    {
+        self->fading_out = false;
+        self->remove_from_parent();
+        self->layer_opacity = 1.0f;
+    };
+}
+
+void GUI::Elements::menu_list::cancel_close()
+{
+    fading_out = false;
+    fade_to(1.0f, user_ui ? float(user_ui->fade_in_duration) : 0.1f);
 }
 
 void GUI::Elements::menu_list::remove_all()
@@ -124,6 +176,11 @@ void GUI::Elements::menu_list::remove_all()
 
 GUI::Elements::menu_list_element::menu_list_element(bool on_strip)
 {
+    auto& light = add_effect<LightOverlay>();
+    light.reveal = true;
+    light.border = true;
+    light.ripple = true;
+    light.radius = 0.0f;
     this->on_strip = on_strip;
 }
 
@@ -207,7 +264,8 @@ namespace GUI
       
         {
 
-            user_ui->add_child(menu);
+            // Fades in, or comes back if it is still fading out from a close.
+            menu->self_open(user_ui);
 
             rect p = get_render_bounds();
 
@@ -227,7 +285,8 @@ namespace GUI
         {
             menu->close_menus();
 
-            menu->remove_from_parent();
+            // Fades out, then leaves the tree (immediately when fades are off).
+            menu->self_close();
 
 
         }

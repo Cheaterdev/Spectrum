@@ -124,6 +124,8 @@ export namespace GUI
                 std::vector<float4> selection;
                 Text::Caret         caret;
                 bool                caret_visible = false;
+                float               caret_blink_time = 0.0f;   // seconds into the blink cycle
+                bool                was_focused = false;
 
                 // Block images: the document holds only ids (Text::Editor image
                 // paragraphs), the textures live here. Guarded by m.
@@ -162,6 +164,11 @@ export namespace GUI
                 // Enter starts a new line and Tab inserts a tab; newlines and tabs
                 // survive paste. Single-line fields drop them.
                 bool multiline = false;
+
+                // Selecting, copying and scrolling work; anything that changes the text
+                // (typing, paste, cut, delete, undo, formatting, drops) is ignored.
+                // set_text() still replaces the content.
+                bool read_only = false;
 
                 // A gutter with 1-based line numbers left of the text (multiline).
                 bool line_numbers = false;

@@ -48,6 +48,7 @@ public:
         nvidia::NRD::reset();
         nvidia::Streamline::reset();
 	    GUI::NinePatch::reset();
+	    GUI::Renderer::reset_backdrop();
     	AssetRenderer::reset();
         Skin::reset();
         HAL::Texture::reset_manager();

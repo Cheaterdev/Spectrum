@@ -160,6 +160,19 @@ namespace GUI
 			// Text is issued directly, not through the batched NinePatch path, so
 			// anything queued ahead of it must reach the list first.
 			c.renderer->flush(c);
+
+			// Two offset passes, the far one fainter, so the shadow fades out instead of
+			// reading as a hard duplicate of the glyphs.
+			if (shadow_color.w > 0.0f)
+			{
+				const vec2 step = shadow_offset * c.scale;
+				// Clipped to the parent, not the label box: the shadow falls outside the glyphs' box.
+				const sizer shadow_clip = sizer(c.ui_clipping);
+				Text::Engine::get().draw(c.command_list, layout, pos + step * 2.0f,
+					float4(shadow_color.x, shadow_color.y, shadow_color.z, shadow_color.w * 0.35f), shadow_clip, c.window_size);
+				Text::Engine::get().draw(c.command_list, layout, pos + step, shadow_color, shadow_clip, c.window_size);
+			}
+
 			Text::Engine::get().draw(c.command_list, layout, pos, color, clip, c.window_size);
 		}
 

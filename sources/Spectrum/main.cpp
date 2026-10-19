@@ -419,7 +419,7 @@ class material_settings_panel : public GUI::base
 	materials::universal_material*   m_material;
 	::FlowGraph::graph*              m_graph;
 	uint32_t                         m_shown_generation = ~0u;
-	GUI::Elements::MultiLineLabel::ptr m_text;
+	GUI::Elements::edit_text::ptr    m_text;
 
 	// Live 3D preview, docked at the very top of the panel -- same
 	// SceneTextureRenderer/test-mesh mechanism asset_preview_content uses
@@ -498,12 +498,14 @@ public:
 			add_child(row);
 		}
 
-		// Own child, not inherited -- MultiLineLabel::on_text_changed() does
-		// contents->remove_all() on itself whenever .text is set, which
-		// would also wipe the checkboxes above if they were its children
-		// too.
-		m_text = std::make_shared<GUI::Elements::MultiLineLabel>();
-		m_text->docking = GUI::dock::FILL;
+		// The generated pixel shader: HLSL-highlighted, selectable and copyable,
+		// but not editable -- it is rebuilt from the graph, so edits would be lost.
+		m_text = std::make_shared<GUI::Elements::edit_text>(Text::Style{ 13, Text::Weight::Normal, Text::Family::Mono });
+		m_text->docking      = GUI::dock::FILL;
+		m_text->multiline    = true;
+		m_text->line_numbers = true;
+		m_text->read_only    = true;
+		m_text->highlighter  = GUI::Syntax::highlight_hlsl;
 		add_child(m_text);
 	}
 
@@ -565,7 +567,7 @@ public:
 
 		m_shown_generation = m_material->preview_source_generation;
 		auto src = m_material->get_pixel_shader_source();
-		m_text->text = src.uniforms + src.text;
+		m_text->set_text(src.uniforms + src.text);
 	}
 };
 
@@ -775,14 +777,18 @@ namespace GUI
 class debug_toolbar_panel : public GUI::base
 {
 public:
+	debug_toolbar_panel()
+	{
+		// The combo boxes cover all but the 4 px padding, so they go glass too.
+		add_effect<GUI::BackdropBlur>().glass_children = true;
+		add_effect<GUI::Shadow>();
+	}
+
 	void draw(GUI::base::Context& c) override
 	{
-		GUI::Texture shadow = Skin::get().Shadow;
-		shadow.margins = { 12, 12, 12, 12 };
-		c.renderer->draw(c, shadow, get_render_bounds());
-
+		// Translucent over the blurred backdrop, so it reads as frosted glass.
 		GUI::Texture bg = Skin::get().FlowWindow.Inactive;
-		bg.mul_color = float4(22, 28, 38, 255) / 255.0f;
+		bg.mul_color = float4(22, 28, 38, backdrop_active(c) ? 150 : 255) / 255.0f;
 		c.renderer->draw(c, bg, get_render_bounds());
 	}
 };
@@ -2022,6 +2028,80 @@ public:
 							}
 							add_row("Toasts", toasts);
 
+							// Procedural shadow and glow (Properties > UI Effects). They are drawn
+							// outside the element, so the cards keep margins around them.
+							auto shadow_row = std::make_shared<layouts::horizontal>();
+							auto add_panel = [&](GUI::base::ptr row, const std::string& caption, bool shadow, bool glow)
+								{
+									auto card = std::make_shared<colored_rect>();
+									card->color = float4(0.14f, 0.16f, 0.22f, 1.0f);
+									card->width_size = GUI::size_type::FIXED;
+									card->height_size = GUI::size_type::FIXED;
+									card->size = { 96, 44 };
+									card->margin = { 8, 8, 22, 12 };
+									if (shadow)
+										card->add_effect<GUI::Shadow>().style.radius = 4.0f;
+									if (glow)
+									{
+										auto& glow_effect = card->add_effect<GUI::Glow>();
+										glow_effect.style.color = float4(0.21f, 0.45f, 0.79f, 1.0f);
+										glow_effect.style.radius = 4.0f;
+									}
+
+									auto text = std::make_shared<label>();
+									text->docking = GUI::dock::FILL;
+									text->magnet_text = FW1_CENTER | FW1_VCENTER | FW1_NOWORDWRAP;
+									text->text = caption;
+									card->add_child(text);
+									row->add_child(card);
+								};
+							add_panel(shadow_row, "Shadow", true, false);
+							add_panel(shadow_row, "Glow", false, true);
+							add_panel(shadow_row, "Both", true, true);
+							add_row("Shadow & glow", shadow_row);
+
+							// Backdrop blur: a translucent panel over loud stripes, so what the
+							// blur does (radius, saturation, tint, grain in Properties > UI
+							// Backdrop) is visible on hard edges.
+							auto blur_stage = std::make_shared<GUI::base>();
+							blur_stage->width_size = GUI::size_type::FIXED;
+							blur_stage->height_size = GUI::size_type::FIXED;
+							blur_stage->size = { 330, 110 };
+							blur_stage->margin = { 0, 0, 0, 6 };
+							const float4 stripe_colors[] = { float4(0.92f, 0.22f, 0.22f, 1), float4(0.05f, 0.05f, 0.08f, 1),
+							                                  float4(0.25f, 0.85f, 0.35f, 1), float4(0.95f, 0.95f, 0.95f, 1),
+							                                  float4(0.22f, 0.42f, 0.95f, 1), float4(0.05f, 0.05f, 0.08f, 1) };
+							for (int i = 0; i < 27; i++)
+							{
+								auto stripe = std::make_shared<colored_rect>();
+								stripe->color = stripe_colors[i % 6];
+								stripe->docking = GUI::dock::LEFT;
+								stripe->width_size = GUI::size_type::FIXED;
+								stripe->height_size = GUI::size_type::MATCH_PARENT;
+								stripe->size = { 12, 0 };
+								blur_stage->add_child(stripe);
+							}
+
+							auto blur_panel = std::make_shared<colored_rect>();
+							blur_panel->color = float4(0.04f, 0.05f, 0.08f, 0.25f);
+							blur_panel->docking = GUI::dock::NONE;
+							blur_panel->width_size = GUI::size_type::FIXED;
+							blur_panel->height_size = GUI::size_type::FIXED;
+							blur_panel->size = { 220, 64 };
+							blur_panel->pos = { 55, 23 };
+							blur_panel->add_effect<GUI::BackdropBlur>();
+							blur_panel->add_effect<GUI::Shadow>();
+							auto& blur_light = blur_panel->add_effect<GUI::LightOverlay>();
+							blur_light.inner = true;
+							blur_light.radius = 4.0f;
+							auto blur_text = std::make_shared<label>();
+							blur_text->docking = GUI::dock::FILL;
+							blur_text->magnet_text = FW1_CENTER | FW1_VCENTER | FW1_NOWORDWRAP;
+							blur_text->text = "Blur test";
+							blur_panel->add_child(blur_text);
+							blur_stage->add_child(blur_panel);
+							add_row("Backdrop blur", blur_stage);
+
 							status->docking = GUI::dock::TOP;
 							status->text = "Commit a value (Enter / click away) or pick something.";
 							split->first()->add_child(status);
@@ -2051,6 +2131,196 @@ public:
 							split->second()->add_child(list);
 
 							docker->get_tabs()->add_page("Widgets", split);
+						};
+
+					// The cursor-driven light effects (Properties > UI Effects) on plain
+					// cards, so each one can be looked at alone and together.
+					test->add_item("Effects")->on_click = [this](GUI::Elements::menu_list_element::ptr)
+						{
+							using namespace GUI::Elements;
+
+							GUI::base::ptr page(new GUI::base());
+							page->docking = GUI::dock::FILL;
+							page->padding = { 16, 16, 16, 16 };
+
+							auto hint = std::make_shared<label>();
+							hint->docking = GUI::dock::TOP;
+							hint->margin = { 0, 0, 0, 12 };
+							hint->text = "Hover the cards, click the ripple cards, click a text field for its focus ring. Strength, size and on/off are in Properties > UI Effects.";
+							page->add_child(hint);
+
+							auto add_row = [&](float height)
+								{
+									auto row = std::make_shared<GUI::base>();
+									row->docking = GUI::dock::TOP;
+									row->height_size = GUI::size_type::FIXED;
+									row->size = { 0, height };
+									row->margin = { 0, 0, 0, 10 };
+									page->add_child(row);
+									return row;
+								};
+
+							auto add_card = [&](GUI::base::ptr row, const std::string& caption, bool reveal, bool border, bool shine)
+								{
+									auto card = std::make_shared<colored_rect>();
+									card->color = float4(0.10f, 0.12f, 0.17f, 1.0f);
+									card->docking = GUI::dock::LEFT;
+									card->width_size = GUI::size_type::FIXED;
+									card->height_size = GUI::size_type::FIXED;
+									card->size = { 180, 52 };
+									card->margin = { 0, 0, 10, 0 };
+									auto& light = card->add_effect<GUI::LightOverlay>();
+									light.reveal = reveal;
+									light.border = border;
+									light.shine = shine;
+									light.radius = 6.0f;
+
+									auto text = std::make_shared<label>();
+									text->docking = GUI::dock::FILL;
+									text->magnet_text = FW1_CENTER | FW1_VCENTER | FW1_NOWORDWRAP;
+									text->text = caption;
+									card->add_child(text);
+									row->add_child(card);
+									return card;
+								};
+
+							auto singles = add_row(52);
+							add_card(singles, "Reveal highlight", true, false, false);
+							add_card(singles, "Edge light", false, true, false);
+							add_card(singles, "Shine sweep", false, false, true);
+
+							auto combined = add_row(52);
+							add_card(combined, "All three", true, true, true);
+
+							// Cheap effects: a click wave, and depth from an inner shadow.
+							auto cheap = add_row(52);
+							auto ripple_card = add_card(cheap, "Press ripple (click)", false, false, false);
+							ripple_card->add_effect<GUI::LightOverlay>().ripple = true;
+							auto inner_card = add_card(cheap, "Inner shadow", false, false, false);
+							inner_card->add_effect<GUI::LightOverlay>().inner = true;
+							auto both_card = add_card(cheap, "Ripple + inner", false, false, false);
+							both_card->add_effect<GUI::LightOverlay>().ripple = true;
+							both_card->add_effect<GUI::LightOverlay>().inner = true;
+
+							// Group fade (base::layer_opacity): the card and the two overlapping
+							// children fade as one unit, so the overlap never shows the lower
+							// child through the upper one (what per-element alpha would do).
+							auto fade_row = add_row(52);
+							auto group = std::make_shared<colored_rect>();
+							group->color = float4(0.10f, 0.12f, 0.17f, 1.0f);
+							group->docking = GUI::dock::LEFT;
+							group->width_size = GUI::size_type::FIXED;
+							group->height_size = GUI::size_type::FIXED;
+							group->size = { 180, 52 };
+							group->margin = { 0, 0, 10, 0 };
+							group->add_effect<GUI::Shadow>().style.radius = 4.0f;
+							for (auto [x, color] : { std::pair{ 24.0f, float4(0.20f, 0.80f, 0.35f, 1.0f) },
+							                         std::pair{ 64.0f, float4(0.25f, 0.45f, 0.95f, 1.0f) } })
+							{
+								auto blob = std::make_shared<colored_rect>();
+								blob->color = color;
+								blob->docking = GUI::dock::NONE;
+								blob->width_size = GUI::size_type::FIXED;
+								blob->height_size = GUI::size_type::FIXED;
+								blob->size = { 80, 32 };
+								blob->pos = { x, 10 };
+								group->add_child(blob);
+							}
+							fade_row->add_child(group);
+
+							auto fade_button = std::make_shared<button>();
+							fade_button->get_label()->text = "Fade out / in";
+							fade_button->docking = GUI::dock::LEFT;
+							fade_button->width_size = GUI::size_type::FIXED;
+							fade_button->size = { 120, 30 };
+							fade_button->margin = { 0, 11, 10, 0 };
+							GUI::base::wptr group_weak = group;
+							fade_button->on_click = [group_weak](button::ptr)
+								{
+									if (auto g = group_weak.lock())
+										g->fade_to(g->layer_opacity > 0.5f ? 0.15f : 1.0f, 0.5f);
+								};
+							fade_row->add_child(fade_button);
+
+							auto buttons = add_row(36);
+							for (const char* name : { "Buttons", "get", "reveal", "and edge" })
+							{
+								auto b = std::make_shared<button>();
+								b->get_label()->text = name;
+								b->docking = GUI::dock::LEFT;
+								b->width_size = GUI::size_type::FIXED;
+								b->size = { 110, 30 };
+								b->margin = { 0, 0, 10, 0 };
+								buttons->add_child(b);
+							}
+
+							// Animated progress bar (eased fill, sweeping highlight, glowing edge)
+							// and a button that opens a window to try the open / close fades and
+							// the lift while its title bar is dragged.
+							auto progress_row = add_row(30);
+							auto progress = std::make_shared<progress_bar>();
+							progress->docking = GUI::dock::LEFT;
+							progress->width_size = GUI::size_type::FIXED;
+							progress->height_size = GUI::size_type::FIXED;
+							progress->size = { 220, 12 };
+							progress->margin = { 0, 9, 10, 0 };
+							progress->value = 0.35f;
+							progress_row->add_child(progress);
+
+							auto step_button = std::make_shared<button>();
+							step_button->get_label()->text = "Progress +25%";
+							step_button->docking = GUI::dock::LEFT;
+							step_button->width_size = GUI::size_type::FIXED;
+							step_button->size = { 120, 30 };
+							step_button->margin = { 0, 0, 10, 0 };
+							GUI::Elements::progress_bar::wptr progress_weak = progress;
+							step_button->on_click = [progress_weak](button::ptr)
+								{
+									if (auto p = progress_weak.lock())
+										p->value = p->value >= 0.99f ? 0.0f : std::min(1.0f, float(p->value) + 0.25f);
+								};
+							progress_row->add_child(step_button);
+
+							auto window_button = std::make_shared<button>();
+							window_button->get_label()->text = "Open window";
+							window_button->docking = GUI::dock::LEFT;
+							window_button->width_size = GUI::size_type::FIXED;
+							window_button->size = { 110, 30 };
+							window_button->margin = { 0, 0, 10, 0 };
+							window_button->on_click = [this](button::ptr)
+								{
+									auto w = std::make_shared<GUI::Elements::window>();
+									w->set_title("Fades in, fades out");
+									w->width_size = GUI::size_type::FIXED;
+									w->height_size = GUI::size_type::FIXED;
+									w->size = { 260, 140 };
+									w->pos = { 300, 200 };
+									add_child(w);
+								};
+							progress_row->add_child(window_button);
+
+							// Edit text fields with the effects: a text box is an element too,
+							// so the same flags apply (opt-in here; text boxes default to none).
+							auto fields = add_row(30);
+							int field_index = 0;
+							for (const char* hint_text : { "Reveal + edge light", "Shine on hover", "All three" })
+							{
+								auto field = std::make_shared<edit_text>();
+								field->docking = GUI::dock::LEFT;
+								field->width_size = GUI::size_type::FIXED;
+								field->size = { 180, 30 };
+								field->margin = { 0, 0, 10, 0 };
+								field->placeholder = hint_text;
+								auto& light = field->add_effect<GUI::LightOverlay>();
+								light.reveal = field_index != 1;
+								light.border = field_index != 1;
+								light.shine = field_index >= 1;
+								light.radius = 3.0f;
+								fields->add_child(field);
+								field_index++;
+							}
+
+							docker->get_tabs()->add_page("Effects demo", page);
 						};
 
 					GUI::Elements::Debug::OutputWindow::on_open_file = [this](std::string file, int line, int column)

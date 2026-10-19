@@ -44,7 +44,10 @@ export namespace GUI
 
                 virtual void on_touch() override;
 
-
+                // Fades out and removes when the fade ends; see base::fade_close.
+                void close() { fade_close(); }
+                void cancel_close() { cancel_fade_close(); }
+                bool is_closing() const { return is_fade_closing(); }
 
         };
 

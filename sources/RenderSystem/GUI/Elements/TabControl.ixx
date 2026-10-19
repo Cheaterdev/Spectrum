@@ -62,6 +62,14 @@ export namespace GUI
 
                 virtual void draw(Context& c) override;
 				virtual void draw_after(Context&) override;
+                virtual void on_pre_render(Context& c) override;
+
+            private:
+                // The accent underline slides to the current tab (x and width, in render px).
+                float indicator_x = 0.0f, indicator_w = 0.0f;
+                bool  indicator_valid = false;
+
+            public:
 
                 virtual void on_bounds_changed(const rect& r) override;
                 virtual void close_menus() override;

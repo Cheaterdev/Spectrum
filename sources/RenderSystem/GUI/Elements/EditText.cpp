@@ -42,6 +42,13 @@ GUI::Elements::edit_text::edit_text() : edit_text(edit_style)
 GUI::Elements::edit_text::edit_text(Text::Style style) : style(style), editor(style)
 {
 	clickable = true;
+	auto& light = add_effect<LightOverlay>();
+	light.focus = true;
+	// White light vanishes on the light skin: tint the hover effects with the accent.
+	light.reveal = true;
+	light.border = true;
+	light.light = float3(0.21f, 0.45f, 0.79f);
+	light.radius = 3.0f;
 
 	// Control characters never enter the text, whatever the user filter says;
 	// a multiline field lets newlines and tabs through (typed or pasted). '\r'
@@ -137,7 +144,7 @@ void GUI::Elements::edit_text::on_char(char32_t ch)
 {
 	// Ctrl+letter arrives as a control character too; shortcuts are handled
 	// from the key event instead.
-	if (ch < 0x20 || ch == 0x7F) return;
+	if (ch < 0x20 || ch == 0x7F || read_only) return;
 	std::lock_guard<std::mutex> guard(m);
 	events.emplace_back(ch);
 }
@@ -213,7 +220,7 @@ bool GUI::Elements::edit_text::on_wheel(mouse_wheel type, float value, vec2 pos)
 bool GUI::Elements::edit_text::need_drag_drop()
 {
 	std::lock_guard<std::mutex> guard(m);
-	return drag_candidate;
+	return drag_candidate && !read_only;
 }
 
 void GUI::Elements::edit_text::on_drag_start()
@@ -233,7 +240,7 @@ void GUI::Elements::edit_text::generate_container(base::ptr holder)
 
 bool GUI::Elements::edit_text::can_accept(drag_n_drop_package::ptr package)
 {
-	if (!package) return false;
+	if (!package || read_only) return false;
 	if (package->name == "text") return true;
 
 	// Anything the image hook can turn into a texture becomes a block image.
@@ -310,15 +317,15 @@ void GUI::Elements::edit_text::open_context_menu(vec2 pos)
 
 	const bool selection = editor.has_selection();
 
-	if (editor.can_undo()) add("Undo", 'Z', true);
-	if (editor.can_redo()) add("Redo", 'Y', true);
-	if (selection)         add("Cut", 'X', true);
-	if (selection)         add("Copy", 'C', true);
-	add("Paste", 'V', true);
-	if (selection)         add("Delete", VK_DELETE, false);
+	if (!read_only && editor.can_undo()) add("Undo", 'Z', true);
+	if (!read_only && editor.can_redo()) add("Redo", 'Y', true);
+	if (!read_only && selection)         add("Cut", 'X', true);
+	if (selection)                       add("Copy", 'C', true);
+	if (!read_only)                      add("Paste", 'V', true);
+	if (!read_only && selection)         add("Delete", VK_DELETE, false);
 	add("Select All", 'A', true);
 
-	if (selection && formatting)
+	if (selection && formatting && !read_only)
 	{
 		add("Bold", 'B', true);
 		add("Italic", 'I', true);
@@ -369,16 +376,16 @@ void GUI::Elements::edit_text::process_key(long key, key_mods mods)
 	case VK_DOWN:   editor.key(Key::Down, shift, ctrl); return;
 	case VK_HOME:   editor.key(Key::Home, shift, ctrl); return;
 	case VK_END:    editor.key(Key::End, shift, ctrl); return;
-	case VK_BACK:   editor.key(Key::Backspace, shift, ctrl); return;
-	case VK_DELETE: editor.key(Key::Delete, shift, ctrl); return;
+	case VK_BACK:   if (!read_only) editor.key(Key::Backspace, shift, ctrl); return;
+	case VK_DELETE: if (!read_only) editor.key(Key::Delete, shift, ctrl); return;
 
 	case VK_RETURN:
-		if (multiline) editor.key(Key::Enter, shift, ctrl);
+		if (multiline && !read_only) editor.key(Key::Enter, shift, ctrl);
 		return;
 
 	case VK_TAB:
 		// Tab arrives only as a key: on_char drops control characters.
-		if (multiline && !ctrl) editor.insert(U'\t');
+		if (multiline && !ctrl && !read_only) editor.insert(U'\t');
 		return;
 	}
 
@@ -391,11 +398,11 @@ void GUI::Elements::edit_text::process_key(long key, key_mods mods)
 		break;
 
 	case 'B':
-		if (formatting) editor.toggle_bold();
+		if (formatting && !read_only) editor.toggle_bold();
 		break;
 
 	case 'I':
-		if (formatting) editor.toggle_italic();
+		if (formatting && !read_only) editor.toggle_italic();
 		break;
 
 	case 'C':
@@ -404,20 +411,21 @@ void GUI::Elements::edit_text::process_key(long key, key_mods mods)
 
 	case 'X':
 		copy_selection();
-		editor.delete_selection();
+		if (!read_only) editor.delete_selection();
 		break;
 
 	case 'V':
-		if (user_ui && user_ui->get_clipboard)
+		if (!read_only && user_ui && user_ui->get_clipboard)
 			editor.insert(utf16_to_utf8(user_ui->get_clipboard()));
 		break;
 
 	case 'Z':
+		if (read_only) break;
 		if (shift) editor.redo(); else editor.undo();
 		break;
 
 	case 'Y':
-		editor.redo();
+		if (!read_only) editor.redo();
 		break;
 	}
 }
@@ -670,7 +678,7 @@ void GUI::Elements::edit_text::on_pre_render(Context& c)
 				text_dirty = true;
 		}
 
-		caret_visible = is_focused();
+		const bool focused = is_focused();
 
 		// Wide enough for the largest number (at least two digits, so it doesn't
 		// jump at line 10), plus a gap on each side. Before the scroll update:
@@ -691,7 +699,20 @@ void GUI::Elements::edit_text::on_pre_render(Context& c)
 		const rect content = content_rect(c);
 		const vec2 view    = vec2(content.w, content.h) / c.scale;
 		drag_select_scroll(c, content, view, scroll_before);
+		const Text::Caret prev_caret = caret;
 		caret = editor.caret();
+
+		// Blink like a native field: solid right after focus or any caret move/edit, so
+		// the caret never vanishes while typing or arrowing, then on/off at a steady rate.
+		constexpr float blink_period = 1.06f;
+		const bool moved = caret.center.x != prev_caret.center.x || caret.center.y != prev_caret.center.y
+		                || caret.height != prev_caret.height;
+		if (!focused || !was_focused || moved)
+			caret_blink_time = 0.0f;
+		else
+			caret_blink_time = std::fmod(caret_blink_time + c.delta_time, blink_period);
+		was_focused   = focused;
+		caret_visible = focused && caret_blink_time < blink_period * 0.5f;
 		update_scroll(view);
 		if (multiline)
 			sync_scroll_bars(view, editor.content_size() + vec2(4, 0));

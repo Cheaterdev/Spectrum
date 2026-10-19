@@ -10,13 +10,22 @@ void GUI::Elements::window::set_title(std::string title)
 void GUI::Elements::window::draw(Context& c)
 {
 	// skin->draw(this, c);
-	c.renderer->draw(c, skin.Active, get_render_bounds());
+	// The skin's frame and title bar are opaque, which hid the blur everywhere
+	// but the content area; translucent while blurring so the whole window is glass.
+	GUI::Texture t = skin.Active;
+	if (backdrop_active(c))
+		t.mul_color.w *= 0.6f;
+	c.renderer->draw(c, t, get_render_bounds());
 	label_text->color = pressed ? float4(200, 200, 200, 255) / 255.0f : float4(1, 1, 1, 1);
 }
 
 GUI::Elements::window::window() : GUI::Elements::resizable()
 {
 	margin = { 20, 20, 20, 20 };
+	fade_on_add = true;
+	add_effect<BackdropBlur>();
+	add_effect<Shadow>();
+	add_effect<LightOverlay>().inner = true;
 	clickable = false;
 	clip_child = true;
 	label_text.reset(new label());
@@ -41,7 +50,7 @@ GUI::Elements::window::window() : GUI::Elements::resizable()
 	close_button->docking = dock::RIGHT;
 	close_button->on_click = [this](button::ptr)
 	{
-		remove_from_parent();
+		close();
 	};
 	title_bar->add_child(close_button);
 	title_bar->add_child(label_text);
@@ -77,6 +86,9 @@ void GUI::Elements::window::remove_child(base::ptr obj)
 
 void GUI::Elements::window::on_touch()
 {
+	if (is_fade_closing())
+		return;
+
 	resizable::on_touch();
 	to_front();
 }

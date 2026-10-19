@@ -119,6 +119,22 @@ namespace Text
             { IconBuilder i(icons, "chevron_right"); i.polygon({ {5.5f, 3}, {10.5f, 8}, {5.5f, 13}, {4, 11.5f}, {7.5f, 8}, {4, 4.5f} }); }
             { IconBuilder i(icons, "chevron_down");  i.polygon({ {3, 5.5f}, {4.5f, 4}, {8, 7.5f}, {11.5f, 4}, {13, 5.5f}, {8, 10.5f} }); }
             {
+                // chevron_right turned clockwise about the grid centre in 10-degree
+                // steps, chevron_0 (right) to chevron_90 (down): a tree arrow that
+                // rotates as its branch opens. Pre-built rather than rotated per
+                // frame so the atlas keeps one small entry per step.
+                static std::string names[10];
+                for (int step = 0; step < 10; step++)
+                {
+                    names[step] = "chevron_" + std::to_string(step * 10);
+                    const float a = step * 10.0f * 3.14159265f / 180.0f;
+                    const float c = std::cos(a), s = std::sin(a);
+                    auto turn = [&](float x, float y) { const float dx = x - 8, dy = y - 8; return skb_vec2_t{ 8 + dx * c - dy * s, 8 + dx * s + dy * c }; };
+                    IconBuilder i(icons, names[step].c_str());
+                    i.polygon({ turn(5.5f, 3), turn(10.5f, 8), turn(5.5f, 13), turn(4, 11.5f), turn(7.5f, 8), turn(4, 4.5f) });
+                }
+            }
+            {
                 IconBuilder i(icons, "close");
                 i.polygon({ {3.5f, 4.9f}, {4.9f, 3.5f}, {12.5f, 11.1f}, {11.1f, 12.5f} });
                 i.polygon({ {11.1f, 3.5f}, {12.5f, 4.9f}, {4.9f, 12.5f}, {3.5f, 11.1f} });

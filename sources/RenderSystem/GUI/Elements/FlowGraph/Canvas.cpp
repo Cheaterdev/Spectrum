@@ -65,14 +65,18 @@ namespace
 	class toolbar_panel : public GUI::base
 	{
 	public:
+		toolbar_panel()
+		{
+			// The buttons cover all but the 4 px padding, so they go glass too.
+			add_effect<GUI::BackdropBlur>().glass_children = true;
+			add_effect<GUI::Shadow>();
+		}
+
 		void draw(GUI::base::Context& c) override
 		{
-			GUI::Texture shadow = Skin::get().Shadow;
-			shadow.margins = { 12, 12, 12, 12 };
-			c.renderer->draw(c, shadow, get_render_bounds());
-
+			// Translucent over the blurred backdrop, so it reads as frosted glass.
 			GUI::Texture bg = Skin::get().FlowWindow.Inactive;
-			bg.mul_color = float4(22, 28, 38, 255) / 255.0f;
+			bg.mul_color = float4(22, 28, 38, backdrop_active(c) ? 150 : 255) / 255.0f;
 			c.renderer->draw(c, bg, get_render_bounds());
 		}
 	};
@@ -190,7 +194,9 @@ void GUI::Elements::FlowGraph::canvas::draw(Context& c)
 	g->cam_pos = contents->pos;
 	c.renderer->flush(c);
 	auto clip = c.scissors;
-	c.command_list->get_graphics().set_scissors(c.ui_clipping);
+	// ui_clipping alone ignores scissors set by ancestors (self/child scissor), so the
+	// splines would spill out of them; narrow the active scissor instead of replacing it.
+	c.command_list->get_graphics().set_scissors(sizer_long(intersect(sizer(c.scissors), sizer(c.ui_clipping))));
 
 	Slots::UI::FlowGraph graph_data;
 	graph_data.GetSize() = vec4(render_bounds->size, user_ui->size.get());
@@ -302,7 +308,7 @@ void GUI::Elements::FlowGraph::canvas::on_remove(::FlowGraph::window* w)
 		run_on_ui([this, node]()
 			{
 				auto elem = nodes[node];
-				elem->remove_from_parent();
+				elem->fade_close();
 				nodes.erase(node);
 			});
 	}
@@ -315,7 +321,7 @@ void GUI::Elements::FlowGraph::canvas::on_remove(::FlowGraph::window* w)
 		run_on_ui([this, w]()
 			{
 				auto elem = windows[w];
-				elem->remove_from_parent();
+				elem->fade_close();
 				windows.erase(w);
 			});
 	}

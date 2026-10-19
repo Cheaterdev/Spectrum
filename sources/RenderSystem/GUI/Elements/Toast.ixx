@@ -31,8 +31,19 @@ export namespace GUI
 
                 toast_widget(const std::string& text, toast_kind kind, float seconds);
 
-                // 0..1 opacity, from the fade-in/out.
+                // 0..1 opacity, from the fade-in/out. The whole toast (blur,
+                // strip and text) fades as one group; with group fades off the
+                // colours fade instead.
                 void set_opacity(float a);
+
+                // Horizontal slide in UI px (positive = to the right of its
+                // resting place), from the slide-in/out.
+                void set_offset(float dx);
+
+            private:
+                float offset = 0.0f;
+
+            public:
 
                 virtual bool on_mouse_action(mouse_action action, mouse_button button, vec2 pos) override;
         };

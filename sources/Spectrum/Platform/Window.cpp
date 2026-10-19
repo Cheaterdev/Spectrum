@@ -241,6 +241,13 @@ LRESULT Window::MsgProc(MSG msg)
             return 0;
 
         case WM_SETCURSOR:
+            // The default handler sets the class arrow on every mouse move, which then fights the
+            // cursor the UI picks (the edit box beam flickered to an arrow). Own the client area.
+            if (LOWORD(msg.lParam) == HTCLIENT && input_handler)
+            {
+                input_handler->apply_cursor();
+                return TRUE;
+            }
             return DefWindowProcW(msg.hwnd, msg.message, msg.wParam, msg.lParam);
 
         case WM_GETMINMAXINFO:

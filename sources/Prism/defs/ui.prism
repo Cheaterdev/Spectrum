@@ -135,6 +135,186 @@ namespace UI
 		blend = { AlphaBlend };
 	}
 
+	# One step of the backdrop blur (Dual Kawase): src mip -> dst mip. The same
+	# kernel pair serves every radius -- the caller picks how many down/up steps
+	# to run and the sample offset (fractional spread between whole octaves).
+	[Bind = DefaultLayout::Instance0]
+	struct BackdropBlur
+	{
+		Texture2D<float4> src;
+		RWTexture2D<float4> dst;
+		uint2 dst_size;
+		float2 src_texel;
+		float offset;
+	}
+
+	ComputePSO BackdropBlur
+	{
+		root = DefaultLayout;
+
+		[EntryPoint = CS]
+		compute = "gui/backdrop_blur.hlsl";
+
+		# Up: 8-tap tent upsample of the smaller mip; off: 5-tap downsample.
+		[rename = BACKDROP_UP]
+		[CS]
+		define Up;
+	}
+
+	# Composites the blurred snapshot back over the element's rect. `map`
+	# turns a window-space position (the same units as `rect`) into a UV of the
+	# blurred texture: uv = window_pos * map.xy + map.zw.
+	[Bind = DefaultLayout::Instance0]
+	struct BackdropDraw
+	{
+		Texture2D<float4> blurred;
+		float4 rect;
+		float4 map;
+		float2 window_size;
+		float4 tint;
+		float saturation;
+		# Acrylic: how far the blur's luminance is pulled toward the tint's, so
+		# bright and dark backdrops read evenly under the glass (Fluent's
+		# luminosity layer).
+		float luminosity;
+		# Acrylic: strength of the static per-pixel grain.
+		float noise;
+		# Direct mode (small radii): xy = one texel of `blurred` in uv, z = tap
+		# spacing in texels. `blurred` is then the raw snapshot, filtered here.
+		float4 direct;
+	}
+
+	# Procedural soft shadow / glow (Renderer::draw_shadow). All positions and
+	# sizes are window pixels (the same space as BackdropDraw.rect).
+	[Bind = DefaultLayout::Instance0]
+	struct UIShadow
+	{
+		# The quad drawn: the shape grown by the blur reach.
+		float4 quad;
+		# The element's own rect: nothing is drawn inside it.
+		float4 element;
+		# The shadow's rect: element moved by the offset and grown by spread.
+		float4 shape;
+		float4 color;
+		float2 window_size;
+		float radius;
+		float sigma;
+	}
+
+	# Cursor-driven light inside a rounded rect (Renderer::draw_fx). All
+	# positions and sizes are window pixels; a zero strength turns that part off.
+	[Bind = DefaultLayout::Instance0]
+	struct UIFx
+	{
+		# The quad drawn: the element's rect clipped to its parent.
+		float4 quad;
+		float4 shape;
+		# xy cursor, z Gaussian sigma, w strength.
+		float4 reveal;
+		# x sigma of the rim's falloff from the cursor, y strength, z rim width.
+		float4 border;
+		# x sweep phase (< 0 = off), y band half-width (fraction of the sweep), z strength.
+		float4 shine;
+		# xy origin (window px), z phase (< 0 = off), w strength. A wave expanding from the origin.
+		float4 ripple;
+		# x ring width (px), y strength. Drawn in focus_color (sRGB rgb) just inside the edge.
+		float4 focus;
+		float4 focus_color;
+		# x size (px), y strength, z vertical offset (px). Darkening inside the edge, deepest at the top.
+		float4 inner;
+		# sRGB rgb of the reveal / rim / shine light (white on dark surfaces).
+		float4 light;
+		float2 window_size;
+		float radius;
+	}
+
+	# Group opacity (Renderer::begin_layer / end_layer): the target region as it was
+	# when the group began, drawn back over the finished group with alpha
+	# (1 - opacity). That is opacity * group + (1 - opacity) * what was below, for
+	# any content, without rendering the group offscreen.
+	[Bind = DefaultLayout::Instance0]
+	struct UILayerRestore
+	{
+		Texture2D<float4> snapshot;
+		# The quad drawn, in window pixels.
+		float4 quad;
+		float2 window_size;
+		# Target pixel of the snapshot's texel (0, 0).
+		float2 origin;
+		float alpha;
+	}
+
+	GraphicsPSO UILayerRestore
+	{
+		root = DefaultLayout;
+
+		[EntryPoint = VS]
+		vertex = "gui/layer_restore.hlsl";
+
+		[EntryPoint = PS]
+		pixel = "gui/layer_restore.hlsl";
+
+		rtv = { R16G16B16A16_FLOAT };
+		blend = { AlphaBlend };
+		cull = None;
+		enable_depth = false;
+	}
+
+	GraphicsPSO UIFx
+	{
+		root = DefaultLayout;
+
+		[EntryPoint = VS]
+		vertex = "gui/fx.hlsl";
+
+		[EntryPoint = PS]
+		pixel = "gui/fx.hlsl";
+
+		rtv = { R16G16B16A16_FLOAT };
+		blend = { AlphaBlend };
+		cull = None;
+		enable_depth = false;
+	}
+
+	GraphicsPSO UIShadow
+	{
+		root = DefaultLayout;
+
+		[EntryPoint = VS]
+		vertex = "gui/shadow.hlsl";
+
+		[EntryPoint = PS]
+		pixel = "gui/shadow.hlsl";
+
+		rtv = { R16G16B16A16_FLOAT };
+		blend = { AlphaBlend };
+		cull = None;
+		enable_depth = false;
+	}
+
+	GraphicsPSO BackdropDraw
+	{
+		root = DefaultLayout;
+
+		[EntryPoint = VS]
+		vertex = "gui/backdrop_draw.hlsl";
+
+		[EntryPoint = PS]
+		pixel = "gui/backdrop_draw.hlsl";
+
+		# Small radii: filter the snapshot right here with a 5x5 binomial kernel
+		# instead of running the blur chain -- same look at the default radius,
+		# and no compute dispatches or UAV transitions per element.
+		[rename = BACKDROP_DIRECT]
+		[PS]
+		define Direct;
+
+		rtv = { R16G16B16A16_FLOAT };
+		blend = { AlphaBlend };
+		cull = None;
+		enable_depth = false;
+	}
+
 	struct VSLine
 	{
 		float2 pos;

@@ -52,6 +52,10 @@ export namespace GUI
         {
 
                 std::vector<menu_list_element::ptr > elements;
+
+                // Fading out after a close; the popup leaves the tree when the
+                // fade ends (on_fade_end), not before.
+                bool fading_out = false;
             protected:
 
                 bool vertical;
@@ -141,6 +145,9 @@ export namespace GUI
                 void self_open(user_interface* ui);
 
                 void self_close();
+
+                // Brings a popup that is still fading out after a close back in.
+                void cancel_close();
 
                 virtual void remove_all();
 
