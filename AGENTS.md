@@ -19,10 +19,14 @@ generate_project.bat
 ### Regenerate code from .prism files
 Tools → Regenerate Prism code in VS (Prism extension), or run `bin/profile/prismc.exe` from `sources/Prism/`.
 
-### Regenerate the Prism parser (only after changing the Prism.g4 grammar)
-```bat
-generate_prism_parser.bat
-```
+### Changing the Prism grammar
+The grammar is a cpp-peglib (PEG) string in `sources/Prism/PrismGrammar.h`; there is no generated parser, so a grammar edit
+is just a rebuild of the Prism project. `peglib.h` (vcpkg port `cpp-peglib`) is included only by the plain, non-module
+`sources/Prism/PrismBridge.cpp` (a header unit of it leaves its static string constants null), which hands `Parsing.cpp` a
+small AST (`PrismAst.h`). Keywords are contextual (`!IDCHAR`-guarded tokens), so where a keyword-led alternative follows an
+`ID`-led one, order them keyword first (see `rt_stat`, `value_id`). All PSO kinds share one `pso_block`; which statements
+each kind takes is checked in `Parsing.cpp` (`PsoKind`), and PSO/node parameters are typed by name in the grammar.
+`prismc --check a.prism` parses files without validating or generating anything, for trying grammar changes.
 
 ### Build
 Open `projects/Spectrum.sln` in Visual Studio 2026. Three configurations: **Debug**, **Profile**, **Retail**.
@@ -33,7 +37,7 @@ Executables output to `bin/Debug`, `bin/Profile`, `bin/Retail`. The working dire
 
 ### Layer Stack (bottom to top)
 ```
-Modules       — C++ module wrappers for third-party libraries (assimp, cereal, antlr4, etc.)
+Modules       — C++ module wrappers for third-party libraries (assimp, cereal, etc.)
 Core          — Engine foundation: math, serialization, threads, events, filesystem, profiling
 HAL           — Hardware Abstraction Layer over D3D12: device, queues, resources, descriptors, shaders
 RenderSystem  — High-level rendering: FrameGraph, materials, lighting, GUI, scene, assets
@@ -46,13 +50,13 @@ Each layer has a `Defines.h` that chains upward (e.g. `RenderSystem/Defines.h` i
 The codebase uses **C++23 modules** (`.ixx` files) extensively. Each subsystem exposes a module interface — for example `HAL.Device.ixx` exports `module HAL:Device`. Headers (`.h`) are used for things that can't be modules (forced includes, third-party interop).
 
 ### Prism
-Prism is the engine's declaration language: `.prism` files in `sources/Prism/defs/` declare shared GPU/CPU structs and their resource bindings, PSOs, raytracing PSOs, FrameGraph passes, pipelines, enums, constants and HLSL helper functions. `prismc` (an ANTLR4-based compiler, `sources/Prism/`) generates HLSL and C++ from them into `sources/HAL/autogen/`, `sources/RenderSystem/FrameGraph/autogen/` and `workdir/shaders/autogen/`. The language was called SIG (shader input groups) before it grew beyond bindings; the engine-side binding code keeps that name (`HAL/SIG/`, `SlotID`, `Table::`).
+Prism is the engine's declaration language: `.prism` files in `sources/Prism/defs/` declare shared GPU/CPU structs and their resource bindings, PSOs, raytracing PSOs, FrameGraph passes, pipelines, enums, constants and HLSL helper functions. `prismc` (a cpp-peglib-based compiler, `sources/Prism/`) generates HLSL and C++ from them into `sources/HAL/autogen/`, `sources/RenderSystem/FrameGraph/autogen/` and `workdir/shaders/autogen/`. The language was called SIG (shader input groups) before it grew beyond bindings; the engine-side binding code keeps that name (`HAL/SIG/`, `SlotID`, `Table::`).
 
 ### FrameGraph
 The `RenderSystem/FrameGraph` subsystem manages render pass scheduling, automatic resource transitions, and async compute. Render passes declare their resource reads/writes; the FrameGraph resolves barriers and execution order.
 
 ### Modules Layer
-`sources/Modules/` wraps third-party vcpkg libraries as C++ modules (`.ixx`). Each subfolder (`assimp/`, `cereal/`, `antlr4/`, etc.) contains an `.ixx` that re-exports the library through the module system.
+`sources/Modules/` wraps third-party vcpkg libraries as C++ modules (`.ixx`). Each subfolder (`assimp/`, `cereal/`, etc.) contains an `.ixx` that re-exports the library through the module system.
 
 ## Key Files
 - `main.sharpmake.cs` — all project/solution configuration; edit this to add files, dependencies, or defines

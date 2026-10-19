@@ -1,11 +1,12 @@
 """
-Generates Visual Studio editor support for .prism files from Prism.g4.
+Generates Visual Studio editor support for .prism files from PrismGrammar.h.
 
-Prism.g4 stays the only grammar anyone edits. Everything lexical comes from it:
-keyword sets, declaration keywords, token regexes (comments, numbers, strings,
-backtick raw spans, %{ }% blocks), operators and bracket pairs. What the .g4
-cannot say -- which TextMate scope a token gets, and which spans embed another
-language -- is the small table in SCOPES below.
+The cpp-peglib grammar in PrismGrammar.h stays the only grammar anyone edits.
+Everything lexical comes from it: keyword sets, declaration keywords, token
+regexes (comments, numbers, strings, backtick raw spans, %{ }% blocks),
+operators and bracket pairs. What the grammar cannot say -- which TextMate scope
+a token gets, and which spans embed another language -- is the small table in
+SCOPES below.
 
 The VSIX also carries the language server: PrismLanguageClient.cs (compiled here
 with the csc and VS assemblies from the local install) starts prismc.exe --lsp,
@@ -38,7 +39,7 @@ import time
 import zipfile
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-G4_PATH = os.path.normpath(os.path.join(HERE, "..", "Prism.g4"))
+GRAMMAR_PATH = os.path.normpath(os.path.join(HERE, "..", "PrismGrammar.h"))
 OUT_DIR = os.path.normpath(os.path.join(HERE, "..", "..", "..", "bin", "editor"))
 
 EXT_ID = "Spectrum.Prism.Language"
@@ -50,7 +51,9 @@ SCOPE = "source.prism"
 # Lexer token -> scope, plus an optional embedded grammar for begin/end spans.
 # VS ships no HLSL TextMate grammar; source.cpp is the closest one it does ship.
 SCOPES = {
-    "COMMENT":      {"name": "comment.line.number-sign.prism"},
+    "HASH_COMMENT":  {"name": "comment.line.number-sign.prism"},
+    "LINE_COMMENT":  {"name": "comment.line.double-slash.prism"},
+    "BLOCK_COMMENT": {"name": "comment.block.prism", "plain": True},
     "STRING":       {"name": "string.quoted.double.prism"},
     "RAWEXPR":      {"name": "string.interpolated.raw.prism", "embed": "source.cpp"},
     "INSERT_BLOCK": {"name": "meta.embedded.block.hlsl.prism", "embed": "source.cpp"},
@@ -60,13 +63,17 @@ SCOPES = {
 
 # Parser rules that are pure literal alternatives -> scope for those words.
 KEYWORD_GROUP_SCOPES = {
-    "shader_type":   "support.type.shader-stage.prism",
-    "pso_param_id":  "variable.parameter.prism",
-    "node_param_id": "variable.parameter.prism",
-    "bool_type":     "constant.language.prism",
+    "shader_type":         "support.type.shader-stage.prism",
+    "bool_pso_param_id":   "variable.parameter.prism",
+    "num_pso_param_id":    "variable.parameter.prism",
+    "enum_pso_param_id":   "variable.parameter.prism",
+    "id_node_param_id":    "variable.parameter.prism",
+    "bool_node_param_id":  "variable.parameter.prism",
+    "array_node_param_id": "variable.parameter.prism",
+    "bool_type":           "constant.language.prism",
 }
 
-# Built-in type names. The .g4 cannot supply these: every type is a plain ID
+# Built-in type names. The grammar cannot supply these: every type is a plain ID
 # there, and what makes one "built-in" is what Parsed.cpp's detect_type and the
 # FrameGraph accept.
 #
@@ -136,22 +143,35 @@ OPERATOR_SCOPE = "keyword.operator.prism"
 # ------------------------------------------------------------------------------
 
 
-def strip_g4_comments(text):
+def read_peg_text(path):
+    """The grammar text itself: the raw-string pieces of PrismGrammar.h."""
+    with open(path, encoding="utf-8") as f:
+        pieces = re.findall(r'R"PEG\((.*?)\)PEG"', f.read(), re.S)
+    if not pieces:
+        sys.exit(f"no R\"PEG(...)PEG\" grammar text in {path}")
+    return "\n".join(pieces)
+
+
+def strip_peg_comments(text):
+    """Drops `# ...` comments; `#` inside a literal or a character class stays."""
     out, i, n = [], 0, len(text)
     while i < n:
         c = text[i]
-        if c == "'":
+        if c in "'\"":
+            end = c
+        elif c == "[":
+            end = "]"
+        else:
+            end = None
+        if end:
             j = i + 1
-            while j < n and text[j] != "'":
+            while j < n and text[j] != end:
                 j += 2 if text[j] == "\\" else 1
             out.append(text[i:j + 1])
             i = j + 1
-        elif text.startswith("//", i):
+        elif c == "#":
             while i < n and text[i] != "\n":
                 i += 1
-        elif text.startswith("/*", i):
-            end = text.find("*/", i + 2)
-            i = n if end < 0 else end + 2
         else:
             out.append(c)
             i += 1
@@ -159,51 +179,29 @@ def strip_g4_comments(text):
 
 
 def split_rules(text):
-    """Returns {name: body} for every `name : body ;` rule."""
-    text = strip_g4_comments(text)
-    text = re.sub(r"^\s*grammar\s+\w+\s*;", "", text, flags=re.M)
-    text = re.sub(r"options\s*\{[^}]*\}", "", text)
-
-    # @lexer::members { C++ } and similar named actions: code, not rules.
-    while (m := re.search(r"@\w+(?:::\w+)?\s*\{", text)):
-        depth, k = 1, m.end()
-        while k < len(text) and depth:
-            depth += {"{": 1, "}": -1}.get(text[k], 0)
-            k += 1
-        text = text[:m.start()] + text[k:]
-    # Inline {predicate}? and {action} blocks inside rules.
-    text = re.sub(r"\{[^{}']*\}\??", "", text)
-
-    rules, i, n = {}, 0, len(text)
-    while i < n:
-        m = re.compile(r"\s*([A-Za-z_]\w*)\s*:").match(text, i)
-        if not m:
-            i += 1
-            continue
-        name, j = m.group(1), m.end()
-        k = j
-        while k < n and text[k] != ";":
-            if text[k] == "'":
-                k += 1
-                while k < n and text[k] != "'":
-                    k += 2 if text[k] == "\\" else 1
-            elif text[k] == "[":
-                while k < n and text[k] != "]":
-                    k += 2 if text[k] == "\\" else 1
-            k += 1
-        rules[name] = text[j:k].strip()
-        i = k + 1
+    """Returns {name: body} for every `name <- body` rule. A rule starts with a
+    name in column 0 (the `<-` may be on the next line) and runs to the next one."""
+    text = strip_peg_comments(text)
+    starts = list(re.finditer(r"^(%?[A-Za-z_]\w*)[ \t]*(?:\r?\n[ \t]+)?<-", text, re.M))
+    rules = {}
+    for i, m in enumerate(starts):
+        end = starts[i + 1].start() if i + 1 < len(starts) else len(text)
+        body = re.sub(r"\{\s*ast_name\s*:[^}]*\}", "", text[m.end():end])  # tree-shape instruction, not syntax
+        rules[m.group(1)] = " ".join(body.split())
     return rules
 
 
-# --- ANTLR lexer rule -> Oniguruma regex ---------------------------------------
+def load_rules(path):
+    return split_rules(read_peg_text(path))
+
+
+# --- PEG token rule -> Oniguruma regex -------------------------------------------
 
 TOKEN_RE = re.compile(r"""
-    (?P<lit>'(?:\\.|[^'\\])*')
-  | (?P<set>~?\[(?:\\.|[^\]\\])*\])
-  | (?P<cmd>->.*$)
-  | (?P<ref>[A-Z_][A-Za-z_0-9]*)
-  | (?P<op>[()|*+?.~])
+    (?P<lit>'(?:\\.|[^'\\])*'|"(?:\\.|[^"\\])*")
+  | (?P<set>\[(?:\\.|[^\]\\])*\])
+  | (?P<ref>[A-Za-z_]\w*)
+  | (?P<op>[()/*+?.!&<>])
   | (?P<ws>\s+)
 """, re.X | re.S)
 
@@ -220,27 +218,26 @@ def re_escape(s):
 
 
 def set_to_regex(s):
-    neg = s.startswith("~")
-    inner = s[2:-1] if neg else s[1:-1]
-    # ANTLR set escapes are regex-class escapes already, except a bare `[`/`^`.
-    inner = inner.replace("[", "\\[")
-    if inner.startswith("^"):
-        inner = "\\" + inner
-    return ("[^" if neg else "[") + inner + "]"
+    # A PEG class is already a regex class (`[^"\r\n]`, `[0-9]`); only a nested
+    # `[` needs escaping for Oniguruma.
+    negated = s.startswith("[^")
+    inner = s[2:-1] if negated else s[1:-1]
+    return ("[^" if negated else "[") + inner.replace("[", "\\[") + "]"
 
 
 def tokenize(body):
     toks = []
     for m in TOKEN_RE.finditer(body):
         kind = m.lastgroup
-        if kind in ("ws", "cmd"):
+        if kind == "ws":
             continue
         toks.append((kind, m.group(kind)))
     return toks
 
 
 def lexer_ast(name, rules, depth=0):
-    """Parses a lexer rule into a tiny AST: ('alt', [seq...]) of ('seq', [atoms])."""
+    """Parses a token rule into a tiny AST: ('alt', [seq...]) of ('seq', [atoms]).
+    The `< >` token boundary is transparent; `!x` is ('not', x)."""
     if depth > 20:
         raise ValueError("lexer rule recursion: " + name)
     toks = tokenize(rules[name])
@@ -249,7 +246,7 @@ def lexer_ast(name, rules, depth=0):
     def parse_alt():
         nonlocal pos
         seqs = [parse_seq()]
-        while pos < len(toks) and toks[pos] == ("op", "|"):
+        while pos < len(toks) and toks[pos] == ("op", "/"):
             pos += 1
             seqs.append(parse_seq())
         return ("alt", seqs)
@@ -257,18 +254,21 @@ def lexer_ast(name, rules, depth=0):
     def parse_seq():
         nonlocal pos
         atoms = []
-        while pos < len(toks) and toks[pos] not in (("op", "|"), ("op", ")")):
-            atom = parse_atom()
-            while pos < len(toks) and toks[pos][0] == "op" and toks[pos][1] in "*+?":
-                q = toks[pos][1]
-                pos += 1
-                lazy = False
-                if q in "*+" and pos < len(toks) and toks[pos] == ("op", "?"):
-                    lazy = True
-                    pos += 1
-                atom = ("rep", atom, q, lazy)
-            atoms.append(atom)
+        while pos < len(toks) and toks[pos] not in (("op", "/"), ("op", ")"), ("op", ">")):
+            atoms.append(parse_prefixed())
         return ("seq", atoms)
+
+    def parse_prefixed():
+        nonlocal pos
+        if toks[pos] in (("op", "!"), ("op", "&")):
+            kind = "not" if toks[pos][1] == "!" else "and"
+            pos += 1
+            return (kind, parse_prefixed())
+        atom = parse_atom()
+        while pos < len(toks) and toks[pos][0] == "op" and toks[pos][1] in "*+?":
+            atom = ("rep", atom, toks[pos][1], False)
+            pos += 1
+        return atom
 
     def parse_atom():
         nonlocal pos
@@ -280,13 +280,13 @@ def lexer_ast(name, rules, depth=0):
             return ("set", val)
         if kind == "ref":
             return lexer_ast(val, rules, depth + 1)
-        if val == "(":
+        if val in ("(", "<"):
             inner = parse_alt()
-            pos += 1  # ')'
+            pos += 1  # ')' or '>'
             return inner
         if val == ".":
             return ("any",)
-        raise ValueError(f"unsupported lexer syntax in {name}: {val}")
+        raise ValueError(f"unsupported token syntax in {name}: {val}")
 
     return parse_alt()
 
@@ -299,6 +299,8 @@ def to_regex(node):
         return set_to_regex(node[1])
     if kind == "any":
         return "[\\s\\S]"
+    if kind in ("not", "and"):
+        return ("(?!" if kind == "not" else "(?=") + to_regex(node[1]) + ")"
     if kind == "rep":
         inner = to_regex(node[1])
         if len(inner) > 1 and not (inner.startswith("[") and inner.endswith("]") and inner.count("[") == 1) \
@@ -341,13 +343,20 @@ def is_lexer(name):
 
 
 def literal_rules(rules):
-    """Lexer rules whose whole body is one literal: {NAME: text}."""
+    """Token rules whose whole body is one literal (a trailing `!x` guard such as
+    `!IDCHAR` does not count): {NAME: text}."""
     out = {}
-    for name, body in rules.items():
-        if is_lexer(name):
-            m = re.fullmatch(r"'((?:\\.|[^'\\])*)'", body.strip())
-            if m:
-                out[name] = unescape_literal("'" + m.group(1) + "'")
+    for name in rules:
+        if not is_lexer(name):
+            continue
+        try:
+            node = flatten(lexer_ast(name, rules))
+        except ValueError:  # a recursive rule such as FUNC_TAIL is never a literal
+            continue
+        if node[0] == "seq":
+            node = flatten(("seq", [a for a in node[1] if a[0] != "not"]))
+        if node[0] == "lit":
+            out[name] = node[1]
     return out
 
 
@@ -379,7 +388,7 @@ def analyse(rules):
     decl = set()
     for name, body in rules.items():
         if not is_lexer(name) and name.endswith(("_definition", "_header")):
-            for alt in body.split("|"):
+            for alt in re.split(r"\s/\s", body):
                 ws = [w for w in words_in(alt, lit_rules)]
                 if ws:
                     decl.add(ws[0])
@@ -405,15 +414,12 @@ def analyse(rules):
     bracket_chars = {c for p in pairs for c in p}
     operators = sorted({t for t in symbolic.values() if t not in bracket_chars}, key=len, reverse=True)
 
-    # Also symbolic literals written inline in parser rules (e.g. '::', ',').
-    for name, body in rules.items():
-        if not is_lexer(name):
-            for kind, val in tokenize(body):
-                if kind == "lit":
-                    t = unescape_literal(val)
-                    if not re.fullmatch(r"[A-Za-z_]\w*", t) and t not in bracket_chars and t not in operators:
-                        operators.append(t)
-    operators.sort(key=len, reverse=True)
+    # `%{ ... }%` is one token rule, so its delimiters are not literal rules of their own.
+    insert = begin_end(lexer_ast("INSERT_BLOCK", rules)) if "INSERT_BLOCK" in rules else None
+    if insert:
+        pairs.append(list(insert))
+        bracket_chars.update(insert)
+        operators = [o for o in operators if o not in insert]
 
     return {
         "lit_rules": lit_rules,
@@ -439,7 +445,9 @@ def build_grammar(rules, a):
             continue
         ast = lexer_ast(tok, rules)
         be = begin_end(ast)
-        if be and ("embed" in cfg or "[\\s\\S]" in to_regex(ast)):
+        if be and cfg.get("plain"):
+            p = {"name": cfg["name"], "begin": re_escape(be[0]), "end": re_escape(be[1])}
+        elif be and ("embed" in cfg or "[\\s\\S]" in to_regex(ast)):
             # Leading \s* on the end: the embedded C++ grammar has rules that
             # start matching at the indentation before `}%`, and the earliest
             # match wins -- without it the block never closes.
@@ -456,6 +464,11 @@ def build_grammar(rules, a):
             p = {"name": cfg["name"], "match": rx}
         repo[tok.lower()] = p
         token_patterns.append(tok.lower())
+
+    # The comment forms are one repository entry, which the other patterns include by name.
+    comment_tokens = [t for t in token_patterns if t.endswith("_comment")]
+    repo["comment"] = {"patterns": [{"include": "#" + t} for t in comment_tokens]}
+    token_patterns = ["comment"] + [t for t in token_patterns if t not in comment_tokens]
 
     # Float before int, so `1.5` is one token.
     order = ["comment", "insert_block", "rawexpr", "string", "float_scalar", "int_scalar"]
@@ -568,15 +581,15 @@ def build_grammar(rules, a):
         "name": "Prism",
         "scopeName": SCOPE,
         "fileTypes": ["prism"],
-        "comment": "GENERATED from sources/Prism/Prism.g4 by sources/Prism/editor/gen_vs_extension.py -- do not edit.",
+        "comment": "GENERATED from sources/Prism/PrismGrammar.h by sources/Prism/editor/gen_vs_extension.py -- do not edit.",
         "patterns": [{"include": "#" + p} for p in top],
         "repository": repo,
     }
 
 
 def build_language_configuration(rules, a):
-    comment = begin_end(lexer_ast("COMMENT", rules))
-    line_comment = literal_of(flatten(lexer_ast("COMMENT", rules))[1][0]) if not comment else None
+    line_comment = literal_of(flatten(lexer_ast("HASH_COMMENT", rules))[1][0])
+    block_comment = begin_end(lexer_ast("BLOCK_COMMENT", rules))
     quotes = []
     for tok in ("STRING", "RAWEXPR"):
         if tok in rules:
@@ -587,7 +600,7 @@ def build_language_configuration(rules, a):
     # Auto-closing `%{` would race the `{` pair and produce `%{}}%`.
     single = [p for p in pairs if len(p[0]) == 1]
     return {
-        "comments": {"lineComment": line_comment},
+        "comments": {"lineComment": line_comment, "blockComment": list(block_comment)},
         "brackets": pairs,
         "autoClosingPairs": [{"open": o, "close": c} for o, c in single + quotes],
         "surroundingPairs": [[o, c] for o, c in single + quotes],
@@ -796,8 +809,7 @@ def main():
                     help="copy the grammar into %%USERPROFILE%%/.vs/Extensions/Prism (no VSIX needed)")
     args = ap.parse_args()
 
-    with open(G4_PATH, encoding="utf-8") as f:
-        rules = split_rules(f.read())
+    rules = load_rules(GRAMMAR_PATH)
 
     a = analyse(rules)
     grammar = build_grammar(rules, a)

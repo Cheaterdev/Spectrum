@@ -174,7 +174,6 @@ namespace Spectrum
             SourceFilesExtensions.Add(".prism");
             SourceFilesExtensions.Add(".hlsl");
 			SourceFilesExtensions.Add(".ixx");
-	        SourceFilesExtensions.Add(".g4");
 	        SourceFilesExtensions.Add(".jinja");
 
 			SourceFilesCompileExtensions.Add(".ixx");

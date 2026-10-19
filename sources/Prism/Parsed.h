@@ -1049,7 +1049,7 @@ struct Parsed : public parsed_type
 	my_container<Pipeline> pipelines;
 	my_container<Enum> enums;
 
-	// Top-level `const Name = value;` declarations (Prism.g4's const_definition).
+	// Top-level `const Name = value;` declarations (PrismGrammar.h's const_definition).
 	// Reuses `option`'s existing name+ValueAtom shape rather than a bespoke
 	// struct -- a const's value supports exactly the same literal/owner-ref/
 	// raw forms a bind_option's value already does.
