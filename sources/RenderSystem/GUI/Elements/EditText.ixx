@@ -165,6 +165,11 @@ export namespace GUI
                 // survive paste. Single-line fields drop them.
                 bool multiline = false;
 
+                // Selecting, copying and scrolling work; anything that changes the text
+                // (typing, paste, cut, delete, undo, formatting, drops) is ignored.
+                // set_text() still replaces the content.
+                bool read_only = false;
+
                 // A gutter with 1-based line numbers left of the text (multiline).
                 bool line_numbers = false;
 

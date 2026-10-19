@@ -56,9 +56,9 @@ void object_tree_creator::init_element(tree_element<member_item, object_tree_cre
 
 	tree->add_child(l);
 
-	tree->on_toogle = [open_icon](bool v)
+	tree->on_toogle = [open_icon](bool expanded)
 		{
-			open_icon->toogle(v);
+			open_icon->set_expanded(expanded);
 		};
 
 	tree->toogle();

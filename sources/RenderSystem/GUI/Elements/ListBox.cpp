@@ -10,9 +10,79 @@ import <windows/windows.h>;
    }
 
 
+void GUI::Elements::list_box::on_pre_render(Context& c)
+{
+    scroll_container::on_pre_render(c);
+
+    list_element* selected = nullptr;
+    if (!multi_select)
+        for (auto& e : elements)
+            if (e->selected)
+            {
+                selected = e.get();
+                break;
+            }
+
+    float y = 0.0f, h = 0.0f;
+    if (selected)
+    {
+        y = selected->get_render_bounds().y - contents->get_render_bounds().y;
+        h = selected->get_render_bounds().h;
+    }
+
+    const bool animate = user_ui && user_ui->window_animations;
+    bar.update(selected != nullptr, y, h, c.delta_time, !animate);
+
+    // The row under the cursor: the hit test finds a row's label, so look up the parents.
+    list_element* hovered = nullptr;
+    if (user_ui)
+        if (auto hit = user_ui->get_hovered().lock())
+            for (base* p = hit.get(); p && !hovered; p = p->get_raw_parent())
+                for (auto& e : elements)
+                    if (e.get() == p)
+                    {
+                        hovered = e.get();
+                        break;
+                    }
+
+    float hover_y = 0.0f, hover_h = 0.0f;
+    if (hovered)
+    {
+        hover_y = hovered->get_render_bounds().y - contents->get_render_bounds().y;
+        hover_h = hovered->get_render_bounds().h;
+    }
+    hover_bar.update(hovered != nullptr, hover_y, hover_h, c.delta_time, !animate);
+}
+
 void GUI::Elements::list_box::draw(Context& c)
 {
     c.renderer->draw_area(get_ptr(), c);
+
+    if (elements.empty())
+        return;
+
+    // Over the background, under the rows (their text), inside the box.
+    const rect box = get_render_bounds();
+    const rect row = elements.front()->get_render_bounds();
+    const float content_y = contents->get_render_bounds().y;
+
+    auto draw_bar = [&](const SlidingHighlight& b, float alpha_scale)
+    {
+        if (b.alpha <= 0.0f)
+            return;
+
+        const float top    = std::max(content_y + b.y, box.y + padding->top * result_scale);
+        const float bottom = std::min(content_y + b.y + b.h, box.y + box.h - padding->bottom * result_scale);
+        if (bottom <= top)
+            return;
+
+        float4 color = float4(53, 114, 202, 255) / 255.0f;
+        color.w *= b.alpha * alpha_scale;
+        c.renderer->draw_color(c, color, rect(row.x, top, row.w, bottom - top));
+    };
+
+    draw_bar(hover_bar, 0.22f);   // under the selection, which stays the strong one
+    draw_bar(bar, 1.0f);
 }
 
 GUI::Elements::list_element::ptr GUI::Elements::list_box::add_item(std::string elem)
@@ -114,7 +184,8 @@ namespace GUI
 
     void Elements::list_element::draw(Context& c)
     {
-        if (selection_t > 0.0f)
+        // Single selection: the list's sliding bar draws it.
+        if (selection_t > 0.0f && owner && owner->multi_select)
         {
             float4 color = float4(53, 114, 202, 255) / 255.0f;
             color.w *= selection_t;

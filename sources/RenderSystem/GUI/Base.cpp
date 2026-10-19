@@ -1276,6 +1276,36 @@ namespace GUI
             c.renderer->draw_backdrop_blur(c, slot, r, params);
     }
 
+    void SlidingHighlight::update(bool present, float target_y, float target_h, float dt, bool snap)
+    {
+        const float k = snap ? 1.0f : 1.0f - std::exp(-dt * 22.0f);
+
+        if (!present)
+        {
+            alpha += (0.0f - alpha) * k;
+            if (alpha < 0.003f)
+                alpha = 0.0f;
+            return;
+        }
+
+        // Nothing visible yet: appear where the row is, don't fly in from the last place.
+        if (!valid || alpha == 0.0f)
+        {
+            y = target_y;
+            h = target_h;
+            valid = true;
+        }
+        else
+        {
+            y += (target_y - y) * k;
+            h += (target_h - h) * k;
+        }
+
+        alpha += (1.0f - alpha) * k;
+        if (alpha > 0.997f)
+            alpha = 1.0f;
+    }
+
     float Shadow::extent(const base& e) const
     {
         if (!e.user_ui->shadows_enabled)

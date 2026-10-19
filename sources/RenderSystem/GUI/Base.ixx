@@ -199,6 +199,24 @@ namespace GUI
         float3 light = { 1.0f, 1.0f, 1.0f };   // sRGB colour of reveal / edge light / shine; tint it on light surfaces
     };
 
+    // An eased highlight bar for single selection in lists and trees: it slides from
+    // the old row to the new one instead of jumping, fades out when nothing is
+    // selected, and appears in place the first time. y and h are relative to the
+    // scrolled content's origin, so scrolling moves the bar with its rows (easing
+    // them in screen space would make it lag behind).
+    struct SlidingHighlight
+    {
+        float y = 0.0f, h = 0.0f;
+        float alpha = 0.0f;       // 0..1, eased
+        bool  valid = false;
+
+        // `snap` skips the easing (animations off).
+        void update(bool present, float target_y, float target_h, float dt, bool snap);
+        // The selected row itself moved (a tree row pushed by an expanding branch):
+        // the bar goes with it at once instead of trailing a few frames behind.
+        void follow(float target_y, float target_h) { y = target_y; h = target_h; }
+    };
+
     class base;
 
     // One visual effect of an element: backdrop blur, shadow, glow, light overlay.
@@ -540,6 +558,10 @@ namespace GUI
             // Whether the element's backdrop blur is on and drawing right now. Elements
             // use it to switch to a translucent look.
             bool backdrop_active(const Context& c) const;
+
+            // The parent without get_ptr(): get_parent() throws for a root that no
+            // shared_ptr owns (a user_interface on the stack in the GUI tests).
+            base* get_raw_parent() const { return parent; }
 
             friend class effect;
             friend class BackdropBlur;

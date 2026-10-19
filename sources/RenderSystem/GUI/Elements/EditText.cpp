@@ -144,7 +144,7 @@ void GUI::Elements::edit_text::on_char(char32_t ch)
 {
 	// Ctrl+letter arrives as a control character too; shortcuts are handled
 	// from the key event instead.
-	if (ch < 0x20 || ch == 0x7F) return;
+	if (ch < 0x20 || ch == 0x7F || read_only) return;
 	std::lock_guard<std::mutex> guard(m);
 	events.emplace_back(ch);
 }
@@ -220,7 +220,7 @@ bool GUI::Elements::edit_text::on_wheel(mouse_wheel type, float value, vec2 pos)
 bool GUI::Elements::edit_text::need_drag_drop()
 {
 	std::lock_guard<std::mutex> guard(m);
-	return drag_candidate;
+	return drag_candidate && !read_only;
 }
 
 void GUI::Elements::edit_text::on_drag_start()
@@ -240,7 +240,7 @@ void GUI::Elements::edit_text::generate_container(base::ptr holder)
 
 bool GUI::Elements::edit_text::can_accept(drag_n_drop_package::ptr package)
 {
-	if (!package) return false;
+	if (!package || read_only) return false;
 	if (package->name == "text") return true;
 
 	// Anything the image hook can turn into a texture becomes a block image.
@@ -317,15 +317,15 @@ void GUI::Elements::edit_text::open_context_menu(vec2 pos)
 
 	const bool selection = editor.has_selection();
 
-	if (editor.can_undo()) add("Undo", 'Z', true);
-	if (editor.can_redo()) add("Redo", 'Y', true);
-	if (selection)         add("Cut", 'X', true);
-	if (selection)         add("Copy", 'C', true);
-	add("Paste", 'V', true);
-	if (selection)         add("Delete", VK_DELETE, false);
+	if (!read_only && editor.can_undo()) add("Undo", 'Z', true);
+	if (!read_only && editor.can_redo()) add("Redo", 'Y', true);
+	if (!read_only && selection)         add("Cut", 'X', true);
+	if (selection)                       add("Copy", 'C', true);
+	if (!read_only)                      add("Paste", 'V', true);
+	if (!read_only && selection)         add("Delete", VK_DELETE, false);
 	add("Select All", 'A', true);
 
-	if (selection && formatting)
+	if (selection && formatting && !read_only)
 	{
 		add("Bold", 'B', true);
 		add("Italic", 'I', true);
@@ -376,16 +376,16 @@ void GUI::Elements::edit_text::process_key(long key, key_mods mods)
 	case VK_DOWN:   editor.key(Key::Down, shift, ctrl); return;
 	case VK_HOME:   editor.key(Key::Home, shift, ctrl); return;
 	case VK_END:    editor.key(Key::End, shift, ctrl); return;
-	case VK_BACK:   editor.key(Key::Backspace, shift, ctrl); return;
-	case VK_DELETE: editor.key(Key::Delete, shift, ctrl); return;
+	case VK_BACK:   if (!read_only) editor.key(Key::Backspace, shift, ctrl); return;
+	case VK_DELETE: if (!read_only) editor.key(Key::Delete, shift, ctrl); return;
 
 	case VK_RETURN:
-		if (multiline) editor.key(Key::Enter, shift, ctrl);
+		if (multiline && !read_only) editor.key(Key::Enter, shift, ctrl);
 		return;
 
 	case VK_TAB:
 		// Tab arrives only as a key: on_char drops control characters.
-		if (multiline && !ctrl) editor.insert(U'\t');
+		if (multiline && !ctrl && !read_only) editor.insert(U'\t');
 		return;
 	}
 
@@ -398,11 +398,11 @@ void GUI::Elements::edit_text::process_key(long key, key_mods mods)
 		break;
 
 	case 'B':
-		if (formatting) editor.toggle_bold();
+		if (formatting && !read_only) editor.toggle_bold();
 		break;
 
 	case 'I':
-		if (formatting) editor.toggle_italic();
+		if (formatting && !read_only) editor.toggle_italic();
 		break;
 
 	case 'C':
@@ -411,20 +411,21 @@ void GUI::Elements::edit_text::process_key(long key, key_mods mods)
 
 	case 'X':
 		copy_selection();
-		editor.delete_selection();
+		if (!read_only) editor.delete_selection();
 		break;
 
 	case 'V':
-		if (user_ui && user_ui->get_clipboard)
+		if (!read_only && user_ui && user_ui->get_clipboard)
 			editor.insert(utf16_to_utf8(user_ui->get_clipboard()));
 		break;
 
 	case 'Z':
+		if (read_only) break;
 		if (shift) editor.redo(); else editor.undo();
 		break;
 
 	case 'Y':
-		editor.redo();
+		if (!read_only) editor.redo();
 		break;
 	}
 }

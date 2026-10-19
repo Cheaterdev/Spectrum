@@ -419,7 +419,7 @@ class material_settings_panel : public GUI::base
 	materials::universal_material*   m_material;
 	::FlowGraph::graph*              m_graph;
 	uint32_t                         m_shown_generation = ~0u;
-	GUI::Elements::MultiLineLabel::ptr m_text;
+	GUI::Elements::edit_text::ptr    m_text;
 
 	// Live 3D preview, docked at the very top of the panel -- same
 	// SceneTextureRenderer/test-mesh mechanism asset_preview_content uses
@@ -498,12 +498,14 @@ public:
 			add_child(row);
 		}
 
-		// Own child, not inherited -- MultiLineLabel::on_text_changed() does
-		// contents->remove_all() on itself whenever .text is set, which
-		// would also wipe the checkboxes above if they were its children
-		// too.
-		m_text = std::make_shared<GUI::Elements::MultiLineLabel>();
-		m_text->docking = GUI::dock::FILL;
+		// The generated pixel shader: HLSL-highlighted, selectable and copyable,
+		// but not editable -- it is rebuilt from the graph, so edits would be lost.
+		m_text = std::make_shared<GUI::Elements::edit_text>(Text::Style{ 13, Text::Weight::Normal, Text::Family::Mono });
+		m_text->docking      = GUI::dock::FILL;
+		m_text->multiline    = true;
+		m_text->line_numbers = true;
+		m_text->read_only    = true;
+		m_text->highlighter  = GUI::Syntax::highlight_hlsl;
 		add_child(m_text);
 	}
 
@@ -565,7 +567,7 @@ public:
 
 		m_shown_generation = m_material->preview_source_generation;
 		auto src = m_material->get_pixel_shader_source();
-		m_text->text = src.uniforms + src.text;
+		m_text->set_text(src.uniforms + src.text);
 	}
 };
 

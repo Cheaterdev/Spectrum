@@ -2129,6 +2129,219 @@ export namespace Test
 		ASSERT_TRUE(button->find_effect<GUI::BackdropBlur>() == nullptr);
 	}
 
+	// Single selection in a list: one bar slides to the newly selected row (eased, so
+	// it is in between mid-way) and ends exactly on it; it appears in place the first time.
+	TEST(Core.HAL, GUIListBox_SelectionBarSlides)
+	{
+		THREAD_SCOPE(GUI);
+
+		auto ui_owner = std::make_shared<GUI::user_interface>();
+		auto& ui = *ui_owner;
+		ui.size = vec2(300.0f, 300.0f);
+
+		auto list = std::make_shared<GUI::Elements::list_box>();
+		list->docking = GUI::dock::NONE;
+		list->width_size = GUI::size_type::FIXED;
+		list->height_size = GUI::size_type::FIXED;
+		list->size = vec2(200.0f, 200.0f);
+		std::vector<GUI::Elements::list_element::ptr> items;
+		for (const char* name : { "One", "Two", "Three", "Four" })
+			items.push_back(list->add_item(name));
+		ui.add_child(list);
+
+		auto frame = [&](float dt)
+		{
+			ui.process_ui(dt);
+			FrameGraph::Graph graph;
+			ui.create_graph(graph);
+		};
+
+		frame(0.016f);
+		frame(0.016f);
+		const float first_y = list->highlight().y;
+		ASSERT_TRUE(list->highlight().alpha > 0.0f);                       // the first item starts selected
+		ASSERT_TRUE(std::abs(first_y - (items[0]->get_render_bounds().y - list->contents->get_render_bounds().y)) < 1.0f);
+
+		list->on_select(items[3].get());
+		const float target = items[3]->get_render_bounds().y - list->contents->get_render_bounds().y;
+		ASSERT_TRUE(target > first_y + 10.0f);
+
+		frame(0.016f);
+		ASSERT_TRUE(list->highlight().y > first_y + 0.5f && list->highlight().y < target - 0.5f);   // on its way
+		for (int i = 0; i < 40; i++)
+			frame(0.016f);
+		ASSERT_TRUE(std::abs(list->highlight().y - target) < 0.5f);       // arrived
+
+		ui.window_animations = false;
+		list->on_select(items[1].get());
+		frame(0.016f);
+		const float second = items[1]->get_render_bounds().y - list->contents->get_render_bounds().y;
+		ASSERT_TRUE(std::abs(list->highlight().y - second) < 0.5f);       // off: snaps
+	}
+
+	// The row under the cursor gets a fainter bar that slides between rows and fades
+	// when the cursor leaves the list.
+	TEST(Core.HAL, GUIListBox_HoverBarFollowsCursor)
+	{
+		THREAD_SCOPE(GUI);
+
+		auto ui_owner = std::make_shared<GUI::user_interface>();   // hit testing needs a shared-owned root
+		auto& ui = *ui_owner;
+		ui.size = vec2(300.0f, 300.0f);
+
+		auto list = std::make_shared<GUI::Elements::list_box>();
+		list->docking = GUI::dock::NONE;
+		list->width_size = GUI::size_type::FIXED;
+		list->height_size = GUI::size_type::FIXED;
+		list->size = vec2(200.0f, 200.0f);
+		std::vector<GUI::Elements::list_element::ptr> items;
+		for (const char* name : { "One", "Two", "Three", "Four" })
+			items.push_back(list->add_item(name));
+		ui.add_child(list);
+
+		auto frame = [&](float dt)
+		{
+			ui.process_ui(dt);
+			FrameGraph::Graph graph;
+			ui.create_graph(graph);
+		};
+		auto rel = [&](int i) { return items[i]->get_render_bounds().y - list->contents->get_render_bounds().y; };
+		auto center = [&](int i) { const rect b = items[i]->get_render_bounds(); return vec2(b.x + b.w * 0.5f, b.y + b.h * 0.5f); };
+
+		frame(0.016f);
+		frame(0.016f);
+		ASSERT_TRUE(list->hover_highlight().alpha == 0.0f);                // nothing under the cursor
+
+		ui.mouse_move_event_internal(center(1));
+		for (int i = 0; i < 40; i++)
+			frame(0.016f);
+		ASSERT_TRUE(list->hover_highlight().alpha > 0.99f);
+		ASSERT_TRUE(std::abs(list->hover_highlight().y - rel(1)) < 0.5f);
+
+		ui.mouse_move_event_internal(center(3));
+		frame(0.016f);
+		ASSERT_TRUE(list->hover_highlight().y > rel(1) + 0.5f && list->hover_highlight().y < rel(3) - 0.5f);   // sliding
+		for (int i = 0; i < 40; i++)
+			frame(0.016f);
+		ASSERT_TRUE(std::abs(list->hover_highlight().y - rel(3)) < 0.5f);
+
+		ui.mouse_move_event_internal(vec2(290.0f, 290.0f));                // off the list
+		for (int i = 0; i < 60; i++)
+			frame(0.016f);
+		ASSERT_TRUE(list->hover_highlight().alpha == 0.0f);
+	}
+
+	// The tree's expand arrow turns between right and down instead of swapping.
+	TEST(Core.HAL, GUITree_ChevronTurns)
+	{
+		THREAD_SCOPE(GUI);
+
+		auto ui_owner = std::make_shared<GUI::user_interface>();
+		auto& ui = *ui_owner;
+		ui.size = vec2(100.0f, 100.0f);
+
+		auto icon = std::make_shared<GUI::Elements::toogle_icon>();
+		ui.add_child(icon);
+		ui.process_ui(0.016f);
+		ASSERT_TRUE(icon->turn_amount() == 0.0f);                          // collapsed: pointing right
+
+		icon->set_expanded(true);
+		ui.process_ui(0.05f);
+		ASSERT_TRUE(icon->turn_amount() > 0.0f && icon->turn_amount() < 1.0f);   // turning
+		for (int i = 0; i < 10; i++)
+			ui.process_ui(0.05f);
+		ASSERT_TRUE(icon->turn_amount() == 1.0f);                          // pointing down
+
+		icon->toogle(true);                                                // the old inverted call: true = collapsed
+		for (int i = 0; i < 10; i++)
+			ui.process_ui(0.05f);
+		ASSERT_TRUE(icon->turn_amount() == 0.0f);
+
+		ui.window_animations = false;
+		icon->set_expanded(true);
+		ASSERT_TRUE(icon->turn_amount() == 1.0f);                          // off: jumps
+	}
+
+	class gui_test_node : public ::tree<gui_test_node, my_unique_vector<std::shared_ptr<gui_test_node>>>
+	{
+		std::wstring name;
+	public:
+		using ptr = std::shared_ptr<gui_test_node>;
+		gui_test_node(std::wstring n) : name(std::move(n)) {}
+		std::wstring get_name() const override { return name; }
+	};
+
+	// Collapsing a tree branch slides its children shut instead of cutting them: the
+	// tree's content height is in between mid-way, ends at the collapsed height, and
+	// expanding goes back to the full height.
+	TEST(Core.HAL, GUITree_BranchSlidesOpenAndShut)
+	{
+		THREAD_SCOPE(GUI);
+
+		auto ui_owner = std::make_shared<GUI::user_interface>();
+		auto& ui = *ui_owner;
+		ui.size = vec2(300.0f, 400.0f);
+
+		auto root = std::make_shared<gui_test_node>(L"root");
+		auto branch = std::make_shared<gui_test_node>(L"branch");
+		root->add_child(branch);
+		for (const wchar_t* n : { L"a", L"b", L"c" })
+			branch->add_child(std::make_shared<gui_test_node>(n));
+
+		using tree_type = GUI::Elements::tree<gui_test_node>;
+		using element_type = GUI::Elements::tree_element<gui_test_node, GUI::Elements::tree_creator<gui_test_node>>;
+		auto tree = std::make_shared<tree_type>();
+		tree->docking = GUI::dock::NONE;
+		tree->width_size = GUI::size_type::FIXED;
+		tree->height_size = GUI::size_type::FIXED;
+		tree->size = vec2(250.0f, 350.0f);
+		ui.add_child(tree);
+		tree->init(root.get());
+
+		auto frame = [&](float dt)
+		{
+			ui.process_ui(dt);
+			FrameGraph::Graph graph;
+			ui.create_graph(graph);
+		};
+		auto content_height = [&] { return tree->contents->get_render_bounds().h; };
+
+		for (int i = 0; i < 5; i++)
+			frame(0.016f);
+		const float full = content_height();
+		ASSERT_TRUE(full > 50.0f);
+
+		element_type* branch_element = nullptr;
+		{
+			FrameGraph::Graph graph;
+			ui.create_graph(graph);
+			for (const auto& e : graph.get_context<GUI::UIContext>().draw_infos)
+				if (auto* t = dynamic_cast<element_type*>(e.elem))
+					if (t->node == branch.get())
+						branch_element = t;
+		}
+		ASSERT_TRUE(branch_element != nullptr);
+
+		branch_element->toogle();                      // collapse
+		frame(0.05f);
+		frame(0.05f);
+		ASSERT_TRUE(content_height() < full - 1.0f);   // closing
+		ASSERT_TRUE(content_height() > full - 3.0f * 20.0f + 1.0f);   // but not shut yet
+		for (int i = 0; i < 20; i++)
+			frame(0.05f);
+		const float collapsed = content_height();
+		ASSERT_TRUE(collapsed < full - 20.0f);
+
+		branch_element->toogle();                      // expand again
+		frame(0.016f);
+		frame(0.016f);
+		frame(0.05f);
+		ASSERT_TRUE(content_height() > collapsed - 0.5f && content_height() < full - 0.5f);   // opening
+		for (int i = 0; i < 20; i++)
+			frame(0.05f);
+		ASSERT_TRUE(std::abs(content_height() - full) < 1.0f);        // fully open again
+	}
+
 	// A window fades in when added, and closing it fades it out and removes it only
 	// when the fade ends (it stays in the tree, drawn, until then). Closing twice is
 	// harmless, and cancel_close() brings it back. No GPU needed.

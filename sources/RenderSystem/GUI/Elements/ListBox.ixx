@@ -38,6 +38,11 @@ export namespace GUI
 
                 std::vector<list_element::ptr > elements;
                 int anchor = -1;   // where a shift-click range starts
+                // Single selection: one bar slides to the selected row (multi-select
+                // fades each row's own highlight instead).
+                SlidingHighlight bar;
+                // The row under the cursor: a fainter bar that slides between rows too.
+                SlidingHighlight hover_bar;
 
 
             public:
@@ -50,6 +55,10 @@ export namespace GUI
 
                 std::vector<int> selected_indices() const;
 
+                // The sliding selection bar (single selection), for inspection.
+                const SlidingHighlight& highlight() const { return bar; }
+                const SlidingHighlight& hover_highlight() const { return hover_bar; }
+
                 void clear_items();
                 //	class renderer;
                 //friend class renderer;
@@ -60,6 +69,7 @@ export namespace GUI
                 list_box();
 
                 list_element::ptr add_item(std::string elem);
+                virtual void on_pre_render(Context& c) override;
                 virtual void draw(Context& c) override;
 
                   void on_select(list_element*, bool shift = false, bool ctrl = false);
