@@ -568,7 +568,7 @@ namespace
 			{ "layout", "slot" }, { "Pipeline", "pipeline entry" },
 		};
 
-		// Mirrors Prism.g4's shader_type rule.
+		// Mirrors PrismGrammar.h's shader_type rule.
 		inline static const std::set<std::string> SHADER_STAGES = {
 			"compute", "vertex", "pixel", "domain", "hull", "geometry", "miss", "closest_hit",
 			"any_hit", "raygen", "amplification", "mesh", "shader",

@@ -273,7 +273,7 @@ Chain:
 
 No grammar change was needed: value_declaration already accepts option_block, and
 options are exposed to Jinja generically. Regenerate with bin/debug/prismc.exe
-from sources/Prism — generate_prism_parser.bat only rebuilds the ANTLR grammar.
+from sources/Prism.
 
 
 ================================================================================

@@ -45,7 +45,7 @@
 - Runtime-tunable properties (`Variable<T>`) with an in-app debug panel
 - CPU/GPU profiling (scoped `PROFILE`/`PROFILE_GPU` markers)
 - FrameGraph live debugger: pass/resource inspector, GPU pass timeline with barrier visualization, and a pannable/zoomable resource preview (2D/array/3D/cube textures and buffers)
-- Prism, a declaration language for GPU/CPU structs, bindings, PSOs and FrameGraph passes (ANTLR4-driven `prismc` generates HLSL + C++ from `.prism` files), with a Visual Studio extension for highlighting, live diagnostics and navigation
+- Prism, a declaration language for GPU/CPU structs, bindings, PSOs and FrameGraph passes (the cpp-peglib-driven `prismc` generates HLSL + C++ from `.prism` files), with a Visual Studio extension for highlighting, live diagnostics and navigation
 
 ## Build system
 
@@ -58,11 +58,11 @@
 
 - C++23, built extensively around **C++ modules** (`.ixx` module interfaces) rather than classic headers
 - Layered module/include architecture (Modules → Core → HAL → RenderSystem → Spectrum), each layer force-including the one below via a chained `Defines.h`
-- Third-party libraries (assimp, cereal, antlr4, DirectXTex, DirectStorage, freetype, jinja2cpp, ...) wrapped as C++ modules under `sources/Modules/`
+- Third-party libraries (assimp, cereal, DirectXTex, DirectStorage, freetype, jinja2cpp, ...) wrapped as C++ modules under `sources/Modules/`
 
 ## Code generation
 
-Large parts of the engine are generated rather than hand-written. The source of truth is **Prism**, the engine's declaration language: `.prism` files in `sources/Prism/defs/` declare GPU/CPU shared structs and their slot bindings, root layouts, graphics/compute/raytracing/work-graph PSOs, FrameGraph passes and pipelines, enums, constants and HLSL helper functions. The `prismc` compiler (`sources/Prism/`, ANTLR4 grammar `Prism.g4`, Jinja2 templates) validates them and generates, into `autogen/` directories that are checked in but never edited by hand:
+Large parts of the engine are generated rather than hand-written. The source of truth is **Prism**, the engine's declaration language: `.prism` files in `sources/Prism/defs/` declare GPU/CPU shared structs and their slot bindings, root layouts, graphics/compute/raytracing/work-graph PSOs, FrameGraph passes and pipelines, enums, constants and HLSL helper functions. The `prismc` compiler (`sources/Prism/`, cpp-peglib grammar `PrismGrammar.h`, Jinja2 templates) validates them and generates, into `autogen/` directories that are checked in but never edited by hand:
 - **HAL** (`sources/HAL/autogen/`): binding tables and slots, root layouts, PSOs with permutation keys, raytracing PSOs, enums, constants
 - **FrameGraph** (`sources/RenderSystem/FrameGraph/autogen/`): per-pass headers with generated setup (resource creation/needs, enable conditions), pipelines, `pass_ids.h`, `resource_ids.h`, `pass_defaults.*`, context dependency tables
 - **HLSL** (`workdir/shaders/autogen/`): the matching shader-side structs, layouts, raytracing and work-graph node headers

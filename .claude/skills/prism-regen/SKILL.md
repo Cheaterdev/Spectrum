@@ -11,12 +11,11 @@ its own — the generated C++ and HLSL must be rebuilt from it.
 
 ## The one thing that goes wrong
 
-`generate_prism_parser.bat` does **not** regenerate code from `.prism` files. It
-runs ANTLR over `Prism.g4` to rebuild the *parser*, which is only needed when
-the grammar itself changes. Running it after a `.prism` edit appears to succeed
-and produces no useful change — which is exactly why it's the trap.
+Editing a `.prism` file does nothing until `prismc.exe` runs. The Prism parser
+itself is not generated any more (the PEG grammar is compiled into `prismc`,
+`sources/Prism/PrismGrammar.h`), so there is no separate parser step to run.
 
-The actual generator is `prismc.exe`, built by the `Prism` project.
+The generator is `prismc.exe`, built by the `Prism` project.
 
 ## Running the generator
 

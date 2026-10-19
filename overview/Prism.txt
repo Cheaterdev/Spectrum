@@ -31,7 +31,7 @@ groups.
 --------------------------------------------------------------------------------
 
   sources/Prism/defs/*.prism     the declarations (one file per subsystem)
-  sources/Prism/Prism.g4         ANTLR grammar
+  sources/Prism/PrismGrammar.h   cpp-peglib (PEG) grammar, compiled into prismc
   sources/Prism/templates/       Jinja templates: cpp/ and hlsl/ output
   sources/Prism/Main.cpp         generator: parse, validate, render templates
   sources/Prism/Validate.cpp     every semantic check (and the option lists)
@@ -88,8 +88,8 @@ window) and the exit code is 1. Many come with a suggestion:
     ddgi.prism(515,2): error: unknown option [SetupConditon] on PassNode
     'DDGIProbeSelect'; did you mean 'SetupCondition'?
 
-generate_prism_parser.bat is NOT a regeneration step — it rebuilds the ANTLR
-parser from Prism.g4 and is only needed after a grammar change.
+There is no parser-generation step: the PEG grammar is compiled into prismc, so
+a grammar change is just a rebuild of the Prism project.
 
 
 --------------------------------------------------------------------------------

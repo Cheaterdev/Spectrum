@@ -5,5 +5,5 @@ Parsed parse(std::wstring filename);
 // diagnostic locations.
 Parsed parse_text(const std::string& text, const std::string& file);
 
-// Every keyword literal in Prism.g4, for completion.
+// Every keyword literal in PrismGrammar.h, for completion.
 std::vector<std::string> sig_keywords();

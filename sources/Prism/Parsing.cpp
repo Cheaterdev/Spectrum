@@ -1,47 +1,100 @@
 import Core;
-import antlr4;
-#undef EOF
-#include ".antlr/PrismLexer.h"
-#include ".antlr/PrismParser.h"
-#include ".antlr/PrismBaseListener.h"
-#include ".antlr/PrismBaseVisitor.h"
 
-using namespace antlr4;
 #include "Parsing.h"
 #include "Diagnostics.h"
+#include "PrismAst.h"
 
-// ANTLR's default listener prints to stderr and then recovers, so a malformed
-// .prism would otherwise yield a half-built model that generates plausible output.
-class CollectingErrorListener : public BaseErrorListener
-{
-	std::string file;
+using Ast = PrismNode;
 
-public:
-	explicit CollectingErrorListener(std::string file) : file(std::move(file)) {}
-
-	void syntaxError(Recognizer*, Token*, size_t line, size_t column, const std::string& msg, std::exception_ptr) override
-	{
-		diagnostics().error(SourceLocation{ file, line, column + 1 }, msg);
-	}
-};
-
-class TreeShapeListener : public PrismBaseListener
+// Walks the AST in source order and builds the Parsed model. Every rule of the
+// grammar is an AST node, so each handler sees the same nodes in the same order
+// the ANTLR parse tree walker used to deliver them: `enter_x` before a node's
+// children, `exit_x` after.
+class TreeShapeListener
 {
 public:
 	Parsed& parsed;
 	std::string file;
+	const std::string& source; // the buffer that was parsed; token views point into it
 
-	TreeShapeListener(Parsed& parsed, std::string file) : parsed(parsed), file(std::move(file))
+	TreeShapeListener(Parsed& parsed, std::string file, const std::string& source)
+		: parsed(parsed), file(std::move(file)), source(source)
 	{
 		parsed.loc.file = this->file;
 		setup_elem(parsed);
 	}
 
-	void stamp(antlr4::ParserRuleContext* ctx)
+	void walk(const Ast& node)
 	{
-		auto* start = ctx->getStart();
-		elems.back().elem->loc = SourceLocation{ file, start->getLine(), start->getCharPositionInLine() + 1 };
+		enter(node);
+		for (const auto& child : node.nodes)
+			walk(*child);
+		leave(node);
 	}
+
+	// ---- AST access ---------------------------------------------------------
+
+	static void collect_text(const Ast& node, std::string& out)
+	{
+		if (node.is_token)
+			out += node.token;
+		else
+			for (const auto& child : node.nodes)
+				collect_text(*child, out);
+	}
+
+	// The concatenated token texts, which is what ANTLR's getText() returned:
+	// whitespace and comments between tokens are not part of it.
+	static std::string text_of(const Ast& node)
+	{
+		std::string out;
+		collect_text(node, out);
+		return out;
+	}
+
+	static const Ast* child_of(const Ast& node, std::string_view name)
+	{
+		for (const auto& child : node.nodes)
+			if (child->name == name)
+				return child.get();
+		return nullptr;
+	}
+
+	static const Ast& require_child(const Ast& node, std::string_view name)
+	{
+		if (auto* c = child_of(node, name))
+			return *c;
+		throw std::logic_error(std::format("internal: {} has no {}", node.name, name));
+	}
+
+	static const Ast* first_leaf(const Ast& node)
+	{
+		const Ast* n = &node;
+		while (!n->is_token)
+		{
+			if (n->nodes.empty())
+				return nullptr;
+			n = n->nodes.front().get();
+		}
+		return n;
+	}
+
+	SourceLocation loc_of(const Ast& node, size_t shift = 0) const
+	{
+		return SourceLocation{ file, node.line, node.column + shift };
+	}
+
+	size_t offset_of(const char* p) const
+	{
+		return static_cast<size_t>(p - source.data());
+	}
+
+	void stamp(const Ast& ctx)
+	{
+		elems.back().elem->loc = loc_of(ctx);
+	}
+
+	// ---- element stack ------------------------------------------------------
 
 	struct elem_info
 	{
@@ -121,31 +174,71 @@ public:
 			loc.file, loc.line, loc.column, typeid(T).name()));
 	}
 
-#define GENERATE(x) \
-	virtual void exit##x##(PrismParser::##x##Context * ctx) override { \
-		end_elem();\
-	}\
-	virtual void enter##x##(PrismParser::##x##Context* ctx) override { \
-		enter_body_##x(ctx);\
-		stamp(ctx);\
-	}\
-	void enter_body_##x(PrismParser::##x##Context* ctx)
+	// ---- dispatch -----------------------------------------------------------
+	// A rule listed here must have the matching handler below, and a handler
+	// that is not listed is never called.
 
+#define GENERATED_RULES(X) \
+	X(layout_definition) X(table_definition) X(const_definition) X(slot_declaration) X(value_declaration) \
+	X(option) X(sampler_declaration) X(rt_definition) X(rt_color_declaration) X(rt_ds_declaration) \
+	X(compute_pso_definition) X(graphics_pso_definition) X(rtx_pso_definition) X(workgraph_pso_definition) \
+	X(node_definition) X(node_param) X(rtx_pass_definition) X(rtx_raygen_definition) X(root_sig) X(shader) \
+	X(options_assign) X(define_declaration) X(rtv_formats_declaration) X(blends_declaration) X(pso_param) \
+	X(array_value_holder) X(flag_value_holder) X(view_definition) X(pass_definition) X(view_declaration) \
+	X(pipeline_definition) X(pipeline_stat) X(enum_definition) X(enum_value_declaration)
 
-#define EXIT(x) \
-	virtual void exit##x##(PrismParser::##x##Context * ctx) override
+#define ENTER_ONLY_RULES(X) \
+	X(name_id) X(shader_path) X(inherit_id) X(class_no_template) X(owner_id) X(template_id) X(value_id) \
+	X(raw_value) X(cond_term) X(call_arg) X(paren_group) X(pso_param_id) X(node_param_id) X(array) X(pointer) \
+	X(array_count_id) X(insert_block) X(shader_type)
 
-#define ENTER(x) \
-	virtual void enter##x##(PrismParser::##x##Context* ctx) override
+#define ENTER_AND_EXIT_RULES(X) X(namespace_header) X(function_definition) X(node_output_decl)
 
+#define EXIT_ONLY_RULES(X) X(namespace_definition) X(call) X(paren_group)
 
-	ENTER(Namespace_header)
+	void enter(const Ast& n)
+	{
+		switch (n.tag)
+		{
+#define CASE_GENERATED(r) case prism_tag(#r): enter_body_##r(n); stamp(n); break;
+#define CASE_ENTER(r) case prism_tag(#r): enter_##r(n); break;
+			GENERATED_RULES(CASE_GENERATED)
+			ENTER_ONLY_RULES(CASE_ENTER)
+			ENTER_AND_EXIT_RULES(CASE_ENTER)
+#undef CASE_GENERATED
+#undef CASE_ENTER
+		default:
+			break;
+		}
+	}
+
+	void leave(const Ast& n)
+	{
+		switch (n.tag)
+		{
+#define CASE_GENERATED(r) case prism_tag(#r): end_elem(); break;
+#define CASE_EXIT(r) case prism_tag(#r): exit_##r(n); break;
+			GENERATED_RULES(CASE_GENERATED)
+			ENTER_AND_EXIT_RULES(CASE_EXIT)
+			EXIT_ONLY_RULES(CASE_EXIT)
+#undef CASE_GENERATED
+#undef CASE_EXIT
+		default:
+			break;
+		}
+	}
+
+#define GENERATE(x) void enter_body_##x([[maybe_unused]] const Ast& ctx)
+#define EXIT(x) void exit_##x([[maybe_unused]] const Ast& ctx)
+#define ENTER(x) void enter_##x([[maybe_unused]] const Ast& ctx)
+
+	ENTER(namespace_header)
 	{
 		setup_map(get_elem<Parsed>().namespaces);
 		stamp(ctx);
 	}
 
-	EXIT(Namespace_header)
+	EXIT(namespace_header)
 	{
 		auto& ns = get_elem<Namespace>();
 		ns.path = ns.ns.empty() ? ns.name : ns.ns + "::" + ns.name;
@@ -153,57 +246,56 @@ public:
 		ns_stack.push_back(ns.path);
 	}
 
-	EXIT(Namespace_definition)
+	EXIT(namespace_definition)
 	{
 		ns_stack.pop_back();
 	}
 
-	GENERATE(Layout_definition)
+	GENERATE(layout_definition)
 	{
 		setup_map(get_elem<Parsed>().layouts);
 	}
 
-	GENERATE(Table_definition)
+	GENERATE(table_definition)
 	{
 		setup_map(get_elem<Parsed>().tables);
 	}
 
-	GENERATE(Const_definition)
+	GENERATE(const_definition)
 	{
 		setup_map(get_elem<Parsed>().consts);
 	}
 
-	ENTER(Function_definition)
+	ENTER(function_definition)
 	{
 		setup_list(get_elem<Table>().functions);
 		stamp(ctx);
 	}
 
-	EXIT(Function_definition)
+	EXIT(function_definition)
 	{
 		auto& fn = get_elem<Function>();
-		auto* input = ctx->getStart()->getInputStream();
-		auto text = [&](size_t a, size_t b) { return input->getText(antlr4::misc::Interval(a, b)); };
 
-		auto* params = ctx->function_params();
-		if (params->getStop() && params->getStop()->getStopIndex() + 1 > params->getStart()->getStartIndex())
-			fn.params = text(params->getStart()->getStartIndex(), params->getStop()->getStopIndex());
+		// Token views are exact; a function_params token has no leading
+		// whitespace (the `(` before it skipped it) but can carry trailing
+		// whitespace up to the `)`.
+		std::string_view params = require_child(ctx, "function_params").token;
+		while (!params.empty() && std::isspace(static_cast<unsigned char>(params.back())))
+			params.remove_suffix(1);
+		if (!params.empty())
+			fn.params = std::string(params);
 
 		// From the start of the return type's line, so the pasted text keeps the
 		// indentation its first line was written with.
-		size_t begin = ctx->type_id()->getStart()->getStartIndex();
+		size_t begin = offset_of(first_leaf(require_child(ctx, "type_id"))->token.data());
 		size_t line_start = begin;
-		while (line_start > 0)
-		{
-			std::string prev = text(line_start - 1, line_start - 1);
-			if (prev != " " && prev != "\t")
-				break;
+		while (line_start > 0 && (source[line_start - 1] == ' ' || source[line_start - 1] == '\t'))
 			--line_start;
-		}
-		fn.source = text(line_start, ctx->getStop()->getStopIndex());
 
-		auto* body = ctx->FUNC_BODY()->getSymbol();
-		fn.body_loc = SourceLocation{ file, body->getLine(), body->getCharPositionInLine() + 1 };
+		const Ast& body = require_child(ctx, "FUNC_BODY");
+		size_t end = offset_of(body.token.data()) + body.token.size();
+		fn.source = source.substr(line_start, end - line_start);
+		fn.body_loc = loc_of(body);
 
 		end_elem();
 
@@ -212,37 +304,37 @@ public:
 			get_elem<Table>().hlsl += "\n" + fn.source + "\n";
 	}
 
-	GENERATE(Slot_declaration)
+	GENERATE(slot_declaration)
 	{
 		setup_map(get_elem<Layout>().slots);
 	}
 
-	GENERATE(Value_declaration)
+	GENERATE(value_declaration)
 	{
 		setup_list(get_elem<Table>().values);
 	}
 
-	GENERATE(Option)
+	GENERATE(option)
 	{
 		setup_map(get_elem<have_options>().options);
 	}
 
-	GENERATE(Sampler_declaration)
+	GENERATE(sampler_declaration)
 	{
 		setup_map(get_elem<Layout>().samplers);
 	}
 
-	GENERATE(Rt_definition)
+	GENERATE(rt_definition)
 	{
 		setup_map(get_elem<Parsed>().rt);
 	}
 
-	GENERATE(Rt_color_declaration)
+	GENERATE(rt_color_declaration)
 	{
 		setup_list(get_elem<RenderTarget>().rtvs);
 	}
 
-	GENERATE(Rt_ds_declaration)
+	GENERATE(rt_ds_declaration)
 	{
 		auto& owner = get_elem<RenderTarget>().dsv;
 		ASSERT(!owner);
@@ -252,38 +344,38 @@ public:
 	}
 
 
-	GENERATE(Compute_pso_definition)
+	GENERATE(compute_pso_definition)
 	{
 		setup_map(get_elem<Parsed>().compute_pso);
 	}
 
-	GENERATE(Graphics_pso_definition)
+	GENERATE(graphics_pso_definition)
 	{
 		setup_map(get_elem<Parsed>().graphics_pso);
 	}
 
-	GENERATE(Rtx_pso_definition)
+	GENERATE(rtx_pso_definition)
 	{
 		setup_map(get_elem<Parsed>().raytrace_pso);
 	}
 
-	GENERATE(Workgraph_pso_definition)
+	GENERATE(workgraph_pso_definition)
 	{
 		setup_map(get_elem<Parsed>().workgraph_pso);
 	}
 
-	GENERATE(Node_definition)
+	GENERATE(node_definition)
 	{
 		setup_map(get_elem<WorkgraphPSO>().nodes);
 	}
 
-	ENTER(Node_output_decl)
+	ENTER(node_output_decl)
 	{
 		setup_list(get_elem<WorkgraphNode>().outputs);
 		stamp(ctx);
 	}
 
-	EXIT(Node_output_decl)
+	EXIT(node_output_decl)
 	{
 		auto& output = get_elem<WorkgraphNodeOutput>();
 		if (auto* opt = output.find_option("MaxRecords"))
@@ -291,128 +383,127 @@ public:
 		end_elem();
 	}
 
-	GENERATE(Node_param)
+	GENERATE(node_param)
 	{
 		setup_map(get_elem<param_holder>().params);
 	}
 
 
 	// index is assigned after all files are merged (assign_rtx_ids in Main.cpp).
-	GENERATE(Rtx_pass_definition)
+	GENERATE(rtx_pass_definition)
 	{
 		setup_map(get_elem<Parsed>().raytrace_pass);
 	}
 
-	GENERATE(Rtx_raygen_definition)
+	GENERATE(rtx_raygen_definition)
 	{
 		setup_map(get_elem<Parsed>().raytrace_gen);
 	}
 
 
-	GENERATE(Root_sig)
+	GENERATE(root_sig)
 	{
 		setup_elem(get_elem<root_holder>().root_sig);
 	}
 
 
-	GENERATE(Shader)
+	GENERATE(shader)
 	{
 		setup_map(get_elem<shader_holder>().shaders);
 	}
 
 
-	GENERATE(Options_assign)
+	GENERATE(options_assign)
 	{
 		auto& owner = get_elem<option>();
 		setup_elem(owner.value_atom);
 	}
 
 
-	GENERATE(Define_declaration)
+	GENERATE(define_declaration)
 	{
 		setup_map(get_elem<PSO>().defines);
 	}
 
 
-	GENERATE(Rtv_formats_declaration)
+	GENERATE(rtv_formats_declaration)
 	{
 		auto& owner = get_elem<GraphicsPSO>();
 		setup_elem(owner.rtv);
 	}
 
-	GENERATE(Blends_declaration)
+	GENERATE(blends_declaration)
 	{
 		auto& owner = get_elem<GraphicsPSO>();
 		setup_elem(owner.blend);
 	}
 
 
-	GENERATE(Pso_param)
+	GENERATE(pso_param)
 	{
 		setup_map(get_elem<param_holder>().params);
 	}
 
 
-	GENERATE(Array_value_holder)
+	GENERATE(array_value_holder)
 	{
 		setup_list(get_elem<have_values>().values);
 	}
 
-	GENERATE(Flag_value_holder)
+	GENERATE(flag_value_holder)
 	{
 		setup_list(get_elem<have_values>().values);
 	}
 
-	GENERATE(View_definition)
+	GENERATE(view_definition)
 	{
 		setup_map(get_elem<Parsed>().views);
 	}
-	GENERATE(Pass_definition)
+	GENERATE(pass_definition)
 	{
 		setup_map(get_elem<Parsed>().passes);
 	}
-	GENERATE(View_declaration)
+	GENERATE(view_declaration)
 	{
 		setup_list(get_elem<View>().params);
 	}
 
-	GENERATE(Pipeline_definition)
+	GENERATE(pipeline_definition)
 	{
 		setup_map(get_elem<Parsed>().pipelines);
 	}
-	GENERATE(Pipeline_stat)
+	GENERATE(pipeline_stat)
 	{
 		setup_map(get_elem<Pipeline>().entries);
 	}
 
-	GENERATE(Enum_definition)
+	GENERATE(enum_definition)
 	{
 		setup_map(get_elem<Parsed>().enums);
 	}
 
-	GENERATE(Enum_value_declaration)
+	GENERATE(enum_value_declaration)
 	{
 		setup_list(get_elem<Enum>().values);
 	}
 
-	void enterName_id(PrismParser::Name_idContext* ctx) override
+	ENTER(name_id)
 	{
 		auto& elem = get_elem<have_name>();
-		elem.name = ctx->children[0]->getText();
-		elem.name_loc = SourceLocation{ file, ctx->getStart()->getLine(), ctx->getStart()->getCharPositionInLine() + 1 };
+		elem.name = text_of(ctx);
+		elem.name_loc = loc_of(ctx);
 	}
 
-	void enterShader_path(PrismParser::Shader_pathContext* ctx) override
+	ENTER(shader_path)
 	{
 		auto& elem = get_elem<Shader>();
-		auto* start = ctx->getStart();
 
-		if (ctx->STRING())
+		if (child_of(ctx, "STRING"))
 		{
-			std::string text = ctx->getText();
+			std::string text = text_of(ctx);
 			elem.path_literal = text.substr(1, text.size() - 2);
 			elem.path_quoted = true;
-			elem.path_loc = SourceLocation{ file, start->getLine(), start->getCharPositionInLine() + 2 };
+			elem.path_loc = loc_of(ctx, 1);
 
 			constexpr std::string_view ext = ".hlsl";
 			elem.path = elem.path_literal.ends_with(ext)
@@ -421,164 +512,162 @@ public:
 		}
 		else
 		{
-			elem.path = elem.path_literal = ctx->getText();
-			elem.path_loc = SourceLocation{ file, start->getLine(), start->getCharPositionInLine() + 1 };
+			elem.path = elem.path_literal = text_of(ctx);
+			elem.path_loc = loc_of(ctx);
 		}
 	}
 
-	void enterInherit_id(PrismParser::Inherit_idContext* ctx) override
+	ENTER(inherit_id)
 	{
 		auto& elem = get_elem<inherited>();
-		elem.parent.emplace_back(ctx->children[0]->getText());
+		elem.parent.emplace_back(text_of(ctx));
 	}
 
-	void enterType_id(PrismParser::Type_idContext* ctx) override
-	{
-		//elem.type = ctx->children[0]->getText();
-		//	elem.detect_type(&options);
-	}
-
-	//	virtual void enterModifier(PrismParser::ModifierContext* ctx) override {
-	//	auto& elem = get_elem<have_type>();
-	//	auto& options = get_elem<have_options>();
-
-	//	elem.unorm = ctx->children[0]->getText()=="unorm";
-	////	elem.detect_type(&options);
-	//}
-
-	void enterClass_no_template(PrismParser::Class_no_templateContext* ctx) override
+	ENTER(class_no_template)
 	{
 		auto& elem = get_elem<have_type>();
 
-		elem.class_no_template = ctx->children[0]->getText();
+		elem.class_no_template = text_of(ctx);
 		elem.detect_type(find_elem<have_options>());
 	}
 
-	void enterOwner_id(PrismParser::Owner_idContext* ctx) override
+	ENTER(owner_id)
 	{
 		auto& elem = get_elem<have_owner>();
-		elem.owner_name = ctx->children[0]->getText();
+		elem.owner_name = text_of(ctx);
 	}
 
-	void enterTemplate_id(PrismParser::Template_idContext* ctx) override
+	ENTER(template_id)
 	{
 		auto& elem = get_elem<have_type>();
 
 		if (!elem.template_arg.empty())
 			elem.template_arg += ' ';
-		elem.template_arg += ctx->children[0]->getText();
+		elem.template_arg += text_of(ctx);
 
 		elem.detect_type(find_elem<have_options>());
 	}
 
-	void enterValue_id(PrismParser::Value_idContext* ctx) override
+	ENTER(value_id)
 	{
 		auto& elem = get_elem<have_expr>();
-		elem.expr = ctx->getText();
-		elem.is_literal = ctx->INT_SCALAR() || ctx->FLOAT_SCALAR() || ctx->bool_type();
+		elem.expr = text_of(ctx);
+		elem.is_literal = child_of(ctx, "INT_SCALAR") || child_of(ctx, "FLOAT_SCALAR") || child_of(ctx, "bool_type");
 	}
 
-	void enterRaw_value(PrismParser::Raw_valueContext* ctx) override
+	ENTER(raw_value)
 	{
 		auto& elem = get_elem<have_expr>();
-		std::string text = ctx->getText();
+		std::string text = text_of(ctx);
 		elem.expr = text.substr(1, text.size() - 2); // strip the enclosing backticks
 		elem.is_raw = true;
 	}
 
 	// Records each cond_term in source order. Deliberately does NOT touch
-	// expr/owner_name/is_literal: enterValue_id and enterOwner_id still fire for
+	// expr/owner_name/is_literal: enter_value_id and enter_owner_id still fire for
 	// the leaves inside these terms, so a single-term option value keeps
 	// producing exactly the fields it always did. Codegen renders from terms
 	// only when there is more than one of them, which is what makes this change
 	// incapable of altering any existing option's generated output.
-	void enterCond_term(PrismParser::Cond_termContext* ctx) override
+	ENTER(cond_term)
 	{
 		auto& elem = get_elem<have_expr>();
 		auto& term = elem.terms.emplace_back();
-		auto loc_of = [&](antlr4::ParserRuleContext* c, size_t shift = 0)
-		{
-			return SourceLocation{ file, c->getStart()->getLine(), c->getStart()->getCharPositionInLine() + 1 + shift };
-		};
 		term.text_loc = loc_of(ctx);
 
-		if (auto* q = ctx->qualified_ref())
+		if (auto* q = child_of(ctx, "qualified_ref"))
 		{
+			const Ast& owner = require_child(*q, "owner_id");
+			const Ast& value = require_child(*q, "value_id");
 			term.kind  = ExprTerm::Qualified;
-			term.owner = q->owner_id()->getText();
-			term.text  = q->value_id()->getText();
-			term.owner_loc = loc_of(q->owner_id());
-			term.text_loc  = loc_of(q->value_id());
+			term.owner = text_of(owner);
+			term.text  = text_of(value);
+			term.owner_loc = loc_of(owner);
+			term.text_loc  = loc_of(value);
 		}
-		else if (auto* m = ctx->member_ref())
+		else if (auto* m = child_of(ctx, "member_ref"))
 		{
+			const Ast& owner = *m->nodes.front();
+			const Ast& member = *m->nodes.back();
 			term.kind  = ExprTerm::Member;
-			term.owner = m->name_id(0)->getText();
-			term.text  = m->name_id(1)->getText();
-			term.owner_loc = loc_of(m->name_id(0));
-			term.text_loc  = loc_of(m->name_id(1));
+			term.owner = text_of(owner);
+			term.text  = text_of(member);
+			term.owner_loc = loc_of(owner);
+			term.text_loc  = loc_of(member);
 		}
-		else if (ctx->function_id())
+		else if (child_of(ctx, "function_id"))
 		{
 			term.kind = ExprTerm::Function;
-			term.text = ctx->getText();
+			term.text = text_of(ctx);
 			if (term.text.rfind("exists(", 0) == 0)
 				term.text_loc = loc_of(ctx, 7);
 		}
-		else if (auto* c = ctx->call())
+		else if (auto* c = child_of(ctx, "call"))
 		{
-			// The argument terms follow via their own enterCond_term; the
-			// separators and closing paren come from the two listeners below.
+			// The argument terms follow via their own enter_cond_term; the
+			// separators and closing paren come from the handlers below.
 			term.kind = ExprTerm::Call;
-			term.text = c->ID()->getText();
+			term.text = text_of(require_child(*c, "ID"));
 		}
-		else if (ctx->cond_op())
+		else if (child_of(ctx, "cond_op"))
 		{
 			term.kind = ExprTerm::Op;
-			term.text = ctx->getText();
+			term.text = text_of(ctx);
 		}
 		else
 		{
 			term.kind = ExprTerm::Plain;
-			term.text = ctx->getText();
+			term.text = text_of(ctx);
 		}
 	}
 
-	void enterCall_arg(PrismParser::Call_argContext* ctx) override
-	{
-		auto* call = static_cast<PrismParser::CallContext*>(ctx->parent);
-		if (call->call_arg(0) != ctx)
-		{
-			auto& term = get_elem<have_expr>().terms.emplace_back();
-			term.kind = ExprTerm::Op;
-			term.text = ",";
-		}
-	}
-
-	void exitCall(PrismParser::CallContext* ctx) override
+	void add_op_term(std::string text, SourceLocation loc)
 	{
 		auto& term = get_elem<have_expr>().terms.emplace_back();
 		term.kind = ExprTerm::Op;
-		term.text = ")";
+		term.text = std::move(text);
+		term.text_loc = std::move(loc);
 	}
 
-	void enterPso_param_id(PrismParser::Pso_param_idContext* ctx) override
+	ENTER(call_arg)
+	{
+		if (&require_child(*ctx.parent, "call_arg") != &ctx)
+			add_op_term(",", {});
+	}
+
+	EXIT(call)
+	{
+		add_op_term(")", {});
+	}
+
+	// A parenthesised group inside a call's argument; a cond_op pair elsewhere.
+	ENTER(paren_group)
+	{
+		add_op_term("(", loc_of(ctx));
+	}
+
+	EXIT(paren_group)
+	{
+		add_op_term(")", loc_of(*ctx.nodes.back()));
+	}
+
+	ENTER(pso_param_id)
 	{
 		auto& elem = get_elem<have_type>();
 
-		elem.class_no_template = ctx->children[0]->getText();
+		elem.class_no_template = text_of(ctx);
 		elem.detect_type(find_elem<have_options>());
 	}
 
-	void enterNode_param_id(PrismParser::Node_param_idContext* ctx) override
+	ENTER(node_param_id)
 	{
 		auto& elem = get_elem<have_type>();
 
-		elem.class_no_template = ctx->children[0]->getText();
+		elem.class_no_template = text_of(ctx);
 		elem.detect_type(find_elem<have_options>());
 	}
 
-	void enterArray(PrismParser::ArrayContext* ctx) override
+	ENTER(array)
 	{
 		{
 			auto& elem = get_elem<have_array>();
@@ -591,21 +680,19 @@ public:
 		}
 	}
 
-	void enterPointer(PrismParser::PointerContext* ctx) override
+	ENTER(pointer)
 	{
-		{
-			auto& elem = get_elem<have_type>();
-			elem.pointer = true;
+		auto& elem = get_elem<have_type>();
+		elem.pointer = true;
 
-			elem.detect_type(find_elem<have_options>());
-		}
+		elem.detect_type(find_elem<have_options>());
 	}
 
-	void enterArray_count_id(PrismParser::Array_count_idContext* ctx) override
+	ENTER(array_count_id)
 	{
 		{
 			auto& elem = get_elem<have_array>();
-			elem.array_count = std::atoi(ctx->children[0]->getText().c_str());
+			elem.array_count = std::atoi(text_of(ctx).c_str());
 		}
 		{
 			auto& elem = get_elem<have_type>();
@@ -619,48 +706,41 @@ public:
 	}
 
 
-	void enterInsert_block(PrismParser::Insert_blockContext* ctx) override
+	ENTER(insert_block)
 	{
-		auto str = ctx->children[0]->getText();
+		auto str = text_of(ctx);
 		auto& elem = get_elem<have_hlsl>();
 		elem.hlsl += str.substr(2, str.size() - 4);
 		elem.inserted = str.substr(2, str.size() - 4);
-		elem.hlsl_loc = SourceLocation{ file, ctx->getStart()->getLine(), ctx->getStart()->getCharPositionInLine() + 1 };
+		elem.hlsl_loc = loc_of(ctx);
 	}
 
 
-	void enterShader_type(PrismParser::Shader_typeContext* ctx) override
+	ENTER(shader_type)
 	{
 		if (auto* shader = find_elem<Shader>())
-			shader->name = ctx->children[0]->getText();
+			shader->name = text_of(ctx);
 	}
 };
 
-static Parsed parse_input(ANTLRInputStream& input, const std::string& file)
+static Parsed parse_input(const std::string& text, const std::string& file)
 {
 	Parsed parsed;
-	CollectingErrorListener errors(file);
 
-	PrismLexer lexer(&input);
-	lexer.removeErrorListeners();
-	lexer.addErrorListener(&errors);
+	std::vector<PrismSyntaxError> errors;
+	auto ast = prism_parse_ast(text, file.c_str(), errors);
 
-	CommonTokenStream tokens(&lexer);
-	PrismParser parser(&tokens);
-	parser.removeErrorListeners();
-	parser.addErrorListener(&errors);
-
-	PrismParser::ParseContext* tree = parser.parse();
-
-	// Walking an error-recovered tree only builds a misleading partial model
-	// for the validator to complain about; the syntax errors are the report.
-	if (lexer.getNumberOfSyntaxErrors() == 0 && parser.getNumberOfSyntaxErrors() == 0)
+	// Walking a failed parse only builds a misleading partial model for the
+	// validator to complain about; the syntax errors are the report.
+	if (!ast)
 	{
-		TreeShapeListener listener(parsed, file);
-		antlr4::tree::ParseTreeWalker walker;
-
-		walker.walk(&listener, tree);
+		for (const auto& e : errors)
+			diagnostics().error(SourceLocation{ file, e.line, e.column }, e.message);
+		return parsed;
 	}
+
+	TreeShapeListener listener(parsed, file, text);
+	listener.walk(*ast);
 
 	return parsed;
 }
@@ -676,29 +756,17 @@ Parsed parse(std::wstring filename)
 		return {};
 	}
 
-	ANTLRInputStream input(stream);
-	return parse_input(input, file);
+	std::ostringstream contents;
+	contents << stream.rdbuf();
+	return parse_input(contents.str(), file);
 }
 
 Parsed parse_text(const std::string& text, const std::string& file)
 {
-	ANTLRInputStream input(text);
-	return parse_input(input, file);
+	return parse_input(text, file);
 }
 
 std::vector<std::string> sig_keywords()
 {
-	ANTLRInputStream input("");
-	PrismLexer lexer(&input);
-	const auto& vocabulary = lexer.getVocabulary();
-
-	// Literal names come back quoted ("'struct'"); symbolic tokens such as ID have none.
-	std::vector<std::string> out;
-	for (size_t t = 1; t <= vocabulary.getMaxTokenType(); ++t)
-	{
-		std::string lit(vocabulary.getLiteralName(t));
-		if (lit.size() > 2 && std::isalpha((unsigned char)lit[1]))
-			out.push_back(lit.substr(1, lit.size() - 2));
-	}
-	return out;
+	return prism_grammar_keywords();
 }

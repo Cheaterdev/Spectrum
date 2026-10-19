@@ -4,7 +4,7 @@
 #include <cstdio>   // assert_fail diagnostics (fopen/fprintf)
 
 // The #ifndef guard prevents a redefinition when Core_defs.h is also
-// compiled into the same TU (the antlr generated header still imports it).
+// compiled into the same TU.
 #ifndef CORE_ASSERT_FAIL_DEFINED
 #define CORE_ASSERT_FAIL_DEFINED
 namespace Core {

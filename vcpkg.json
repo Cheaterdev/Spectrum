@@ -6,7 +6,7 @@
     "zlib",
     "directxtex",
     {"name" :"assimp", "version>=":"6.0.4#3"},
-    {"name" :"antlr4", "version>=":"4.13.2#1"},
+    "cpp-peglib",
     {"name" :"magic-enum", "version>=":"0.9.7#1"},
     "crossguid",
     "crc32c",

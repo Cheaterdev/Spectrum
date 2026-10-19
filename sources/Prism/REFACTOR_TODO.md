@@ -40,7 +40,7 @@ strings, checked against workdir/shaders.
 
 | Concern | Location |
 |---|---|
-| Grammar | `Prism.g4` |
+| Grammar | `PrismGrammar.h` (cpp-peglib; this file's other references to ANTLR and `Prism.g4` predate that move) |
 | Parse entry point | `Parsing.cpp:507` (`parse()`) |
 | Listener / element stack | `Parsing.cpp` (`TreeShapeListener`) |
 | Stack accessor | `Parsing.cpp:70` (`get_elem<T>()`) |

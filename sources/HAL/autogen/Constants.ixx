@@ -12,7 +12,7 @@ import Core;
 // never need a Table type at all) whenever a new raw const needs one.
 import :Autogen.Tables.Dev.TileRecord;
 
-// One `const Name = value;` declaration (Prism.g4's const_definition) per line,
+// One `const Name = value;` declaration (PrismGrammar.h's const_definition) per line,
 // in .prism declaration order -- a later constant's raw value may reference an
 // earlier one by its unqualified name (ordinary C++ initialization-order
 // rules), e.g. `const MaxDispatchEntries = `MaxLevels * 2048`;`.
