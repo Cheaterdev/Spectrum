@@ -147,14 +147,52 @@ namespace GUI
         //    context.renderer->draw(c, skin.Normal, get_render_bounds());
 			c.renderer->draw_container(get_ptr(),c);
         }
+		void tab_strip::on_pre_render(Context& c)
+		{
+			base::on_pre_render(c);
+
+			if (!current || !current->visible.get())
+			{
+				indicator_valid = false;
+				return;
+			}
+
+			const rect cb = current->get_render_bounds();
+			if (!indicator_valid)
+			{
+				indicator_x = cb.x;
+				indicator_w = cb.w;
+				indicator_valid = true;
+				return;
+			}
+
+			// Exponential ease, frame-rate independent: about 90% of a jump in 0.1 s.
+			const float k = 1.0f - std::exp(-c.delta_time * 23.0f);
+			indicator_x += (cb.x - indicator_x) * k;
+			indicator_w += (cb.w - indicator_w) * k;
+		}
+
 		void tab_strip::draw_after(Context& c)
 		{
-		//	    context.renderer->draw(c, skin.Normal, get_render_bounds());
-			//	context.renderer->draw_container(get_ptr(),c);
+			const float4 accent = float4(53, 114, 202, 255) / 255.0f;
 			auto bounds = get_render_bounds();
 			bounds.y += bounds.h - 3;
 			bounds.h = 3;
-			c.renderer->draw_color(c, float4(53, 114, 202,255)/255.0f, bounds);
+
+			if (!indicator_valid)
+			{
+				c.renderer->draw_color(c, accent, bounds);
+				return;
+			}
+
+			// A faint baseline under the whole strip, the accent under the current tab only.
+			c.renderer->draw_color(c, float4(accent.x, accent.y, accent.z, 0.25f), bounds);
+
+			rect ind = bounds;
+			ind.x = std::max(indicator_x, bounds.x);
+			ind.w = std::min(indicator_x + indicator_w, bounds.x + bounds.w) - ind.x;
+			if (ind.w > 0)
+				c.renderer->draw_color(c, accent, ind);
 		}
 
 		tab_strip::tab_strip()

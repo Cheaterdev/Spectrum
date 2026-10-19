@@ -23,6 +23,7 @@ GUI::Elements::window::window() : GUI::Elements::resizable()
 {
 	margin = { 20, 20, 20, 20 };
 	backdrop_blur = true;
+	fade_on_add = true;
 	shadow.enabled = true;
 	fx.inner = true;
 	clickable = false;
@@ -49,7 +50,7 @@ GUI::Elements::window::window() : GUI::Elements::resizable()
 	close_button->docking = dock::RIGHT;
 	close_button->on_click = [this](button::ptr)
 	{
-		remove_from_parent();
+		close();
 	};
 	title_bar->add_child(close_button);
 	title_bar->add_child(label_text);
@@ -85,6 +86,9 @@ void GUI::Elements::window::remove_child(base::ptr obj)
 
 void GUI::Elements::window::on_touch()
 {
+	if (is_fade_closing())
+		return;
+
 	resizable::on_touch();
 	to_front();
 }

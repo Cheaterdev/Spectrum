@@ -2248,6 +2248,51 @@ public:
 								buttons->add_child(b);
 							}
 
+							// Animated progress bar (eased fill, sweeping highlight, glowing edge)
+							// and a button that opens a window to try the open / close fades and
+							// the lift while its title bar is dragged.
+							auto progress_row = add_row(30);
+							auto progress = std::make_shared<progress_bar>();
+							progress->docking = GUI::dock::LEFT;
+							progress->width_size = GUI::size_type::FIXED;
+							progress->height_size = GUI::size_type::FIXED;
+							progress->size = { 220, 12 };
+							progress->margin = { 0, 9, 10, 0 };
+							progress->value = 0.35f;
+							progress_row->add_child(progress);
+
+							auto step_button = std::make_shared<button>();
+							step_button->get_label()->text = "Progress +25%";
+							step_button->docking = GUI::dock::LEFT;
+							step_button->width_size = GUI::size_type::FIXED;
+							step_button->size = { 120, 30 };
+							step_button->margin = { 0, 0, 10, 0 };
+							GUI::Elements::progress_bar::wptr progress_weak = progress;
+							step_button->on_click = [progress_weak](button::ptr)
+								{
+									if (auto p = progress_weak.lock())
+										p->value = p->value >= 0.99f ? 0.0f : std::min(1.0f, float(p->value) + 0.25f);
+								};
+							progress_row->add_child(step_button);
+
+							auto window_button = std::make_shared<button>();
+							window_button->get_label()->text = "Open window";
+							window_button->docking = GUI::dock::LEFT;
+							window_button->width_size = GUI::size_type::FIXED;
+							window_button->size = { 110, 30 };
+							window_button->margin = { 0, 0, 10, 0 };
+							window_button->on_click = [this](button::ptr)
+								{
+									auto w = std::make_shared<GUI::Elements::window>();
+									w->set_title("Fades in, fades out");
+									w->width_size = GUI::size_type::FIXED;
+									w->height_size = GUI::size_type::FIXED;
+									w->size = { 260, 140 };
+									w->pos = { 300, 200 };
+									add_child(w);
+								};
+							progress_row->add_child(window_button);
+
 							// Edit text fields with the effects: a text box is an element too,
 							// so the same flags apply (opt-in here; text boxes default to none).
 							auto fields = add_row(30);

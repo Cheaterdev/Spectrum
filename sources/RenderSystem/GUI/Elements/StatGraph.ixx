@@ -25,10 +25,18 @@ export namespace GUI
             float _smooth_max  = 0.0f;
             bool  _range_valid = false;
 
-            label::ptr header_label;
-            label::ptr _max_label;
-            label::ptr _min_label;
-            void update_label();
+            // Each readout is its own label in a slot that only ever grows, so a
+            // digit-count change cannot move its neighbours or resize its box.
+            struct readout
+            {
+                label::ptr lbl;
+                float      slot_w = 0.0f;
+            };
+            label::ptr header_label; // title, left
+            readout    _cur, _avg, _max, _min;
+            float      _label_accum = 1.0f; // seconds since the texts were last rewritten
+            void update_label(float dt);
+            void layout_labels(float w, float h);
 
             float get_sample(size_t i) const;
             void  compute_auto_range(float& vmin, float& vmax) const;

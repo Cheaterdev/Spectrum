@@ -41,7 +41,7 @@ bool GUI::Elements::dock_base::on_drop(drag_n_drop_package::ptr e, vec2 p)
 		auto ui = user_ui;
 		dock->on_empty.register_handler(w.get(), [ww, ui](bool)
 			{
-				ui->add_task([ww] {   ww->remove_from_parent(); });
+				ui->add_task([ww] {   ww->close(); });
 			});
 	}
 

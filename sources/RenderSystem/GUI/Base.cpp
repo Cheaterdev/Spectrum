@@ -53,6 +53,13 @@ namespace GUI
         map_to_pixels = map_to_pixels && base_parent->map_to_pixels;
         need_update_layout = true;
 
+        if (fade_on_add && user_ui && user_ui->fade_enabled && user_ui->window_animations)
+        {
+            fade_closing = false;
+            layer_opacity = 0.0f;
+            fade_to(1.0f, user_ui->fade_in_duration);
+        }
+
         if (user_ui && thinkable)
             user_ui->thinking.insert(this);
 
@@ -849,7 +856,8 @@ namespace GUI
 
 
         bool visibility = true;
-        rect r_bounds = render_bounds.get();
+        const rect collected_bounds = render_bounds.get();
+        rect r_bounds = collected_bounds;
         r_bounds.x += c.offset.x;
         r_bounds.y += c.offset.y;
 
@@ -883,6 +891,11 @@ namespace GUI
         if (visibility)
 		{
             update_fade(c.delta_time);
+            if (lift != lift_target)
+            {
+                const float step = c.delta_time / 0.12f;
+                lift = lift < lift_target ? std::min(lift + step, lift_target) : std::max(lift - step, lift_target);
+            }
             layered = layer_wanted();
             layer_alpha = layer_opacity;
 
@@ -896,7 +909,7 @@ namespace GUI
                 update_fx(c.delta_time);
 
            on_pre_render(c);
-            user_ui->draw_infos.emplace_back(c.ui_clipping, entry_scissors,c.scale,this,c.offset,true,layered,layer_index,layer_alpha);
+            user_ui->draw_infos.emplace_back(c.ui_clipping, entry_scissors,c.scale,this,c.offset,true,layered,layer_index,layer_alpha,collected_bounds);
 		//	rec_c.execute([this](Context &c) {
 		//		draw(c);
 		//	});
@@ -945,7 +958,7 @@ namespace GUI
 
     //    if (visibility)
     //        draw_after(c);
-        user_ui->draw_infos.emplace_back(c.ui_clipping, entry_scissors,c.scale, this, c.offset, false, layered, layer_index, layer_alpha);
+        user_ui->draw_infos.emplace_back(c.ui_clipping, entry_scissors,c.scale, this, c.offset, false, layered, layer_index, layer_alpha, collected_bounds);
 
 		/*rec_c.execute([this](Context &c) {
 			draw_after(c);
@@ -1027,8 +1040,31 @@ namespace GUI
         return package;
     }
 
+    namespace
+    {
+        // Set by draw_bounds_scope on the thread that is drawing an element.
+        thread_local const base* draw_bounds_owner = nullptr;
+        thread_local rect draw_bounds_value;
+    }
+
+    draw_bounds_scope::draw_bounds_scope(const base* owner, const rect& bounds)
+        : previous_owner(draw_bounds_owner), previous_bounds(draw_bounds_value)
+    {
+        draw_bounds_owner = owner;
+        draw_bounds_value = bounds;
+    }
+
+    draw_bounds_scope::~draw_bounds_scope()
+    {
+        draw_bounds_owner = previous_owner;
+        draw_bounds_value = previous_bounds;
+    }
+
     rect base::get_render_bounds()
     {
+        if (draw_bounds_owner == this)
+            return draw_bounds_value;
+
         return render_bounds.get();
     }
 
@@ -1135,6 +1171,41 @@ namespace GUI
         }
     }
 
+    void base::fade_close()
+    {
+        if (fade_closing)
+            return;
+
+        if (!user_ui || !user_ui->fade_enabled || !user_ui->window_animations || !get_parent())
+        {
+            remove_from_parent();
+            return;
+        }
+
+        fade_closing = true;
+        fade_to(0.0f, user_ui->fade_out_duration);
+
+        // fade_to dropped any earlier callback, so this is set after it.
+        on_fade_end = [self = get_ptr()]()
+        {
+            if (!self->fade_closing)
+                return;   // cancel_fade_close() came in between
+
+            self->fade_closing = false;
+            self->remove_from_parent();
+            self->layer_opacity = 1.0f;
+        };
+    }
+
+    void base::cancel_fade_close()
+    {
+        if (!fade_closing)
+            return;
+
+        fade_closing = false;
+        fade_to(1.0f, user_ui ? float(user_ui->fade_in_duration) : 0.1f);
+    }
+
     bool base::layer_wanted() const
     {
         return layer_opacity < 0.999f && user_ui && user_ui->fade_enabled;
@@ -1163,7 +1234,7 @@ namespace GUI
             float pad = 2.0f;
 
             if (shadow.enabled && user_ui->shadows_enabled)
-                pad = std::max(pad, 3.0f * float(user_ui->shadow_blur) + float(user_ui->shadow_offset) + 2.0f);
+                pad = std::max(pad, (3.0f * float(user_ui->shadow_blur) + float(user_ui->shadow_offset)) * (1.0f + 1.2f * lift) + 2.0f);
 
             if (glow.enabled && user_ui->glow_enabled)
                 pad = std::max(pad, 3.0f * float(user_ui->glow_size) + 2.0f);
@@ -1194,9 +1265,9 @@ namespace GUI
             if (shadow.enabled && user_ui->shadows_enabled)
             {
                 ShadowStyle s = shadow;
-                s.color.w = user_ui->shadow_opacity;
-                s.blur    = user_ui->shadow_blur;
-                s.offset  = float2(0.0f, float(user_ui->shadow_offset));
+                s.color.w = std::min(1.0f, float(user_ui->shadow_opacity) * (1.0f + 0.4f * lift));
+                s.blur    = float(user_ui->shadow_blur) * (1.0f + 0.8f * lift);
+                s.offset  = float2(0.0f, float(user_ui->shadow_offset) * (1.0f + 1.2f * lift));
                 c.renderer->draw_shadow(c, r, s);
             }
 
@@ -2505,6 +2576,10 @@ void PassDefault<Passes::UI::UI_Render>::render(
             c.layer         = e.layer;
             c.layer_slot    = e.layer_slot;
             c.layer_opacity = e.layer_opacity;
+
+            // The element is drawn where it was when this entry was collected,
+            // not where the GUI thread has since moved it.
+            draw_bounds_scope bounds_scope(e.elem, e.bounds);
 
             if (e.before)
                 e.elem->draw_before(c);

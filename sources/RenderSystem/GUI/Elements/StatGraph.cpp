@@ -32,37 +32,30 @@ namespace GUI
             width_size  = size_type::MATCH_PARENT;
             size        = {0, 60};
 
-            header_label.reset(new label());
-            header_label->docking     = dock::NONE;
-            header_label->x_type      = pos_x_type::LEFT;
-            header_label->y_type      = pos_y_type::TOP;
-            header_label->pos         = {4, 2};
-            header_label->width_size  = size_type::FIXED;
-            header_label->height_size = size_type::FIXED;
-            header_label->size        = {0, 14};
-            header_label->magnet_text = FW1_LEFT | FW1_VCENTER | FW1_NOWORDWRAP;
-            header_label->color       = {0.9f, 0.9f, 0.9f, 0.85f};
-            add_child(header_label);
-
-            auto make_legend_label = [this]() -> label::ptr {
+            // Labels size themselves to their text (label::on_text_changed); layout_labels()
+            // then widens them to their slot and positions them, so nothing is left to the
+            // dock/size machinery that used to flip between text width and graph width.
+            auto make_label = [this](float font, float4 color) -> label::ptr {
                 auto l = label::ptr(new label());
                 l->docking     = dock::NONE;
                 l->x_type      = pos_x_type::LEFT;
                 l->y_type      = pos_y_type::TOP;
-                l->pos         = {0, 2};
                 l->width_size  = size_type::FIXED;
                 l->height_size = size_type::FIXED;
-                l->size        = {0, 12};
-                l->magnet_text = FW1_RIGHT | FW1_VCENTER | FW1_NOWORDWRAP;
-                l->color       = {0.75f, 0.75f, 0.75f, 0.65f};
+                l->magnet_text = FW1_LEFT | FW1_TOP | FW1_NOWORDWRAP;
+                l->font_size   = font;
+                l->color       = color;
+                add_child(l);
                 return l;
             };
 
-            _max_label = make_legend_label();
-            add_child(_max_label);
-
-            _min_label = make_legend_label();
-            add_child(_min_label);
+            // One style for every readout so none of them stands out; only the title is brighter.
+            const float4 readout_color = {0.75f, 0.75f, 0.75f, 0.75f};
+            header_label = make_label(11.0f, {0.95f, 0.95f, 0.95f, 0.95f});
+            _cur.lbl     = make_label(15.0f, line_color); // colour follows line_color, see layout_labels
+            _avg.lbl     = make_label(11.0f, readout_color);
+            _max.lbl     = make_label(11.0f, readout_color);
+            _min.lbl     = make_label(11.0f, readout_color);
 
             draw_tex.mul_color = {1, 1, 1, 1};
             draw_tex.add_color = {0, 0, 0, 0};
@@ -176,7 +169,7 @@ namespace GUI
                 }
             }
 
-            update_label();
+            update_label(dt);
         }
 
         float stat_graph::current_value() const
@@ -209,54 +202,90 @@ namespace GUI
             return m;
         }
 
-        void stat_graph::update_label()
+        void stat_graph::update_label(float dt)
         {
-            header_label->visible = show_stats;
-            _max_label->visible   = show_stats;
-            _min_label->visible   = show_stats;
+            for (label::ptr l : {header_label, _cur.lbl, _avg.lbl, _max.lbl, _min.lbl})
+                l->visible = show_stats;
             if (!show_stats) return;
 
-            char buf[128];
-            float cur = current_value();
-            float avg = average_value();
+            // The texts are rewritten a few times a second, not per frame: a value that
+            // changes every frame is unreadable, and every rewrite re-lays-out the glyphs.
+            constexpr float refresh_interval = 0.25f;
+            _label_accum += dt;
+            if (dt > 0.0f && _label_accum < refresh_interval) return;
+            _label_accum = 0.0f;
 
-            const char* u   = unit.empty() ? "" : unit.c_str();
-            const char* usp = unit.empty() ? "" : " ";
+            const std::string u   = unit.empty() ? "" : " " + unit;
+            auto fmt = [&](const char* prefix, float v) {
+                char buf[64];
+                snprintf(buf, sizeof(buf), "%s%.1f%s", prefix, v, u.c_str());
+                return std::string(buf);
+            };
 
-            if (title.empty())
-                snprintf(buf, sizeof(buf), "%.1f%s%s  avg %.1f%s%s", cur, usp, u, avg, usp, u);
-            else
-                snprintf(buf, sizeof(buf), "%s: %.1f%s%s  avg %.1f%s%s",
-                    title.c_str(), cur, usp, u, avg, usp, u);
+            // Setting the text makes the label size itself to it; the slot only grows.
+            auto set = [](readout& r, const std::string& s) {
+                r.lbl->text = s;
+                r.slot_w = std::max(r.slot_w, vec2(r.lbl->size).x);
+            };
 
-            header_label->text = buf;
+            header_label->text = title;
+            set(_cur, fmt("", current_value()));
+            set(_avg, fmt("avg ", average_value()));
+            // Actual data min/max, not the padded display range.
+            set(_min, fmt("min ", min_stored()));
+            set(_max, fmt("max ", max_stored()));
+        }
 
-            // Legend: actual data min/max (not the padded display range)
-            snprintf(buf, sizeof(buf), "%.1f%s%s ", max_stored(), usp, u);
-            _max_label->text = buf;
+        void stat_graph::layout_labels(float w, float h)
+        {
+            if (!show_stats) return;
 
-            snprintf(buf, sizeof(buf), "%.1f%s%s ", min_stored(), usp, u);
-            _min_label->text = buf;
+            constexpr float pad = 4.0f, gap = 10.0f;
+            auto height = [](const label::ptr& l) { return vec2(l->size).y; };
+
+            // Slot widths come from the ratchet, never from the current text, so the
+            // positions below are stable between refreshes.
+            auto place = [&](const label::ptr& l, float slot_w, float x, float row_y, float row_h) {
+                const float lh = height(l);
+                l->size = {std::max(slot_w, vec2(l->size).x), lh};
+                l->pos  = {x, row_y + (row_h - lh) * 0.5f};
+            };
+
+            const float title_w = vec2(header_label->size).x;
+            const float row_h   = std::max({height(header_label), height(_avg.lbl),
+                                            height(_min.lbl), height(_max.lbl)});
+
+            place(header_label, title_w, pad, 2.0f, row_h);
+
+            // The current value is the headline: bottom-left, larger, in the graph's own colour.
+            _cur.lbl->color = {line_color.x, line_color.y, line_color.z, 1.0f};
+            const float cur_h = height(_cur.lbl);
+            place(_cur.lbl, _cur.slot_w, pad, h - cur_h - 2.0f, cur_h);
+
+            // One row, right to left in priority order. A readout that would run into the
+            // title (or one already dropped) is hidden instead of overlapping.
+            const float left_limit = pad + title_w + gap;
+            float x = w - pad;
+            bool  fits = true;
+            for (readout* r : {&_avg, &_min, &_max})
+            {
+                x -= r->slot_w;
+                fits = fits && x >= left_limit;
+                r->lbl->visible = fits;
+                if (fits)
+                    place(r->lbl, r->slot_w, x, 2.0f, row_h);
+                x -= gap;
+            }
         }
 
         // ── GPU rendering hooks ────────────────────────────────────────────────
 
         void stat_graph::on_pre_render(Context& c)
         {
-            // Keep min label pinned to the bottom edge
             auto bounds = get_render_bounds();
             // Label positions are in layout units; the bounds are pixels.
             const float layout_scale = result_scale * scale;
-            const float h = bounds.h / layout_scale;
-            if (h > 14.0f)
-                _min_label->pos = {0, h - 14.0f};
-
-            // MATCH_PARENT would copy the parent's pixel width into layout units, overshooting by the
-            // scale factor (and right-aligned text would land outside the graph).
-            const float w = bounds.w / layout_scale;
-            header_label->size = {w, 14};
-            _max_label->size   = {w, 12};
-            _min_label->size   = {w, 12};
+            layout_labels(bounds.w / layout_scale, bounds.h / layout_scale);
 
             if (count == 0) return;
             if (bounds.w < 4.0f || bounds.h < 4.0f) return;

@@ -195,7 +195,9 @@ void GUI::Elements::FlowGraph::canvas::draw(Context& c)
 	g->cam_pos = contents->pos;
 	c.renderer->flush(c);
 	auto clip = c.scissors;
-	c.command_list->get_graphics().set_scissors(c.ui_clipping);
+	// ui_clipping alone ignores scissors set by ancestors (self/child scissor), so the
+	// splines would spill out of them; narrow the active scissor instead of replacing it.
+	c.command_list->get_graphics().set_scissors(sizer_long(intersect(sizer(c.scissors), sizer(c.ui_clipping))));
 
 	Slots::UI::FlowGraph graph_data;
 	graph_data.GetSize() = vec4(render_bounds->size, user_ui->size.get());
@@ -307,7 +309,7 @@ void GUI::Elements::FlowGraph::canvas::on_remove(::FlowGraph::window* w)
 		run_on_ui([this, node]()
 			{
 				auto elem = nodes[node];
-				elem->remove_from_parent();
+				elem->fade_close();
 				nodes.erase(node);
 			});
 	}
@@ -320,7 +322,7 @@ void GUI::Elements::FlowGraph::canvas::on_remove(::FlowGraph::window* w)
 		run_on_ui([this, w]()
 			{
 				auto elem = windows[w];
-				elem->remove_from_parent();
+				elem->fade_close();
 				windows.erase(w);
 			});
 	}

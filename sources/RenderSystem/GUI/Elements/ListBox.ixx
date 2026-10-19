@@ -20,8 +20,11 @@ export namespace GUI
                 bool selected = false;
                 list_box* owner;
 
+                // The highlight eases in and out (0..1) instead of switching.
+                float selection_t = 0.0f;
 
                 list_element(list_box* owner);
+                virtual void on_pre_render(Context& c) override;
                 virtual void draw(Context& c) override;
 
                 virtual bool on_mouse_action(mouse_action action, mouse_button button, vec2 pos) override;

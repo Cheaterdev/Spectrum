@@ -199,7 +199,11 @@ namespace
 	// Lays out and draws a whole user_interface the way UI_Render does (create_graph,
 	// the pre-draw pass, then the draw list in one command list) into a W x H
 	// target cleared to black, and reads it back.
-	fx_image render_ui(GUI::user_interface& ui, uint W, uint H, double* record_and_execute_ms = nullptr, double* record_ms = nullptr)
+	// advance_dt >= 0 lays the NEXT frame out between building the draw list and
+	// drawing it, which is what the app does when the GUI thread runs ahead of the
+	// frame still being recorded: elements are drawn at newer bounds than the
+	// clip rectangles captured in the draw list.
+	fx_image render_ui(GUI::user_interface& ui, uint W, uint H, double* record_and_execute_ms = nullptr, double* record_ms = nullptr, float advance_dt = -1.0f)
 	{
 		auto& device = RenderSystem::get().device();
 
@@ -224,6 +228,9 @@ namespace
 		}
 
 		const auto timer_start = std::chrono::steady_clock::now();
+
+		if (advance_dt >= 0.0f)
+			ui.process_ui(advance_dt);
 
 		auto list = device.get_queue(HAL::CommandListType::DIRECT)->get_free_list();
 		list->begin(L"render_ui");
@@ -267,6 +274,8 @@ namespace
 			c.layer         = e.layer;
 			c.layer_slot    = e.layer_slot;
 			c.layer_opacity = e.layer_opacity;
+
+			GUI::draw_bounds_scope bounds_scope(e.elem, e.bounds);
 
 			if (e.before)
 				e.elem->draw_before(c);
@@ -688,6 +697,8 @@ export namespace Test
 			c.layer_slot    = e.layer_slot;
 			c.layer_opacity = e.layer_opacity;
 
+			GUI::draw_bounds_scope bounds_scope(e.elem, e.bounds);
+
 			if (e.before)
 				e.elem->draw_before(c);
 			else
@@ -870,6 +881,8 @@ export namespace Test
 			c.layer         = e.layer;
 			c.layer_slot    = e.layer_slot;
 			c.layer_opacity = e.layer_opacity;
+
+			GUI::draw_bounds_scope bounds_scope(e.elem, e.bounds);
 
 			if (e.before)
 				e.elem->draw_before(c);
@@ -1323,6 +1336,8 @@ export namespace Test
 			c.layer_slot    = e.layer_slot;
 			c.layer_opacity = e.layer_opacity;
 
+			GUI::draw_bounds_scope bounds_scope(e.elem, e.bounds);
+
 			if (e.before)
 				e.elem->draw_before(c);
 			else
@@ -1392,6 +1407,7 @@ export namespace Test
 		GUI::user_interface ui;
 		ui.size = vec2((float)W, (float)H);
 		ui.backdrop_radius = 12.0f;   // wide enough to show well above the skin's 20% transmittance
+		ui.window_animations = false; // the window is measured fully opaque, not mid-fade
 
 		{
 			auto left = std::make_shared<GUI::Elements::colored_rect>();
@@ -1476,6 +1492,8 @@ export namespace Test
 			c.layer         = e.layer;
 			c.layer_slot    = e.layer_slot;
 			c.layer_opacity = e.layer_opacity;
+
+			GUI::draw_bounds_scope bounds_scope(e.elem, e.bounds);
 
 			if (e.before)
 				e.elem->draw_before(c);
@@ -1579,6 +1597,7 @@ export namespace Test
 
 		GUI::user_interface ui;
 		ui.size = vec2((float)W, (float)H);
+		ui.window_animations = false;
 
 		auto background = std::make_shared<GUI::Elements::colored_rect>();
 		background->color   = float4(0.5f, 0.5f, 0.5f, 1.0f);
@@ -1651,6 +1670,8 @@ export namespace Test
 			c.layer         = e.layer;
 			c.layer_slot    = e.layer_slot;
 			c.layer_opacity = e.layer_opacity;
+
+			GUI::draw_bounds_scope bounds_scope(e.elem, e.bounds);
 
 			if (e.before)
 				e.elem->draw_before(c);
@@ -2079,6 +2100,141 @@ export namespace Test
 		ASSERT_TRUE(!layered(0.1f));                 // the setting turns layers off
 	}
 
+	// A window fades in when added, and closing it fades it out and removes it only
+	// when the fade ends (it stays in the tree, drawn, until then). Closing twice is
+	// harmless, and cancel_close() brings it back. No GPU needed.
+	TEST(Core.HAL, GUIWindow_FadesInAndClosesDelayed)
+	{
+		THREAD_SCOPE(GUI);
+
+		auto ui_owner = std::make_shared<GUI::user_interface>();
+		auto& ui = *ui_owner;
+		ui.size = vec2(400.0f, 300.0f);
+
+		auto frame = [&](float dt)
+		{
+			ui.process_ui(dt);
+			FrameGraph::Graph graph;
+			ui.create_graph(graph);
+		};
+
+		auto win = std::make_shared<GUI::Elements::window>();
+		win->width_size  = GUI::size_type::FIXED;
+		win->height_size = GUI::size_type::FIXED;
+		win->size        = vec2(200.0f, 120.0f);
+		ui.add_child(win);
+
+		ASSERT_TRUE(win->layer_opacity == 0.0f);          // starts invisible
+		frame(0.03f);
+		ASSERT_TRUE(win->layer_opacity > 0.0f && win->layer_opacity < 1.0f);
+		for (int i = 0; i < 8; i++)
+			frame(0.03f);
+		ASSERT_TRUE(win->layer_opacity == 1.0f);          // arrived
+
+		win->close();
+		win->close();                                     // second call: nothing new
+		ASSERT_TRUE(win->is_closing());
+		frame(0.03f);
+		ASSERT_TRUE(win->get_parent() != nullptr);        // still there mid-fade
+		ASSERT_TRUE(win->layer_opacity < 1.0f);
+
+		// Changed mind mid-fade.
+		win->cancel_close();
+		for (int i = 0; i < 8; i++)
+			frame(0.03f);
+		ASSERT_TRUE(win->get_parent() != nullptr);
+		ASSERT_TRUE(win->layer_opacity == 1.0f);
+
+		win->close();
+		for (int i = 0; i < 12; i++)
+			frame(0.03f);
+		ASSERT_TRUE(win->get_parent() == nullptr);        // gone once the fade ended
+		ASSERT_TRUE(!win->is_closing());
+
+		// Without the setting the window just goes.
+		ui.window_animations = false;
+		auto win2 = std::make_shared<GUI::Elements::window>();
+		ui.add_child(win2);
+		ASSERT_TRUE(win2->layer_opacity == 1.0f);
+		win2->close();
+		ASSERT_TRUE(win2->get_parent() == nullptr);
+	}
+
+	// Dragging a window's title bar lifts it (bigger shadow); letting go eases back.
+	TEST(Core.HAL, GUIWindow_DragLiftsAndReleases)
+	{
+		THREAD_SCOPE(GUI);
+
+		auto ui_owner = std::make_shared<GUI::user_interface>();
+		auto& ui = *ui_owner;
+		ui.size = vec2(400.0f, 300.0f);
+		ui.window_animations = false;
+
+		auto frame = [&](float dt)
+		{
+			ui.process_ui(dt);
+			FrameGraph::Graph graph;
+			ui.create_graph(graph);
+		};
+
+		auto win = std::make_shared<GUI::Elements::window>();
+		win->width_size  = GUI::size_type::FIXED;
+		win->height_size = GUI::size_type::FIXED;
+		win->size        = vec2(200.0f, 120.0f);
+		win->pos         = vec2(50.0f, 50.0f);
+		ui.add_child(win);
+		frame(0.03f);
+		ASSERT_TRUE(win->lift == 0.0f);
+
+		win->lift_target = 1.0f;                           // what the dragger sets on mouse down
+		frame(0.03f);
+		ASSERT_TRUE(win->lift > 0.0f && win->lift < 1.0f); // eased, not a jump
+		for (int i = 0; i < 6; i++)
+			frame(0.03f);
+		ASSERT_TRUE(win->lift == 1.0f);
+
+		win->lift_target = 0.0f;
+		for (int i = 0; i < 8; i++)
+			frame(0.03f);
+		ASSERT_TRUE(win->lift == 0.0f);
+	}
+
+	// The progress fill eases toward a new value instead of jumping; the first frame snaps.
+	TEST(Core.HAL, GUIProgressBar_EasesToValue)
+	{
+		THREAD_SCOPE(GUI);
+
+		auto ui_owner = std::make_shared<GUI::user_interface>();
+		auto& ui = *ui_owner;
+		ui.size = vec2(300.0f, 100.0f);
+
+		auto bar = std::make_shared<GUI::Elements::progress_bar>();
+		bar->value = 0.2f;
+		ui.add_child(bar);
+
+		auto frame = [&](float dt)
+		{
+			ui.process_ui(dt);
+			FrameGraph::Graph graph;
+			ui.create_graph(graph);
+		};
+
+		frame(0.016f);
+		ASSERT_TRUE(std::abs(bar->displayed() - 0.2f) < 0.001f);   // first frame snapped
+
+		bar->value = 0.9f;
+		frame(0.016f);
+		ASSERT_TRUE(bar->displayed() > 0.2f && bar->displayed() < 0.5f);   // moving, not there yet
+		for (int i = 0; i < 30; i++)
+			frame(0.016f);
+		ASSERT_TRUE(std::abs(bar->displayed() - 0.9f) < 0.001f);   // arrived
+
+		bar->animated = false;
+		bar->value = 0.3f;
+		frame(0.016f);
+		ASSERT_TRUE(std::abs(bar->displayed() - 0.3f) < 0.001f);   // off: snaps
+	}
+
 	// A popup that is closed fades out first and leaves the tree only when the
 	// fade ends; reopening it mid-fade brings the same popup back instead of
 	// adding it twice. No GPU needed.
@@ -2148,6 +2304,299 @@ export namespace Test
 		file->close_menu();
 		frame(0.03f);
 		ASSERT_TRUE(popup->get_parent() == nullptr);
+	}
+
+	// A toast over a hard red|blue seam: its translucent background shows the
+	// backdrop blurred (blue has crossed the seam under it, which a plain
+	// translucent plate would not do), and its opacity fades the whole toast as one
+	// group (blur, strip and text), 0 = nothing, 1 = fully there.
+	TEST(Core.HAL, GUIToast_FrostedAndGroupFade)
+	{
+		THREAD_SCOPE(GUI);
+		constexpr uint W = 512, H = 128;
+		constexpr float seam = 256.0f;
+
+		GUI::user_interface ui;
+		ui.size = vec2((float)W, (float)H);
+
+		auto add_half = [&](float4 color, float x, float width)
+		{
+			auto half = std::make_shared<GUI::Elements::colored_rect>();
+			half->color       = color;
+			half->docking     = GUI::dock::NONE;
+			half->width_size  = GUI::size_type::FIXED;
+			half->height_size = GUI::size_type::FIXED;
+			half->size        = vec2(width, (float)H);
+			half->pos         = vec2(x, 0.0f);
+			ui.add_child(half);
+		};
+		add_half(float4(1.0f, 0.0f, 0.0f, 1.0f), 0.0f, seam);
+		add_half(float4(0.0f, 0.0f, 1.0f, 1.0f), seam, W - seam);
+
+		auto toast = std::make_shared<GUI::Elements::toast_widget>("Saved", GUI::Elements::toast_kind::info, 4.0f);
+		ui.add_child(toast);
+
+		toast->set_opacity(1.0f);
+		const auto full = render_ui(ui, W, H);
+
+		const rect tb = toast->get_render_bounds();
+		ASSERT_TRUE(tb.x < seam - 40.0f && tb.x + tb.w > seam + 40.0f);        // it spans the seam
+		const uint y = (uint)(tb.y + 3.0f);                                    // above the text
+
+		ASSERT_TRUE(full.at((uint)seam - 1, y, 2) > 0.05f);                    // blue under it, blurred across the seam
+		ASSERT_TRUE(full.at((uint)seam - 1, y, 2) < 0.4f);                     // as a smear, not a swap
+		ASSERT_TRUE(full.at((uint)seam - 17, y, 2) < 0.01f);                   // 16 px away the blur is gone
+		ASSERT_TRUE(full.at(100, y, 0) > 0.2f && full.at(100, y, 0) < 0.6f);   // red darkened by the plate
+
+		toast->set_opacity(0.5f);
+		const auto half = render_ui(ui, W, H);
+		toast->set_opacity(0.0f);
+		const auto none = render_ui(ui, W, H);
+
+		const float r_full = full.at(100, y, 0), r_half = half.at(100, y, 0), r_none = none.at(100, y, 0);
+		ASSERT_TRUE(r_none > 0.98f);                  // opacity 0: only the background is left
+		ASSERT_TRUE(r_none > r_half && r_half > r_full);
+		ASSERT_TRUE(std::abs(r_half - 0.5f * (r_full + r_none)) < 0.03f);   // exactly the midpoint
+		ASSERT_TRUE(none.at((uint)seam - 1, y, 2) < 0.01f);                 // and no blur either
+	}
+
+	// While a toast slides, everything that makes it up has to move with it: the
+	// blur (drawn from the toast's rectangle) and the plate, strip and text (its
+	// children). With the children left behind, the plate stays at the resting
+	// place while the blur moves off: left of the slid toast there is a darkened
+	// plate where only the plain background belongs.
+	TEST(Core.HAL, GUIToast_SlideMovesChildrenAndBlurTogether)
+	{
+		THREAD_SCOPE(GUI);
+		constexpr uint W = 512, H = 128;
+
+		GUI::user_interface ui;
+		ui.size = vec2((float)W, (float)H);
+
+		auto background = std::make_shared<GUI::Elements::colored_rect>();
+		background->color       = float4(1.0f, 0.0f, 0.0f, 1.0f);
+		background->docking     = GUI::dock::NONE;
+		background->width_size  = GUI::size_type::FIXED;
+		background->height_size = GUI::size_type::FIXED;
+		background->size        = vec2((float)W, (float)H);
+		ui.add_child(background);
+
+		auto toast = std::make_shared<GUI::Elements::toast_widget>("Saved", GUI::Elements::toast_kind::info, 4.0f);
+		ui.add_child(toast);
+		toast->set_opacity(1.0f);
+
+		// Rendered once at rest first, as a real toast is: the children have been placed.
+		render_ui(ui, W, H);
+
+		toast->set_offset(80.0f);
+		const auto img = render_ui(ui, W, H);
+
+		const rect tb = toast->get_render_bounds();
+		ASSERT_TRUE(tb.x > 70.0f);                                   // it did move
+		const uint y = (uint)(tb.y + 3.0f);
+
+		ASSERT_TRUE(img.at((uint)(tb.x - 10.0f), y, 0) > 0.98f);     // left of it: plain background, no plate
+		ASSERT_TRUE(img.at((uint)(tb.x + 10.0f), y, 0) < 0.6f);      // inside it: the dark plate
+		ASSERT_TRUE(img.at(20, y, 0) > 0.98f);                       // and nothing left behind at the old place
+
+		// The accent strip is a child: it must have moved with the toast, not stayed behind.
+		ASSERT_TRUE(img.at((uint)(tb.x + 1.0f), y, 2) > 0.7f);       // strip blue at the toast's left edge
+		ASSERT_TRUE(img.at((uint)(tb.x + 1.0f), y, 0) < 0.4f);
+	}
+
+	// The same through the real flow: toast_manager puts the toast in its stack and
+	// slides it from think(). Mid-slide the blurred area must be exactly the
+	// toast's plate: on every side, one pixel inside is plate-over-blur and one
+	// pixel outside is the plain background.
+	TEST(Core.HAL, GUIToast_ManagerSlideBlurMatchesPlate)
+	{
+		THREAD_SCOPE(GUI);
+		constexpr uint W = 640, H = 200;
+		constexpr float seam = 320.0f;
+
+		auto ui_owner = std::make_shared<GUI::user_interface>();
+		auto& ui = *ui_owner;
+		ui.size = vec2((float)W, (float)H);
+
+		auto add_half = [&](float4 color, float x, float width)
+		{
+			auto half = std::make_shared<GUI::Elements::colored_rect>();
+			half->color       = color;
+			half->docking     = GUI::dock::NONE;
+			half->width_size  = GUI::size_type::FIXED;
+			half->height_size = GUI::size_type::FIXED;
+			half->size        = vec2(width, (float)H);
+			half->pos         = vec2(x, 0.0f);
+			ui.add_child(half);
+		};
+		add_half(float4(1.0f, 0.0f, 0.0f, 1.0f), 0.0f, seam);
+		add_half(float4(0.0f, 0.0f, 1.0f, 1.0f), seam, W - seam);
+
+		ui.add_child(std::make_shared<GUI::Elements::toast_manager>());
+		GUI::Elements::toast_manager::show("Mid-slide", GUI::Elements::toast_kind::info, 4.0f);
+
+		ui.process_ui(0.05f);
+		for (int i = 0; i < 2; i++)
+			ui.process_ui(0.1f);        // ~0.25 s in: sliding and fading in
+
+		// Find the toast, then draw the frame exactly as it is (render_ui runs one more
+		// zero-length process_ui, so nothing moves under it).
+		GUI::Elements::toast_widget* toast = nullptr;
+		{
+			FrameGraph::Graph graph;
+			ui.create_graph(graph);
+			for (const auto& e : graph.get_context<GUI::UIContext>().draw_infos)
+				if (auto* t = dynamic_cast<GUI::Elements::toast_widget*>(e.elem))
+					toast = t;
+		}
+		ASSERT_TRUE(toast != nullptr);
+		ASSERT_TRUE(toast->margin->left > 1.0f);                  // really mid-slide
+		toast->layer_opacity = 1.0f;                              // read the colours, not the fade
+
+		const auto img = render_ui(ui, W, H);
+		const rect tb = toast->get_render_bounds();
+
+		const uint mid_y = (uint)(tb.y + 3.0f);                   // above the text
+		const uint left = (uint)tb.x, right = (uint)(tb.x + tb.w) - 1;
+		const uint top = (uint)tb.y, bottom = (uint)(tb.y + tb.h) - 1;
+		const uint mid_x = (uint)(tb.x + 20.0f);
+
+		// Red background (left of the seam): plain = 1.0, plate over it = darkened.
+		ASSERT_TRUE(img.at(left + 1, mid_y, 0) < 0.8f);           // inside, left edge: plate
+		ASSERT_TRUE(img.at(left - 2, mid_y, 0) > 0.98f);          // outside, left edge: plain
+		ASSERT_TRUE(img.at(mid_x, top + 1, 0) < 0.8f);            // inside, top edge: plate
+		ASSERT_TRUE(img.at(mid_x, top - 2, 0) > 0.98f);           // outside, top edge: plain
+		ASSERT_TRUE(img.at(mid_x, bottom - 1, 0) < 0.8f);         // inside, bottom edge: plate
+		ASSERT_TRUE(img.at(mid_x, bottom + 2, 0) > 0.98f);        // outside, bottom edge: plain
+		ASSERT_TRUE(img.at(right - 1, mid_y, 2) > 0.1f);          // inside, right edge: plate over blue
+		ASSERT_TRUE(img.at(std::min(right + 2, W - 1), mid_y, 2) > 0.98f);   // outside (or past the window): plain blue
+	}
+
+	// The app's frame overlap: while a frame is drawn, the GUI thread has already
+	// laid the next one out. A sliding toast is then drawn at bounds one step ahead
+	// of the clip rectangles captured with the draw list. Whatever that does, the
+	// blurred area and the plate must still agree on where the toast is.
+	TEST(Core.HAL, GUIToast_SlideWithTheNextFrameAlreadyLaidOut)
+	{
+		THREAD_SCOPE(GUI);
+		constexpr uint W = 640, H = 200;
+
+		auto ui_owner = std::make_shared<GUI::user_interface>();
+		auto& ui = *ui_owner;
+		ui.size = vec2((float)W, (float)H);
+
+		auto background = std::make_shared<GUI::Elements::colored_rect>();
+		background->color       = float4(1.0f, 0.0f, 0.0f, 1.0f);
+		background->docking     = GUI::dock::NONE;
+		background->width_size  = GUI::size_type::FIXED;
+		background->height_size = GUI::size_type::FIXED;
+		background->size        = vec2((float)W, (float)H);
+		ui.add_child(background);
+
+		ui.add_child(std::make_shared<GUI::Elements::toast_manager>());
+		GUI::Elements::toast_manager::show("Mid-slide", GUI::Elements::toast_kind::info, 4.0f);
+
+		ui.process_ui(0.05f);
+		for (int i = 0; i < 2; i++)
+			ui.process_ui(0.1f);                       // sliding
+
+		GUI::Elements::toast_widget* toast = nullptr;
+		{
+			FrameGraph::Graph graph;
+			ui.create_graph(graph);
+			for (const auto& e : graph.get_context<GUI::UIContext>().draw_infos)
+				if (auto* t = dynamic_cast<GUI::Elements::toast_widget*>(e.elem))
+					toast = t;
+		}
+		ASSERT_TRUE(toast != nullptr);
+
+		// Draw it with the next step (0.1 s further along) already laid out.
+		toast->layer_opacity = 1.0f;
+		const rect collected = toast->get_render_bounds();   // what the draw list is built from
+		const auto img = render_ui(ui, W, H, nullptr, nullptr, 0.1f);
+		ASSERT_TRUE(std::abs(toast->get_render_bounds().x - collected.x) > 1.0f);   // really one step ahead
+
+		const uint mid_y = (uint)(collected.y + 3.0f);
+		const uint left = (uint)collected.x, right = (uint)(collected.x + collected.w) - 1;
+
+		// Where the toast was collected, the plate darkens the blurred red everywhere;
+		// blur drawn at the newer bounds would leave bright strips there or outside.
+		for (uint x = left + 1; x < std::min(right, W - 1); x += 8)
+			ASSERT_TRUE(img.at(x, mid_y, 0) < 0.8f);
+		ASSERT_TRUE(img.at(left - 2, mid_y, 0) > 0.98f);
+	}
+
+	// The slide: an offset moves the toast sideways without changing its width.
+	TEST(Core.HAL, GUIToast_SlideMovesWithoutResizing)
+	{
+		THREAD_SCOPE(GUI);
+
+		GUI::user_interface ui;
+		ui.size = vec2(400.0f, 100.0f);
+
+		auto toast = std::make_shared<GUI::Elements::toast_widget>("Saved", GUI::Elements::toast_kind::info, 4.0f);
+		ui.add_child(toast);
+
+		ui.process_ui(0.0f);
+		const rect rest = toast->get_render_bounds();
+
+		toast->set_offset(36.0f);
+		ui.process_ui(0.0f);
+		const rect slid = toast->get_render_bounds();
+		ASSERT_TRUE(std::abs((slid.x - rest.x) - 36.0f) < 1.0f);
+		ASSERT_TRUE(std::abs(slid.w - rest.w) < 1.0f);
+
+		toast->set_offset(0.0f);
+		ui.process_ui(0.0f);
+		ASSERT_TRUE(std::abs(toast->get_render_bounds().x - rest.x) < 1.0f);
+	}
+
+	// The manager's lifecycle: a toast arrives sliding and fading in, settles,
+	// slides and fades out near the end of its life, then is gone.
+	TEST(Core.HAL, GUIToast_ManagerAnimates)
+	{
+		THREAD_SCOPE(GUI);
+
+		auto ui_owner = std::make_shared<GUI::user_interface>();
+		auto& ui = *ui_owner;
+		ui.size = vec2(600.0f, 300.0f);
+		ui.add_child(std::make_shared<GUI::Elements::toast_manager>());
+
+		auto find_toast = [&]() -> GUI::Elements::toast_widget*
+		{
+			FrameGraph::Graph graph;
+			ui.create_graph(graph);
+			for (const auto& e : graph.get_context<GUI::UIContext>().draw_infos)
+				if (auto* t = dynamic_cast<GUI::Elements::toast_widget*>(e.elem))
+					return t;
+			return nullptr;
+		};
+
+		GUI::Elements::toast_manager::show("Hello", GUI::Elements::toast_kind::info, 1.0f);
+
+		ui.process_ui(0.05f);
+		auto* toast = find_toast();
+		ASSERT_TRUE(toast != nullptr);
+		ASSERT_TRUE(toast->layer_opacity < 0.5f);          // arriving: faint,
+		ASSERT_TRUE(toast->margin->left > 20.0f);          // and still off to the right
+
+		for (int i = 0; i < 4; i++)                         // ~0.45 s in: settled (fades are 0.4 s, life 1 s)
+			ui.process_ui(0.1f);
+		toast = find_toast();
+		ASSERT_TRUE(toast != nullptr);
+		ASSERT_TRUE(toast->layer_opacity == 1.0f);
+		ASSERT_TRUE(std::abs(float(toast->margin->left)) < 0.5f);
+
+		for (int i = 0; i < 3; i++)                         // ~0.75 s in: leaving
+			ui.process_ui(0.1f);
+		toast = find_toast();
+		ASSERT_TRUE(toast != nullptr);
+		ASSERT_TRUE(toast->layer_opacity < 1.0f);
+		ASSERT_TRUE(toast->margin->left > 1.0f);
+
+		for (int i = 0; i < 6; i++)                         // past its life
+			ui.process_ui(0.1f);
+		ASSERT_TRUE(find_toast() == nullptr);
 	}
 
 	// Context menus open through menu_list::self_open and close through

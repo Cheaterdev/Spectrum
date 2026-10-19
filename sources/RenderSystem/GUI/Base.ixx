@@ -456,6 +456,20 @@ namespace GUI
             void  fade_to(float target, float seconds);
             void  update_fade(float dt);
             bool  layer_wanted() const;
+            // 0..1 elevation: a lifted element (a dragged window) casts a larger,
+            // softer, stronger shadow. Eases toward lift_target over ~0.12 s.
+            float lift = 0.0f;
+            float lift_target = 0.0f;
+            // Windows and graph nodes set this: when added they fade in as a group.
+            bool  fade_on_add = false;
+            // Fades out as a group and removes the element when the fade ends (it
+            // stays in the tree and keeps drawing until then). Without fades it is
+            // removed at once. Repeated calls are harmless.
+            void  fade_close();
+            // Changed mind mid fade_close(): fade back in and stay.
+            void  cancel_fade_close();
+            bool  is_fade_closing() const { return fade_closing; }
+            bool  fade_closing = false;
             bool  layer_open = false;       // between draw_before and draw_end
             // draw_after, then closes the layer opened by draw_before.
             void  draw_end(Context& c);
@@ -692,6 +706,24 @@ namespace GUI
         // the next frame.
         uint32_t layer_slot = 0;
         float layer_opacity = 1.0f;
+        // The element's render bounds when the entry was collected. Draws use
+        // these (see draw_bounds_scope), so geometry matches the clip above.
+        rect bounds;
+    };
+
+    // While alive on a draw thread, owner->get_render_bounds() returns `bounds`
+    // (the geometry captured when the draw list was built) instead of the live
+    // value. The GUI thread lays the next frame out while this one is still being
+    // recorded, so a moving element's live bounds run ahead of the clip rectangles
+    // in the draw list: its blur, shadow and fill would then be placed against
+    // different edges. Layout code runs on other threads and is unaffected.
+    class draw_bounds_scope
+    {
+            const base* previous_owner;
+            rect        previous_bounds;
+        public:
+            draw_bounds_scope(const base* owner, const rect& bounds);
+            ~draw_bounds_scope();
     };
 
     struct UIContext
@@ -800,6 +832,7 @@ namespace GUI
             Variable<bool>  fade_enabled     = { true, "Group fades", effects_context.get() };
             Variable<float> fade_in_duration = { 0.14f, "Fade-in duration (s)", effects_context.get(), 0.02f, 1.5f };
             Variable<float> fade_out_duration = { 0.10f, "Fade-out duration (s)", effects_context.get(), 0.02f, 1.5f };
+            Variable<bool>  window_animations = { true, "Window open/close fades", effects_context.get() };
 
             // Hands each backdrop element its own snapshot slot for the frame:
             // two elements recorded into different command lists must not

@@ -75,6 +75,7 @@ GUI::Elements::FlowGraph::component_window::component_window(canvas* canva, ::Fl
 {
 	thinkable = true;
 	backdrop_blur = true;
+	fade_on_add = true;
 	shadow.enabled = true;
 	glow.color = float4(0.35f, 0.65f, 1.0f, 1.0f);
 	this->node = node;

@@ -14,6 +14,8 @@ namespace
     std::vector<pending_toast> pending;
 
     constexpr float fade_time = 0.4f;
+    constexpr float slide_in  = 36.0f;   // px, the distance it arrives from
+    constexpr float slide_out = 24.0f;   // px, the distance it leaves to
 }
 
 namespace GUI
@@ -37,6 +39,9 @@ namespace GUI
             docking     = dock::TOP;
             height_size = size_type::MATCH_CHILDREN;
             margin      = { 0, 6, 0, 0 };
+            // Frosted: the dark background below is translucent, so the blur of
+            // what is behind the toast shows through it.
+            backdrop_blur = true;
             // No padding: PARENT-docked children are placed inside it, and the
             // background and strip must reach the edges. The text's offset
             // comes from its own margins instead.
@@ -76,9 +81,30 @@ namespace GUI
 
         void toast_widget::set_opacity(float a)
         {
-            background->color = float4(0.13f, 0.13f, 0.14f, 0.94f * a);
-            strip->color      = float4(accent.x, accent.y, accent.z, a);
-            message->color    = float4(1, 1, 1, a);
+            // As a group the blur, background, strip and text fade together;
+            // per-element alpha would let the strip show through the text
+            // area and leave the blur at full strength.
+            const bool group = user_ui && user_ui->fade_enabled;
+            layer_opacity = group ? a : 1.0f;
+            const float alpha = group ? 1.0f : a;
+
+            background->color = float4(0.09f, 0.10f, 0.13f, 0.52f * alpha);
+            strip->color      = float4(accent.x, accent.y, accent.z, alpha);
+            message->color    = float4(1, 1, 1, alpha);
+        }
+
+        void toast_widget::set_offset(float dx)
+        {
+            if (std::abs(dx - offset) < 0.05f)
+                return;
+
+            offset = dx;
+            // Shifted by margins: the right one gives back what the left one
+            // takes, so the width stays the same and only the position moves.
+            margin = { dx, 6, -dx, 0 };
+            // A margin change only flags the parent; without this the toast moves
+            // but its children keep the positions of the last full layout.
+            set_update_layout();
         }
 
         bool toast_widget::on_mouse_action(mouse_action action, mouse_button button, vec2 pos)
@@ -123,6 +149,8 @@ namespace GUI
                 stack->height_size = size_type::MATCH_CHILDREN;
                 stack->size        = { 360, 0 };
                 stack->margin      = { 0, 0, 16, 16 };
+                // The toasts slide in from beyond its right edge.
+                stack->clip_child  = false;
                 ui->add_child(stack);
             }
         }
@@ -154,7 +182,14 @@ namespace GUI
             {
                 t->remaining -= dt;
                 const float age = t->lifetime - t->remaining;
-                t->set_opacity(std::clamp(std::min(age, t->remaining) / fade_time, 0.0f, 1.0f));
+                const float in  = std::clamp(age / fade_time, 0.0f, 1.0f);
+                const float out = std::clamp(t->remaining / fade_time, 0.0f, 1.0f);
+                auto smooth = [](float x) { return x * x * (3.0f - 2.0f * x); };
+
+                t->set_opacity(smooth(std::min(in, out)));
+
+                // Slides in from the right, and a little way back out when it leaves.
+                t->set_offset(slide_in * (1.0f - smooth(in)) + slide_out * (1.0f - smooth(out)));
             }
 
             // Removed from the UI thread's queue rather than here: think() runs

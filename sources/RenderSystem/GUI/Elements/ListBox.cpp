@@ -98,10 +98,28 @@ namespace GUI
 {
 
 
+    void Elements::list_element::on_pre_render(Context& c)
+    {
+        base::on_pre_render(c);
+
+        const float target = selected ? 1.0f : 0.0f;
+        const bool animate = user_ui && user_ui->window_animations;
+
+        if (!animate)
+            selection_t = target;
+        else
+            selection_t = selection_t < target ? std::min(selection_t + c.delta_time / 0.12f, target)
+                                               : std::max(selection_t - c.delta_time / 0.12f, target);
+    }
+
     void Elements::list_element::draw(Context& c)
     {
-           if (selected)
-             c.renderer->draw_color(c, float4(53, 114, 202, 255) / 255.0f, get_render_bounds());
+        if (selection_t > 0.0f)
+        {
+            float4 color = float4(53, 114, 202, 255) / 255.0f;
+            color.w *= selection_t;
+            c.renderer->draw_color(c, color, get_render_bounds());
+        }
     }
 
     bool Elements::list_element::on_mouse_action(mouse_action action, mouse_button button, vec2 pos)
