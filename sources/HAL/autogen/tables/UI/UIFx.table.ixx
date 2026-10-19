@@ -28,6 +28,7 @@ export namespace Table
 			float4 focus;
 			float4 focus_color;
 			float4 inner;
+			float4 light;
 			float2 window_size;
 			float radius;
 			float4& GetQuad() { return quad; }
@@ -39,6 +40,7 @@ export namespace Table
 			float4& GetFocus() { return focus; }
 			float4& GetFocus_color() { return focus_color; }
 			float4& GetInner() { return inner; }
+			float4& GetLight() { return light; }
 			float2& GetWindow_size() { return window_size; }
 			float& GetRadius() { return radius; }
 			static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
@@ -54,6 +56,7 @@ export namespace Table
 				compiler.compile(focus, "UIFx::focus");
 				compiler.compile(focus_color, "UIFx::focus_color");
 				compiler.compile(inner, "UIFx::inner");
+				compiler.compile(light, "UIFx::light");
 				compiler.compile(window_size, "UIFx::window_size");
 				compiler.compile(radius, "UIFx::radius");
 			}
@@ -75,6 +78,7 @@ export namespace Table
 				ar& NVP(focus);
 				ar& NVP(focus_color);
 				ar& NVP(inner);
+				ar& NVP(light);
 				ar& NVP(window_size);
 				ar& NVP(radius);
 			}

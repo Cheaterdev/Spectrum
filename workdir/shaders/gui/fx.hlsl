@@ -108,7 +108,7 @@ float4 PS(vs_out i) : SV_TARGET0
     // Over-composite: inner shadow (black) < light (white) < focus ring (accent).
     float light_a = saturate(light);
     float4 under = float4(0.0, 0.0, 0.0, inner_a);
-    float4 white = float4(1.0, 1.0, 1.0, light_a);
+    float4 white = float4(d.GetLight().rgb, light_a);   // the light's own colour (white unless tinted)
     float a_lw = white.a + under.a * (1.0 - white.a);
     float3 c_lw = a_lw > 0.0 ? (white.rgb * white.a + under.rgb * under.a * (1.0 - white.a)) / a_lw : float3(0.0, 0.0, 0.0);
 

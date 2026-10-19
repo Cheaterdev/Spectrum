@@ -188,6 +188,7 @@ void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 	tasks.emplace_back(PSOBase::create<PSOS::UI::NinePatch>(device, pso[PSO::NinePatch]));
 	tasks.emplace_back(PSOBase::create<PSOS::UI::SimpleRect>(device, pso[PSO::SimpleRect]));
 	tasks.emplace_back(PSOBase::create<PSOS::UI::CanvasBack>(device, pso[PSO::CanvasBack]));
+	tasks.emplace_back(PSOBase::create<PSOS::UI::UILayerRestore>(device, pso[PSO::UILayerRestore]));
 	tasks.emplace_back(PSOBase::create<PSOS::UI::UIFx>(device, pso[PSO::UIFx]));
 	tasks.emplace_back(PSOBase::create<PSOS::UI::UIShadow>(device, pso[PSO::UIShadow]));
 	tasks.emplace_back(PSOBase::create<PSOS::UI::BackdropDraw>(device, pso[PSO::BackdropDraw]));

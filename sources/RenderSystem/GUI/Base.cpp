@@ -875,8 +875,20 @@ namespace GUI
         if (self_scissor.has_value())
             entry_scissors = intersect(entry_scissors, math::convert(*self_scissor));
 
+        // Decided once per frame here, so the before and after entries agree.
+        bool layered = false;
+        uint32_t layer_index = 0;
+        float layer_alpha = 1.0f;
+
         if (visibility)
 		{
+            update_fade(c.delta_time);
+            layered = layer_wanted();
+            layer_alpha = layer_opacity;
+
+            if (layered)
+                layer_index = user_ui->layer_counter++;
+
             if (backdrop_blur && user_ui && user_ui->backdrop_enabled)
                 backdrop_slot = user_ui->backdrop_counter++;
 
@@ -884,7 +896,7 @@ namespace GUI
                 update_fx(c.delta_time);
 
            on_pre_render(c);
-            user_ui->draw_infos.emplace_back(c.ui_clipping, entry_scissors,c.scale,this,c.offset,true);
+            user_ui->draw_infos.emplace_back(c.ui_clipping, entry_scissors,c.scale,this,c.offset,true,layered,layer_index,layer_alpha);
 		//	rec_c.execute([this](Context &c) {
 		//		draw(c);
 		//	});
@@ -933,7 +945,7 @@ namespace GUI
 
     //    if (visibility)
     //        draw_after(c);
-        user_ui->draw_infos.emplace_back(c.ui_clipping, entry_scissors,c.scale, this, c.offset, false);
+        user_ui->draw_infos.emplace_back(c.ui_clipping, entry_scissors,c.scale, this, c.offset, false, layered, layer_index, layer_alpha);
 
 		/*rec_c.execute([this](Context &c) {
 			draw_after(c);
@@ -1097,8 +1109,60 @@ namespace GUI
         return 1.0f;
     }
 
+    void base::fade_to(float target, float seconds)
+    {
+        fade_from = layer_opacity;
+        fade_target = target;
+        fade_duration = std::max(seconds, 0.001f);
+        fade_t = 0.0f;
+    }
+
+    void base::update_fade(float dt)
+    {
+        if (fade_t >= 1.0f)
+            return;
+
+        fade_t = std::min(1.0f, fade_t + dt / fade_duration);
+        const float smooth = fade_t * fade_t * (3.0f - 2.0f * fade_t);
+        layer_opacity = fade_from + (fade_target - fade_from) * smooth;
+    }
+
+    bool base::layer_wanted() const
+    {
+        return layer_opacity < 0.999f && user_ui && user_ui->fade_enabled;
+    }
+
+    void base::draw_end(Context& c)
+    {
+        draw_after(c);
+
+        if (layer_open)
+        {
+            layer_open = false;
+            c.renderer->end_layer(c, c.layer_opacity);
+        }
+    }
+
     void base::draw_before(Context& c)
     {
+        // The group opens first, so the blur, shadow and the element itself are
+        // all part of it. The shadow reaches outside the bounds, so the
+        // snapshot is grown by it.
+        layer_open = false;
+
+        if (c.layer && c.target.resource)
+        {
+            float pad = 2.0f;
+
+            if (shadow.enabled && user_ui->shadows_enabled)
+                pad = std::max(pad, 3.0f * float(user_ui->shadow_blur) + float(user_ui->shadow_offset) + 2.0f);
+
+            if (glow.enabled && user_ui->glow_enabled)
+                pad = std::max(pad, 3.0f * float(user_ui->glow_size) + 2.0f);
+
+            layer_open = c.renderer->begin_layer(c, c.layer_slot, get_render_bounds(), pad);
+        }
+
         if (backdrop_active(c))
         {
             BackdropBlurParams params;
@@ -1147,6 +1211,7 @@ namespace GUI
         {
             FxParams p;
             p.radius = fx.radius;
+            p.light_color = fx.light;
             const vec2 mouse = user_ui->get_mouse_pos();
             p.cursor = float2(mouse.x, mouse.y);
 
@@ -1333,6 +1398,7 @@ namespace GUI
         draw_infos.clear();
         pre_draw_infos.clear();
         backdrop_counter = 0;
+        layer_counter = 0;
         draw_recursive(c);
         drag.draw(c);
      }
@@ -1361,9 +1427,40 @@ namespace GUI
         {
             const uint32_t size     = (uint32_t)ui_ctx.draw_infos.size();
             const uint32_t per_pass = ui_per_thread(size);
+
+            // One contiguous range per instance. A group-opacity layer copies the
+            // target when it opens and draws it back when it closes, so both
+            // have to be recorded in the same command list: a range that would
+            // end inside a layer runs on to the layer's end.
+            auto& chunks = ui_ctx.chunks;
+            chunks.clear();
+
+            const uint32_t max_chunks = Passes::UI::UI_Render::MaxCount;
+            uint32_t start = 0;
+            int depth = 0;
+
+            while (start < size)
+            {
+                uint32_t end = chunks.size() + 1 >= max_chunks ? size : std::min(start + per_pass, size);
+
+                for (uint32_t i = start; i < end; i++)
+                    if (ui_ctx.draw_infos[i].layer)
+                        depth += ui_ctx.draw_infos[i].before ? 1 : -1;
+
+                while (depth > 0 && end < size)
+                {
+                    if (ui_ctx.draw_infos[end].layer)
+                        depth += ui_ctx.draw_infos[end].before ? 1 : -1;
+                    end++;
+                }
+
+                chunks.emplace_back(start, end);
+                start = end;
+            }
+
             auto& ui_render_ctx = graph.get_context<::Table::UI::UIRenderState>();
             ui_render_ctx.per_pass      = per_pass;
-            ui_render_ctx.passes_needed = (size + per_pass - 1) / per_pass;
+            ui_render_ctx.passes_needed = (uint32_t)chunks.size();
         }
 
         ui_ctx.dt          = dt;
@@ -1999,6 +2096,8 @@ namespace GUI
         {
             back->to_front();
             back->visible = true;
+            exit_window->layer_opacity = 0.0f;
+            exit_window->fade_to(1.0f, fade_in_duration);
             add_child(exit_window);
         });
         return pr->get_future();
@@ -2333,10 +2432,12 @@ void PassDefault<Passes::UI::UI_Render>::render(
 
     auto& ui_ctx = context.graph->get_context<GUI::UIContext>();
 
-    const uint32_t size      = (uint32_t)ui_ctx.draw_infos.size();
-    const uint32_t per_pass  = context.graph->get_context<::Table::UI::UIRenderState>().per_pass;
-    const uint32_t start     = data.pass_index * per_pass;
-    const uint32_t end       = std::min(start + per_pass, size);
+    // This instance's range, chosen in create_graph so no layer is split.
+    if (data.pass_index >= ui_ctx.chunks.size())
+        return;
+
+    const uint32_t start     = ui_ctx.chunks[data.pass_index].first;
+    const uint32_t end       = ui_ctx.chunks[data.pass_index].second;
 
     auto command_list = context.get_list();
     auto texture = (*data.swapchain);
@@ -2393,11 +2494,14 @@ void PassDefault<Passes::UI::UI_Render>::render(
             c.offset      = e.offset;
             c.scissors    = e.scissors;
             c.window_size = ui_ctx.scaled_size;
+            c.layer         = e.layer;
+            c.layer_slot    = e.layer_slot;
+            c.layer_opacity = e.layer_opacity;
 
             if (e.before)
                 e.elem->draw_before(c);
             else
-                e.elem->draw_after(c);
+                e.elem->draw_end(c);
         }
     }
 

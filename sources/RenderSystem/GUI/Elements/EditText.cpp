@@ -43,6 +43,10 @@ GUI::Elements::edit_text::edit_text(Text::Style style) : style(style), editor(st
 {
 	clickable = true;
 	fx.focus = true;
+	// White light vanishes on the light skin: tint the hover effects with the accent.
+	fx.reveal = true;
+	fx.border = true;
+	fx.light = float3(0.21f, 0.45f, 0.79f);
 	fx.radius = 3.0f;
 
 	// Control characters never enter the text, whatever the user filter says;

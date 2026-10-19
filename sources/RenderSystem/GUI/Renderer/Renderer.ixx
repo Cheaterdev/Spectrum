@@ -59,11 +59,20 @@ export namespace GUI
 		float  inner_strength = 0.0f;      // darkening inside the edge
 		float  inner_size = 10.0f;         // falloff, UI px
 		float  inner_offset = 2.0f;        // pushes the shadow down from the top edge, UI px
+		float3 light_color = { 1.0f, 1.0f, 1.0f };      // sRGB; white suits dark surfaces, tint it on light ones
 	};
 
 	class Renderer
 	{
 		NinePatch nine_patch;
+
+		struct LayerRecord
+		{
+			int left = 0, top = 0, width = 0, height = 0;   // target pixels
+			HAL::Texture2DView view;                        // the snapshot
+			std::shared_ptr<void> owner;                    // keeps its texture alive
+		};
+		std::vector<LayerRecord> layers;
 
 		Texture area_tex;
 		Texture virtual_tex;
@@ -101,6 +110,16 @@ export namespace GUI
 		// soft spot at the cursor, a lit rim brightest near it, and a diagonal
 		// sweep. A strength of 0 (shine: phase < 0) turns that part off.
 		void draw_fx(base::Context& c, rect r, const FxParams& params);
+
+		// Group opacity. begin_layer copies the target under `r` (grown by `pad`
+		// UI px, for shadows) and returns false when nothing can be snapshotted;
+		// everything drawn until the matching end_layer is the group. end_layer
+		// draws that copy back with alpha (1 - opacity), which leaves
+		// opacity * group + (1 - opacity) * what was below -- for any content,
+		// overlaps and blurs included. Begin and end must be recorded in the
+		// same command list (the draw list keeps a group in one chunk).
+		bool begin_layer(base::Context& c, uint32_t slot, rect r, float pad);
+		void end_layer(base::Context& c, float opacity);
 
 		// Drops the snapshot textures; call before the device goes away.
 		static void reset_backdrop();

@@ -102,11 +102,168 @@ namespace GUI
         {
             return std::max(1, size >> mip);
         }
+
+        // One snapshot texture per group-opacity layer slot, same lifetime
+        // handling as the blur textures.
+        struct LayerSlot
+        {
+            int width = 0;
+            int height = 0;
+            std::shared_ptr<HAL::Texture> tex;
+        };
+
+        class LayerCache
+        {
+            std::mutex m;
+            std::vector<LayerSlot> slots;
+            std::vector<std::shared_ptr<HAL::Texture>> retired;
+            static constexpr size_t retire_depth = 24;
+
+        public:
+            static LayerCache& get()
+            {
+                static LayerCache cache;
+                return cache;
+            }
+
+            LayerSlot acquire(HAL::Device& device, uint32_t index, int width, int height)
+            {
+                std::lock_guard<std::mutex> g(m);
+
+                if (slots.size() <= index)
+                    slots.resize(index + 1);
+
+                auto& s = slots[index];
+
+                if (!s.tex || s.width != width || s.height != height)
+                {
+                    if (s.tex)
+                        retired.push_back(std::move(s.tex));
+
+                    if (retired.size() > retire_depth)
+                        retired.erase(retired.begin(), retired.begin() + (retired.size() - retire_depth));
+
+                    s.width = width;
+                    s.height = height;
+                    s.tex = std::make_shared<HAL::Texture>(device,
+                        HAL::ResourceDesc::Tex2D(HAL::Format::R16G16B16A16_FLOAT,
+                            { (UINT)width, (UINT)height }, 1, 1, HAL::ResFlags::ShaderResource),
+                        HAL::TextureLayout::UNDEFINED);
+                    s.tex->resource->set_name("ui_layer::snapshot");
+                }
+
+                return s;
+            }
+
+            void reset()
+            {
+                std::lock_guard<std::mutex> g(m);
+                slots.clear();
+                retired.clear();
+            }
+        };
     }
 
     void Renderer::reset_backdrop()
     {
         BackdropCache::get().reset();
+        LayerCache::get().reset();
+    }
+
+    bool Renderer::begin_layer(base::Context& c, uint32_t slot_index, rect r, float pad_ui)
+    {
+        if (!c.target.resource || c.window_size.x <= 0 || c.window_size.y <= 0)
+            return false;
+
+        PROFILE(L"ui_layer_begin");
+
+        const ivec2 target_size = c.target.get_size();
+        const float k = float(target_size.x) / c.window_size.x;
+        const float pad = std::ceil(pad_ui * c.scale * k);
+
+        const float2 lt = (float2(r.pos) + c.offset) * k;
+        const float2 rb = lt + float2(r.size) * k;
+
+        int left   = std::max(0, int(std::floor(lt.x - pad)));
+        int top    = std::max(0, int(std::floor(lt.y - pad)));
+        const int right  = std::min(target_size.x, int(std::ceil(rb.x + pad)));
+        const int bottom = std::min(target_size.y, int(std::ceil(rb.y + pad)));
+        int width  = right - left;
+        int height = bottom - top;
+
+        if (width < 2 || height < 2)
+            return false;
+
+        // Same 32 px bucketing as the blur snapshots: elements of similar size
+        // share a texture size instead of reallocating.
+        constexpr int bucket = 32;
+        width  = std::min(target_size.x, (width + bucket - 1) / bucket * bucket);
+        height = std::min(target_size.y, (height + bucket - 1) / bucket * bucket);
+        left = std::min(left, target_size.x - width);
+        top  = std::min(top, target_size.y - height);
+
+        // What the group sits on has to be in the target before it is copied.
+        nine_patch.flush(c);
+
+        auto& device = RenderSystem::get().device();
+        const LayerSlot slot = LayerCache::get().acquire(device, slot_index, width, height);
+
+        c.command_list->get_copy().copy_texture(slot.tex->resource, ivec3(0, 0, 0),
+                                                c.target.resource, ivec3(left, top, 0),
+                                                ivec3(width, height, 1));
+
+        LayerRecord record;
+        record.left = left;
+        record.top = top;
+        record.width = width;
+        record.height = height;
+        record.view = slot.tex->texture_2d();
+        record.owner = slot.tex;
+        layers.push_back(std::move(record));
+        return true;
+    }
+
+    void Renderer::end_layer(base::Context& c, float opacity)
+    {
+        if (layers.empty())
+            return;
+
+        const LayerRecord record = std::move(layers.back());
+        layers.pop_back();
+
+        const float alpha = 1.0f - std::clamp(opacity, 0.0f, 1.0f);
+        if (alpha <= 0.0f)
+            return;
+
+        PROFILE(L"ui_layer_end");
+
+        const ivec2 target_size = c.target.get_size();
+        const float k = float(target_size.x) / c.window_size.x;
+
+        // Window pixels, clipped like the group's own drawing was.
+        const float2 quad_lt = float2::max(float2(record.left / k, record.top / k),
+                                           float2(float(c.ui_clipping.left), float(c.ui_clipping.top)));
+        const float2 quad_rb = float2::min(float2((record.left + record.width) / k, (record.top + record.height) / k),
+                                           float2(float(c.ui_clipping.right), float(c.ui_clipping.bottom)));
+        if (quad_rb.x <= quad_lt.x || quad_rb.y <= quad_lt.y)
+            return;
+
+        // The group is batched; the copy goes over all of it.
+        nine_patch.flush(c);
+
+        auto& graphics = c.command_list->get_graphics();
+
+        Slots::UI::UILayerRestore data;
+        data.GetSnapshot()    = record.view.texture2D;
+        data.GetQuad()        = float4(quad_lt.x, quad_lt.y, quad_rb.x - quad_lt.x, quad_rb.y - quad_lt.y);
+        data.GetWindow_size() = float2(c.window_size.x, c.window_size.y);
+        data.GetOrigin()      = float2(float(record.left), float(record.top));
+        data.GetAlpha()       = alpha;
+        graphics.set(data);
+
+        graphics.set_pipeline<PSOS::UI::UILayerRestore>();
+        graphics.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::STRIP);
+        graphics.draw(4);
     }
 
     void Renderer::draw_backdrop_blur(base::Context& c, uint32_t slot_index, rect r, const BackdropBlurParams& p)
@@ -364,6 +521,7 @@ namespace GUI
         data.GetFocus()       = float4(p.focus_width * k, p.focus_strength, 0.0f, 0.0f);
         data.GetFocus_color() = float4(p.focus_color.x, p.focus_color.y, p.focus_color.z, 1.0f);
         data.GetInner()       = float4(p.inner_size * k, p.inner_strength, p.inner_offset * k, 0.0f);
+        data.GetLight()       = float4(p.light_color.x, p.light_color.y, p.light_color.z, 1.0f);
         data.GetWindow_size() = float2(c.window_size.x, c.window_size.y);
         data.GetRadius()      = p.radius * k;
         graphics.set(data);

@@ -32,6 +32,11 @@ export
         HAL::Texture2DView target;
         float ui_scale = 1;
 
+        // Group opacity of the entry being drawn, from its draw_info.
+        bool  layer = false;
+        uint32_t layer_slot = 0;
+        float layer_opacity = 1.0f;
+
         GUIInfo() = default;
         GUIInfo(HAL::CommandList::ptr list);
     };
@@ -188,6 +193,7 @@ namespace GUI
         bool  focus  = false;   // accent ring while the element has keyboard focus
         bool  inner  = false;   // darkening just inside the edge (depth)
         float radius = 4.0f;    // corner radius
+        float3 light = { 1.0f, 1.0f, 1.0f };   // sRGB colour of reveal / edge light / shine; tint it on light surfaces
     };
 
     class base;
@@ -434,7 +440,22 @@ namespace GUI
             vec2  fx_ripple_origin = { 0, 0 };
             bool  fx_was_pressed = false;
             float fx_focus = 0.0f;
+            float fade_from = 1.0f;
+            float fade_target = 1.0f;
+            float fade_t = 1.0f;            // 0..1 along the fade, 1 = not fading
+            float fade_duration = 0.1f;
             void update_fx(float dt);
+
+            // Group opacity: while below 1 the element and everything inside it
+            // is drawn as one unit and blended back with this opacity
+            // (Renderer::begin_layer). fade_to animates it.
+            float layer_opacity = 1.0f;
+            void  fade_to(float target, float seconds);
+            void  update_fade(float dt);
+            bool  layer_wanted() const;
+            bool  layer_open = false;       // between draw_before and draw_end
+            // draw_after, then closes the layer opened by draw_before.
+            void  draw_end(Context& c);
             // For panels that are mostly covered by their own controls: while
             // this element's blur is active, the controls under it (buttons,
             // combo boxes) draw their backgrounds at glass_opacity so the blur
@@ -659,11 +680,23 @@ namespace GUI
         base* elem;
         vec2 offset;
         bool before;
+        // The element is a group-opacity layer: its before entry opens the
+        // layer, its after entry closes it. Everything in between must be
+        // recorded in the same command list.
+        bool layer = false;
+        // Captured with the entry: the render thread reads these, not the
+        // element's live state, which the GUI thread is already updating for
+        // the next frame.
+        uint32_t layer_slot = 0;
+        float layer_opacity = 1.0f;
     };
 
     struct UIContext
     {
         std::vector<draw_info> draw_infos;
+        // [begin, end) ranges of draw_infos, one per UI_Render instance, never
+        // splitting a layer.
+        std::vector<std::pair<uint32_t, uint32_t>> chunks;
         std::vector<base*> pre_draw_infos;
 
         float dt = 0;
@@ -760,10 +793,16 @@ namespace GUI
             Variable<float> inner_strength   = { 0.35f, "Inner shadow strength", effects_context.get(), 0.0f, 1.0f };
             Variable<float> inner_size       = { 10.0f, "Inner shadow size (px)", effects_context.get(), 1.0f, 48.0f };
 
+            // Group fades (base::layer_opacity): menu popups and message boxes fade in.
+            Variable<bool>  fade_enabled     = { true, "Group fades", effects_context.get() };
+            Variable<float> fade_in_duration = { 0.14f, "Fade-in duration (s)", effects_context.get(), 0.02f, 1.5f };
+
             // Hands each backdrop element its own snapshot slot for the frame:
             // two elements recorded into different command lists must not
             // share a texture. Reset when the draw list is collected.
             uint32_t backdrop_counter = 0;
+            // The same for group-opacity layers (one snapshot texture each).
+            uint32_t layer_counter = 0;
 
             using ptr = s_ptr<user_interface>;
             using wptr = w_ptr<user_interface>;

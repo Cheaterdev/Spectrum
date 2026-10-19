@@ -2149,7 +2149,7 @@ public:
 									row->docking = GUI::dock::TOP;
 									row->height_size = GUI::size_type::FIXED;
 									row->size = { 0, height };
-									row->margin = { 0, 0, 0, 14 };
+									row->margin = { 0, 0, 0, 10 };
 									page->add_child(row);
 									return row;
 								};
@@ -2161,7 +2161,7 @@ public:
 									card->docking = GUI::dock::LEFT;
 									card->width_size = GUI::size_type::FIXED;
 									card->height_size = GUI::size_type::FIXED;
-									card->size = { 180, 66 };
+									card->size = { 180, 52 };
 									card->margin = { 0, 0, 10, 0 };
 									card->fx.reveal = reveal;
 									card->fx.border = border;
@@ -2177,16 +2177,16 @@ public:
 									return card;
 								};
 
-							auto singles = add_row(66);
+							auto singles = add_row(52);
 							add_card(singles, "Reveal highlight", true, false, false);
 							add_card(singles, "Edge light", false, true, false);
 							add_card(singles, "Shine sweep", false, false, true);
 
-							auto combined = add_row(66);
+							auto combined = add_row(52);
 							add_card(combined, "All three", true, true, true);
 
 							// Cheap effects: a click wave, and depth from an inner shadow.
-							auto cheap = add_row(66);
+							auto cheap = add_row(52);
 							auto ripple_card = add_card(cheap, "Press ripple (click)", false, false, false);
 							ripple_card->fx.ripple = true;
 							auto inner_card = add_card(cheap, "Inner shadow", false, false, false);
@@ -2194,6 +2194,47 @@ public:
 							auto both_card = add_card(cheap, "Ripple + inner", false, false, false);
 							both_card->fx.ripple = true;
 							both_card->fx.inner = true;
+
+							// Group fade (base::layer_opacity): the card and the two overlapping
+							// children fade as one unit, so the overlap never shows the lower
+							// child through the upper one (what per-element alpha would do).
+							auto fade_row = add_row(52);
+							auto group = std::make_shared<colored_rect>();
+							group->color = float4(0.10f, 0.12f, 0.17f, 1.0f);
+							group->docking = GUI::dock::LEFT;
+							group->width_size = GUI::size_type::FIXED;
+							group->height_size = GUI::size_type::FIXED;
+							group->size = { 180, 52 };
+							group->margin = { 0, 0, 10, 0 };
+							group->shadow.enabled = true;
+							group->shadow.radius = 4.0f;
+							for (auto [x, color] : { std::pair{ 24.0f, float4(0.20f, 0.80f, 0.35f, 1.0f) },
+							                         std::pair{ 64.0f, float4(0.25f, 0.45f, 0.95f, 1.0f) } })
+							{
+								auto blob = std::make_shared<colored_rect>();
+								blob->color = color;
+								blob->docking = GUI::dock::NONE;
+								blob->width_size = GUI::size_type::FIXED;
+								blob->height_size = GUI::size_type::FIXED;
+								blob->size = { 80, 32 };
+								blob->pos = { x, 10 };
+								group->add_child(blob);
+							}
+							fade_row->add_child(group);
+
+							auto fade_button = std::make_shared<button>();
+							fade_button->get_label()->text = "Fade out / in";
+							fade_button->docking = GUI::dock::LEFT;
+							fade_button->width_size = GUI::size_type::FIXED;
+							fade_button->size = { 120, 30 };
+							fade_button->margin = { 0, 11, 10, 0 };
+							GUI::base::wptr group_weak = group;
+							fade_button->on_click = [group_weak](button::ptr)
+								{
+									if (auto g = group_weak.lock())
+										g->fade_to(g->layer_opacity > 0.5f ? 0.15f : 1.0f, 0.5f);
+								};
+							fade_row->add_child(fade_button);
 
 							auto buttons = add_row(36);
 							for (const char* name : { "Buttons", "get", "reveal", "and edge" })

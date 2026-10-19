@@ -219,8 +219,42 @@ namespace UI
 		float4 focus_color;
 		# x size (px), y strength, z vertical offset (px). Darkening inside the edge, deepest at the top.
 		float4 inner;
+		# sRGB rgb of the reveal / rim / shine light (white on dark surfaces).
+		float4 light;
 		float2 window_size;
 		float radius;
+	}
+
+	# Group opacity (Renderer::begin_layer / end_layer): the target region as it was
+	# when the group began, drawn back over the finished group with alpha
+	# (1 - opacity). That is opacity * group + (1 - opacity) * what was below, for
+	# any content, without rendering the group offscreen.
+	[Bind = DefaultLayout::Instance0]
+	struct UILayerRestore
+	{
+		Texture2D<float4> snapshot;
+		# The quad drawn, in window pixels.
+		float4 quad;
+		float2 window_size;
+		# Target pixel of the snapshot's texel (0, 0).
+		float2 origin;
+		float alpha;
+	}
+
+	GraphicsPSO UILayerRestore
+	{
+		root = DefaultLayout;
+
+		[EntryPoint = VS]
+		vertex = "gui/layer_restore.hlsl";
+
+		[EntryPoint = PS]
+		pixel = "gui/layer_restore.hlsl";
+
+		rtv = { R16G16B16A16_FLOAT };
+		blend = { AlphaBlend };
+		cull = None;
+		enable_depth = false;
 	}
 
 	GraphicsPSO UIFx

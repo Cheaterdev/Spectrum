@@ -195,6 +195,87 @@ namespace
 		list->execute_and_wait();
 		return { Test::readback_texture(tex.get()) };
 	}
+
+	// Lays out and draws a whole user_interface the way UI_Render does (create_graph,
+	// the pre-draw pass, then the draw list in one command list) into a W x H
+	// target cleared to black, and reads it back.
+	fx_image render_ui(GUI::user_interface& ui, uint W, uint H)
+	{
+		auto& device = RenderSystem::get().device();
+
+		auto tex = std::make_shared<HAL::TextureResource>(device,
+			HAL::ResourceDesc::Tex2D(UI_RT_FORMAT, {W, H}, 1, 1, HAL::ResFlags::RenderTarget),
+			HAL::HeapType::DEFAULT);
+
+		ui.process_ui(0.0f);
+
+		FrameGraph::Graph graph;
+		ui.create_graph(graph);
+		device.get_queue(HAL::CommandListType::DIRECT)->signal_and_wait();
+
+		auto& predraw = graph.get_context<GUI::UIContext>();
+		if (!predraw.pre_draw_infos.empty())
+		{
+			auto pre_draw_list = device.get_queue(HAL::CommandListType::DIRECT)->get_free_list();
+			pre_draw_list->begin(L"pre_draw");
+			GUI::user_interface::run_pre_draw(predraw.pre_draw_infos, pre_draw_list);
+			pre_draw_list->end();
+			pre_draw_list->execute_and_wait();
+		}
+
+		auto list = device.get_queue(HAL::CommandListType::DIRECT)->get_free_list();
+		list->begin(L"render_ui");
+
+		HAL::Texture2DView view(tex, *list);
+		set_ui_target(list, view, vec4(0.0f, 0.0f, 0.0f, 1.0f));
+
+		sizer_long full_vp;
+		full_vp.left   = 0;
+		full_vp.top    = 0;
+		full_vp.right  = (long)W;
+		full_vp.bottom = (long)H;
+		list->get_graphics().set_scissors(full_vp);
+
+		GUI::Renderer renderer;
+		GUIInfo c;
+		c.renderer     = &renderer;
+		c.command_list = list;
+		c.target       = view;
+		c.ui_scale     = 1.0f;
+		c.window_size  = vec2((float)W, (float)H);
+		c.offset       = vec2(0.0f, 0.0f);
+		c.ui_clipping  = full_vp;
+		c.scissors     = full_vp;
+		c.scale        = 1.0f;
+		c.delta_time   = 0.0f;
+
+		auto& ui_ctx = graph.get_context<GUI::UIContext>();
+		for (auto& e : ui_ctx.draw_infos)
+		{
+			if (c.scissors != e.scissors)
+			{
+				renderer.flush(c);
+				list->get_graphics().set_scissors(e.scissors);
+			}
+			c.scale         = e.scale;
+			c.ui_clipping   = e.clip;
+			c.offset        = e.offset;
+			c.scissors      = e.scissors;
+			c.window_size   = ui_ctx.scaled_size;
+			c.layer         = e.layer;
+			c.layer_slot    = e.layer_slot;
+			c.layer_opacity = e.layer_opacity;
+
+			if (e.before)
+				e.elem->draw_before(c);
+			else
+				e.elem->draw_end(c);
+		}
+		renderer.flush(c);
+
+		list->execute_and_wait();
+		return { Test::readback_texture(tex.get()) };
+	}
 }
 
 export namespace Test
@@ -594,11 +675,14 @@ export namespace Test
 			c.offset      = e.offset;
 			c.scissors    = e.scissors;
 			c.window_size = ui_ctx.scaled_size;
+			c.layer         = e.layer;
+			c.layer_slot    = e.layer_slot;
+			c.layer_opacity = e.layer_opacity;
 
 			if (e.before)
 				e.elem->draw_before(c);
 			else
-				e.elem->draw_after(c);
+				e.elem->draw_end(c);
 		}
 		renderer.flush(c);
 
@@ -774,11 +858,14 @@ export namespace Test
 			c.offset      = e.offset;
 			c.scissors    = e.scissors;
 			c.window_size = ui_ctx.scaled_size;
+			c.layer         = e.layer;
+			c.layer_slot    = e.layer_slot;
+			c.layer_opacity = e.layer_opacity;
 
 			if (e.before)
 				e.elem->draw_before(c);
 			else
-				e.elem->draw_after(c);
+				e.elem->draw_end(c);
 		}
 		renderer.flush(c);
 
@@ -1160,11 +1247,14 @@ export namespace Test
 			c.offset      = e.offset;
 			c.scissors    = e.scissors;
 			c.window_size = ui_ctx.scaled_size;
+			c.layer         = e.layer;
+			c.layer_slot    = e.layer_slot;
+			c.layer_opacity = e.layer_opacity;
 
 			if (e.before)
 				e.elem->draw_before(c);
 			else
-				e.elem->draw_after(c);
+				e.elem->draw_end(c);
 		}
 		renderer.flush(c);
 
@@ -1311,11 +1401,14 @@ export namespace Test
 			c.offset      = e.offset;
 			c.scissors    = e.scissors;
 			c.window_size = ui_ctx.scaled_size;
+			c.layer         = e.layer;
+			c.layer_slot    = e.layer_slot;
+			c.layer_opacity = e.layer_opacity;
 
 			if (e.before)
 				e.elem->draw_before(c);
 			else
-				e.elem->draw_after(c);
+				e.elem->draw_end(c);
 		}
 		renderer.flush(c);
 
@@ -1397,6 +1490,120 @@ export namespace Test
 		ASSERT_TRUE(img.at(128, 64) < 0.06f);    // centre: not lit
 		ASSERT_TRUE(img.at(191, 64) < 0.08f);    // rim on the far side: out of the cursor's reach
 		ASSERT_TRUE(img.at(64, 64) > img.at(64, 90));   // falls off along the rim
+	}
+
+	// A floating window's procedural shadow: it falls outside the window (a soft
+	// darkening that fades with distance) and leaves the far background alone.
+	TEST(Core.HAL, GUIWindow_Shadow)
+	{
+		THREAD_SCOPE(GUI);
+		auto& device = RenderSystem::get().device();
+		constexpr uint W = 512, H = 256;
+
+		auto tex = std::make_shared<HAL::TextureResource>(device,
+			HAL::ResourceDesc::Tex2D(UI_RT_FORMAT, {W, H}, 1, 1,
+				HAL::ResFlags::RenderTarget),
+			HAL::HeapType::DEFAULT);
+
+		GUI::user_interface ui;
+		ui.size = vec2((float)W, (float)H);
+
+		auto background = std::make_shared<GUI::Elements::colored_rect>();
+		background->color   = float4(0.5f, 0.5f, 0.5f, 1.0f);
+		background->docking = GUI::dock::FILL;
+		ui.add_child(background);
+
+		auto win = std::make_shared<GUI::Elements::window>();
+		win->width_size  = GUI::size_type::FIXED;
+		win->height_size = GUI::size_type::FIXED;
+		win->size        = vec2(200.0f, 110.0f);
+		win->pos         = vec2(160.0f, 70.0f);
+		ui.add_child(win);
+		ui.process_ui(0.0f);
+
+		const rect wb = win->get_render_bounds();
+
+		FrameGraph::Graph graph;
+		ui.create_graph(graph);
+		device.get_queue(HAL::CommandListType::DIRECT)->signal_and_wait();
+
+		auto& predraw = graph.get_context<GUI::UIContext>();
+		if (!predraw.pre_draw_infos.empty())
+		{
+			auto pre_draw_list = device.get_queue(HAL::CommandListType::DIRECT)->get_free_list();
+			pre_draw_list->begin(L"pre_draw");
+			GUI::user_interface::run_pre_draw(predraw.pre_draw_infos, pre_draw_list);
+			pre_draw_list->end();
+			pre_draw_list->execute_and_wait();
+		}
+
+		auto list = device.get_queue(HAL::CommandListType::DIRECT)->get_free_list();
+		list->begin(L"GUIWindow_Shadow");
+
+		HAL::Texture2DView view(tex, *list);
+		set_ui_target(list, view, vec4(0.0f, 0.0f, 0.0f, 1.0f));
+
+		sizer_long full_vp;
+		full_vp.left   = 0;
+		full_vp.top    = 0;
+		full_vp.right  = (long)W;
+		full_vp.bottom = (long)H;
+		list->get_graphics().set_scissors(full_vp);
+
+		GUI::Renderer renderer;
+		GUIInfo c;
+		c.renderer     = &renderer;
+		c.command_list = list;
+		c.target       = view;
+		c.ui_scale     = 1.0f;
+		c.window_size  = vec2((float)W, (float)H);
+		c.offset       = vec2(0.0f, 0.0f);
+		c.ui_clipping  = full_vp;
+		c.scissors     = full_vp;
+		c.scale        = 1.0f;
+		c.delta_time   = 0.0f;
+
+		auto& ui_ctx = graph.get_context<GUI::UIContext>();
+		for (auto& e : ui_ctx.draw_infos)
+		{
+			if (c.scissors != e.scissors)
+			{
+				renderer.flush(c);
+				list->get_graphics().set_scissors(e.scissors);
+			}
+			c.scale       = e.scale;
+			c.ui_clipping = e.clip;
+			c.offset      = e.offset;
+			c.scissors    = e.scissors;
+			c.window_size = ui_ctx.scaled_size;
+			c.layer         = e.layer;
+			c.layer_slot    = e.layer_slot;
+			c.layer_opacity = e.layer_opacity;
+
+			if (e.before)
+				e.elem->draw_before(c);
+			else
+				e.elem->draw_end(c);
+		}
+		renderer.flush(c);
+
+		list->execute_and_wait();
+
+		const auto img = fx_image{ readback_texture(tex.get()) };
+		const uint mid_y = (uint)(wb.y + wb.h * 0.5f);
+
+		const float far_value = img.at(20, 20);
+		ASSERT_TRUE(far_value > 0.15f);                                    // grey background, ~0.21 linear
+
+		const float near_value = img.at((uint)(wb.x - 8.0f), mid_y);      // 8 px outside the left edge
+		ASSERT_TRUE(near_value < far_value * 0.96f);                       // shadowed
+		ASSERT_TRUE(near_value > far_value * 0.6f);                        // but soft, not black
+
+		const float nearer = img.at((uint)(wb.x - 2.0f), mid_y);
+		ASSERT_TRUE(nearer < near_value);                                  // darker closer to the window
+
+		const float below = img.at((uint)(wb.x + wb.w * 0.5f), (uint)(wb.y + wb.h + 6.0f));
+		ASSERT_TRUE(below < far_value * 0.96f);                            // and below it (offset pushes it down)
 	}
 
 	// The hover state behind the effects: with the cursor over an element (or its
@@ -1502,6 +1709,23 @@ export namespace Test
 		ASSERT_TRUE(off.at(156, 64) < 0.06f);
 	}
 
+	// A tinted light (for light surfaces): the reveal spot takes the light's colour.
+	TEST(Core.HAL, GUIFx_LightColor)
+	{
+		THREAD_SCOPE(GUI);
+
+		GUI::FxParams p;
+		p.cursor = float2(128.0f, 64.0f);
+		p.reveal_strength = 0.6f;
+		p.reveal_size = 20.0f;
+		p.light_color = float3(0.0f, 0.0f, 1.0f);
+		const auto img = render_fx(p);
+
+		ASSERT_TRUE(img.at(128, 64, 2) > 0.35f);     // blue at the cursor
+		ASSERT_TRUE(img.at(128, 64, 0) < 0.1f);      // and only blue: no white in it
+		ASSERT_TRUE(img.at(128, 64, 1) < 0.1f);
+	}
+
 	// Focus ring: accent blue just inside the edge, nothing in the middle.
 	TEST(Core.HAL, GUIFx_FocusRing)
 	{
@@ -1588,5 +1812,198 @@ export namespace Test
 		for (int i = 0; i < 14; i++)
 			frame(0.03f);
 		ASSERT_TRUE(card->fx_focus < 0.05f);
+	}
+
+	// Group opacity: a group at 0.5 over a red background is exactly
+	// 0.5 * group + 0.5 * background, and where its children overlap only the
+	// top child counts. Per-element alpha would let the lower child (green)
+	// show through the upper one (blue) there.
+	TEST(Core.HAL, GUILayer_GroupFade)
+	{
+		THREAD_SCOPE(GUI);
+		constexpr uint W = 256, H = 128;
+
+		GUI::user_interface ui;
+		ui.size = vec2((float)W, (float)H);
+
+		auto background = std::make_shared<GUI::Elements::colored_rect>();
+		background->color   = float4(1.0f, 0.0f, 0.0f, 1.0f);
+		background->docking = GUI::dock::FILL;
+		ui.add_child(background);
+
+		auto group = std::make_shared<GUI::base>();   // draws nothing itself
+		group->docking     = GUI::dock::NONE;
+		group->width_size  = GUI::size_type::FIXED;
+		group->height_size = GUI::size_type::FIXED;
+		group->size        = vec2(160.0f, 80.0f);
+		group->pos         = vec2(48.0f, 24.0f);
+		group->layer_opacity = 0.5f;
+		ui.add_child(group);
+
+		auto add_blob = [&](float4 color, vec2 pos)
+		{
+			auto blob = std::make_shared<GUI::Elements::colored_rect>();
+			blob->color       = color;
+			blob->docking     = GUI::dock::NONE;
+			blob->width_size  = GUI::size_type::FIXED;
+			blob->height_size = GUI::size_type::FIXED;
+			blob->size        = vec2(80.0f, 50.0f);
+			blob->pos         = pos;
+			group->add_child(blob);
+		};
+		add_blob(float4(0.0f, 1.0f, 0.0f, 1.0f), vec2(10.0f, 10.0f));    // green, lower
+		add_blob(float4(0.0f, 0.0f, 1.0f, 1.0f), vec2(50.0f, 20.0f));    // blue, on top of it
+
+		const auto img = render_ui(ui, W, H);
+
+		const rect gb = group->get_render_bounds();
+		auto px = [&](float x, float y, uint ch) { return img.at((uint)(gb.x + x), (uint)(gb.y + y), ch); };
+
+		// Outside the group: untouched red.
+		ASSERT_TRUE(img.at(10, 10, 0) > 0.98f);
+		ASSERT_TRUE(img.at(10, 10, 1) < 0.02f);
+
+		// Green only (x 10..50 is clear of the blue one): half green, half the red behind it.
+		ASSERT_TRUE(std::abs(px(20, 20, 1) - 0.5f) < 0.03f);
+		ASSERT_TRUE(std::abs(px(20, 20, 0) - 0.5f) < 0.03f);
+
+		// Overlap (blue over green): half blue, half red -- and no green at all.
+		ASSERT_TRUE(std::abs(px(70, 40, 2) - 0.5f) < 0.03f);
+		ASSERT_TRUE(std::abs(px(70, 40, 0) - 0.5f) < 0.03f);
+		ASSERT_TRUE(px(70, 40, 1) < 0.03f);
+
+		// Fully opaque or fully hidden are the two ends of the same blend.
+		group->layer_opacity = 1.0f;
+		const auto opaque = render_ui(ui, W, H);
+		ASSERT_TRUE(opaque.at((uint)(gb.x + 20), (uint)(gb.y + 20), 1) > 0.98f);
+
+		group->layer_opacity = 0.0f;
+		const auto hidden = render_ui(ui, W, H);
+		ASSERT_TRUE(hidden.at((uint)(gb.x + 20), (uint)(gb.y + 20), 0) > 0.98f);
+		ASSERT_TRUE(hidden.at((uint)(gb.x + 20), (uint)(gb.y + 20), 1) < 0.02f);
+	}
+
+	// A layer copies the target when it opens and draws it back when it closes, so
+	// both must land in one command list: the chunk ranges handed to the UI_Render
+	// instances never start or end inside a layer.
+	TEST(Core.HAL, GUILayer_ChunksKeepLayersWhole)
+	{
+		THREAD_SCOPE(GUI);
+
+		GUI::user_interface ui;
+		ui.size = vec2(400.0f, 400.0f);
+
+		auto add_rects = [&](GUI::base::ptr parent, int count)
+		{
+			for (int i = 0; i < count; i++)
+			{
+				auto r = std::make_shared<GUI::Elements::colored_rect>();
+				r->docking = GUI::dock::TOP;
+				r->height_size = GUI::size_type::FIXED;
+				r->size = vec2(0.0f, 1.0f);
+				parent->add_child(r);
+			}
+		};
+
+		auto before = std::make_shared<GUI::base>();
+		before->docking = GUI::dock::TOP;
+		before->height_size = GUI::size_type::FIXED;
+		before->size = vec2(0.0f, 100.0f);
+		add_rects(before, 40);
+		ui.add_child(before);
+
+		// ~300 draw entries inside one layer, far past the 64-per-instance minimum.
+		auto group = std::make_shared<GUI::base>();
+		group->docking = GUI::dock::TOP;
+		group->height_size = GUI::size_type::FIXED;
+		group->size = vec2(0.0f, 100.0f);
+		group->layer_opacity = 0.5f;
+		add_rects(group, 150);
+		ui.add_child(group);
+
+		auto after = std::make_shared<GUI::base>();
+		after->docking = GUI::dock::TOP;
+		after->height_size = GUI::size_type::FIXED;
+		after->size = vec2(0.0f, 100.0f);
+		add_rects(after, 150);
+		ui.add_child(after);
+
+		ui.process_ui(0.0f);
+		FrameGraph::Graph graph;
+		ui.create_graph(graph);
+
+		const auto& ctx = graph.get_context<GUI::UIContext>();
+		ASSERT_TRUE(ctx.draw_infos.size() > 400);
+		ASSERT_TRUE(ctx.chunks.size() >= 2);   // it does get split somewhere
+
+		// The ranges tile the list, and at every boundary no layer is open.
+		uint32_t expected_start = 0;
+		bool layer_seen = false;
+		for (const auto& [start, end] : ctx.chunks)
+		{
+			ASSERT_TRUE(start == expected_start);
+			ASSERT_TRUE(end > start);
+
+			int depth = 0;
+			for (uint32_t i = start; i < end; i++)
+				if (ctx.draw_infos[i].layer)
+				{
+					layer_seen = true;
+					depth += ctx.draw_infos[i].before ? 1 : -1;
+					ASSERT_TRUE(depth >= 0);
+				}
+
+			ASSERT_TRUE(depth == 0);   // opened and closed inside this chunk
+			expected_start = end;
+		}
+
+		ASSERT_TRUE(expected_start == ctx.draw_infos.size());
+		ASSERT_TRUE(layer_seen);
+	}
+
+	// The fade state behind group opacity: fade_to eases layer_opacity to its
+	// target, the element is a layer only while it is below 1, and it stops
+	// being one when the fade ends. No GPU needed.
+	TEST(Core.HAL, GUILayer_FadeState)
+	{
+		THREAD_SCOPE(GUI);
+
+		GUI::user_interface ui;
+		ui.size = vec2(200.0f, 100.0f);
+
+		auto card = std::make_shared<GUI::Elements::colored_rect>();
+		card->docking = GUI::dock::FILL;
+		ui.add_child(card);
+
+		auto layered = [&](float dt)
+		{
+			ui.process_ui(dt);
+			FrameGraph::Graph graph;
+			ui.create_graph(graph);
+
+			for (const auto& e : graph.get_context<GUI::UIContext>().draw_infos)
+				if (e.elem == card.get() && e.before)
+					return e.layer;
+			return false;
+		};
+
+		ASSERT_TRUE(!layered(0.1f));                 // opacity 1: no layer
+
+		card->layer_opacity = 0.0f;
+		card->fade_to(1.0f, 0.3f);
+		ASSERT_TRUE(layered(0.1f));                  // fading: a layer
+		ASSERT_TRUE(card->layer_opacity > 0.0f && card->layer_opacity < 1.0f);
+
+		float last = card->layer_opacity;
+		layered(0.1f);
+		ASSERT_TRUE(card->layer_opacity > last);     // still rising
+		for (int i = 0; i < 4; i++)
+			layered(0.1f);
+		ASSERT_TRUE(card->layer_opacity == 1.0f);    // arrived
+		ASSERT_TRUE(!layered(0.1f));                 // and no longer a layer
+
+		ui.fade_enabled = false;
+		card->layer_opacity = 0.3f;
+		ASSERT_TRUE(!layered(0.1f));                 // the setting turns layers off
 	}
 }

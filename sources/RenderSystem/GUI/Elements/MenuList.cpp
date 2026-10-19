@@ -223,6 +223,10 @@ namespace GUI
 
             user_ui->add_child(menu);
 
+            // Popups fade in as one group (the blur, shadow and items together).
+            menu->layer_opacity = 0.0f;
+            menu->fade_to(1.0f, user_ui->fade_in_duration);
+
             rect p = get_render_bounds();
 
             if (!on_strip)

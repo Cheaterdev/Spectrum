@@ -20,6 +20,7 @@ namespace UI
 		float4 focus; // float4
 		float4 focus_color; // float4
 		float4 inner; // float4
+		float4 light; // float4
 		float2 window_size; // float2
 		float radius; // float
 		float4 GetQuad() { return quad; }
@@ -31,6 +32,7 @@ namespace UI
 		float4 GetFocus() { return focus; }
 		float4 GetFocus_color() { return focus_color; }
 		float4 GetInner() { return inner; }
+		float4 GetLight() { return light; }
 		float2 GetWindow_size() { return window_size; }
 		float GetRadius() { return radius; }
 	};
