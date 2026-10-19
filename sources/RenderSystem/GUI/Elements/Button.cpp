@@ -35,15 +35,17 @@ namespace GUI
 
         button::button()
         {
-            fx.reveal = true;
-            fx.border = true;
-            fx.ripple = true;
-            fx.radius = 3.0f;
+            auto& light = add_effect<LightOverlay>();
+            light.reveal = true;
+            light.border = true;
+            light.ripple = true;
+            light.radius = 3.0f;
             clickable = true;
             clip_child = true;
             label_text.reset(new label());
             label_text->text = "click me!";
             label_text->docking = dock::FILL;
+            label_text->magnet_text = FW1_CENTER | FW1_VCENTER | FW1_NOWORDWRAP;
             add_child(label_text);
             padding = {3, 3, 3, 3};
             im.reset(new image());

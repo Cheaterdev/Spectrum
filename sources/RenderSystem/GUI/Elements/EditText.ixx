@@ -124,6 +124,8 @@ export namespace GUI
                 std::vector<float4> selection;
                 Text::Caret         caret;
                 bool                caret_visible = false;
+                float               caret_blink_time = 0.0f;   // seconds into the blink cycle
+                bool                was_focused = false;
 
                 // Block images: the document holds only ids (Text::Editor image
                 // paragraphs), the textures live here. Guarded by m.

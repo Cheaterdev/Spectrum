@@ -42,12 +42,13 @@ GUI::Elements::edit_text::edit_text() : edit_text(edit_style)
 GUI::Elements::edit_text::edit_text(Text::Style style) : style(style), editor(style)
 {
 	clickable = true;
-	fx.focus = true;
+	auto& light = add_effect<LightOverlay>();
+	light.focus = true;
 	// White light vanishes on the light skin: tint the hover effects with the accent.
-	fx.reveal = true;
-	fx.border = true;
-	fx.light = float3(0.21f, 0.45f, 0.79f);
-	fx.radius = 3.0f;
+	light.reveal = true;
+	light.border = true;
+	light.light = float3(0.21f, 0.45f, 0.79f);
+	light.radius = 3.0f;
 
 	// Control characters never enter the text, whatever the user filter says;
 	// a multiline field lets newlines and tabs through (typed or pasted). '\r'
@@ -676,7 +677,7 @@ void GUI::Elements::edit_text::on_pre_render(Context& c)
 				text_dirty = true;
 		}
 
-		caret_visible = is_focused();
+		const bool focused = is_focused();
 
 		// Wide enough for the largest number (at least two digits, so it doesn't
 		// jump at line 10), plus a gap on each side. Before the scroll update:
@@ -697,7 +698,20 @@ void GUI::Elements::edit_text::on_pre_render(Context& c)
 		const rect content = content_rect(c);
 		const vec2 view    = vec2(content.w, content.h) / c.scale;
 		drag_select_scroll(c, content, view, scroll_before);
+		const Text::Caret prev_caret = caret;
 		caret = editor.caret();
+
+		// Blink like a native field: solid right after focus or any caret move/edit, so
+		// the caret never vanishes while typing or arrowing, then on/off at a steady rate.
+		constexpr float blink_period = 1.06f;
+		const bool moved = caret.center.x != prev_caret.center.x || caret.center.y != prev_caret.center.y
+		                || caret.height != prev_caret.height;
+		if (!focused || !was_focused || moved)
+			caret_blink_time = 0.0f;
+		else
+			caret_blink_time = std::fmod(caret_blink_time + c.delta_time, blink_period);
+		was_focused   = focused;
+		caret_visible = focused && caret_blink_time < blink_period * 0.5f;
 		update_scroll(view);
 		if (multiline)
 			sync_scroll_bars(view, editor.content_size() + vec2(4, 0));

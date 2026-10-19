@@ -41,7 +41,7 @@ namespace GUI
             margin      = { 0, 6, 0, 0 };
             // Frosted: the dark background below is translucent, so the blur of
             // what is behind the toast shows through it.
-            backdrop_blur = true;
+            add_effect<BackdropBlur>();
             // No padding: PARENT-docked children are placed inside it, and the
             // background and strip must reach the edges. The text's offset
             // comes from its own margins instead.

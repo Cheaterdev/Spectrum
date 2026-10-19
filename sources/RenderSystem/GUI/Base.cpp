@@ -891,22 +891,18 @@ namespace GUI
         if (visibility)
 		{
             update_fade(c.delta_time);
-            if (lift != lift_target)
-            {
-                const float step = c.delta_time / 0.12f;
-                lift = lift < lift_target ? std::min(lift + step, lift_target) : std::max(lift - step, lift_target);
-            }
             layered = layer_wanted();
             layer_alpha = layer_opacity;
 
             if (layered)
                 layer_index = user_ui->layer_counter++;
 
-            if (backdrop_blur && user_ui && user_ui->backdrop_enabled)
-                backdrop_slot = user_ui->backdrop_counter++;
-
-            if (fx.reveal || fx.border || fx.shine || fx.ripple || fx.focus)
-                update_fx(c.delta_time);
+            for (auto& e : effects)
+                if (e->enabled)
+                {
+                    e->collect(*this);
+                    e->update(*this, c.delta_time);
+                }
 
            on_pre_render(c);
             user_ui->draw_infos.emplace_back(c.ui_clipping, entry_scissors,c.scale,this,c.offset,true,layered,layer_index,layer_alpha,collected_bounds);
@@ -1122,13 +1118,19 @@ namespace GUI
     // snapshot, and elements fall back to their regular look.
     bool base::backdrop_active(const Context& c) const
     {
-        if (!(backdrop_blur && user_ui && user_ui->backdrop_enabled && c.target.resource))
+        auto* blur = find_effect<BackdropBlur>();
+        return blur && blur->active(*this, c);
+    }
+
+    bool BackdropBlur::active(const base& e, const GUIInfo& c) const
+    {
+        if (!(enabled && e.user_ui && e.user_ui->backdrop_enabled && c.target.resource))
             return false;
 
         // Raw parent pointers for the same reason as control_opacity().
-        if (backdrop_standalone_only)
-            for (const base* p = parent; p; p = p->parent)
-                if (p->backdrop_blur)
+        if (standalone_only)
+            for (const base* p = e.parent; p; p = p->parent)
+                if (p->find_effect<BackdropBlur>())
                     return false;
 
         return true;
@@ -1140,8 +1142,8 @@ namespace GUI
         // (shared_from_this), which throws for a root not owned by a shared_ptr
         // -- e.g. a user_interface on the stack in the GUI tests.
         for (const base* p = parent; p; p = p->parent)
-            if (p->glass_children)
-                return p->backdrop_active(c) ? p->glass_opacity : 1.0f;
+            if (auto* blur = p->find_effect<BackdropBlur>(); blur && blur->glass_children)
+                return blur->active(*p, c) ? blur->glass_opacity : 1.0f;
         return 1.0f;
     }
 
@@ -1233,167 +1235,216 @@ namespace GUI
         {
             float pad = 2.0f;
 
-            if (shadow.enabled && user_ui->shadows_enabled)
-                pad = std::max(pad, (3.0f * float(user_ui->shadow_blur) + float(user_ui->shadow_offset)) * (1.0f + 1.2f * lift) + 2.0f);
-
-            if (glow.enabled && user_ui->glow_enabled)
-                pad = std::max(pad, 3.0f * float(user_ui->glow_size) + 2.0f);
+            for (auto& e : effects)
+                if (e->enabled)
+                    pad = std::max(pad, e->extent(*this));
 
             layer_open = c.renderer->begin_layer(c, c.layer_slot, get_render_bounds(), pad);
         }
 
-        if (backdrop_active(c))
-        {
-            BackdropBlurParams params;
-            params.radius = user_ui->backdrop_radius;
-            params.saturation = user_ui->backdrop_saturation;
-            params.tint.w = user_ui->backdrop_tint;
-            params.luminosity = user_ui->backdrop_luminosity;
-            params.noise = user_ui->backdrop_noise;
-
-            rect r = get_render_bounds();
-            if (r.w > 0 && r.h > 0)
-                c.renderer->draw_backdrop_blur(c, backdrop_slot, r, params);
-        }
-
-        // After the blur: the blur snapshot reads a little beyond the element,
-        // and a shadow already drawn there would be blurred into the glass.
-        if (user_ui && (shadow.enabled || glow.enabled))
-        {
-            rect r = get_render_bounds();
-
-            if (shadow.enabled && user_ui->shadows_enabled)
-            {
-                ShadowStyle s = shadow;
-                s.color.w = std::min(1.0f, float(user_ui->shadow_opacity) * (1.0f + 0.4f * lift));
-                s.blur    = float(user_ui->shadow_blur) * (1.0f + 0.8f * lift);
-                s.offset  = float2(0.0f, float(user_ui->shadow_offset) * (1.0f + 1.2f * lift));
-                c.renderer->draw_shadow(c, r, s);
-            }
-
-            if (glow.enabled && user_ui->glow_enabled)
-            {
-                ShadowStyle g = glow;
-                g.color.w *= user_ui->glow_strength;
-                g.blur     = user_ui->glow_size;
-                g.offset   = float2(0.0f, 0.0f);
-                c.renderer->draw_shadow(c, r, g);
-            }
-        }
+        for (auto& e : effects)
+            if (e->enabled)
+                e->draw_under(c, *this);
 
         draw(c);
 
-        // Over the element's own draw, under its children (labels stay readable).
-        if (user_ui && (fx.reveal || fx.border || fx.shine || fx.ripple || fx.focus || fx.inner)
-            && (fx_hover > 0.003f || fx_shine >= 0.0f || fx_ripple >= 0.0f || fx_focus > 0.003f
-                || (fx.inner && user_ui->inner_enabled)))
-        {
-            FxParams p;
-            p.radius = fx.radius;
-            p.light_color = fx.light;
-            const vec2 mouse = user_ui->get_mouse_pos();
-            p.cursor = float2(mouse.x, mouse.y);
-
-            if (fx.reveal && user_ui->reveal_enabled)
-            {
-                p.reveal_strength = user_ui->reveal_strength * fx_hover;
-                p.reveal_size = user_ui->reveal_size;
-            }
-
-            if (fx.border && user_ui->border_enabled)
-            {
-                p.border_strength = user_ui->border_strength * fx_hover;
-                p.border_size = user_ui->border_size;
-            }
-
-            if (fx.shine && user_ui->shine_enabled && fx_shine >= 0.0f)
-            {
-                p.shine_phase = fx_shine;
-                p.shine_strength = user_ui->shine_strength;
-            }
-
-            if (fx.ripple && user_ui->ripple_enabled && fx_ripple >= 0.0f)
-            {
-                p.ripple_origin = float2(fx_ripple_origin.x, fx_ripple_origin.y);
-                p.ripple_phase = fx_ripple;
-                p.ripple_strength = user_ui->ripple_strength;
-            }
-
-            if (fx.focus && user_ui->focus_enabled)
-                p.focus_strength = user_ui->focus_strength * fx_focus;
-
-            if (fx.inner && user_ui->inner_enabled)
-            {
-                p.inner_strength = user_ui->inner_strength;
-                p.inner_size = user_ui->inner_size;
-            }
-
-            c.renderer->draw_fx(c, get_render_bounds(), p);
-        }
+        for (auto& e : effects)
+            if (e->enabled)
+                e->draw_over(c, *this);
     }
 
-    void base::update_fx(float dt)
+    void BackdropBlur::collect(base& e)
     {
+        if (e.user_ui && e.user_ui->backdrop_enabled)
+            slot = e.user_ui->backdrop_counter++;
+    }
+
+    void BackdropBlur::draw_under(GUIInfo& c, base& e)
+    {
+        if (!active(e, c))
+            return;
+
+        BackdropBlurParams params;
+        params.radius = e.user_ui->backdrop_radius;
+        params.saturation = e.user_ui->backdrop_saturation;
+        params.tint.w = e.user_ui->backdrop_tint;
+        params.luminosity = e.user_ui->backdrop_luminosity;
+        params.noise = e.user_ui->backdrop_noise;
+
+        rect r = e.get_render_bounds();
+        if (r.w > 0 && r.h > 0)
+            c.renderer->draw_backdrop_blur(c, slot, r, params);
+    }
+
+    float Shadow::extent(const base& e) const
+    {
+        if (!e.user_ui->shadows_enabled)
+            return 0.0f;
+
+        return (3.0f * float(e.user_ui->shadow_blur) + float(e.user_ui->shadow_offset)) * (1.0f + 1.2f * lift) + 2.0f;
+    }
+
+    void Shadow::update(base&, float dt)
+    {
+        if (lift == lift_target)
+            return;
+
+        const float step = dt / 0.12f;
+        lift = lift < lift_target ? std::min(lift + step, lift_target) : std::max(lift - step, lift_target);
+    }
+
+    void Shadow::draw_under(GUIInfo& c, base& e)
+    {
+        if (!e.user_ui || !e.user_ui->shadows_enabled)
+            return;
+
+        ShadowStyle s = style;
+        s.color.w = std::min(1.0f, float(e.user_ui->shadow_opacity) * (1.0f + 0.4f * lift));
+        s.blur    = float(e.user_ui->shadow_blur) * (1.0f + 0.8f * lift);
+        s.offset  = float2(0.0f, float(e.user_ui->shadow_offset) * (1.0f + 1.2f * lift));
+        c.renderer->draw_shadow(c, e.get_render_bounds(), s);
+    }
+
+    float Glow::extent(const base& e) const
+    {
+        return e.user_ui->glow_enabled ? 3.0f * float(e.user_ui->glow_size) + 2.0f : 0.0f;
+    }
+
+    void Glow::draw_under(GUIInfo& c, base& e)
+    {
+        if (!e.user_ui || !e.user_ui->glow_enabled)
+            return;
+
+        ShadowStyle g = style;
+        g.color.w *= e.user_ui->glow_strength;
+        g.blur     = e.user_ui->glow_size;
+        g.offset   = float2(0.0f, 0.0f);
+        c.renderer->draw_shadow(c, e.get_render_bounds(), g);
+    }
+
+    void LightOverlay::draw_over(GUIInfo& c, base& e)
+    {
+        auto* ui = e.user_ui;
+
+        if (!ui || !(reveal || border || shine || ripple || focus || inner))
+            return;
+
+        if (!(hover > 0.003f || shine_t >= 0.0f || ripple_t >= 0.0f || focus_t > 0.003f
+              || (inner && ui->inner_enabled)))
+            return;
+
+        FxParams p;
+        p.radius = radius;
+        p.light_color = light;
+        const vec2 mouse = ui->get_mouse_pos();
+        p.cursor = float2(mouse.x, mouse.y);
+
+        if (reveal && ui->reveal_enabled)
+        {
+            p.reveal_strength = ui->reveal_strength * hover;
+            p.reveal_size = ui->reveal_size;
+        }
+
+        if (border && ui->border_enabled)
+        {
+            p.border_strength = ui->border_strength * hover;
+            p.border_size = ui->border_size;
+        }
+
+        if (shine && ui->shine_enabled && shine_t >= 0.0f)
+        {
+            p.shine_phase = shine_t;
+            p.shine_strength = ui->shine_strength;
+        }
+
+        if (ripple && ui->ripple_enabled && ripple_t >= 0.0f)
+        {
+            p.ripple_origin = float2(ripple_origin.x, ripple_origin.y);
+            p.ripple_phase = ripple_t;
+            p.ripple_strength = ui->ripple_strength;
+        }
+
+        if (focus && ui->focus_enabled)
+            p.focus_strength = ui->focus_strength * focus_t;
+
+        if (inner && ui->inner_enabled)
+        {
+            p.inner_strength = ui->inner_strength;
+            p.inner_size = ui->inner_size;
+        }
+
+        c.renderer->draw_fx(c, e.get_render_bounds(), p);
+    }
+
+    void LightOverlay::update(base& e, float dt)
+    {
+        // Only the cursor-driven parts have state to advance.
+        if (!(reveal || border || shine || ripple || focus))
+            return;
+
+        auto* ui = e.user_ui;
+
         // Hovered when the cursor is over this element or anything inside it
         // (a button's label is what the hit test finds). Raw parent pointers:
         // see control_opacity().
         bool hovered_now = false;
 
-        if (user_ui)
-            if (auto h = user_ui->get_hovered().lock())
+        if (ui)
+            if (auto h = ui->get_hovered().lock())
                 for (const base* p = h.get(); p; p = p->parent)
-                    if (p == this)
+                    if (p == &e)
                     {
                         hovered_now = true;
                         break;
                     }
 
         const float target = hovered_now ? 1.0f : 0.0f;
-        const float previous = fx_hover;
-        fx_hover += (target - fx_hover) * (1.0f - std::exp(-dt * 14.0f));
+        const float previous = hover;
+        hover += (target - hover) * (1.0f - std::exp(-dt * 14.0f));
 
-        if (std::abs(target - fx_hover) < 0.003f)
-            fx_hover = target;
+        if (std::abs(target - hover) < 0.003f)
+            hover = target;
 
-        if (fx.shine && user_ui)
+        if (shine && ui)
         {
-            if (previous <= 0.0f && fx_hover > 0.0f)
-                fx_shine = 0.0f;
-            else if (fx_shine >= 0.0f)
+            if (previous <= 0.0f && hover > 0.0f)
+                shine_t = 0.0f;
+            else if (shine_t >= 0.0f)
             {
-                fx_shine += dt / std::max(float(user_ui->shine_duration), 0.05f);
+                shine_t += dt / std::max(float(ui->shine_duration), 0.05f);
 
-                if (fx_shine >= 1.0f)
-                    fx_shine = -1.0f;
+                if (shine_t >= 1.0f)
+                    shine_t = -1.0f;
             }
         }
 
         // A press starts the ripple at the cursor; it then runs out on its own.
-        if (fx.ripple && user_ui)
+        const bool pressed_now = e.pressed;
+        if (ripple && ui)
         {
-            if (pressed && !fx_was_pressed)
+            if (pressed_now && !was_pressed)
             {
-                fx_ripple = 0.0f;
-                fx_ripple_origin = user_ui->get_mouse_pos();
+                ripple_t = 0.0f;
+                ripple_origin = ui->get_mouse_pos();
             }
-            else if (fx_ripple >= 0.0f)
+            else if (ripple_t >= 0.0f)
             {
-                fx_ripple += dt / std::max(float(user_ui->ripple_duration), 0.05f);
+                ripple_t += dt / std::max(float(ui->ripple_duration), 0.05f);
 
-                if (fx_ripple >= 1.0f)
-                    fx_ripple = -1.0f;
+                if (ripple_t >= 1.0f)
+                    ripple_t = -1.0f;
             }
         }
 
-        fx_was_pressed = pressed;
+        was_pressed = pressed_now;
 
-        if (fx.focus)
+        if (focus)
         {
-            const float focus_target = is_focused() ? 1.0f : 0.0f;
-            fx_focus += (focus_target - fx_focus) * (1.0f - std::exp(-dt * 14.0f));
+            const float focus_target = e.is_focused() ? 1.0f : 0.0f;
+            focus_t += (focus_target - focus_t) * (1.0f - std::exp(-dt * 14.0f));
 
-            if (std::abs(focus_target - fx_focus) < 0.003f)
-                fx_focus = focus_target;
+            if (std::abs(focus_target - focus_t) < 0.003f)
+                focus_t = focus_target;
         }
     }
 
@@ -2067,9 +2118,14 @@ namespace GUI
 				mouse_move_event_internal(pos);
 			});
 
+		apply_cursor();
+	}
+
+	void user_interface::apply_cursor()
+	{
 		::SetCursor(LoadCursor(nullptr, cursors[static_cast<int>(cursor)]));
 	}
-	
+
 	void user_interface::mouse_action_event(mouse_action action, mouse_button button, vec2 pos)
 	{
 		run_on_ui([this, action, button, pos]()

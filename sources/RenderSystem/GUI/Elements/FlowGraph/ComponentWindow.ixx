@@ -61,6 +61,7 @@ export namespace GUI
                     window_type type;
                     canvas* canva;
                     Skin::Window skin;
+                    GUI::Glow* glow = nullptr;   // in the effect stack; lit while selected
                 public:
 
 

@@ -1388,7 +1388,7 @@ export namespace Test
 		}
 	}
 
-	// A floating window goes through the same generic path (base::backdrop_blur
+	// A floating window goes through the same generic path (a BackdropBlur effect
 	// + draw_before). Its skin body is 80% black, so only ~20% of the blurred
 	// backdrop shows through: without the blur the blue channel just left of the
 	// seam is exactly 0.
@@ -1718,9 +1718,10 @@ export namespace Test
 		card->height_size = GUI::size_type::FIXED;
 		card->size        = vec2(200.0f, 100.0f);
 		card->pos         = vec2(20.0f, 20.0f);
-		card->fx.reveal = true;
-		card->fx.border = true;
-		card->fx.shine  = true;
+		auto& light = card->add_effect<GUI::LightOverlay>();
+		light.reveal = true;
+		light.border = true;
+		light.shine  = true;
 
 		auto child = std::make_shared<GUI::base>();   // what the cursor really hits
 		child->docking = GUI::dock::FILL;
@@ -1735,24 +1736,24 @@ export namespace Test
 		};
 
 		frame(0.03f);
-		ASSERT_TRUE(card->fx_hover == 0.0f);
-		ASSERT_TRUE(card->fx_shine < 0.0f);
+		ASSERT_TRUE(light.hover == 0.0f);
+		ASSERT_TRUE(light.shine_t < 0.0f);
 
 		const rect b = card->get_render_bounds();
 		ui.mouse_move_event_internal(vec2(b.x + b.w * 0.5f, b.y + b.h * 0.5f));
 
 		frame(0.03f);
-		ASSERT_TRUE(card->fx_hover > 0.2f);      // started easing in
-		ASSERT_TRUE(card->fx_shine >= 0.0f);     // the sweep began
+		ASSERT_TRUE(light.hover > 0.2f);      // started easing in
+		ASSERT_TRUE(light.shine_t >= 0.0f);     // the sweep began
 
 		for (int i = 0; i < 12; i++)
 			frame(0.03f);
-		ASSERT_TRUE(card->fx_hover > 0.95f);     // settled
+		ASSERT_TRUE(light.hover > 0.95f);     // settled
 
 		ui.mouse_move_event_internal(vec2(390.0f, 190.0f));   // off the card
 		for (int i = 0; i < 14; i++)
 			frame(0.03f);
-		ASSERT_TRUE(card->fx_hover < 0.05f);
+		ASSERT_TRUE(light.hover < 0.05f);
 	}
 
 	// Shine: a band at the sweep phase, moving across the shape; off at phase < 0.
@@ -1867,8 +1868,9 @@ export namespace Test
 		card->height_size = GUI::size_type::FIXED;
 		card->size        = vec2(200.0f, 100.0f);
 		card->pos         = vec2(20.0f, 20.0f);
-		card->fx.ripple = true;
-		card->fx.focus  = true;
+		auto& light = card->add_effect<GUI::LightOverlay>();
+		light.ripple = true;
+		light.focus  = true;
 		ui.add_child(card);
 
 		auto frame = [&](float dt)
@@ -1879,8 +1881,8 @@ export namespace Test
 		};
 
 		frame(0.03f);
-		ASSERT_TRUE(card->fx_ripple < 0.0f);
-		ASSERT_TRUE(card->fx_focus == 0.0f);
+		ASSERT_TRUE(light.ripple_t < 0.0f);
+		ASSERT_TRUE(light.focus_t == 0.0f);
 
 		const rect b = card->get_render_bounds();
 		const vec2 press_at(b.x + b.w * 0.25f, b.y + b.h * 0.5f);
@@ -1888,23 +1890,23 @@ export namespace Test
 		ui.mouse_action_event_internal(mouse_action::DOWN, mouse_button::LEFT, press_at);
 
 		frame(0.03f);
-		ASSERT_TRUE(card->fx_ripple >= 0.0f);                                   // started
-		ASSERT_TRUE(std::abs(card->fx_ripple_origin.x - press_at.x) < 1.0f);    // at the cursor
-		ASSERT_TRUE(std::abs(card->fx_ripple_origin.y - press_at.y) < 1.0f);
+		ASSERT_TRUE(light.ripple_t >= 0.0f);                                   // started
+		ASSERT_TRUE(std::abs(light.ripple_origin.x - press_at.x) < 1.0f);    // at the cursor
+		ASSERT_TRUE(std::abs(light.ripple_origin.y - press_at.y) < 1.0f);
 
 		for (int i = 0; i < 25; i++)
 			frame(0.03f);
-		ASSERT_TRUE(card->fx_ripple < 0.0f);                                    // ran out (0.55 s)
+		ASSERT_TRUE(light.ripple_t < 0.0f);                                    // ran out (0.55 s)
 
 		card->focus();
 		for (int i = 0; i < 14; i++)
 			frame(0.03f);
-		ASSERT_TRUE(card->fx_focus > 0.95f);
+		ASSERT_TRUE(light.focus_t > 0.95f);
 
 		card->unfocus();
 		for (int i = 0; i < 14; i++)
 			frame(0.03f);
-		ASSERT_TRUE(card->fx_focus < 0.05f);
+		ASSERT_TRUE(light.focus_t < 0.05f);
 	}
 
 	// Group opacity: a group at 0.5 over a red background is exactly
@@ -2100,6 +2102,33 @@ export namespace Test
 		ASSERT_TRUE(!layered(0.1f));                 // the setting turns layers off
 	}
 
+	// The effect stack: add_effect appends once and returns the existing one the second
+	// time, find_effect finds by type, and an element without effects has none.
+	TEST(Core.HAL, GUIEffects_StackAddFind)
+	{
+		THREAD_SCOPE(GUI);
+
+		auto plain = std::make_shared<GUI::Elements::colored_rect>();
+		ASSERT_TRUE(plain->effects.empty());
+		ASSERT_TRUE(plain->find_effect<GUI::Shadow>() == nullptr);
+
+		auto& blur = plain->add_effect<GUI::BackdropBlur>();
+		auto& shadow = plain->add_effect<GUI::Shadow>();
+		ASSERT_TRUE(&plain->add_effect<GUI::BackdropBlur>() == &blur);   // not added twice
+		ASSERT_TRUE(plain->effects.size() == 2);
+		ASSERT_TRUE(plain->effects[0].get() == &blur);                   // stack order is add order
+		ASSERT_TRUE(plain->effects[1].get() == &shadow);
+		ASSERT_TRUE(plain->find_effect<GUI::Shadow>() == &shadow);
+		ASSERT_TRUE(plain->find_effect<GUI::Glow>() == nullptr);
+
+		// The presets: a window is glass with a shadow and an inner shadow; a button has light only.
+		GUI::Elements::window win;
+		ASSERT_TRUE(win.find_effect<GUI::BackdropBlur>() && win.find_effect<GUI::Shadow>() && win.find_effect<GUI::LightOverlay>());
+		auto button = std::make_shared<GUI::Elements::button>();
+		ASSERT_TRUE(button->find_effect<GUI::LightOverlay>() != nullptr);
+		ASSERT_TRUE(button->find_effect<GUI::BackdropBlur>() == nullptr);
+	}
+
 	// A window fades in when added, and closing it fades it out and removes it only
 	// when the fade ends (it stays in the tree, drawn, until then). Closing twice is
 	// harmless, and cancel_close() brings it back. No GPU needed.
@@ -2183,20 +2212,23 @@ export namespace Test
 		win->size        = vec2(200.0f, 120.0f);
 		win->pos         = vec2(50.0f, 50.0f);
 		ui.add_child(win);
+		auto* found = win->find_effect<GUI::Shadow>();
+		ASSERT_TRUE(found != nullptr);
+		auto& shadow = *found;
 		frame(0.03f);
-		ASSERT_TRUE(win->lift == 0.0f);
+		ASSERT_TRUE(shadow.lift == 0.0f);
 
-		win->lift_target = 1.0f;                           // what the dragger sets on mouse down
+		shadow.lift_target = 1.0f;                           // what the dragger sets on mouse down
 		frame(0.03f);
-		ASSERT_TRUE(win->lift > 0.0f && win->lift < 1.0f); // eased, not a jump
+		ASSERT_TRUE(shadow.lift > 0.0f && shadow.lift < 1.0f); // eased, not a jump
 		for (int i = 0; i < 6; i++)
 			frame(0.03f);
-		ASSERT_TRUE(win->lift == 1.0f);
+		ASSERT_TRUE(shadow.lift == 1.0f);
 
-		win->lift_target = 0.0f;
+		shadow.lift_target = 0.0f;
 		for (int i = 0; i < 8; i++)
 			frame(0.03f);
-		ASSERT_TRUE(win->lift == 0.0f);
+		ASSERT_TRUE(shadow.lift == 0.0f);
 	}
 
 	// The progress fill eases toward a new value instead of jumping; the first frame snaps.

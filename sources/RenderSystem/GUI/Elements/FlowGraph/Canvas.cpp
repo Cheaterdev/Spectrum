@@ -68,9 +68,8 @@ namespace
 		toolbar_panel()
 		{
 			// The buttons cover all but the 4 px padding, so they go glass too.
-			backdrop_blur = true;
-			glass_children = true;
-			shadow.enabled = true;
+			add_effect<GUI::BackdropBlur>().glass_children = true;
+			add_effect<GUI::Shadow>();
 		}
 
 		void draw(GUI::base::Context& c) override

@@ -29,15 +29,6 @@ Texture2D get_texture(uint i)
     return GetMaterialPreviewInfo().GetTextures(i);
 }
 
-void spec_to_metallic(float4 albedo, float3 specular, out float4 mat_albedo, out float metallic)
-{
-    float3 metal_rgb = (float3(1, 1, 1) / (albedo.rgb / specular + 1));
-    metallic = (metal_rgb.x + metal_rgb.y + metal_rgb.z) / 3;
-
-    mat_albedo.rgb = specular / metal_rgb;
-    mat_albedo.w = albedo.w;
-}
-
 // Tiled textures aren't previewable yet -- see UniversalMaterialPreview.hlsl.
 float4 tile_sample(Texture2D<float4> tex, SamplerState s, float2 tc, Texture2D<float4> residency, RWByteAddressBuffer visibility)
 {

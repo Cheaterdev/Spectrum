@@ -18,7 +18,8 @@ namespace GUI
 			{
 				dragging = action == mouse_action::DOWN;
 				set_movable(dragging);
-				real_target->lift_target = dragging ? 1.0f : 0.0f;
+				if (auto* shadow = real_target->find_effect<Shadow>())
+					shadow->lift_target = dragging ? 1.0f : 0.0f;
 
 				if (dragging)
 				{

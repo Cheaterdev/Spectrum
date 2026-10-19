@@ -22,10 +22,10 @@ void GUI::Elements::window::draw(Context& c)
 GUI::Elements::window::window() : GUI::Elements::resizable()
 {
 	margin = { 20, 20, 20, 20 };
-	backdrop_blur = true;
 	fade_on_add = true;
-	shadow.enabled = true;
-	fx.inner = true;
+	add_effect<BackdropBlur>();
+	add_effect<Shadow>();
+	add_effect<LightOverlay>().inner = true;
 	clickable = false;
 	clip_child = true;
 	label_text.reset(new label());

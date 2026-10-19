@@ -87,6 +87,10 @@ struct InputHandler
 
 	virtual	void key_action_event(key_action action, long key, key_mods mods) = 0;
 	virtual	void char_event(char32_t ch) = 0;
+
+	// Puts the hovered element's cursor on screen. Called from WM_SETCURSOR as well as after input,
+	// so the window's default arrow never gets a frame in between.
+	virtual	void apply_cursor() {}
 };
 
 namespace GUI
@@ -173,7 +177,6 @@ namespace GUI
     // UI pixels at scale 1; color is sRGB, alpha = strength.
     struct ShadowStyle
     {
-        bool   enabled = false;
         float4 color   = { 0, 0, 0, 0.5f };
         float2 offset  = { 0, 0 };
         float  blur    = 12.0f;   // Gaussian sigma
@@ -197,6 +200,101 @@ namespace GUI
     };
 
     class base;
+
+    // One visual effect of an element: backdrop blur, shadow, glow, light overlay.
+    // An element holds an ordered stack of them (base::add_effect) -- most hold
+    // none -- and base::draw_before runs them around the element's own draw():
+    //   draw_under  before draw(), in stack order (blur first, then shadow: the blur
+    //               snapshot reads a little beyond the element and a shadow already
+    //               drawn there would be blurred into the glass),
+    //   draw()      the element itself,
+    //   draw_over   after draw(), under the children (labels stay readable).
+    // collect() and update() run on the thread that builds the draw list, once per
+    // visible element per frame; draw_* run on the render threads.
+    // Group opacity (fades) is not an effect: it wraps the whole sequence below and
+    // one layer must stay inside one command list, so it stays on the element.
+    class effect
+    {
+        public:
+            bool enabled = true;
+            virtual ~effect() = default;
+
+            virtual void  collect(base&) {}
+            virtual void  update(base&, float /*dt*/) {}
+            // How far outside the render bounds it draws, in UI px (sizes the fade layer).
+            virtual float extent(const base&) const { return 0.0f; }
+            virtual void  draw_under(GUIInfo&, base&) {}
+            virtual void  draw_over(GUIInfo&, base&) {}
+    };
+
+    // Blurs what is behind the element's render bounds. Skin shadows are drawn as
+    // margins outside the bounds, so the bounds are the shape.
+    class BackdropBlur : public effect
+    {
+        public:
+            // Only blur when no ancestor already does: for plain panels that are
+            // their own frosted surface when standalone but just part of an
+            // already back-blurred window otherwise.
+            bool standalone_only = false;
+            // For panels that are mostly covered by their own controls: while the
+            // blur is active, the controls under it (buttons, combo boxes) draw
+            // their backgrounds at glass_opacity so the blur shows through them
+            // instead of only through the padding.
+            bool  glass_children = false;
+            float glass_opacity = 0.5f;
+            uint32_t slot = 0;
+
+            bool active(const base& e, const GUIInfo& c) const;
+            void collect(base& e) override;
+            void draw_under(GUIInfo& c, base& e) override;
+    };
+
+    // Soft drop shadow. Only the shape (style.radius, colour) is per element;
+    // strength, softness and offset come from the UI Effects settings.
+    class Shadow : public effect
+    {
+        public:
+            ShadowStyle style;
+            // 0..1 elevation: a lifted element (a dragged window) casts a larger,
+            // softer, stronger shadow. Eases toward lift_target over ~0.12 s.
+            float lift = 0.0f;
+            float lift_target = 0.0f;
+
+            float extent(const base& e) const override;
+            void  update(base& e, float dt) override;
+            void  draw_under(GUIInfo& c, base& e) override;
+    };
+
+    // Soft glow around the shape (a selection ring, for instance).
+    class Glow : public effect
+    {
+        public:
+            ShadowStyle style;
+
+            float extent(const base& e) const override;
+            void  draw_under(GUIInfo& c, base& e) override;
+    };
+
+    // Cursor-driven light on the element's rounded rect (reveal, edge light, shine,
+    // ripple, focus ring, inner shadow): the flags of OverlayFx choose which.
+    class LightOverlay : public effect, public OverlayFx
+    {
+        public:
+            // hover eases 0..1 with the cursor over the element or a descendant;
+            // shine_t runs 0..1 after the hover starts, -1 when idle.
+            float hover = 0.0f;
+            float shine_t = -1.0f;
+            // ripple_t runs 0..1 after a press (-1 idle) from ripple_origin;
+            // focus_t eases 0..1 with keyboard focus.
+            float ripple_t = -1.0f;
+            vec2  ripple_origin = { 0, 0 };
+            bool  was_pressed = false;
+            float focus_t = 0.0f;
+
+            void update(base& e, float dt) override;
+            void draw_over(GUIInfo& c, base& e) override;
+    };
+
     class drag_n_drop_package
     {
 
@@ -413,38 +511,46 @@ namespace GUI
          virtual void draw(Context&); // override;;
             virtual void draw_after(Context&);;
 
-            // Blurs what is behind the element's render bounds, just before its
-            // own draw() (the draw loops call draw_before). Skin shadows are
-            // drawn as margins outside the bounds, so the bounds are the shape.
-            bool  backdrop_blur = false;
-            // Only blur when no ancestor already does: for plain panels that are
-            // their own frosted surface when standalone but just part of an
-            // already back-blurred window otherwise.
-            bool  backdrop_standalone_only = false;
-            uint32_t backdrop_slot = 0;
+            // The element's effect stack (see `effect`), drawn by draw_before around
+            // draw(). Empty for most elements. Set up when the element is built;
+            // it is read by the draw-list thread, so don't change it while the
+            // element is in the tree.
+            std::vector<std::unique_ptr<effect>> effects;
+
+            // The effect of type T, or null.
+            template<class T>
+            T* find_effect() const
+            {
+                for (auto& e : effects)
+                    if (auto* t = dynamic_cast<T*>(e.get()))
+                        return t;
+                return nullptr;
+            }
+
+            // Appends a T to the stack (or returns the one already there) and returns it.
+            template<class T>
+            T& add_effect()
+            {
+                if (auto* t = find_effect<T>())
+                    return *t;
+                effects.push_back(std::make_unique<T>());
+                return static_cast<T&>(*effects.back());
+            }
+
+            // Whether the element's backdrop blur is on and drawing right now. Elements
+            // use it to switch to a translucent look.
             bool backdrop_active(const Context& c) const;
-            // Drawn by draw_before after the backdrop blur, before draw(). Only
-            // `enabled` and the shape (radius) are per element; strength,
-            // softness and offset come from the UI Effects settings.
-            ShadowStyle shadow;
-            ShadowStyle glow;
-            // Cursor-driven light effects, drawn by draw_before after draw().
-            // fx_hover eases 0..1 with the cursor over the element or a
-            // descendant; fx_shine runs 0..1 after the hover starts, -1 when idle.
-            OverlayFx fx;
-            float fx_hover = 0.0f;
-            float fx_shine = -1.0f;
-            // fx_ripple runs 0..1 after a press (-1 idle) from fx_ripple_origin;
-            // fx_focus eases 0..1 with keyboard focus.
-            float fx_ripple = -1.0f;
-            vec2  fx_ripple_origin = { 0, 0 };
-            bool  fx_was_pressed = false;
-            float fx_focus = 0.0f;
+
+            friend class effect;
+            friend class BackdropBlur;
+            friend class Shadow;
+            friend class Glow;
+            friend class LightOverlay;
+
             float fade_from = 1.0f;
             float fade_target = 1.0f;
             float fade_t = 1.0f;            // 0..1 along the fade, 1 = not fading
             float fade_duration = 0.1f;
-            void update_fx(float dt);
 
             // Group opacity: while below 1 the element and everything inside it
             // is drawn as one unit and blended back with this opacity
@@ -456,10 +562,6 @@ namespace GUI
             void  fade_to(float target, float seconds);
             void  update_fade(float dt);
             bool  layer_wanted() const;
-            // 0..1 elevation: a lifted element (a dragged window) casts a larger,
-            // softer, stronger shadow. Eases toward lift_target over ~0.12 s.
-            float lift = 0.0f;
-            float lift_target = 0.0f;
             // Windows and graph nodes set this: when added they fade in as a group.
             bool  fade_on_add = false;
             // Fades out as a group and removes the element when the fade ends (it
@@ -473,14 +575,8 @@ namespace GUI
             bool  layer_open = false;       // between draw_before and draw_end
             // draw_after, then closes the layer opened by draw_before.
             void  draw_end(Context& c);
-            // For panels that are mostly covered by their own controls: while
-            // this element's blur is active, the controls under it (buttons,
-            // combo boxes) draw their backgrounds at glass_opacity so the blur
-            // shows through them instead of only through the padding.
-            bool  glass_children = false;
-            float glass_opacity = 0.5f;
-            // Background opacity for a control: the nearest glass_children
-            // ancestor's glass_opacity while its blur is active, else 1.
+            // Background opacity for a control: the nearest ancestor's
+            // BackdropBlur::glass_opacity while its blur is active, else 1.
             float control_opacity(const Context& c);
             void draw_before(Context& c);
 			virtual sizer update_layout(sizer r, float scale);
@@ -870,6 +966,7 @@ namespace GUI
             virtual void mouse_wheel_event(mouse_wheel type, float value, vec2 pos);
             virtual void key_action_event(key_action action, long key, key_mods mods);
             virtual void char_event(char32_t ch);
+            virtual void apply_cursor() override;
 
          //   virtual void draw_ui(Context&);
 

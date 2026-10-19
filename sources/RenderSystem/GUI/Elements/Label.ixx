@@ -66,6 +66,11 @@ export namespace GUI
                 property<std::string> text;
                 property<float> font_size;
                 float4 color;
+
+                // Drop shadow behind the text; off while the alpha is 0. The offset is in
+                // layout units, so it scales with the UI.
+                float4 shadow_color  = float4(0, 0, 0, 0);
+                vec2   shadow_offset = vec2(1, 1);
                 label();
                 virtual	~label();
                 virtual void draw(Context& c) override;

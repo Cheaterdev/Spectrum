@@ -65,8 +65,8 @@ namespace GUI
             for (int i = 0; i < slices; i++)
             {
                 const float t     = (i + 0.5f) / slices;                  // 0..1 across the band
-                const float s     = std::sin(t * 3.14159265f);
-                const float alpha = 0.28f * s * s;                        // soft at both ends
+                const float wave  = std::sin(t * 3.14159265f);
+                const float alpha = 0.28f * wave * wave;                  // soft at both ends
                 float sx = x0 + band * i / slices;
                 float ex = x0 + band * (i + 1) / slices;
                 sx = std::max(sx, fill.pos.x);

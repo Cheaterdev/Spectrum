@@ -59,10 +59,9 @@ namespace GUI
 
     Elements::container::container()
     {
-        backdrop_blur = true;
         // Inside a window the window's own back-blur covers it; a second one here
         // would blur the window's translucent skin again as a separate patch.
-        backdrop_standalone_only = true;
+        add_effect<BackdropBlur>().standalone_only = true;
         contents->size = { 20, 20 };
         contents->width_size = size_type::MATCH_CHILDREN;
         contents->height_size = size_type::MATCH_CHILDREN;

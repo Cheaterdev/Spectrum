@@ -778,9 +778,8 @@ public:
 	debug_toolbar_panel()
 	{
 		// The combo boxes cover all but the 4 px padding, so they go glass too.
-		backdrop_blur = true;
-		glass_children = true;
-		shadow.enabled = true;
+		add_effect<GUI::BackdropBlur>().glass_children = true;
+		add_effect<GUI::Shadow>();
 	}
 
 	void draw(GUI::base::Context& c) override
@@ -2038,10 +2037,14 @@ public:
 									card->height_size = GUI::size_type::FIXED;
 									card->size = { 96, 44 };
 									card->margin = { 8, 8, 22, 12 };
-									card->shadow.enabled = shadow;
-									card->glow.enabled = glow;
-									card->glow.color = float4(0.21f, 0.45f, 0.79f, 1.0f);
-									card->shadow.radius = card->glow.radius = 4.0f;
+									if (shadow)
+										card->add_effect<GUI::Shadow>().style.radius = 4.0f;
+									if (glow)
+									{
+										auto& glow_effect = card->add_effect<GUI::Glow>();
+										glow_effect.style.color = float4(0.21f, 0.45f, 0.79f, 1.0f);
+										glow_effect.style.radius = 4.0f;
+									}
 
 									auto text = std::make_shared<label>();
 									text->docking = GUI::dock::FILL;
@@ -2084,10 +2087,11 @@ public:
 							blur_panel->height_size = GUI::size_type::FIXED;
 							blur_panel->size = { 220, 64 };
 							blur_panel->pos = { 55, 23 };
-							blur_panel->backdrop_blur = true;
-							blur_panel->shadow.enabled = true;
-							blur_panel->fx.inner = true;
-							blur_panel->fx.radius = 4.0f;
+							blur_panel->add_effect<GUI::BackdropBlur>();
+							blur_panel->add_effect<GUI::Shadow>();
+							auto& blur_light = blur_panel->add_effect<GUI::LightOverlay>();
+							blur_light.inner = true;
+							blur_light.radius = 4.0f;
 							auto blur_text = std::make_shared<label>();
 							blur_text->docking = GUI::dock::FILL;
 							blur_text->magnet_text = FW1_CENTER | FW1_VCENTER | FW1_NOWORDWRAP;
@@ -2163,10 +2167,11 @@ public:
 									card->height_size = GUI::size_type::FIXED;
 									card->size = { 180, 52 };
 									card->margin = { 0, 0, 10, 0 };
-									card->fx.reveal = reveal;
-									card->fx.border = border;
-									card->fx.shine = shine;
-									card->fx.radius = 6.0f;
+									auto& light = card->add_effect<GUI::LightOverlay>();
+									light.reveal = reveal;
+									light.border = border;
+									light.shine = shine;
+									light.radius = 6.0f;
 
 									auto text = std::make_shared<label>();
 									text->docking = GUI::dock::FILL;
@@ -2188,12 +2193,12 @@ public:
 							// Cheap effects: a click wave, and depth from an inner shadow.
 							auto cheap = add_row(52);
 							auto ripple_card = add_card(cheap, "Press ripple (click)", false, false, false);
-							ripple_card->fx.ripple = true;
+							ripple_card->add_effect<GUI::LightOverlay>().ripple = true;
 							auto inner_card = add_card(cheap, "Inner shadow", false, false, false);
-							inner_card->fx.inner = true;
+							inner_card->add_effect<GUI::LightOverlay>().inner = true;
 							auto both_card = add_card(cheap, "Ripple + inner", false, false, false);
-							both_card->fx.ripple = true;
-							both_card->fx.inner = true;
+							both_card->add_effect<GUI::LightOverlay>().ripple = true;
+							both_card->add_effect<GUI::LightOverlay>().inner = true;
 
 							// Group fade (base::layer_opacity): the card and the two overlapping
 							// children fade as one unit, so the overlap never shows the lower
@@ -2206,8 +2211,7 @@ public:
 							group->height_size = GUI::size_type::FIXED;
 							group->size = { 180, 52 };
 							group->margin = { 0, 0, 10, 0 };
-							group->shadow.enabled = true;
-							group->shadow.radius = 4.0f;
+							group->add_effect<GUI::Shadow>().style.radius = 4.0f;
 							for (auto [x, color] : { std::pair{ 24.0f, float4(0.20f, 0.80f, 0.35f, 1.0f) },
 							                         std::pair{ 64.0f, float4(0.25f, 0.45f, 0.95f, 1.0f) } })
 							{
@@ -2305,10 +2309,11 @@ public:
 								field->size = { 180, 30 };
 								field->margin = { 0, 0, 10, 0 };
 								field->placeholder = hint_text;
-								field->fx.reveal = field_index != 1;
-								field->fx.border = field_index != 1;
-								field->fx.shine = field_index >= 1;
-								field->fx.radius = 3.0f;
+								auto& light = field->add_effect<GUI::LightOverlay>();
+								light.reveal = field_index != 1;
+								light.border = field_index != 1;
+								light.shine = field_index >= 1;
+								light.radius = 3.0f;
 								fields->add_child(field);
 								field_index++;
 							}

@@ -443,7 +443,7 @@ namespace GUI
 
     void Renderer::draw_shadow(base::Context& c, rect r, const ShadowStyle& s)
     {
-        if (!s.enabled || s.color.w <= 0.0f || c.window_size.x <= 0 || c.window_size.y <= 0)
+        if (s.color.w <= 0.0f || c.window_size.x <= 0 || c.window_size.y <= 0)
             return;
 
         PROFILE(L"ui_shadow");

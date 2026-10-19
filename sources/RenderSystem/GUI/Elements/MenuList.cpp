@@ -17,10 +17,14 @@ GUI::Elements::menu_list::menu_list(bool vertical)
 {
     this->vertical = vertical;
     // Popups blur what is behind them and sit slightly recessed; the menu strip is a flat bar.
-    backdrop_blur = vertical;
-    fx.inner = vertical;
-    fx.radius = 0.0f;
-    shadow.enabled = vertical;
+    if (vertical)
+    {
+        add_effect<BackdropBlur>();
+        add_effect<Shadow>();
+        auto& light = add_effect<LightOverlay>();
+        light.inner = true;
+        light.radius = 0.0f;
+    }
     padding = { 1, 1, 1, 1 };
     docking = GUI::dock::NONE;
     if (!vertical)
@@ -172,10 +176,11 @@ void GUI::Elements::menu_list::remove_all()
 
 GUI::Elements::menu_list_element::menu_list_element(bool on_strip)
 {
-    fx.reveal = true;
-    fx.border = true;
-    fx.ripple = true;
-    fx.radius = 0.0f;
+    auto& light = add_effect<LightOverlay>();
+    light.reveal = true;
+    light.border = true;
+    light.ripple = true;
+    light.radius = 0.0f;
     this->on_strip = on_strip;
 }
 

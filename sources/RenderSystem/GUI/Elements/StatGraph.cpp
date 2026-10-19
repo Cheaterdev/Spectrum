@@ -45,17 +45,17 @@ namespace GUI
                 l->magnet_text = FW1_LEFT | FW1_TOP | FW1_NOWORDWRAP;
                 l->font_size   = font;
                 l->color       = color;
+                l->shadow_color = {0.0f, 0.0f, 0.0f, 0.85f};
                 add_child(l);
                 return l;
             };
 
-            // One style for every readout so none of them stands out; only the title is brighter.
-            const float4 readout_color = {0.75f, 0.75f, 0.75f, 0.75f};
-            header_label = make_label(11.0f, {0.95f, 0.95f, 0.95f, 0.95f});
-            _cur.lbl     = make_label(15.0f, line_color); // colour follows line_color, see layout_labels
-            _avg.lbl     = make_label(11.0f, readout_color);
-            _max.lbl     = make_label(11.0f, readout_color);
-            _min.lbl     = make_label(11.0f, readout_color);
+            // Colours follow line_color and are applied in layout_labels.
+            header_label = make_label(15.0f, line_color);
+            _cur.lbl     = make_label(15.0f, line_color);
+            _avg.lbl     = make_label(13.0f, line_color);
+            _max.lbl     = make_label(13.0f, line_color);
+            _min.lbl     = make_label(13.0f, line_color);
 
             draw_tex.mul_color = {1, 1, 1, 1};
             draw_tex.add_color = {0, 0, 0, 0};
@@ -251,29 +251,35 @@ namespace GUI
                 l->pos  = {x, row_y + (row_h - lh) * 0.5f};
             };
 
+            // Everything lives in one bottom row, all in the graph's own colour:
+            // "title value" on the left, "avg min max" on the right.
+            const float3 rgb = {line_color.x, line_color.y, line_color.z};
+            header_label->color = {rgb.x, rgb.y, rgb.z, 0.85f};
+            _cur.lbl->color     = {rgb.x, rgb.y, rgb.z, 1.0f};
+            for (readout* r : {&_avg, &_min, &_max})
+                r->lbl->color = {rgb.x, rgb.y, rgb.z, 0.85f};
+
             const float title_w = vec2(header_label->size).x;
-            const float row_h   = std::max({height(header_label), height(_avg.lbl),
+            const float row_h   = std::max({height(header_label), height(_cur.lbl), height(_avg.lbl),
                                             height(_min.lbl), height(_max.lbl)});
+            const float row_y   = h - row_h - 2.0f;
 
-            place(header_label, title_w, pad, 2.0f, row_h);
+            place(header_label, title_w, pad, row_y, row_h);
+            const float cur_x = pad + title_w + 6.0f;
+            place(_cur.lbl, _cur.slot_w, cur_x, row_y, row_h);
 
-            // The current value is the headline: bottom-left, larger, in the graph's own colour.
-            _cur.lbl->color = {line_color.x, line_color.y, line_color.z, 1.0f};
-            const float cur_h = height(_cur.lbl);
-            place(_cur.lbl, _cur.slot_w, pad, h - cur_h - 2.0f, cur_h);
-
-            // One row, right to left in priority order. A readout that would run into the
-            // title (or one already dropped) is hidden instead of overlapping.
-            const float left_limit = pad + title_w + gap;
+            // Right to left, max first; a readout that would run into the left group
+            // (or one already dropped) is hidden instead of overlapping.
+            const float left_limit = cur_x + _cur.slot_w + gap;
             float x = w - pad;
             bool  fits = true;
-            for (readout* r : {&_avg, &_min, &_max})
+            for (readout* r : {&_max, &_min, &_avg})
             {
                 x -= r->slot_w;
                 fits = fits && x >= left_limit;
                 r->lbl->visible = fits;
                 if (fits)
-                    place(r->lbl, r->slot_w, x, 2.0f, row_h);
+                    place(r->lbl, r->slot_w, x, row_y, row_h);
                 x -= gap;
             }
         }

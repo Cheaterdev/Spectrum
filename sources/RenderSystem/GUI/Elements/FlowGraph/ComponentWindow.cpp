@@ -67,17 +67,20 @@ void GUI::Elements::FlowGraph::component_window::draw(Context& c)
 
 void GUI::Elements::FlowGraph::component_window::on_pre_render(Context& c)
 {
-	glow.enabled = selected;
+	glow->enabled = selected;
 	base::on_pre_render(c);
 }
 
 GUI::Elements::FlowGraph::component_window::component_window(canvas* canva, ::FlowGraph::Node* node, window_type type)
 {
 	thinkable = true;
-	backdrop_blur = true;
 	fade_on_add = true;
-	shadow.enabled = true;
-	glow.color = float4(0.35f, 0.65f, 1.0f, 1.0f);
+	add_effect<GUI::BackdropBlur>();
+	add_effect<GUI::Shadow>();
+	// Lit while the node is selected (on_pre_render).
+	glow = &add_effect<GUI::Glow>();
+	glow->enabled = false;
+	glow->style.color = float4(0.35f, 0.65f, 1.0f, 1.0f);
 	this->node = node;
 	this->type = type;
 	this->canva = canva;
