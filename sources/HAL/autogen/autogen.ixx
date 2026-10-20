@@ -29,6 +29,8 @@ export import :Autogen.Layouts.Frame.DefaultLayout;
 export import :Autogen.Layouts.Frame.NoneLayout;
 export import :Autogen.Slots.Editor.TextureRenderer;
 export import :Autogen.Tables.Editor.TextureRenderer;
+export import :Autogen.Slots.Editor.PreviewDiffParams;
+export import :Autogen.Tables.Editor.PreviewDiffParams;
 export import :Autogen.Tables.Post.BloomSelectors;
 export import :Autogen.Slots.Post.BloomDownsample;
 export import :Autogen.Tables.Post.BloomDownsample;
@@ -430,6 +432,7 @@ export import :Autogen.Tables.Dev.WorkGR_Shadows_NodeEmulation;
 // re-exported. A bare `import` here compiles HAL fine and fails only in the
 // importing layer, with "RT is not a class or namespace name".
 
+export import :Autogen.PSO.Editor.PreviewDiff;
 export import :Autogen.PSO.Post.BloomDownsample;
 export import :Autogen.PSO.Post.BloomUpsample;
 export import :Autogen.PSO.Post.BloomComposite;
@@ -551,6 +554,8 @@ export import :Autogen.PSO.Shadows.VSM.VSMGatherDispatch;
 export import :Autogen.PSO.Shadows.VSM.VSMGatherDispatchMaterial;
 export import :Autogen.PSO.Shadows.VSM.VSMScreenSpaceShadow;
 export import :Autogen.PSO.Shadows.VSM.SkyAmbient;
+export import :Autogen.PSO.Shadows.VSM.SkyAmbientDiffuse;
+export import :Autogen.PSO.Shadows.VSM.SkyAmbientSpecular;
 export import :Autogen.PSO.Shadows.VSM.VSMDepthAnalysis;
 export import :Autogen.PSO.Dev.DebugLinesDraw;
 export import :Autogen.PSO.Dev.DebugLinesOccluded;

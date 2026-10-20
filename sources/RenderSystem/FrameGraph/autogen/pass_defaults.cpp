@@ -49,6 +49,20 @@ FrameGraph::SetupResult PassSetupDefault<Passes::Editor::AssetMip>::setup(
 }
 
 
+FrameGraph::SetupResult PassSetupDefault<Passes::Editor::AssetSkyDiffuse>::setup(
+	Passes::Editor::AssetSkyDiffuse::Context& data, FrameGraph::TaskBuilder& builder)
+{
+	return FrameGraph::SetupResult::NeedsRender;
+}
+
+
+FrameGraph::SetupResult PassSetupDefault<Passes::Editor::AssetSkySpecular>::setup(
+	Passes::Editor::AssetSkySpecular::Context& data, FrameGraph::TaskBuilder& builder)
+{
+	return FrameGraph::SetupResult::NeedsRender;
+}
+
+
 FrameGraph::SetupResult PassDefault<Passes::Post::BloomBuild>::setup(
 	Passes::Post::BloomBuild::Context& data, FrameGraph::TaskBuilder& builder)
 {

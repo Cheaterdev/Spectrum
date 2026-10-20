@@ -498,6 +498,20 @@ public:
 			add_child(row);
 		}
 
+		// What the preview shows the material on and under (shape, scale, environment,
+		// sun, lobe isolation): the renderer's PreviewSettings variables, as property rows.
+		{
+			auto& preview = m_mesh_renderer->get_settings();
+
+			add_child(GUI::Elements::create_property(preview.shape));
+			add_child(GUI::Elements::create_property(preview.scale));
+			add_child(GUI::Elements::create_property(preview.environment));
+			add_child(GUI::Elements::create_property(preview.sun_azimuth));
+			add_child(GUI::Elements::create_property(preview.sun_elevation));
+			add_child(GUI::Elements::create_property(preview.studio_fill));
+			add_child(GUI::Elements::create_property(preview.lobes));
+		}
+
 		// The generated pixel shader: HLSL-highlighted, selectable and copyable,
 		// but not editable -- it is rebuilt from the graph, so edits would be lost.
 		m_text = std::make_shared<GUI::Elements::edit_text>(Text::Style{ 13, Text::Weight::Normal, Text::Family::Mono });

@@ -28,6 +28,7 @@ void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 	std::vector<task<void>> tasks;
 
 
+	tasks.emplace_back(PSOBase::create<PSOS::Editor::PreviewDiff>(device, pso[PSO::PreviewDiff]));
 	tasks.emplace_back(PSOBase::create<PSOS::Post::BloomDownsample>(device, pso[PSO::BloomDownsample]));
 	tasks.emplace_back(PSOBase::create<PSOS::Post::BloomUpsample>(device, pso[PSO::BloomUpsample]));
 	tasks.emplace_back(PSOBase::create<PSOS::Post::BloomComposite>(device, pso[PSO::BloomComposite]));
@@ -148,6 +149,8 @@ void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 	tasks.emplace_back(PSOBase::create<PSOS::Shadows::VSM::VSMGatherDispatchMaterial>(device, pso[PSO::VSMGatherDispatchMaterial]));
 	tasks.emplace_back(PSOBase::create<PSOS::Shadows::VSM::VSMScreenSpaceShadow>(device, pso[PSO::VSMScreenSpaceShadow]));
 	tasks.emplace_back(PSOBase::create<PSOS::Shadows::VSM::SkyAmbient>(device, pso[PSO::SkyAmbient]));
+	tasks.emplace_back(PSOBase::create<PSOS::Shadows::VSM::SkyAmbientDiffuse>(device, pso[PSO::SkyAmbientDiffuse]));
+	tasks.emplace_back(PSOBase::create<PSOS::Shadows::VSM::SkyAmbientSpecular>(device, pso[PSO::SkyAmbientSpecular]));
 	tasks.emplace_back(PSOBase::create<PSOS::Shadows::VSM::VSMDepthAnalysis>(device, pso[PSO::VSMDepthAnalysis]));
 
 

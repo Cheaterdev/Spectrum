@@ -214,6 +214,7 @@ export namespace materials
 		Slots::Meshes::MaterialInfo::Compiled compiled_material_info;
 
 		bool is_ready_to_draw() const override { return pipeline && pipeline->is_built(); }
+		bool has_pipeline() const override { return pipeline != nullptr; }
 
 		::TypedHandle<Table::Meshes::MaterialCommandData::Compiled> info_handle;
 

@@ -10,6 +10,9 @@ namespace Dev
 	enum RTXDebugFlags
 	{
 		DisableSkyFallback = 1;
+		# Material preview: write every material as STANDARD, so the extra lobe (coat, sheen,
+		# anisotropy, subsurface, thin film) is off (universal_material.hlsl).
+		HideMaterialLobe = 2;
 	}
 }
 

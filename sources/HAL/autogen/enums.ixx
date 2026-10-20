@@ -19,6 +19,7 @@ export
 
 	enum class PSO: int
 	{
+		PreviewDiff,
 		BloomDownsample,
 		BloomUpsample,
 		BloomComposite,
@@ -140,6 +141,8 @@ export
 		VSMGatherDispatchMaterial,
 		VSMScreenSpaceShadow,
 		SkyAmbient,
+		SkyAmbientDiffuse,
+		SkyAmbientSpecular,
 		VSMDepthAnalysis,
 		DebugLinesDraw,
 		DebugLinesOccluded,
@@ -197,6 +200,7 @@ export
 	enum class SlotID: unsigned int
 	{
 		TextureRenderer = "TextureRenderer"_crc32,
+		PreviewDiffParams = "PreviewDiffParams"_crc32,
 		BloomSelectors = "BloomSelectors"_crc32,
 		BloomDownsample = "BloomDownsample"_crc32,
 		BloomUpsample = "BloomUpsample"_crc32,
@@ -485,7 +489,8 @@ namespace Dev
 {
 		enum class RTXDebugFlags : uint
 		{
-			DisableSkyFallback = 1
+			DisableSkyFallback = 1,
+			HideMaterialLobe = 2
 		};
 }
 namespace Post

@@ -20,14 +20,20 @@ export namespace Table
 		{
 			static constexpr SlotID ID = SlotID::SkyState;
 			float3 prev_sun_dir;
+			float prev_studio = 0;
+			float prev_studio_fill = 1;
 			bool sky_changed = false;
 			float3& GetPrev_sun_dir() { return prev_sun_dir; }
+			float& GetPrev_studio() { return prev_studio; }
+			float& GetPrev_studio_fill() { return prev_studio_fill; }
 			bool& GetSky_changed() { return sky_changed; }
 			static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 			template<class Compiler>
 			void compile(Compiler& compiler) const
 			{
 				compiler.compile(prev_sun_dir, "SkyState::prev_sun_dir");
+				compiler.compile(prev_studio, "SkyState::prev_studio");
+				compiler.compile(prev_studio_fill, "SkyState::prev_studio_fill");
 				compiler.compile(sky_changed, "SkyState::sky_changed");
 			}
 			using Compiled = SkyState;
@@ -40,6 +46,8 @@ export namespace Table
 			SERIALIZE()
 			{
 				ar& NVP(prev_sun_dir);
+				ar& NVP(prev_studio);
+				ar& NVP(prev_studio_fill);
 				ar& NVP(sky_changed);
 			}
 

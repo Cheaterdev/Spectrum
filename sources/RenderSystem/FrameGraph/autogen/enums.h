@@ -22,6 +22,8 @@ export
 	
 			Library::AssetGBuffer AssetGBuffer;
 		Library::AssetMip AssetMip;
+		Library::AssetSkyDiffuse AssetSkyDiffuse;
+		Library::AssetSkySpecular AssetSkySpecular;
 		Library::BloomBuild BloomBuild;
 		Library::BloomProcess BloomProcess;
 		Library::BloomBuildPost BloomBuildPost;

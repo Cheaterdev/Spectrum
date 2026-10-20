@@ -10,6 +10,22 @@ namespace EngineAssets
 		return (new MeshAsset(to_path(L"resources\\mitsuba\\mitsuba-sphere.obj").wstring()));
 		});
 
+	EngineAsset<MeshAsset> preview_sphere(L"preview_sphere", [] {
+		return (new MeshAsset(to_path(L"resources\\preview\\preview_sphere.obj")));
+		});
+
+	EngineAsset<MeshAsset> preview_rounded_cube(L"preview_rounded_cube", [] {
+		return (new MeshAsset(to_path(L"resources\\preview\\preview_rounded_cube.obj")));
+		});
+
+	EngineAsset<MeshAsset> preview_slab(L"preview_slab", [] {
+		return (new MeshAsset(to_path(L"resources\\preview\\preview_slab.obj")));
+		});
+
+	EngineAsset<MeshAsset> preview_cloth(L"preview_cloth", [] {
+		return (new MeshAsset(to_path(L"resources\\preview\\preview_cloth.obj")));
+		});
+
 	EngineAsset<MeshAsset> plane(L"plane", [] {
 		return (new MeshAsset(to_path(L"resources\\plane.obj").wstring()));
 		});

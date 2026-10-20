@@ -28,6 +28,10 @@ public:
 
     float time = 0;
 
+    // FrameInfo::debugFlags for this graph's frame (Dev::RTXDebugFlags), set by the
+    // preview before each render.
+    uint32_t debug_flags = 0;
+
     main_renderer::ptr scene_renderer;
 
     SceneRenderWorkflow() : pipeline(), sky(pipeline), pssm(pipeline)
@@ -39,6 +43,40 @@ public:
         pipeline.assetMip.render_func = [](auto& data, FrameContext& _context) {
             MipMapGenerator::get().render_texture_2d_slow(_context.get_list()->get_graphics(), *data.swapchain, *data.ResultTexture);
             MipMapGenerator::get().generate(_context.get_list()->get_compute(), *data.swapchain);
+        };
+
+        // The baked sky as indirect light, diffuse half before the subsurface blur and
+        // specular half after it (AssetRenderer.prism).
+        auto sky_light = [](auto& data, FrameContext& context, bool specular)
+        {
+            GBuffer gbuffer = GBufferViewDesc::actualize(data);
+
+            auto& compute = context.get_list()->get_compute();
+            compute.set_signature(Layouts::DefaultLayout);
+            context.graph->set_slot(SlotID::FrameInfo, compute);
+
+            Slots::Shadows::VSM::SkyAmbientData ambient;
+            gbuffer.SetTable(ambient.GetGbuffer());
+            ambient.GetSky()    = data.sky_cubemap_filtered->textureCube;
+            ambient.GetResult() = data.ResultTexture->rwTexture2D;
+            compute.set(ambient);
+
+            if (specular)
+                compute.set_pipeline<PSOS::Shadows::VSM::SkyAmbientSpecular>();
+            else
+                compute.set_pipeline<PSOS::Shadows::VSM::SkyAmbientDiffuse>();
+            {
+                PROFILE_GPU(L"asset_sky_light");
+                compute.dispatch(context.graph->get_context<ViewportInfo>().frame_size, ivec2{ 16, 16 });
+            }
+        };
+
+        pipeline.assetSkyDiffuse.render_func = [sky_light](auto& data, FrameContext& context) {
+            sky_light(data, context, false);
+        };
+
+        pipeline.assetSkySpecular.render_func = [sky_light](auto& data, FrameContext& context) {
+            sky_light(data, context, true);
         };
 
         pipeline.assetGBuffer.render_func = [this](auto& data, FrameContext& _context)
@@ -135,6 +173,7 @@ public:
                 frameInfo.GetSky() = sky->get_handler<Handlers::TextureCube>()->textureCube;
             /////////
             frameInfo.GetSunDir().xyz = skyinfo.sunDir;
+            frameInfo.GetDebugFlags() = debug_flags;
             frameInfo.GetTime() = { time.time, time.totalTime, 0, 0 };
             frameInfo.GetCamera()     = cam.cam->camera_cb.current;
             frameInfo.GetPrevCamera() = cam.cam->camera_cb.prev;
@@ -205,13 +244,28 @@ void AssetRenderer::draw(Scene::ptr scene, HAL::Texture::ptr result)
 
     rendering->render(graph);
 	graph.builder.pass_texture(FrameGraph::ResourceID::swapchain, result->resource, {}, ResourceFlags::Required);
- 
+
     graph.setup();
     graph.compile(frame++);
     graph.render();
     graph.commit_command_lists();
     graph.reset();
     mesh_plane->remove_from_parent();
+}
+
+namespace
+{
+    std::atomic<bool> preview_deferred = false;
+}
+
+void AssetRenderer::defer_preview()
+{
+    preview_deferred = true;
+}
+
+bool AssetRenderer::take_deferred()
+{
+    return preview_deferred.exchange(false);
 }
 
 void AssetRenderer::draw(MaterialAsset::ptr mat, HAL::Texture::ptr result)
@@ -290,6 +344,7 @@ SceneTextureRenderer::SceneTextureRenderer()
     {
         VariableContext::Scope scope(*preview_context);
         scene_renderer->register_renderer(meshes_renderer = std::make_shared<mesh_renderer>());
+        settings = std::make_unique<PreviewSettings>();
     }
 
     // Meshlet Hi-Z occlusion needs FrameInfo::mainHiZ, which only the main view
@@ -313,6 +368,41 @@ SceneTextureRenderer::SceneTextureRenderer()
 }
 
 void SceneTextureRenderer::draw(Scene::ptr scene, HAL::Texture::ptr result)
+{
+    switch ((PreviewLobes)settings->lobes)
+    {
+    case PreviewLobes::WithoutLobe:
+        render_scene(scene, result, true);
+        break;
+
+    case PreviewLobes::LobeDifference:
+    {
+        // Two renders at the target's size, subtracted on the GPU.
+        if (!lobe_with || ivec2(lobe_with->get_size().xy) != ivec2(result->get_size().xy))
+        {
+            auto make = [&] {
+                return std::make_shared<HAL::Texture>(RenderSystem::get().device(),
+                    HAL::ResourceDesc::Tex2D(HAL::Format::R8G8B8A8_UNORM, { result->get_size().xy }, 1, 6,
+                        HAL::ResFlags::ShaderResource | HAL::ResFlags::RenderTarget | HAL::ResFlags::UnorderedAccess));
+            };
+
+            lobe_with    = make();
+            lobe_without = make();
+        }
+
+        render_scene(scene, lobe_with, false);
+        render_scene(scene, lobe_without, true);
+        subtract_lobes(lobe_with, lobe_without, result);
+        break;
+    }
+
+    default:
+        render_scene(scene, result, false);
+        break;
+    }
+}
+
+void SceneTextureRenderer::render_scene(Scene::ptr scene, HAL::Texture::ptr result, bool hide_lobe)
 {
     graph.start_new_frame();
 
@@ -354,7 +444,16 @@ void SceneTextureRenderer::draw(Scene::ptr scene, HAL::Texture::ptr result)
     cam.set_projection_params(Math::pi / 4, aspect, 1, 100 + (mn - mx).length());
     cam.update();
 
-    skyinfo.sunDir = float3(1, 1, 1).normalize();
+    {
+        // Azimuth about +y from +x, elevation above the horizon: 45 / 35.3 degrees is the old fixed (1, 1, 1).
+        const float azimuth   = (float)settings->sun_azimuth * Math::pi / 180.0f;
+        const float elevation = (float)settings->sun_elevation * Math::pi / 180.0f;
+        skyinfo.sunDir = float3(Math::cos(elevation) * Math::cos(azimuth), Math::sin(elevation), Math::cos(elevation) * Math::sin(azimuth)).normalize();
+        skyinfo.studio      = (PreviewEnvironment)settings->environment == PreviewEnvironment::Studio ? 1.0f : 0.0f;
+        skyinfo.studio_fill = (float)settings->studio_fill;
+    }
+
+    rendering->debug_flags = hide_lobe ? (uint32_t)Dev::RTXDebugFlags::HideMaterialLobe : 0u;
 
     graph.builder.debug = true;
     // See AssetRenderer::draw's identical comment -- these are thumbnail/
@@ -387,15 +486,76 @@ void SceneTextureRenderer::draw(scene_object::ptr obj, HAL::Texture::ptr result)
     obj->remove_from_parent();
 }
 
+MeshAssetInstance::ptr SceneTextureRenderer::get_shape_instance()
+{
+    const auto shape = (PreviewShape)settings->shape;
+
+    if (shape == PreviewShape::MaterialTester)
+        return material_tester;
+
+    auto& instance = shape_instances[shape];
+
+    if (!instance)
+    {
+        auto& asset = shape == PreviewShape::Sphere      ? EngineAssets::preview_sphere
+                    : shape == PreviewShape::RoundedCube ? EngineAssets::preview_rounded_cube
+                    : shape == PreviewShape::Slab        ? EngineAssets::preview_slab
+                                                         : EngineAssets::preview_cloth;
+        instance.reset(new MeshAssetInstance(asset.get_asset()));
+    }
+
+    return instance;
+}
+
 void SceneTextureRenderer::draw(MaterialAsset::ptr mat, HAL::Texture::ptr result)
 {
     std::lock_guard<std::mutex> g(lock);
 
-    scene->add_child(material_tester);
-    material_tester->override_material(1, mat);
+    auto instance = get_shape_instance();
+    // The material tester has the material on its second part (the first is the case around it).
+    const size_t slot = (PreviewShape)settings->shape == PreviewShape::MaterialTester ? 1 : 0;
+
+    instance->local_transform.scaling((float)settings->scale);
+    scene->add_child(instance);
+    instance->override_material(slot, mat);
 
     draw(scene, result);
-    material_tester->remove_from_parent();
+    instance->remove_from_parent();
+}
+
+// result = |with - without| x 4: what the material's extra lobe adds to the picture.
+void SceneTextureRenderer::subtract_lobes(HAL::Texture::ptr with, HAL::Texture::ptr without, HAL::Texture::ptr result)
+{
+    auto& device = RenderSystem::get().device();
+    auto& queue  = device.get_queue(HAL::CommandListType::DIRECT);
+    auto  list   = queue->get_free_list();
+    list->begin(L"PreviewLobeDifference");
+
+    HAL::Texture2DView with_view(with->resource, *list);
+    HAL::Texture2DView without_view(without->resource, *list);
+    HAL::Texture2DView result_view(result->resource, *list);
+
+    // A fresh render target must be cleared before anything else touches it; the compute write below
+    // would otherwise be its first operation (D3D12 #1422).
+    {
+        HAL::CompiledRT compiled_rt;
+        compiled_rt.table_rtv = result_view.renderTarget;
+        list->get_graphics().set_rtv(compiled_rt, HAL::RTOptions::Default | HAL::RTOptions::ClearColor, 0, 0, vec4(0, 0, 0, 0));
+    }
+
+    auto& compute = list->get_compute();
+    compute.set_signature(Layouts::DefaultLayout);
+
+    Slots::Editor::PreviewDiffParams params;
+    params.GetA()      = with_view.texture2D;
+    params.GetB()      = without_view.texture2D;
+    params.GetResult() = result_view.rwTexture2D;
+    params.GetGain()   = 4.0f;
+    compute.set(params);
+
+    compute.set_pipeline<PSOS::Editor::PreviewDiff>();
+    compute.dispatch(ivec2(result->get_size().xy), ivec2{ 8, 8 });
+    list->execute_and_wait();
 }
 
 void SceneTextureRenderer::orbit(vec2 delta)

@@ -31,20 +31,20 @@ void MaterialAsset::update_preview(HAL::Texture::ptr preview)
     // deliberately doesn't create one (Vulkan: no material pipelines yet).
     if (!AssetRenderer::is_good()) return;
     auto self = get_ptr<MaterialAsset>();
-    AssetRenderer::get().draw(self, preview);
 
-    // The first draw creates the material's pipeline; its shaders then compile
-    // in the background, and until they land its draws are skipped -- the
-    // preview would stay without the material. Wait (this is the preview
-    // thread) and draw again once it can render.
+    // Previews are drawn on the render thread, which must not wait: a material whose shaders are still
+    // compiling draws nothing, so say so and let the caller come back. A loaded material only makes its
+    // pipeline on its first draw, so that draw is made (its image is thrown away) to get it started.
     if (!is_ready_to_draw())
     {
-        const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(30);
-        while (!is_ready_to_draw() && std::chrono::steady_clock::now() < deadline)
-            std::this_thread::sleep_for(std::chrono::milliseconds(50));
-        if (is_ready_to_draw())
+        if (!has_pipeline())
             AssetRenderer::get().draw(self, preview);
+
+        AssetRenderer::defer_preview();
+        return;
     }
+
+    AssetRenderer::get().draw(self, preview);
     mark_changed();
 }
 

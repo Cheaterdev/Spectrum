@@ -1272,6 +1272,25 @@ namespace Shadows
 			compute = "shadows/vsm/sky_ambient.hlsl";
 		}
 
+		# The same sky split into its diffuse and specular halves, for a pipeline that blurs the
+		# diffuse light (subsurface scattering) in between -- AssetRenderer.prism's AssetSkyDiffuse /
+		# AssetSkySpecular.
+		ComputePSO SkyAmbientDiffuse
+		{
+			root = DefaultLayout;
+
+			[EntryPoint = CS_DIFFUSE]
+			compute = "shadows/vsm/sky_ambient.hlsl";
+		}
+
+		ComputePSO SkyAmbientSpecular
+		{
+			root = DefaultLayout;
+
+			[EntryPoint = CS_SPECULAR]
+			compute = "shadows/vsm/sky_ambient.hlsl";
+		}
+
 		[Compute]
 		[SetupCondition = VSMSelectors::supported]
 		PassNode SkyAmbient
@@ -1279,6 +1298,7 @@ namespace Shadows
 			[Always = Read] Texture GBuffer_Albedo;
 			[Always = Read] Texture GBuffer_Normals;
 			[Always = Read] Texture GBuffer_Specular;
+			[Always = Read] Texture GBuffer_Material;
 			[Always = Read] Texture GBuffer_Speed;
 			[Always = None] Texture GBuffer_DepthMips;
 			[Always = Read] TextureCube sky_cubemap_filtered;

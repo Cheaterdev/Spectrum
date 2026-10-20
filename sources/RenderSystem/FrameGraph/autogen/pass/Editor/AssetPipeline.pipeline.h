@@ -16,6 +16,11 @@
 #include "../Environment/CubeMapEnviromentProcessor.h"
 #include "../Shadows/PSSM/PSSM_GenerateMask.h"
 #include "../Shadows/PSSM/PSSM_Combine.h"
+#include "../Editor/AssetSkyDiffuse.h"
+#include "../Subsurface/SSS_Classify.h"
+#include "../Subsurface/SSS_BlurH.h"
+#include "../Subsurface/SSS_BlurV.h"
+#include "../Editor/AssetSkySpecular.h"
 #include "../Environment/Sky.h"
 #include "../Raytrace/TranslucentRTX.h"
 #include "../Post/AA/SMAA.h"
@@ -40,6 +45,8 @@ namespace Editor
 		Passes::Environment::CubeSky cubeSky;
 		Passes::Shadows::PSSM::PSSM_GenerateMask pSSM_GenerateMask;
 		Passes::Shadows::PSSM::PSSM_Combine pSSM_Combine;
+		Passes::Editor::AssetSkyDiffuse assetSkyDiffuse;
+		Passes::Editor::AssetSkySpecular assetSkySpecular;
 		Passes::Environment::Sky sky;
 		Passes::Post::AA::SMAA sMAA;
 		Passes::Editor::AssetMip assetMip;
@@ -61,6 +68,11 @@ namespace Editor
 			Passes::Environment::CubeMapEnviromentProcessor::Name.ptr,
 			Passes::Shadows::PSSM::PSSM_GenerateMask::Name.ptr,
 			Passes::Shadows::PSSM::PSSM_Combine::Name.ptr,
+			Passes::Editor::AssetSkyDiffuse::Name.ptr,
+			Passes::Subsurface::SSS_Classify::Name.ptr,
+			Passes::Subsurface::SSS_BlurH::Name.ptr,
+			Passes::Subsurface::SSS_BlurV::Name.ptr,
+			Passes::Editor::AssetSkySpecular::Name.ptr,
 			Passes::Environment::Sky::Name.ptr,
 			Passes::Raytrace::TranslucentRTX::Name.ptr,
 			Passes::Post::AA::SMAA::Name.ptr,
@@ -97,6 +109,8 @@ namespace Editor
 			L"sky_cubemap_filtered_diffuse",
 			L"LightMask",
 			L"ShadowMask",
+			L"SSSTiles",
+			L"SSSTemp",
 			L"ResultTextureNew",
 			L"SMAA_edges",
 			L"SMAA_blend",
@@ -115,6 +129,10 @@ namespace Editor
 		static inline const FrameGraph::PassRef ResultTexture_c0_pass_refs[] = {
 			{ PassID::ResultCreation, 0 },
 			{ PassID::PSSM_Combine, 0 },
+			{ PassID::AssetSkyDiffuse, 0 },
+			{ PassID::SSS_BlurH, 0 },
+			{ PassID::SSS_BlurV, 0 },
+			{ PassID::AssetSkySpecular, 0 },
 			{ PassID::Sky, 0 },
 			{ PassID::TranslucentRTX, 0 },
 		};
@@ -123,6 +141,10 @@ namespace Editor
 			{ true, { ResultTexture_c0_pass_refs + 1, 1 } },
 			{ true, { ResultTexture_c0_pass_refs + 2, 1 } },
 			{ false, { ResultTexture_c0_pass_refs + 3, 1 } },
+			{ true, { ResultTexture_c0_pass_refs + 4, 1 } },
+			{ true, { ResultTexture_c0_pass_refs + 5, 1 } },
+			{ true, { ResultTexture_c0_pass_refs + 6, 1 } },
+			{ false, { ResultTexture_c0_pass_refs + 7, 1 } },
 		};
 		static inline const FrameGraph::PassRef scene_c0_pass_refs[] = {
 			{ PassID::PreScene, 0 },
@@ -143,19 +165,29 @@ namespace Editor
 			{ PassID::AssetGBuffer, 0 },
 			{ PassID::PSSM_GenerateMask, 0 },
 			{ PassID::PSSM_Combine, 0 },
+			{ PassID::AssetSkyDiffuse, 0 },
+			{ PassID::SSS_Classify, 0 },
+			{ PassID::SSS_BlurH, 0 },
+			{ PassID::SSS_BlurV, 0 },
+			{ PassID::AssetSkySpecular, 0 },
 		};
 		static inline const FrameGraph::PrecompiledState GBuffer_Albedo_c0_states[] = {
 			{ true, { GBuffer_Albedo_c0_pass_refs + 0, 1 } },
-			{ false, { GBuffer_Albedo_c0_pass_refs + 1, 2 } },
+			{ false, { GBuffer_Albedo_c0_pass_refs + 1, 7 } },
 		};
 		static inline const FrameGraph::PassRef GBuffer_Normals_c0_pass_refs[] = {
 			{ PassID::AssetGBuffer, 0 },
 			{ PassID::PSSM_GenerateMask, 0 },
 			{ PassID::PSSM_Combine, 0 },
+			{ PassID::AssetSkyDiffuse, 0 },
+			{ PassID::SSS_Classify, 0 },
+			{ PassID::SSS_BlurH, 0 },
+			{ PassID::SSS_BlurV, 0 },
+			{ PassID::AssetSkySpecular, 0 },
 		};
 		static inline const FrameGraph::PrecompiledState GBuffer_Normals_c0_states[] = {
 			{ true, { GBuffer_Normals_c0_pass_refs + 0, 1 } },
-			{ false, { GBuffer_Normals_c0_pass_refs + 1, 2 } },
+			{ false, { GBuffer_Normals_c0_pass_refs + 1, 7 } },
 		};
 		static inline const FrameGraph::PassRef GBuffer_Depth_c0_pass_refs[] = {
 			{ PassID::AssetGBuffer, 0 },
@@ -170,19 +202,29 @@ namespace Editor
 			{ PassID::AssetGBuffer, 0 },
 			{ PassID::PSSM_GenerateMask, 0 },
 			{ PassID::PSSM_Combine, 0 },
+			{ PassID::AssetSkyDiffuse, 0 },
+			{ PassID::SSS_Classify, 0 },
+			{ PassID::SSS_BlurH, 0 },
+			{ PassID::SSS_BlurV, 0 },
+			{ PassID::AssetSkySpecular, 0 },
 		};
 		static inline const FrameGraph::PrecompiledState GBuffer_Specular_c0_states[] = {
 			{ true, { GBuffer_Specular_c0_pass_refs + 0, 1 } },
-			{ false, { GBuffer_Specular_c0_pass_refs + 1, 2 } },
+			{ false, { GBuffer_Specular_c0_pass_refs + 1, 7 } },
 		};
 		static inline const FrameGraph::PassRef GBuffer_Speed_c0_pass_refs[] = {
 			{ PassID::AssetGBuffer, 0 },
 			{ PassID::PSSM_GenerateMask, 0 },
 			{ PassID::PSSM_Combine, 0 },
+			{ PassID::AssetSkyDiffuse, 0 },
+			{ PassID::SSS_Classify, 0 },
+			{ PassID::SSS_BlurH, 0 },
+			{ PassID::SSS_BlurV, 0 },
+			{ PassID::AssetSkySpecular, 0 },
 		};
 		static inline const FrameGraph::PrecompiledState GBuffer_Speed_c0_states[] = {
 			{ true, { GBuffer_Speed_c0_pass_refs + 0, 1 } },
-			{ false, { GBuffer_Speed_c0_pass_refs + 1, 2 } },
+			{ false, { GBuffer_Speed_c0_pass_refs + 1, 7 } },
 		};
 		static inline const FrameGraph::PassRef GBuffer_ObjectID_c0_pass_refs[] = {
 			{ PassID::AssetGBuffer, 0 },
@@ -193,19 +235,29 @@ namespace Editor
 		static inline const FrameGraph::PassRef GBuffer_Material_c0_pass_refs[] = {
 			{ PassID::AssetGBuffer, 0 },
 			{ PassID::PSSM_Combine, 0 },
+			{ PassID::AssetSkyDiffuse, 0 },
+			{ PassID::SSS_Classify, 0 },
+			{ PassID::SSS_BlurH, 0 },
+			{ PassID::SSS_BlurV, 0 },
+			{ PassID::AssetSkySpecular, 0 },
 		};
 		static inline const FrameGraph::PrecompiledState GBuffer_Material_c0_states[] = {
 			{ true, { GBuffer_Material_c0_pass_refs + 0, 1 } },
-			{ false, { GBuffer_Material_c0_pass_refs + 1, 1 } },
+			{ false, { GBuffer_Material_c0_pass_refs + 1, 6 } },
 		};
 		static inline const FrameGraph::PassRef GBuffer_DepthMips_c0_pass_refs[] = {
 			{ PassID::AssetGBuffer, 0 },
 			{ PassID::PSSM_GenerateMask, 0 },
 			{ PassID::PSSM_Combine, 0 },
+			{ PassID::AssetSkyDiffuse, 0 },
+			{ PassID::SSS_Classify, 0 },
+			{ PassID::SSS_BlurH, 0 },
+			{ PassID::SSS_BlurV, 0 },
+			{ PassID::AssetSkySpecular, 0 },
 		};
 		static inline const FrameGraph::PrecompiledState GBuffer_DepthMips_c0_states[] = {
 			{ true, { GBuffer_DepthMips_c0_pass_refs + 0, 1 } },
-			{ false, { GBuffer_DepthMips_c0_pass_refs + 1, 2 } },
+			{ false, { GBuffer_DepthMips_c0_pass_refs + 1, 7 } },
 		};
 		static inline const FrameGraph::PassRef GBuffer_HiZ_c0_pass_refs[] = {
 			{ PassID::AssetGBuffer, 0 },
@@ -281,12 +333,14 @@ namespace Editor
 		static inline const FrameGraph::PassRef sky_cubemap_filtered_c0_pass_refs[] = {
 			{ PassID::CubeMapDownsample, 0 },
 			{ PassID::CubeMapEnviromentProcessor, 0 },
+			{ PassID::AssetSkyDiffuse, 0 },
+			{ PassID::AssetSkySpecular, 0 },
 			{ PassID::TranslucentRTX, 0 },
 		};
 		static inline const FrameGraph::PrecompiledState sky_cubemap_filtered_c0_states[] = {
 			{ false, { sky_cubemap_filtered_c0_pass_refs + 0, 1 } },
 			{ true, { sky_cubemap_filtered_c0_pass_refs + 1, 1 } },
-			{ false, { sky_cubemap_filtered_c0_pass_refs + 2, 1 } },
+			{ false, { sky_cubemap_filtered_c0_pass_refs + 2, 3 } },
 		};
 		static inline const FrameGraph::PassRef sky_cubemap_filtered_diffuse_c0_pass_refs[] = {
 			{ PassID::CubeMapDownsample, 0 },
@@ -309,6 +363,23 @@ namespace Editor
 		};
 		static inline const FrameGraph::PrecompiledState ShadowMask_c0_states[] = {
 			{ false, { ShadowMask_c0_pass_refs + 0, 1 } },
+		};
+		static inline const FrameGraph::PassRef SSSTiles_c0_pass_refs[] = {
+			{ PassID::SSS_Classify, 0 },
+			{ PassID::SSS_BlurH, 0 },
+			{ PassID::SSS_BlurV, 0 },
+		};
+		static inline const FrameGraph::PrecompiledState SSSTiles_c0_states[] = {
+			{ true, { SSSTiles_c0_pass_refs + 0, 1 } },
+			{ false, { SSSTiles_c0_pass_refs + 1, 2 } },
+		};
+		static inline const FrameGraph::PassRef SSSTemp_c0_pass_refs[] = {
+			{ PassID::SSS_BlurH, 0 },
+			{ PassID::SSS_BlurV, 0 },
+		};
+		static inline const FrameGraph::PrecompiledState SSSTemp_c0_states[] = {
+			{ true, { SSSTemp_c0_pass_refs + 0, 1 } },
+			{ false, { SSSTemp_c0_pass_refs + 1, 1 } },
 		};
 		static inline const FrameGraph::PassRef ResultTexture_c1_pass_refs[] = {
 			{ PassID::TranslucentRTX, 0 },
@@ -381,6 +452,8 @@ namespace Editor
 			{ ResourceID::sky_cubemap_filtered_diffuse, 0, sky_cubemap_filtered_diffuse_c0_states },
 			{ ResourceID::LightMask, 0, LightMask_c0_states },
 			{ ResourceID::ShadowMask, 0, ShadowMask_c0_states },
+			{ ResourceID::SSSTiles, 0, SSSTiles_c0_states },
+			{ ResourceID::SSSTemp, 0, SSSTemp_c0_states },
 			{ ResourceID::ResultTexture, 1, ResultTexture_c1_states },
 			{ ResourceID::ResultTexture, 2, ResultTexture_c2_states },
 			{ ResourceID::SMAA_edges, 0, SMAA_edges_c0_states },
@@ -447,38 +520,93 @@ namespace Editor
 			{ PassID::PSSM_GenerateMask, 0 },
 			{ PassID::ResultCreation, 0 },
 		};
-		static inline const FrameGraph::PassRef Sky_0_prev[] = {
+		static inline const FrameGraph::PassRef AssetSkyDiffuse_0_prev[] = {
 			{ PassID::AssetGBuffer, 0 },
+			{ PassID::CubeMapDownsample, 0 },
+			{ PassID::CubeMapEnviromentProcessor, 0 },
 			{ PassID::PSSM_Combine, 0 },
 			{ PassID::ResultCreation, 0 },
 		};
+		static inline const FrameGraph::PassRef SSS_Classify_0_prev[] = {
+			{ PassID::AssetGBuffer, 0 },
+		};
+		static inline const FrameGraph::PassRef SSS_BlurH_0_prev[] = {
+			{ PassID::AssetGBuffer, 0 },
+			{ PassID::AssetSkyDiffuse, 0 },
+			{ PassID::PSSM_Combine, 0 },
+			{ PassID::ResultCreation, 0 },
+			{ PassID::SSS_Classify, 0 },
+		};
+		static inline const FrameGraph::PassRef SSS_BlurV_0_prev[] = {
+			{ PassID::AssetGBuffer, 0 },
+			{ PassID::AssetSkyDiffuse, 0 },
+			{ PassID::PSSM_Combine, 0 },
+			{ PassID::ResultCreation, 0 },
+			{ PassID::SSS_BlurH, 0 },
+			{ PassID::SSS_Classify, 0 },
+		};
+		static inline const FrameGraph::PassRef AssetSkySpecular_0_prev[] = {
+			{ PassID::AssetGBuffer, 0 },
+			{ PassID::AssetSkyDiffuse, 0 },
+			{ PassID::CubeMapDownsample, 0 },
+			{ PassID::CubeMapEnviromentProcessor, 0 },
+			{ PassID::PSSM_Combine, 0 },
+			{ PassID::ResultCreation, 0 },
+			{ PassID::SSS_BlurH, 0 },
+			{ PassID::SSS_BlurV, 0 },
+		};
+		static inline const FrameGraph::PassRef Sky_0_prev[] = {
+			{ PassID::AssetGBuffer, 0 },
+			{ PassID::AssetSkyDiffuse, 0 },
+			{ PassID::AssetSkySpecular, 0 },
+			{ PassID::PSSM_Combine, 0 },
+			{ PassID::ResultCreation, 0 },
+			{ PassID::SSS_BlurH, 0 },
+			{ PassID::SSS_BlurV, 0 },
+		};
 		static inline const FrameGraph::PassRef TranslucentRTX_0_prev[] = {
 			{ PassID::AssetGBuffer, 0 },
+			{ PassID::AssetSkyDiffuse, 0 },
+			{ PassID::AssetSkySpecular, 0 },
 			{ PassID::CubeMapDownsample, 0 },
 			{ PassID::CubeMapEnviromentProcessor, 0 },
 			{ PassID::PSSM_Combine, 0 },
 			{ PassID::PreScene, 0 },
 			{ PassID::ResultCreation, 0 },
+			{ PassID::SSS_BlurH, 0 },
+			{ PassID::SSS_BlurV, 0 },
 			{ PassID::Sky, 0 },
 		};
 		static inline const FrameGraph::PassRef SMAA_0_prev[] = {
+			{ PassID::AssetSkyDiffuse, 0 },
+			{ PassID::AssetSkySpecular, 0 },
 			{ PassID::PSSM_Combine, 0 },
 			{ PassID::ResultCreation, 0 },
+			{ PassID::SSS_BlurH, 0 },
+			{ PassID::SSS_BlurV, 0 },
 			{ PassID::Sky, 0 },
 			{ PassID::TranslucentRTX, 0 },
 		};
 		static inline const FrameGraph::PassRef FSR_0_prev[] = {
+			{ PassID::AssetSkyDiffuse, 0 },
+			{ PassID::AssetSkySpecular, 0 },
 			{ PassID::PSSM_Combine, 0 },
 			{ PassID::ResultCreation, 0 },
 			{ PassID::SMAA, 0 },
+			{ PassID::SSS_BlurH, 0 },
+			{ PassID::SSS_BlurV, 0 },
 			{ PassID::Sky, 0 },
 			{ PassID::TranslucentRTX, 0 },
 		};
 		static inline const FrameGraph::PassRef AssetMip_0_prev[] = {
+			{ PassID::AssetSkyDiffuse, 0 },
+			{ PassID::AssetSkySpecular, 0 },
 			{ PassID::FSR, 0 },
 			{ PassID::PSSM_Combine, 0 },
 			{ PassID::ResultCreation, 0 },
 			{ PassID::SMAA, 0 },
+			{ PassID::SSS_BlurH, 0 },
+			{ PassID::SSS_BlurV, 0 },
 			{ PassID::Sky, 0 },
 			{ PassID::TranslucentRTX, 0 },
 		};
@@ -499,6 +627,11 @@ namespace Editor
 			{ PassID::CubeMapEnviromentProcessor, 0, false, CubeMapEnviromentProcessor_0_prev },
 			{ PassID::PSSM_GenerateMask, 0, false, PSSM_GenerateMask_0_prev },
 			{ PassID::PSSM_Combine, 0, true, PSSM_Combine_0_prev },
+			{ PassID::AssetSkyDiffuse, 0, false, AssetSkyDiffuse_0_prev },
+			{ PassID::SSS_Classify, 0, false, SSS_Classify_0_prev },
+			{ PassID::SSS_BlurH, 0, false, SSS_BlurH_0_prev },
+			{ PassID::SSS_BlurV, 0, false, SSS_BlurV_0_prev },
+			{ PassID::AssetSkySpecular, 0, false, AssetSkySpecular_0_prev },
 			{ PassID::Sky, 0, true, Sky_0_prev },
 			{ PassID::TranslucentRTX, 0, false, TranslucentRTX_0_prev },
 			{ PassID::SMAA, 0, true, SMAA_0_prev },
@@ -569,6 +702,17 @@ namespace Editor
 			// only supplies render_func, so that is what gates registration.
 			if (pSSM_Combine.render_func)
 				graph.add_library_pass<Passes::Shadows::PSSM::PSSM_Combine>(PassSetupDefault<Passes::Shadows::PSSM::PSSM_Combine>::setup, pSSM_Combine.render_func, (pSSM_Combine.flags));
+			// Setup is generated (PassSetupDefault<T>, pass_defaults.h); the owner
+			// only supplies render_func, so that is what gates registration.
+			if (assetSkyDiffuse.render_func)
+				graph.add_library_pass<Passes::Editor::AssetSkyDiffuse>(PassSetupDefault<Passes::Editor::AssetSkyDiffuse>::setup, assetSkyDiffuse.render_func, (assetSkyDiffuse.flags & ~FrameGraph::PassFlags::Compute));
+			graph.add_library_pass<Passes::Subsurface::SSS_Classify>(PassDefault<Passes::Subsurface::SSS_Classify>::setup, PassDefault<Passes::Subsurface::SSS_Classify>::render, (PassDefault<Passes::Subsurface::SSS_Classify>::flags & ~FrameGraph::PassFlags::Compute));
+			graph.add_library_pass<Passes::Subsurface::SSS_BlurH>(PassDefault<Passes::Subsurface::SSS_BlurH>::setup, PassDefault<Passes::Subsurface::SSS_BlurH>::render, (PassDefault<Passes::Subsurface::SSS_BlurH>::flags & ~FrameGraph::PassFlags::Compute));
+			graph.add_library_pass<Passes::Subsurface::SSS_BlurV>(PassDefault<Passes::Subsurface::SSS_BlurV>::setup, PassDefault<Passes::Subsurface::SSS_BlurV>::render, (PassDefault<Passes::Subsurface::SSS_BlurV>::flags & ~FrameGraph::PassFlags::Compute));
+			// Setup is generated (PassSetupDefault<T>, pass_defaults.h); the owner
+			// only supplies render_func, so that is what gates registration.
+			if (assetSkySpecular.render_func)
+				graph.add_library_pass<Passes::Editor::AssetSkySpecular>(PassSetupDefault<Passes::Editor::AssetSkySpecular>::setup, assetSkySpecular.render_func, (assetSkySpecular.flags & ~FrameGraph::PassFlags::Compute));
 			// Setup is generated (PassSetupDefault<T>, pass_defaults.h); the owner
 			// only supplies render_func, so that is what gates registration.
 			if (sky.render_func)

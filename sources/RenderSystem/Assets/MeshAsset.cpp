@@ -1,4 +1,4 @@
-﻿module Graphics:MeshAsset;
+module Graphics:MeshAsset;
 import RenderSystem;
 
 import :Scene;
@@ -379,13 +379,27 @@ void MeshAsset::try_register()
 
 void MeshAsset::update_preview(HAL::Texture::ptr preview)
 {
-	// See MaterialAsset::update_preview.
+    // See MaterialAsset::update_preview.
 	if (!AssetRenderer::is_good()) return;
+
 	if (!preview || !preview->is_rt())
 		preview.reset(new HAL::Texture(RenderSystem::get().device(), HAL::ResourceDesc::Tex2D(HAL::Format::R8G8B8A8_UNORM, { 256, 256 }, 1, 6, HAL::ResFlags::ShaderResource | HAL::ResFlags::RenderTarget | HAL::ResFlags::UnorderedAccess)));
 
 	if (!preview_mesh)
 		preview_mesh.reset(new MeshAssetInstance(get_ptr<MeshAsset>()));
+
+	// A draw skips every material whose pipeline is not built yet, and this is the render thread, which
+	// must not wait for the shaders: come back when they are.
+	for (auto& ref : materials)
+	{
+		MaterialAsset::ptr material = *ref;
+
+		if (material && material->has_pipeline() && !material->is_ready_to_draw())
+		{
+			AssetRenderer::defer_preview();
+			return;
+		}
+	}
 
 	AssetRenderer::get().draw(preview_mesh, preview);
 	mark_changed();

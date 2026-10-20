@@ -316,10 +316,11 @@ namespace Environment
 			{ PassID::VSM_ShadowResolve, 0 },
 			{ PassID::VSM_Combine, 0 },
 			{ PassID::VSM_Unshadowed, 0 },
+			{ PassID::SkyAmbient, 0 },
 		};
 		static inline const FrameGraph::PrecompiledState GBuffer_Material_c0_states[] = {
 			{ true, { GBuffer_Material_c0_pass_refs + 0, 1 } },
-			{ false, { GBuffer_Material_c0_pass_refs + 1, 3 } },
+			{ false, { GBuffer_Material_c0_pass_refs + 1, 4 } },
 		};
 		static inline const FrameGraph::PassRef GBuffer_DepthMips_c0_pass_refs[] = {
 			{ PassID::Scene, 0 },

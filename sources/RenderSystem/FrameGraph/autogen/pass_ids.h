@@ -12,6 +12,8 @@ namespace FrameGraph
 	{
 		AssetGBuffer,
 		AssetMip,
+		AssetSkyDiffuse,
+		AssetSkySpecular,
 		BloomBuild,
 		BloomProcess,
 		BloomBuildPost,

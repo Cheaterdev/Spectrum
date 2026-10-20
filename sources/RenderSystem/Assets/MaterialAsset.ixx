@@ -82,6 +82,10 @@ export namespace materials
             // because its pipeline is still compiling.
             virtual bool is_ready_to_draw() const { return true; }
 
+            // Whether the pipeline exists yet (a loaded material makes it on its first update),
+            // so a caller knows waiting for is_ready_to_draw() can end.
+            virtual bool has_pipeline() const { return true; }
+
             size_t get_pipeline_id();
             SERIALIZE()
             {

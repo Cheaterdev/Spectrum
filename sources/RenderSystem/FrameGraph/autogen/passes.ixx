@@ -16,6 +16,8 @@ export import "../defines.h";
 
 #include "pass/Editor/AssetGBuffer.h"
 #include "pass/Editor/AssetMip.h"
+#include "pass/Editor/AssetSkyDiffuse.h"
+#include "pass/Editor/AssetSkySpecular.h"
 #include "pass/Post/BloomBuild.h"
 #include "pass/Post/BloomProcess.h"
 #include "pass/Post/BloomBuildPost.h"
@@ -184,6 +186,14 @@ export namespace Passes
 	namespace Editor
 	{
 		using ::Passes::Editor::AssetMip;
+	}
+	namespace Editor
+	{
+		using ::Passes::Editor::AssetSkyDiffuse;
+	}
+	namespace Editor
+	{
+		using ::Passes::Editor::AssetSkySpecular;
 	}
 	namespace Post
 	{

@@ -1368,8 +1368,9 @@ namespace
 
                     // The scattering part has its own diffuse colour: blend the
                     // base colour towards it by the subsurface weight (the weight
-                    // is clamped to 1, as in MaterialX).
-                    if (*map->subsurface_color)
+                    // is clamped to 1, as in MaterialX). Only a colour the material sets: the nodedef
+                    // default is white, which at weight 1 would replace the base colour with white.
+                    if (*map->subsurface_color && shader->getInput(map->subsurface_color))
                         base_color = lerp_color(base_color, channel(shader, map->subsurface_color, d), subsurface, d);
                 }
             }

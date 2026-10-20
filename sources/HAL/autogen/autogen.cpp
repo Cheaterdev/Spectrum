@@ -10,6 +10,7 @@ import HAL;
 std::optional<SlotID> get_slot(std::string_view slot_name)
 {
 	if(slot_name == "TextureRenderer") return SlotID::TextureRenderer;
+	if(slot_name == "PreviewDiffParams") return SlotID::PreviewDiffParams;
 	if(slot_name == "BloomDownsample") return SlotID::BloomDownsample;
 	if(slot_name == "BloomUpsample") return SlotID::BloomUpsample;
 	if(slot_name == "BloomComposite") return SlotID::BloomComposite;
@@ -188,6 +189,8 @@ uint get_table_index(SlotID id)
 {
 
 	if(id == SlotID::TextureRenderer) return Slots::Editor::TextureRenderer::Slot::ID;
+
+	if(id == SlotID::PreviewDiffParams) return Slots::Editor::PreviewDiffParams::Slot::ID;
 
 	if(id == SlotID::BloomDownsample) return Slots::Post::BloomDownsample::Slot::ID;
 
@@ -536,6 +539,7 @@ uint get_table_index(SlotID id)
 std::string get_slot_name(SlotID id)
 {
 	if(id == SlotID::TextureRenderer) return "TextureRenderer";
+	if(id == SlotID::PreviewDiffParams) return "PreviewDiffParams";
 	if(id == SlotID::BloomDownsample) return "BloomDownsample";
 	if(id == SlotID::BloomUpsample) return "BloomUpsample";
 	if(id == SlotID::BloomComposite) return "BloomComposite";

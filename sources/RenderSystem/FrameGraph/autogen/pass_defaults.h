@@ -707,6 +707,28 @@ struct PassSetupDefault<Passes::Editor::AssetMip>
 
 
 template<>
+struct PassSetupDefault<Passes::Editor::AssetSkyDiffuse>
+{
+	static constexpr bool enabled = true;
+
+	// Generated from this pass's [RunAlways]/[SetupCondition]/
+	// [RenderCondition]; defined in autogen/pass_defaults.cpp.
+	static FrameGraph::SetupResult setup(Passes::Editor::AssetSkyDiffuse::Context& data, FrameGraph::TaskBuilder& builder);
+};
+
+
+template<>
+struct PassSetupDefault<Passes::Editor::AssetSkySpecular>
+{
+	static constexpr bool enabled = true;
+
+	// Generated from this pass's [RunAlways]/[SetupCondition]/
+	// [RenderCondition]; defined in autogen/pass_defaults.cpp.
+	static FrameGraph::SetupResult setup(Passes::Editor::AssetSkySpecular::Context& data, FrameGraph::TaskBuilder& builder);
+};
+
+
+template<>
 struct PassSetupDefault<Passes::Utility::BlueNoise>
 {
 	static constexpr bool enabled = true;

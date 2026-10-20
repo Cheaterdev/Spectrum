@@ -54,6 +54,8 @@ SkyRender::SkyRender()
 			skydata.GetIrradiance()    = irradiance->texture_2d().texture2D;
 			skydata.GetTransmittance() = transmittance->texture_2d().texture2D;
 			skydata.GetSunDir()        = sky.sunDir;
+			skydata.GetStudio()        = sky.studio;
+			skydata.GetStudio_fill()   = sky.studio_fill;
 			compute.set(skydata);
 
 			context.graph->set_slot(SlotID::FrameInfo, compute);
@@ -98,6 +100,8 @@ SkyRender::SkyRender()
 			skydata.GetTransmittance() = transmittance->texture_2d().texture2D;
 			skydata.GetDepthBuffer()   = data.GBuffer_Depth->texture2D;
 			skydata.GetSunDir()        = sky.sunDir;
+			skydata.GetStudio()        = sky.studio;
+			skydata.GetStudio_fill()   = sky.studio_fill;
 			skydata.GetResult()        = data.ResultTexture->rwTexture2D;
 			compute.set(skydata);
 		}
@@ -123,9 +127,15 @@ void PassSetupDefault<Passes::Environment::CubeSky>::pre_setup(FrameGraph::Graph
 	auto& sky   = graph.get_context<SkyInfo>();
 	auto& state = graph.get_context<Table::Environment::SkyState>();
 
-	state.sky_changed = ((sky.sunDir - state.prev_sun_dir).length() > 0.001f);
+	state.sky_changed = ((sky.sunDir - state.prev_sun_dir).length() > 0.001f)
+		|| sky.studio != state.prev_studio || sky.studio_fill != state.prev_studio_fill;
+
 	if (state.sky_changed)
-		state.prev_sun_dir = sky.sunDir;
+	{
+		state.prev_sun_dir      = sky.sunDir;
+		state.prev_studio       = sky.studio;
+		state.prev_studio_fill  = sky.studio_fill;
+	}
 }
 
 // ---- PassDefault<Passes::Environment::CubeMapDownsample> --------------------------------

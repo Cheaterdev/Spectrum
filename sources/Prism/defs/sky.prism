@@ -17,6 +17,10 @@ namespace Environment
 	struct SkyState
 	{
 		float3 prev_sun_dir;
+		# The studio environment (sky/studio.hlsl) and its fill scale, compared like the sun
+		# direction: a change re-bakes the cube.
+		float prev_studio = 0;
+		float prev_studio_fill = 1;
 		bool sky_changed = false;
 	}
 
@@ -25,6 +29,10 @@ namespace Environment
 	{
 
 		float3 sunDir;
+		# 1 swaps the atmosphere for a studio of softboxes (material preview); studio_fill scales
+		# every light but the key.
+		float studio;
+		float studio_fill;
 		# [Auto] (with result below): set only by the screen-space sky (CS); the
 		# cubemap bake (CS_Cube) uses the LUTs alone.
 		[Auto = Texture_Null]

@@ -12,8 +12,12 @@ namespace Environment
 	struct SkyState
 	{
 		float3 prev_sun_dir; // float3
+		float prev_studio; // float
+		float prev_studio_fill; // float
 		bool sky_changed; // bool
 		float3 GetPrev_sun_dir() { return prev_sun_dir; }
+		float GetPrev_studio() { return prev_studio; }
+		float GetPrev_studio_fill() { return prev_studio_fill; }
 		bool GetSky_changed() { return sky_changed; }
 	};
 }
