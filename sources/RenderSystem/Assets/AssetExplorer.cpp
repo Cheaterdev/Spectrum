@@ -65,19 +65,8 @@ namespace GUI
 				auto loaded_asset = asset->get_asset();
 				if (!loaded_asset) return true;
 				menu_list::ptr menu(new menu_list());
-				menu->add_item("Test")->on_click = [this](menu_list_element::ptr e)
-				{
-					auto material = asset->get_asset()->get_ptr<MaterialAsset>();
-
-					if (material)
-					{
-						auto universal = std::dynamic_pointer_cast<materials::universal_material>(material);
-
-						if (universal)
-							universal->test();
-					}
-				};
-				menu->add_item("Edit")->on_click = [this](menu_list_element::ptr e)
+				if (loaded_asset->get_ptr<MaterialAsset>())
+					menu->add_item("Edit")->on_click = [this](menu_list_element::ptr e)
 				{
 					if (!asset->get_asset()) return;
 
@@ -108,43 +97,6 @@ namespace GUI
 							FlowGraph::manager::get().register_tab(g, btn);
 						}
 					}
-
-					auto texture = asset->get_asset()->get_ptr<TextureAsset>();
-
-					if (texture)
-					{
-						auto t = texture->get_texture()->get_desc().as_texture();
-						std::stringstream s;
-						s << "mips: " << t.MipLevels;
-						user_ui->message_box("info", s.str(), [](bool v) {});
-					}
-
-
-					auto mesh = asset->get_asset()->get_ptr<MeshAsset>();
-
-					if (mesh)
-					{
-						//	auto t = mesh->get_texture()
-						std::stringstream s;
-						size_t total_vertexes = 0;
-						size_t total_indices = 0;
-						for (auto& info : mesh->meshes)
-						{
-						//	s << "mesh vertex: " << info.vertex_count << " index: " << info.index_count << std::endl;
-					//		total_vertexes += info.vertex_count;
-						//	total_indices += info.index_count;
-
-						}
-
-						s << "TOTAL vertex: " << total_vertexes << " index: " << total_indices << std::endl;
-
-
-
-						//			s << "mips: " << t.MipLevels;
-						user_ui->message_box("info", s.str(), [](bool v) {});
-					}
-
-
 				};
 				auto texture  = loaded_asset->get_ptr<TextureAsset>();
 				auto binary   = loaded_asset->get_ptr<BinaryAsset>();
@@ -164,12 +116,17 @@ namespace GUI
 					if (on_open_preview) on_open_preview(asset->get_asset());
 				};
 
-				menu->add_item("refresh")->on_click = [this](menu_list_element::ptr e)
+				menu->add_item("Refresh thumbnail")->on_click = [this](menu_list_element::ptr e)
 				{
 					asset->update_preview();
 				};
 
-				menu->add_item("show references")->on_click = [this](menu_list_element::ptr e)
+				menu->add_item("Reload")->on_click = [this](menu_list_element::ptr e)
+				{
+					asset->get_asset()->reload_resource();
+				};
+
+				menu->add_item("Show references")->on_click = [this](menu_list_element::ptr e)
 				{
 
 					dummy_options::GraphType::ptr graph(new dummy_options::GraphType());
@@ -226,14 +183,7 @@ namespace GUI
 				};
 
 				menu->pos = vec2(pos);
-
-
-			
-				menu->add_item("Reload")->on_click = [this](menu_list_element::ptr e)
-				{
-					asset->get_asset()->reload_resource();
-				};
-						menu->self_open(user_ui);
+				menu->self_open(user_ui);
 			}
 
 			return true;
@@ -314,10 +264,6 @@ namespace GUI
 			add_but->on_click = [this](button::ptr but)
 			{
 				menu_list::ptr menu(new menu_list());
-				menu->add_item("TILE")->on_click = [this](menu_list_element::ptr e)
-				{
-					auto files = Application::get().file_open("Choose your destiny", "", "png|*.png|" "jpg|*.jpg|" "all|*.*|"   "|");
-				};
 				menu->add_item("Import asset")->on_click = [this](menu_list_element::ptr e)
 				{
 
@@ -439,7 +385,7 @@ namespace GUI
 
 						bool any = !!mat_info->albedo | !!mat_info->metallic | !!mat_info->roughness | !!mat_info->height | !!mat_info->normals;
 						if (any)
-							user_ui->message_box("create_material", "yes, we can", [mat_info](bool v) {
+							user_ui->message_box("Import", "Create a material from the imported textures?",[mat_info](bool v) {
 							if (v)
 								mat_info->create();
 								});

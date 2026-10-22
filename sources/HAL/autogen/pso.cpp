@@ -116,6 +116,8 @@ void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 	tasks.emplace_back(PSOBase::create<PSOS::Post::TonemapExposureAdapt>(device, pso[PSO::TonemapExposureAdapt]));
 	tasks.emplace_back(PSOBase::create<PSOS::Post::TonemapApply>(device, pso[PSO::TonemapApply]));
 	tasks.emplace_back(PSOBase::create<PSOS::UI::BackdropBlur>(device, pso[PSO::BackdropBlur]));
+	tasks.emplace_back(PSOBase::create<PSOS::Dev::FrameGraph_Debug_Histogram2D>(device, pso[PSO::FrameGraph_Debug_Histogram2D]));
+	tasks.emplace_back(PSOBase::create<PSOS::Dev::FrameGraph_Debug_Histogram2DArray>(device, pso[PSO::FrameGraph_Debug_Histogram2DArray]));
 	tasks.emplace_back(PSOBase::create<PSOS::Dev::FrameGraph_Debug_Texture2D>(device, pso[PSO::FrameGraph_Debug_Texture2D]));
 	tasks.emplace_back(PSOBase::create<PSOS::Dev::FrameGraph_Debug_Texture2DArray>(device, pso[PSO::FrameGraph_Debug_Texture2DArray]));
 	tasks.emplace_back(PSOBase::create<PSOS::Dev::FrameGraph_Debug_Texture3D>(device, pso[PSO::FrameGraph_Debug_Texture3D]));

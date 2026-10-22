@@ -108,6 +108,8 @@ export
 		TonemapExposureAdapt,
 		TonemapApply,
 		BackdropBlur,
+		FrameGraph_Debug_Histogram2D,
+		FrameGraph_Debug_Histogram2DArray,
 		FrameGraph_Debug_Texture2D,
 		FrameGraph_Debug_Texture2DArray,
 		FrameGraph_Debug_Texture3D,

@@ -527,6 +527,8 @@ export import :Autogen.PSO.Post.TonemapHistogramBuild;
 export import :Autogen.PSO.Post.TonemapExposureAdapt;
 export import :Autogen.PSO.Post.TonemapApply;
 export import :Autogen.PSO.UI.BackdropBlur;
+export import :Autogen.PSO.Dev.FrameGraph_Debug_Histogram2D;
+export import :Autogen.PSO.Dev.FrameGraph_Debug_Histogram2DArray;
 export import :Autogen.PSO.Dev.FrameGraph_Debug_Texture2D;
 export import :Autogen.PSO.Dev.FrameGraph_Debug_Texture2DArray;
 export import :Autogen.PSO.Dev.FrameGraph_Debug_Texture3D;

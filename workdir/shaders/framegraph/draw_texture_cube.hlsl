@@ -1,5 +1,6 @@
 #include "../autogen/FrameGraph_Debug_TextureCube.h"
 #include "../autogen/FrameGraph_Debug_Common.h"
+#include "channels.hlsli"
 
 // D3D cubemap face UV -> sample direction.
 // st = uv * 2 - 1, maps [0,1] to [-1,1].
@@ -38,5 +39,5 @@ void CS(uint2 tid : SV_DispatchThreadID)
     float3 dir = cube_dir(face, uv);
     float4 color = GetFrameGraph_Debug_TextureCube().GetSource().SampleLevel(linearSampler, dir, GetFrameGraph_Debug_Common().GetSelectedMip());
 
-    GetFrameGraph_Debug_Common().GetTarget()[tid] = float4(pow(max(color.xyz, 0.0), 1.0 / 2.2), 1.0);
+    GetFrameGraph_Debug_Common().GetTarget()[tid] = float4(pow(apply_channels(color, GetFrameGraph_Debug_Common().GetChannelMask()), 1.0 / 2.2), 1.0);
 }

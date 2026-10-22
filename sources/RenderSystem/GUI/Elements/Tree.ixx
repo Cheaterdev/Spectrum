@@ -317,8 +317,15 @@ export namespace GUI
 
                     if (expanded)
                     {
+                        // Shut and invisible from the first frame; the children are laid
+                        // out meanwhile and measured from their own bounds (see
+                        // natural_height). Measuring through other's MATCH_CHILDREN
+                        // height instead pushed every row below down by the full height
+                        // for the frames that takes, then snapped them back.
+                        other->height_size = size_type::FIXED;
+                        other->size = vec2(other->size->x, 0.0f);
                         other->visible = true;
-                        other->layer_opacity = 0.0f;   // hidden until measured (a frame or two)
+                        other->layer_opacity = 0.0f;
                         anim_s = 0.0f;
                         measure_frames = 2;
                     }
@@ -353,22 +360,22 @@ export namespace GUI
                         // The children are laid out at their natural height now.
                         if (anim_target <= 0.0f)   // collapsed again while measuring
                         {
+                            other->height_size = size_type::MATCH_CHILDREN;
                             other->visible = false;
                             other->layer_opacity = 1.0f;
                             animating = false;
                             return;
                         }
 
-                        const float height = other->get_render_bounds().h / std::max(other->result_scale, 0.001f);
+                        const float height = natural_height();
                         if (height <= 0.5f)
                         {
+                            other->height_size = size_type::MATCH_CHILDREN;
                             other->layer_opacity = 1.0f;
                             animating = false;
                             return;
                         }
                         anim_height = height;
-                        other->height_size = size_type::FIXED;
-                        other->size = vec2(other->size->x, 0.0f);
                     }
 
                     constexpr float duration = 0.18f;
@@ -389,6 +396,30 @@ export namespace GUI
                 }
 
             private:
+                // Height of the children laid out at their natural size, UI px, read from
+                // the children's own bounds (0 when none has been laid out yet).
+                float natural_height()
+                {
+                    const rect box = other->get_render_bounds();
+                    float bottom = box.y;
+
+                    for (int i = 0; i < other->get_child_count(); i++)
+                    {
+                        auto* child = other->get_child(i);
+
+                        if (!child->visible.get())
+                            continue;
+
+                        const rect cb = child->get_render_bounds();
+                        bottom = std::max(bottom, cb.y + cb.h);
+                    }
+
+                    if (bottom <= box.y)
+                        return 0.0f;
+
+                    return (bottom - box.y) / std::max(other->result_scale, 0.001f) + other->padding->bottom;
+                }
+
                 bool  expanded = true;
                 bool  animating = false;
                 float anim_s = 1.0f;          // 0 = collapsed, 1 = expanded

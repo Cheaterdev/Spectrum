@@ -2477,6 +2477,10 @@ public:
 		alive = false;
 		task_end.wait();
 
+		// What is left in the queue are UI tasks (a FlowGraph canvas adding its nodes, say) that process_ui would
+		// have run under the GUI scope. The UI thread has stopped, so this thread owns the UI now; without the
+		// scope add_child's thread check asserts.
+		THREAD_SCOPE(GUI);
 		while (Events::Runner::has_tasks())
 		{
 			PROFILE(L"process_tasks");

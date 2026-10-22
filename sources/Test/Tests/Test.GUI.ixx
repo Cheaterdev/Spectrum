@@ -2333,7 +2333,13 @@ export namespace Test
 		ASSERT_TRUE(collapsed < full - 20.0f);
 
 		branch_element->toogle();                      // expand again
-		frame(0.016f);
+		// While the children are being measured nothing below may move: the content
+		// must not grow past the collapsed height until the slide actually starts.
+		for (int i = 0; i < 2; i++)
+		{
+			frame(0.001f);
+			ASSERT_TRUE(content_height() <= collapsed + 0.5f);
+		}
 		frame(0.016f);
 		frame(0.05f);
 		ASSERT_TRUE(content_height() > collapsed - 0.5f && content_height() < full - 0.5f);   // opening

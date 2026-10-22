@@ -22,6 +22,30 @@ using namespace HAL;
 //  FrameGraph timeline does this from process_debug_resource; an asset window
 //  can drive it from its own pass.
 // ---------------------------------------------------------------------------
+// Emoji marking the kind of a resource, UTF-8 spelled out as bytes so the source encoding doesn't matter.
+// Each is a single code point (palette, ice cube, game die, package, tree).
+export namespace resource_icons
+{
+	inline constexpr const char* texture_2d = "\xF0\x9F\x8E\xA8"; // U+1F3A8
+	inline constexpr const char* texture_3d = "\xF0\x9F\xA7\x8A"; // U+1F9CA
+	inline constexpr const char* cube       = "\xF0\x9F\x8E\xB2"; // U+1F3B2
+	inline constexpr const char* buffer     = "\xF0\x9F\x93\xA6"; // U+1F4E6
+	inline constexpr const char* bvh         = "\xF0\x9F\x8C\xB3"; // U+1F333
+}
+
+// Small panel that follows the cursor over a preview: a swatch of the picked colour (opaque half / alpha-blended half)
+// with text rows added as children by the owner.
+export class preview_hud : public GUI::base
+{
+public:
+	using ptr = std::shared_ptr<preview_hud>;
+
+	float4 color = { 0.0f, 0.0f, 0.0f, 1.0f }; // as displayed in the preview (display gamma already applied)
+	float  alpha = 1.0f;
+
+	virtual void draw(Context& c) override;
+};
+
 export class resource_preview : public GUI::base
 {
 	GUI::Elements::image::ptr                                       m_img;
@@ -53,6 +77,48 @@ export class resource_preview : public GUI::base
 
 	GUI::Elements::combo_box::ptr m_mip_combo;
 	GUI::Elements::combo_box::ptr m_array_combo;
+
+	// Selector extents (UI thread); the prev/next buttons clamp against them.
+	int m_mip_count   = 1;
+	int m_array_count = 1;
+
+	// Visible channels, bit 0..3 = R,G,B,A: UI thread writes, render thread reads.
+	volatile int m_channel_mask = 0xF;
+	GUI::Elements::button::ptr m_prev_mip, m_next_mip, m_prev_array, m_next_array;
+
+	volatile int m_refit = 0; // set by the Reset button, consumed by render()
+
+	// Pixel under the cursor, in preview-image pixels (-1 = cursor is elsewhere): UI thread writes, render thread reads.
+	volatile int m_cursor_x = -1;
+	volatile int m_cursor_y = -1;
+	volatile int m_show_histogram = 0;
+
+	// Which toolbar tools apply depends on the resource: R/G/B/A need a shader that honours the channel mask
+	// (2D, 2D-array, cube); Reset, the histogram and the pixel readout need the flat pan/zoom view (2D, 2D-array).
+	// Buffers and 3D volumes have neither. The tools that don't apply are hidden.
+	volatile bool m_pixel_tools = true;
+	GUI::Elements::check_box::ptr m_hist_check;
+	GUI::Elements::label::ptr     m_hist_label;
+	GUI::Elements::check_box::ptr m_channel_check[4];
+	GUI::Elements::label::ptr     m_channel_label[4];
+	GUI::Elements::button::ptr    m_reset_btn;
+	void set_tools(bool channels, bool flat_view);
+
+	// Floating readout next to the cursor: texel position, values, hex and a colour swatch.
+	preview_hud::ptr          m_hud;
+	GUI::Elements::label::ptr m_pixel_lbl, m_value_lbl, m_hex_lbl;
+
+	// Once the user pans or zooms, a resize no longer re-fits the image. m_fit_size is the view size of the last fit.
+	bool  m_user_view = false;
+	uint2 m_fit_size  = { 0, 0 };
+
+	// Picked texel + histogram bins written by the preview shaders (layout in stats.hlsli). Render thread only.
+	std::shared_ptr<HAL::StructuredBufferView<uint>> m_stats;
+
+	// UI thread. Mip and array selectors are shown only when they have more than one entry.
+	void set_selectors_visible(bool mips, bool arrays);
+	void select_mip(int mip);
+	void select_array(int index);
 
 	// Pan / zoom / camera state — guarded by m_state_mutex.
 	mutable Thread::Lockable::mutex m_state_mutex;
@@ -87,6 +153,7 @@ public:
 
 	virtual bool   on_mouse_action(mouse_action action, mouse_button button, vec2 pos) override;
 	virtual bool   on_mouse_move(vec2 pos) override;
+	virtual void   on_mouse_leave(vec2 pos) override;
 	virtual bool   on_wheel(mouse_wheel type, float value, vec2 wpos) override;
 	virtual ::sizer update_layout(::sizer r, float scale) override;
 };

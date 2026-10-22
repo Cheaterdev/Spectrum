@@ -24,13 +24,21 @@ export namespace Table
 			float3 maxColor;
 			uint selectedMip;
 			uint selectedArrayIndex;
+			uint channelMask;
+			int2 cursor;
+			uint flags;
 			HLSL::RWTexture2D<float4> target;
+			HLSL::RWStructuredBuffer<uint> stats;
 			HLSL::RWTexture2D<float4>& GetTarget() { return target; }
 			uint2& GetTargetSize() { return targetSize; }
 			float3& GetMinColor() { return minColor; }
 			float3& GetMaxColor() { return maxColor; }
 			uint& GetSelectedMip() { return selectedMip; }
 			uint& GetSelectedArrayIndex() { return selectedArrayIndex; }
+			uint& GetChannelMask() { return channelMask; }
+			int2& GetCursor() { return cursor; }
+			uint& GetFlags() { return flags; }
+			HLSL::RWStructuredBuffer<uint>& GetStats() { return stats; }
 			static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 			template<class Compiler>
 			void compile(Compiler& compiler) const
@@ -40,7 +48,11 @@ export namespace Table
 				compiler.compile(maxColor, "FrameGraph_Debug_Common::maxColor");
 				compiler.compile(selectedMip, "FrameGraph_Debug_Common::selectedMip");
 				compiler.compile(selectedArrayIndex, "FrameGraph_Debug_Common::selectedArrayIndex");
+				compiler.compile(channelMask, "FrameGraph_Debug_Common::channelMask");
+				compiler.compile(cursor, "FrameGraph_Debug_Common::cursor");
+				compiler.compile(flags, "FrameGraph_Debug_Common::flags");
 				compiler.compile(target, "FrameGraph_Debug_Common::target");
+				compiler.compile_auto(stats, "FrameGraph_Debug_Common::stats");
 			}
 			struct Compiled
 			{
@@ -49,7 +61,11 @@ export namespace Table
 				float3 maxColor; // float3
 				uint selectedMip; // uint
 				uint selectedArrayIndex; // uint
+				uint channelMask; // uint
+				int2 cursor; // int2
+				uint flags; // uint
 				uint target; // RWTexture2D<float4>
+				uint stats; // RWStructuredBuffer<uint>
 
 			
 				private:
@@ -60,6 +76,9 @@ export namespace Table
 					ar& NVP(maxColor);
 					ar& NVP(selectedMip);
 					ar& NVP(selectedArrayIndex);
+					ar& NVP(channelMask);
+					ar& NVP(cursor);
+					ar& NVP(flags);
 				}
 
 
@@ -77,6 +96,9 @@ export namespace Table
 				ar& NVP(maxColor);
 				ar& NVP(selectedMip);
 				ar& NVP(selectedArrayIndex);
+				ar& NVP(channelMask);
+				ar& NVP(cursor);
+				ar& NVP(flags);
 			}
 
 		};

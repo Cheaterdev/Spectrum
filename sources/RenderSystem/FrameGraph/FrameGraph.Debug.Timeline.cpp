@@ -570,7 +570,92 @@ class FrameGraphTimelineCanvas : public dock_base
         using ptr = std::shared_ptr<preview_image>;
         std::function<void()> on_click;
 
-        preview_image() { clickable = true; }
+        // Buffers have no thumbnail: a tinted panel (a label child says what it is) stands in for it.
+        bool placeholder = false;
+
+        // Counted buffers: how full the counter is (0..1), drawn as a thin bar along the bottom; < 0 = no bar.
+        float fill = -1.0f;
+
+        // Reads sit slightly see-through so the cell's blue shows through; hovering fades them to fully opaque.
+        // (Writes keep base_alpha 1.) The labels of a placeholder panel follow the same alpha.
+        float base_alpha = 1.0f;
+        float hover      = 0.0f;   // 0..1, eased toward 1 while the mouse is over the cell
+        std::vector<label::ptr> fade;
+
+        // The cell's kind is marked by a coloured edge just inside it (red for a write, blue for a read) instead of a
+        // block behind it. It is drawn as nested 1px frames whose alpha falls off quadratically inward, and it
+        // strengthens with the hover.
+        float3 edge_color = { 1.0f, 0.3f, 0.2f };
+        float  edge_base  = 0.5f;     // alpha at the rim when not hovered
+        static constexpr float edge_hover_max = 0.8f;   // alpha at the rim when fully hovered
+        static constexpr int   edge_width = 7;    // px
+        static constexpr float edge_power = 2.0f; // falloff exponent: 1 = linear, higher = tighter
+
+        preview_image()
+        {
+            clickable = true;
+            thinkable = true;
+        }
+
+        void set_kind(bool write)
+        {
+            base_alpha = write ? 1.0f : 0.6f;   // reads sit see-through until hovered
+            edge_base  = write ? 0.5f : 0.35f;
+            edge_color = write ? float3(1.0f, 0.3f, 0.2f) : float3(0.3f, 0.6f, 1.0f);
+        }
+
+        float alpha() const { return base_alpha + (1.0f - base_alpha) * hover; }
+
+        void draw_edge(Context& c, const rect& b) const
+        {
+            const float strength = edge_base + (edge_hover_max - edge_base) * hover;
+            for (int i = 0; i < edge_width; ++i)
+            {
+                const float a = strength * std::pow(1.0f - float(i) / float(edge_width), edge_power);
+                const float4 color = { edge_color.x, edge_color.y, edge_color.z, a };
+
+                const float x = b.pos.x + i, y = b.pos.y + i, w = b.w - 2.0f * i, h = b.h - 2.0f * i;
+                if (w <= 2.0f || h <= 2.0f) break;
+
+                c.renderer->draw_color(c, color, rect{ x, y, w, 1.0f });                 // top
+                c.renderer->draw_color(c, color, rect{ x, y + h - 1.0f, w, 1.0f });      // bottom
+                c.renderer->draw_color(c, color, rect{ x, y + 1.0f, 1.0f, h - 2.0f });   // left
+                c.renderer->draw_color(c, color, rect{ x + w - 1.0f, y + 1.0f, 1.0f, h - 2.0f });   // right
+            }
+        }
+
+        virtual void think(float dt) override
+        {
+            image::think(dt);
+
+            const float target = is_hovered() ? 1.0f : 0.0f;
+            hover += (target - hover) * std::min(1.0f, dt * 14.0f);
+            if (std::abs(target - hover) < 0.003f) hover = target;
+
+            for (auto& lbl : fade) lbl->color.w = alpha();
+        }
+
+        virtual void draw(Context& c) override
+        {
+            if (placeholder)
+            {
+                const rect b = get_render_bounds();
+                c.renderer->draw_color(c, float4(0.13f, 0.17f, 0.24f, 0.92f * alpha()), b);
+
+                if (fill >= 0.0f)
+                {
+                    const float x = b.pos.x + 6.0f, y = b.pos.y + b.h - 24.0f, w = b.w - 12.0f;   // above the state tag ("W", "UAV", ...) at the bottom
+                    c.renderer->draw_color(c, float4(0.05f, 0.07f, 0.1f, alpha()), rect{ x, y, w, 4.0f });
+                    c.renderer->draw_color(c, float4(0.35f, 0.75f, 1.0f, alpha()), rect{ x, y, w * std::clamp(fill, 0.0f, 1.0f), 4.0f });
+                }
+                draw_edge(c, b);
+                return;
+            }
+
+            texture.mul_color.w = alpha();
+            image::draw(c);
+            draw_edge(c, get_render_bounds());
+        }
 
         virtual bool on_mouse_action(mouse_action action, mouse_button button, vec2 pos) override
         {
@@ -1279,13 +1364,23 @@ class FrameGraphTimelineCanvas : public dock_base
     // -----------------------------------------------------------------------
     //  Helpers
     // -----------------------------------------------------------------------
-    static std::string resource_flags_to_str(FrameGraph::ResourceFlags flags)
+    // A buffer can't be a render target or depth buffer; passes still declare their plain writes with those
+    // flags, so for buffers they read as a generic write instead of a misleading "RT".
+    static std::string resource_flags_to_str(FrameGraph::ResourceFlags flags, bool buffer = false)
     {
         using RF = FrameGraph::ResourceFlags;
         std::string s;
         auto add = [&](RF f, const char* name){ if (check(flags & f)){ if (!s.empty()) s += '|'; s += name; } };
-        add(RF::RenderTarget,    "RT");
-        add(RF::DepthStencil,    "DS");
+        if (buffer)
+        {
+            if (check(flags & (RF::RenderTarget | RF::DepthStencil)) && !check(flags & RF::UnorderedAccess))
+                s = "W";
+        }
+        else
+        {
+            add(RF::RenderTarget,    "RT");
+            add(RF::DepthStencil,    "DS");
+        }
         add(RF::UnorderedAccess, "UAV");
         add(RF::CopyDest,        "DST");
       //  add(RF::GenCPU,          "CPU");
@@ -1388,6 +1483,115 @@ class FrameGraphTimelineCanvas : public dock_base
         add(TL::COPY_DEST,           "CPY-D");
         add(TL::COPY_QUEUE,          "CQ");
         return r.empty() ? "?" : r;
+    }
+
+    // What fills a buffer's timeline cell in place of a thumbnail: its kind mark, element type and size.
+    // A counted buffer has a counter line too, which is "counter N / capacity" once the GPU value has been read back.
+    struct BufferInfo
+    {
+        std::string title;           // kind mark + element type
+        std::string detail;          // count x stride, or the byte size
+        bool        counted  = false;
+        uint64      capacity = 0;
+        uint        stride   = 0;    // bytes per element (structured buffers)
+    };
+
+    // The cells of one buffer's write and the reads that follow it share the counter value read at the write.
+    struct CounterTarget
+    {
+        struct Entry { label::ptr text; std::shared_ptr<preview_image> panel; };
+        std::vector<Entry> cells;
+    };
+
+    // The compiler's spelling of an element type, made short enough to read in a cell:
+    //   "struct HAL::Table::Dev::DrawMeshCommand[HAL]"            -> "DrawMeshCommand"
+    //   "struct Vector<struct vector_data_t<float,4> >"           -> "float4"
+    //   "unsigned int"                                            -> "uint"
+    static std::string friendly_type_name(std::string type)
+    {
+        auto replace_all = [](std::string& s, std::string_view from, std::string_view to)
+        {
+            for (size_t at = 0; (at = s.find(from, at)) != std::string::npos; at += to.size())
+                s.replace(at, from.size(), to);
+        };
+
+        for (const std::string_view keyword : { "struct ", "class ", "enum " })
+            replace_all(type, keyword, "");
+        replace_all(type, " >", ">");
+
+        // Module tags: "Name[HAL]".
+        for (size_t open; (open = type.find('[')) != std::string::npos; )
+        {
+            const size_t close = type.find(']', open);
+            type.erase(open, close == std::string::npos ? std::string::npos : close - open + 1);
+        }
+
+        // Namespace qualifiers, also inside template arguments: drop every "Identifier::".
+        {
+            std::string out;
+            for (size_t i = 0; i < type.size(); )
+            {
+                size_t end = i;
+                while (end < type.size() && (std::isalnum((unsigned char)type[end]) || type[end] == '_')) ++end;
+                if (end > i && type.compare(end, 2, "::") == 0) { i = end + 2; continue; }   // qualifier: skip it
+                const size_t stop = end > i ? end : i + 1;
+                out.append(type, i, stop - i);
+                i = stop;
+            }
+            type = std::move(out);
+        }
+
+        replace_all(type, "unsigned __int64", "uint64");
+        replace_all(type, "unsigned short",   "ushort");
+        replace_all(type, "unsigned int",     "uint");
+
+        // Vector<vector_data_t<float,4>> -> float4
+        for (size_t at; (at = type.find("Vector<vector_data_t<")) != std::string::npos; )
+        {
+            const size_t elem_begin = at + std::string_view("Vector<vector_data_t<").size();
+            const size_t comma      = type.find(',', elem_begin);
+            const size_t close      = comma == std::string::npos ? comma : type.find(">>", comma);
+            if (close == std::string::npos) break;
+            type.replace(at, close + 2 - at, type.substr(elem_begin, comma - elem_begin) + type.substr(comma + 1, close - comma - 1));
+        }
+
+        constexpr size_t max_chars = 20;   // what fits a cell at the title's font size
+        if (type.size() > max_chars) type = type.substr(0, max_chars - 1) + "\xE2\x80\xA6";
+        return type;
+    }
+
+    static BufferInfo buffer_info(FrameGraph::ResourceAllocInfo& alloc)
+    {
+        auto bytes = [](uint64 n) -> std::string
+        {
+            if (n >= (1ull << 20)) return std::format("{:.1f} MB", double(n) / double(1ull << 20));
+            if (n >= (1ull << 10)) return std::format("{:.1f} KB", double(n) / double(1ull << 10));
+            return std::format("{} B", n);
+        };
+
+        BufferInfo info;
+        const uint64 total = alloc.resource->get_desc().as_buffer().SizeInBytes;
+
+        if (auto* sb = dynamic_cast<HAL::StructuredBufferViewBase*>(alloc.view.get()))
+        {
+            info.counted  = sb->get_counter_type() != HAL::counterType::NONE;
+            info.capacity = sb->get_count();
+            info.stride   = sb->get_element_size();
+            info.title    = friendly_type_name(sb->get_element_type_name());
+            info.detail   = std::format("{} x {}B", sb->get_count(), sb->get_element_size());
+        }
+        else if (dynamic_cast<HAL::RTXSceneView*>(alloc.view.get()))
+        {
+            info.title  = "BVH";
+            info.detail = bytes(total);
+        }
+        else
+        {
+            info.title  = "Buffer";
+            info.detail = bytes(total);
+        }
+
+        return info;
     }
 
     static label::ptr make_label(float w, float h, const std::string& text,
@@ -1649,7 +1853,7 @@ private:
                 cell.is_created = FrameGraph::UsedResources::contains(pass->used.resource_creations, version);
                 cell.is_deleted = FrameGraph::UsedResources::contains(pass->used.resource_deletions_after, version);
                 cell.alloc      = alloc;
-                cell.state_str = resource_flags_to_str(flags);
+                cell.state_str = resource_flags_to_str(flags, alloc->resource && !alloc->resource->get_desc().is_texture());
               
                 tr.cells.push_back(cell);
             }
@@ -1855,6 +2059,7 @@ private:
 
             // Resource type label — bottom-right corner of the left-panel row.
             std::string type_str;
+            const char* emoji = nullptr;
             for (auto& cell : m_resources[ri].cells)
             {
                 if (!cell.alloc || !cell.alloc->resource) continue;
@@ -1862,19 +2067,36 @@ private:
                 if (desc.is_texture())
                 {
                     if (cell.alloc->view && dynamic_cast<HAL::CubeView*>(cell.alloc->view.get()))
-                        type_str = "Cube";
+                        { type_str = "Cube"; emoji = resource_icons::cube; }
+                    else if (desc.as_texture().Dimensions.z > 1)
+                        { type_str = "3D";   emoji = resource_icons::texture_3d; }
                     else
-                        type_str = (desc.as_texture().Dimensions.z > 1) ? "3D" : "2D";
+                        { type_str = "2D";   emoji = resource_icons::texture_2d; }
                 }
-                else if (cell.alloc->view)
+                else
                 {
-                    if      (dynamic_cast<HAL::StructuredBufferViewBase*>(cell.alloc->view.get())) type_str = "Struct";
-                    else if (dynamic_cast<HAL::ByteBufferView*>(cell.alloc->view.get()))           type_str = "Byte";
-                    else if (dynamic_cast<HAL::CounterView*>(cell.alloc->view.get()))              type_str = "Counter";
-                    else if (dynamic_cast<HAL::RTXSceneView*>(cell.alloc->view.get()))             type_str = "BVH";
-                    else                                                                            type_str = "Buffer";
+                    emoji = resource_icons::buffer;
+                    if (cell.alloc->view)
+                    {
+                        if      (dynamic_cast<HAL::StructuredBufferViewBase*>(cell.alloc->view.get())) type_str = "Struct";
+                        else if (dynamic_cast<HAL::ByteBufferView*>(cell.alloc->view.get()))           type_str = "Byte";
+                        else if (dynamic_cast<HAL::CounterView*>(cell.alloc->view.get()))              type_str = "Counter";
+                        else if (dynamic_cast<HAL::RTXSceneView*>(cell.alloc->view.get()))             { type_str = "BVH"; emoji = resource_icons::bvh; }
+                        else                                                                            type_str = "Buffer";
+                    }
                 }
                 break;
+            }
+
+            // The type mark takes the old placeholder icon's spot.
+            icon->visible = false;
+            if (emoji)
+            {
+                auto elbl = make_label(ICON_W + 4.0f, ROW_H - 4.0f, emoji, C_TEXT_BRIGHT, 15.0f);
+                elbl->pos = { 2.0f, row_top + 2.0f };
+                elbl->magnet_text = FW1_CENTER | FW1_VCENTER | FW1_NOWORDWRAP;
+                m_left_panel->add_child(elbl);
+                m_resource_labels.push_back(elbl);
             }
             if (!type_str.empty())
             {
@@ -1895,6 +2117,7 @@ private:
             FrameGraph::ResourceAllocInfo* last_write_alloc      = nullptr;
             UINT                           last_write_call_id    = 0;
             std::shared_ptr<Texture>       last_write_thumb_tex;
+            std::shared_ptr<CounterTarget> counter_target;
 
             for (auto& cell : m_resources[ri].cells)
             {
@@ -1958,8 +2181,78 @@ private:
                 if (last_write_thumb_tex)
                 {
                     img->texture.texture = last_write_thumb_tex->texture_2d();
-                    if (!cell.is_write)
-                        img->texture.mul_color = { 1.0f, 1.0f, 1.0f, 0.7f };
+                }
+
+                img->set_kind(cell.is_write);
+
+                if (cell.alloc && cell.alloc->resource && !cell.alloc->resource->get_desc().is_texture())
+                {
+                    img->placeholder = true;
+
+                    const BufferInfo binfo = buffer_info(*cell.alloc);
+
+                    // Title (kind mark + type) over a dimmer detail line, stacked from the top.
+                    auto add_line = [&](const std::string& text, float4 color, float font, float height)
+                    {
+                        auto lbl         = std::make_shared<label>();
+                        lbl->text        = text;
+                        lbl->color       = color;
+                        lbl->font_size   = font;
+                        lbl->docking     = GUI::dock::TOP;
+                        lbl->width_size  = GUI::size_type::MATCH_PARENT;
+                        lbl->height_size = GUI::size_type::FIXED;
+                        lbl->size        = { 0.0f, height };
+                        lbl->clickable   = false;
+                        lbl->magnet_text = FW1_CENTER | FW1_VCENTER | FW1_NOWORDWRAP;
+                        img->add_child(lbl);
+                        img->fade.push_back(lbl);
+                        return lbl;
+                    };
+                    add_line(binfo.title, C_TEXT_BRIGHT, 13.0f, 26.0f);
+                    auto info_lbl = add_line(binfo.counted ? std::format("? / {} x {}B", binfo.capacity, binfo.stride) : binfo.detail,
+                                             binfo.counted ? float4(0.55f, 0.82f, 1.0f, 1.0f) : C_TEXT_DIM, 11.0f, 18.0f);
+
+                    // A write starts a new counter reading; the reads after it show that same value.
+                    if (binfo.counted)
+                    {
+                        img->fill = 0.0f;
+                        if (cell.is_write || !counter_target)
+                            counter_target = std::make_shared<CounterTarget>();
+                        counter_target->cells.push_back({ info_lbl, img });
+
+                        if (cell.is_write)
+                        {
+                            // Throttled: a counter read is a GPU copy plus a stall-free readback per counted buffer.
+                            cell.debug_handler = cell.alloc->process_debug_resource.register_handler(this,
+                                [this, call_id = cell.call_id, alloc = cell.alloc, target = counter_target,
+                                 capacity = binfo.capacity, stride = binfo.stride, frame = 0u]
+                                (FrameGraph::Pass* pass, FrameGraph::FrameContext* context) mutable
+                                {
+                                    if (pass->call_id != call_id) return;
+                                    if (alloc->is_new && pass->id == std::numeric_limits<UINT>::max()) return;
+                                    if ((frame++ % 20) != 0) return;
+
+                                    auto* sb = dynamic_cast<HAL::StructuredBufferViewBase*>(alloc->view.get());
+                                    auto  counter_buffer = sb ? sb->get_counter_resource() : nullptr;
+                                    if (!counter_buffer) return;
+
+                                    context->get_list()->get_copy().read_buffer(counter_buffer.get(), sb->get_counter_byte_offset(), sizeof(uint),
+                                        [this, target, capacity, stride](std::span<std::byte> memory)
+                                        {
+                                            uint value = 0;
+                                            if (memory.size() >= sizeof(value)) std::memcpy(&value, memory.data(), sizeof(value));
+                                            run_on_ui([target, value, capacity, text = std::format("{} / {} x {}B", value, capacity, stride)]()
+                                            {
+                                                for (auto& cell : target->cells)
+                                                {
+                                                    cell.text->text   = text;
+                                                    cell.panel->fill  = capacity ? float(value) / float(capacity) : 0.0f;
+                                                }
+                                            });
+                                        });
+                                });
+                        }
+                    }
                 }
 
                 // Read cells open the preview from the last write pass.
@@ -2058,6 +2351,12 @@ private:
                             common.GetTarget()      = thumb_tex->texture_2d().rwTexture2D;
                             common.GetTargetSize()  = preview_size;
                             common.GetSelectedMip() = 0;
+                            common.GetSelectedArrayIndex() = 0;
+                            // The draw shaders also serve resource_preview: all channels on, no cursor, no histogram.
+                            // (An unset mask is 0 = every channel off = a black thumbnail.)
+                            common.GetChannelMask() = 0xF;
+                            common.GetCursor()      = int2(-1, -1);
+                            common.GetFlags()       = 0;
                             compute.set(common);
                         }
 
@@ -2436,7 +2735,9 @@ private:
                 float cx  = dep_x(cell.call_id, bx);
                 float cw  = col_w() - 2.0f * PAD;
                 const bool deletion_only = cell.is_deleted && !cell.is_write && !cell.is_created;
-                if (!deletion_only)
+
+                // A cell with a preview is marked by the preview's own glow; the solid block is for cells without one.
+                if (!deletion_only && !cell.preview)
                 {
                     const float4& cc = cell.disabled
                         ? (cell.is_write ? C_WRITE_DISABLED : C_READ_DISABLED)

@@ -86,6 +86,13 @@ export
 
 			using BufferView::BufferView;
 
+		   // For debug UIs: the element type's compiler name (e.g. "struct Table::Dev::Foo"), and where the
+		   // counter lives when the buffer is counted (null / NONE when it isn't).
+		   virtual std::string get_element_type_name() const = 0;
+		   virtual counterType get_counter_type() const = 0;
+		   virtual Buffer::ptr get_counter_resource() = 0;
+		   virtual uint64 get_counter_byte_offset() const = 0;
+
 		   virtual uint get_element_size() const =0;
 		   		   virtual 	uint64 get_count() const=0;
 	
@@ -443,6 +450,20 @@ export
 			uint64 get_count()  const	 override
 			{
 				return desc.size / sizeof(UnderlyingType);
+			}
+
+			std::string get_element_type_name() const override { return typeid(UnderlyingType).name(); }
+			counterType get_counter_type() const override { return desc.counted; }
+
+			Buffer::ptr get_counter_resource() override
+			{
+				return desc.counted == counterType::NONE ? nullptr : get_counter_buffer();
+			}
+
+			// A SELF counter sits at the start of this view's range; a help buffer's counter at its start.
+			uint64 get_counter_byte_offset() const override
+			{
+				return desc.counted == counterType::SELF ? desc.offset : 0;
 			}
 
 			void init(GPUEntityStorageInterface& frame)

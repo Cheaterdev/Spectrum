@@ -11,6 +11,13 @@ import Graphics;
 
 
 using namespace GUI::Elements;
+
+// Mirrors framegraph/stats.hlsli: 8 words for the picked texel, then 4 channels x 256 histogram bins.
+namespace preview_stats
+{
+	constexpr uint max_grid = 512;
+	constexpr uint words    = 8 + 4 * 256;
+}
 /*
 
 class PassInfo:public GUI::base
@@ -353,43 +360,91 @@ resource_preview::resource_preview()
 		bar->height_size = GUI::size_type::FIXED;
 		bar->size        = { 0.0f, 26.0f };
 
-		auto mip_lbl         = std::make_shared<label>();
-		mip_lbl->text        = "Mip:";
-		mip_lbl->font_size   = 10.0f;
-		mip_lbl->docking     = GUI::dock::NONE;
-		mip_lbl->width_size  = GUI::size_type::FIXED;
-		mip_lbl->height_size = GUI::size_type::FIXED;
-		mip_lbl->size        = { 28.0f, 16.0f };
-		mip_lbl->pos         = { 4.0f, 5.0f };
-		bar->add_child(mip_lbl);
+		auto add_label = [&](const char* text, float x, float w) -> label::ptr
+		{
+			auto lbl         = std::make_shared<label>();
+			lbl->text        = text;
+			lbl->font_size   = 13.0f;
+			lbl->docking     = GUI::dock::NONE;
+			lbl->width_size  = GUI::size_type::FIXED;
+			lbl->height_size = GUI::size_type::FIXED;
+			lbl->size        = { w, 18.0f };
+			lbl->pos         = { x, 4.0f };
+			bar->add_child(lbl);
+			return lbl;
+		};
+
+		auto add_button = [&](const char* text, float x, float w) -> button::ptr
+		{
+			auto btn         = std::make_shared<button>();
+			btn->get_label()->text = text;
+			btn->docking     = GUI::dock::NONE;
+			btn->width_size  = GUI::size_type::FIXED;
+			btn->height_size = GUI::size_type::FIXED;
+			btn->size        = { w, 20.0f };
+			btn->pos         = { x, 3.0f };
+			bar->add_child(btn);
+			return btn;
+		};
+
+		// A tick box with its letter beside it.
+		auto add_check = [&](const char* text, float x, bool checked, std::function<void(bool)> on_check)
+			-> std::pair<check_box::ptr, label::ptr>
+		{
+			auto chk         = std::make_shared<check_box>();
+			chk->docking     = GUI::dock::NONE;
+			chk->width_size  = GUI::size_type::FIXED;
+			chk->height_size = GUI::size_type::FIXED;
+			chk->size        = { 18.0f, 18.0f };
+			chk->pos         = { x, 4.0f };
+			bar->add_child(chk);
+			chk->set_checked(checked);
+			chk->on_check = on_check;
+			return { chk, add_label(text, x + 21.0f, 12.0f) };
+		};
+
+		// [Reset] [x]R [x]G [x]B [x]A [ ]H   [<] [Mip n] [>]   [<] [Array n] [>]
+		// The selectors stay hidden (all of them) until set_source sees more than one entry.
+		m_reset_btn = add_button("Reset", 4.0f, 48.0f);
+		m_reset_btn->on_click = [this](button::ptr) { m_user_view = false; m_refit = 1; };
+
+		static const char* channel_names[4] = { "R", "G", "B", "A" };
+		for (int c = 0; c < 4; ++c)
+			std::tie(m_channel_check[c], m_channel_label[c]) = add_check(channel_names[c], 58.0f + c * 36.0f, true, [this, c](bool on)
+			{
+				m_channel_mask = on ? (m_channel_mask | (1 << c)) : (m_channel_mask & ~(1 << c));
+			});
+		std::tie(m_hist_check, m_hist_label) = add_check("H", 202.0f, false, [this](bool on) { m_show_histogram = on ? 1 : 0; });
+
+		m_prev_mip  = add_button("<", 246.0f, 20.0f);
+		m_prev_mip->on_click = [this](button::ptr) { select_mip(m_sel_mip - 1); };
 
 		m_mip_combo              = std::make_shared<combo_box>();
 		m_mip_combo->docking     = GUI::dock::NONE;
 		m_mip_combo->width_size  = GUI::size_type::FIXED;
 		m_mip_combo->height_size = GUI::size_type::FIXED;
 		m_mip_combo->size        = { 84.0f, 20.0f };
-		m_mip_combo->pos         = { 34.0f, 3.0f };
-		m_mip_combo->visible     = false;
+		m_mip_combo->pos         = { 268.0f, 3.0f };
 		bar->add_child(m_mip_combo);
 
-		auto arr_lbl         = std::make_shared<label>();
-		arr_lbl->text        = "Array:";
-		arr_lbl->font_size   = 10.0f;
-		arr_lbl->docking     = GUI::dock::NONE;
-		arr_lbl->width_size  = GUI::size_type::FIXED;
-		arr_lbl->height_size = GUI::size_type::FIXED;
-		arr_lbl->size        = { 36.0f, 16.0f };
-		arr_lbl->pos         = { 124.0f, 5.0f };
-		bar->add_child(arr_lbl);
+		m_next_mip = add_button(">", 354.0f, 20.0f);
+		m_next_mip->on_click = [this](button::ptr) { select_mip(m_sel_mip + 1); };
+
+		m_prev_array  = add_button("<", 380.0f, 20.0f);
+		m_prev_array->on_click = [this](button::ptr) { select_array(m_sel_array - 1); };
 
 		m_array_combo              = std::make_shared<combo_box>();
 		m_array_combo->docking     = GUI::dock::NONE;
 		m_array_combo->width_size  = GUI::size_type::FIXED;
 		m_array_combo->height_size = GUI::size_type::FIXED;
 		m_array_combo->size        = { 84.0f, 20.0f };
-		m_array_combo->pos         = { 162.0f, 3.0f };
-		m_array_combo->visible     = false;
+		m_array_combo->pos         = { 402.0f, 3.0f };
 		bar->add_child(m_array_combo);
+
+		m_next_array = add_button(">", 488.0f, 20.0f);
+		m_next_array->on_click = [this](button::ptr) { select_array(m_sel_array + 1); };
+
+		set_selectors_visible(false, false);
 
 		docker->add_child(bar);
 	}
@@ -419,14 +474,14 @@ resource_preview::resource_preview()
 	{
 		auto lbl         = std::make_shared<label>();
 		lbl->text        = text;
-		lbl->font_size   = 10.0f;
+		lbl->font_size   = 13.0f;
 		lbl->docking     = GUI::dock::NONE;
 		lbl->width_size  = GUI::size_type::MATCH_PARENT;
 		lbl->height_size = GUI::size_type::FIXED;
-		lbl->size        = { 0.0f, 18.0f };
+		lbl->size        = { 0.0f, 20.0f };
 		lbl->pos         = { 6.0f, info_y };
 		info_panel->add_child(lbl);
-		info_y += 18.0f;
+		info_y += 20.0f;
 		return lbl;
 	};
 
@@ -435,6 +490,50 @@ resource_preview::resource_preview()
 	m_dim_lbl  = add_row("Size:     ...");
 
 	bottom_dock->get_tabs()->add_page("Info", info_panel);
+
+	// Added last so it draws over the image. Not clickable: the mouse events must reach this widget underneath it.
+	m_hud              = std::make_shared<preview_hud>();
+	m_hud->docking     = GUI::dock::NONE;
+	m_hud->width_size  = GUI::size_type::FIXED;
+	m_hud->height_size = GUI::size_type::FIXED;
+	m_hud->size        = { 330.0f, 70.0f };
+	m_hud->clickable   = false;
+	m_hud->visible     = false;
+	add_child(m_hud);
+
+	auto add_hud_row = [&](float y) -> label::ptr
+	{
+		auto lbl         = std::make_shared<label>();
+		lbl->text        = "-";
+		lbl->font_size   = 13.0f;
+		lbl->docking     = GUI::dock::NONE;
+		lbl->width_size  = GUI::size_type::FIXED;
+		lbl->height_size = GUI::size_type::FIXED;
+		lbl->size        = { 264.0f, 20.0f };
+		lbl->pos         = { 62.0f, y };
+		lbl->clickable   = false;
+		m_hud->add_child(lbl);
+		return lbl;
+	};
+	m_pixel_lbl = add_hud_row(4.0f);
+	m_value_lbl = add_hud_row(25.0f);
+	m_hex_lbl   = add_hud_row(46.0f);
+}
+
+void preview_hud::draw(Context& c)
+{
+	const rect b = get_render_bounds();
+	c.renderer->draw_color(c, float4(0.06f, 0.07f, 0.09f, 0.94f), b);
+
+	// 1px light frame, then the swatch: left half opaque, right half blended with grey by alpha.
+	const float x = b.pos.x + 7.0f;
+	const float y = b.pos.y + 8.0f;
+	c.renderer->draw_color(c, float4(0.8f, 0.8f, 0.8f, 1.0f), rect{ x, y, 46.0f, 46.0f });
+	c.renderer->draw_color(c, float4(color.x, color.y, color.z, 1.0f), rect{ x + 1.0f, y + 1.0f, 22.0f, 44.0f });
+
+	const float grey = 0.35f;
+	c.renderer->draw_color(c, float4(grey + (color.x - grey) * alpha, grey + (color.y - grey) * alpha, grey + (color.z - grey) * alpha, 1.0f),
+		rect{ x + 23.0f, y + 1.0f, 22.0f, 44.0f });
 }
 
 void resource_preview::set_source(std::shared_ptr<HAL::ResourceView> source, const std::string& title)
@@ -443,12 +542,55 @@ void resource_preview::set_source(std::shared_ptr<HAL::ResourceView> source, con
 	m_title         = title;
 	m_fit_done      = false;
 	m_buffer_inited = false;
+	m_sel_mip       = 0;
+	m_sel_array     = 0;
+	m_user_view     = false;
+	m_fit_size      = { 0, 0 };
 	run_on_ui([this, title]()
 	{
 		if (m_name_lbl) m_name_lbl->text = "Resource: " + (title.empty() ? std::string("-") : title);
-		m_mip_combo->visible   = false;
-		m_array_combo->visible = false;
+		set_selectors_visible(false, false);
 	});
+}
+
+void resource_preview::set_selectors_visible(bool mips, bool arrays)
+{
+	for (auto* w : { (GUI::base*)m_prev_mip.get(), (GUI::base*)m_mip_combo.get(), (GUI::base*)m_next_mip.get() })
+		w->visible = mips;
+	for (auto* w : { (GUI::base*)m_prev_array.get(), (GUI::base*)m_array_combo.get(), (GUI::base*)m_next_array.get() })
+		w->visible = arrays;
+}
+
+void resource_preview::set_tools(bool channels, bool flat_view)
+{
+	for (int c = 0; c < 4; ++c)
+	{
+		m_channel_check[c]->visible = channels;
+		m_channel_label[c]->visible = channels;
+	}
+
+	m_pixel_tools         = flat_view;
+	m_reset_btn->visible  = flat_view;
+	m_hist_check->visible = flat_view;
+	m_hist_label->visible = flat_view;
+	if (!flat_view)
+	{
+		m_cursor_x     = -1;
+		m_cursor_y     = -1;
+		m_hud->visible = false;
+	}
+}
+
+void resource_preview::select_mip(int mip)
+{
+	m_sel_mip = Math::clamp(mip, 0, std::max(m_mip_count - 1, 0));
+	m_mip_combo->get_label()->text = "Mip " + std::to_string(m_sel_mip);
+}
+
+void resource_preview::select_array(int index)
+{
+	m_sel_array = Math::clamp(index, 0, std::max(m_array_count - 1, 0));
+	m_array_combo->get_label()->text = "Array " + std::to_string(m_sel_array);
 }
 
 void resource_preview::refresh_source(std::shared_ptr<HAL::ResourceView> source)
@@ -519,55 +661,87 @@ void resource_preview::render(FrameGraph::FrameContext* context)
 
 				const bool is_cube = !!dynamic_cast<HAL::CubeView*>(m_source.get());
 				const bool is_3d   = !is_cube && (d.z > 1);
-				std::string t = is_cube ? "TextureCube"
-				              : is_3d   ? "Texture3D" : "Texture2D";
+				std::string t = is_cube ? std::string(resource_icons::cube) + " TextureCube"
+				              : is_3d   ? std::string(resource_icons::texture_3d) + " Texture3D"
+				                        : std::string(resource_icons::texture_2d) + " Texture2D";
 				std::string s = std::to_string(d.x) + "x" + std::to_string(d.y)
 				              + (is_cube ? "x6"
 				              : is_3d   ? "x" + std::to_string(d.z) : "");
-				run_on_ui([this, t, s]()
+				run_on_ui([this, t, s, channels = !is_3d, flat_view = !is_cube && !is_3d]()
 				{
 					m_type_lbl->text = "Type:     " + t;
 					m_dim_lbl->text  = "Size:     " + s;
+					set_tools(channels, flat_view);
 				});
 
 				UINT mip_count   = res_desc.as_texture().MipLevels;
 				UINT array_count = res_desc.as_texture().ArraySize;
-				run_on_ui([this, mip_count]()
+				run_on_ui([this, mip_count, array_count]()
 				{
+					m_mip_count   = (int)mip_count;
+					m_array_count = (int)array_count;
+
 					m_mip_combo->remove_items();
 					for (UINT i = 0; i < mip_count; ++i)
 					{
 						auto item = m_mip_combo->add_item("Mip " + std::to_string(i));
-						item->on_select = [this, i]() { m_sel_mip = (int)i; };
+						item->on_select = [this, i]() { select_mip((int)i); };
 					}
-					if (mip_count > 0)
-						m_mip_combo->get_label()->text = "Mip 0";
-					m_mip_combo->visible = (mip_count > 1);
-				});
-				run_on_ui([this, array_count]()
-				{
 					m_array_combo->remove_items();
 					for (UINT i = 0; i < array_count; ++i)
 					{
 						auto item = m_array_combo->add_item("Array " + std::to_string(i));
-						item->on_select = [this, i]() { m_sel_array = (int)i; };
+						item->on_select = [this, i]() { select_array((int)i); };
 					}
-					if (array_count > 0)
-						m_array_combo->get_label()->text = "Array 0";
-					m_array_combo->visible = (array_count > 1);
+					select_mip(0);
+					select_array(0);
+					set_selectors_visible(mip_count > 1, array_count > 1);
 				});
 			}
 		}
 
+		// The first fit can run before the window has its final size (the image then ends up cut off), so
+		// until the user pans or zooms, fit again whenever the view size changes.
+		if (m_refit || (!m_user_view && m_fit_size != SZ))
+		{
+			m_refit = 0;
+			auto   d   = res_desc.as_texture().Dimensions;
+			float2 src = { float(d.x), float(d.y) };
+			float2 dst = float2(SZ);
+			float  fit = std::min(dst.x / src.x, dst.y / src.y);
+
+			Thread::Lockable::guard lk(m_state_mutex);
+			m_scale    = fit;
+			m_pan      = (dst - src * fit) * 0.5f;
+			m_fit_size = SZ;
+		}
+
 		auto& compute = context->get_list()->get_compute();
+
+		if (!m_stats)
+			m_stats = std::make_shared<HAL::StructuredBufferView<uint>>(RenderSystem::get().device(), preview_stats::words,
+				HAL::counterType::NONE, HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess);
+
+		const int cursor_x = m_cursor_x;
+		const int cursor_y = m_cursor_y;
+
+		// Rebound before every dispatch that touches the stats buffer: each bind records its UAV usage,
+		// which is what makes the HAL put barriers between clear -> histogram -> draw (see TonemapPass).
+		auto bind_common = [&](uint extra_flags = 0)
 		{
 			Slots::Dev::FrameGraph_Debug_Common common;
 			common.GetTarget()             = m_current_tex->texture_2d().rwTexture2D;
 			common.GetTargetSize()         = SZ;
 			common.GetSelectedMip()        = (UINT)m_sel_mip;
 			common.GetSelectedArrayIndex() = (UINT)m_sel_array;
+			common.GetChannelMask()        = (UINT)m_channel_mask;
+			common.GetCursor()             = int2(cursor_x, cursor_y);
+			common.GetFlags()              = (m_show_histogram ? 1u : 0u) | extra_flags;
+			common.GetStats()              = m_stats->rwStructuredBuffer;
 			compute.set(common);
-		}
+		};
+		bind_common();
+		bool read_pixel = false;
 
 		if (auto* src = dynamic_cast<HAL::Texture2DView*>(m_source.get()))
 		{
@@ -592,26 +766,59 @@ void resource_preview::render(FrameGraph::FrameContext* context)
 			if (!srv_ok)
 				return;
 
+			const uint2 source_size = res_desc.as_texture().Dimensions.xy;
+			auto bind_source = [&]()
+			{
+				if (array_size > 1)
+				{
+					Slots::Dev::FrameGraph_Debug_Texture2DArray tex2darr;
+					tex2darr.GetSource()     = *src;
+					tex2darr.GetSourceSize() = source_size;
+					tex2darr.GetOffset()     = snap_pan;
+					tex2darr.GetScale()      = snap_scale;
+					compute.set(tex2darr);
+				}
+				else
+				{
+					Slots::Dev::FrameGraph_Debug_Texture2D tex2d;
+					tex2d.GetSource()     = *src;
+					tex2d.GetSourceSize() = source_size;
+					tex2d.GetOffset()     = snap_pan;
+					tex2d.GetScale()      = snap_scale;
+					compute.set(tex2d);
+				}
+			};
+
+			if (m_show_histogram)
+			{
+				PROFILE(L"preview_histogram");
+				// Same grid as the histogram shaders: at most preview_stats::max_grid samples per axis of the selected mip.
+				const uint mip = (uint)m_sel_mip;
+				const uint2 grid = { std::min(std::max(source_size.x >> mip, 1u), preview_stats::max_grid),
+				                     std::min(std::max(source_size.y >> mip, 1u), preview_stats::max_grid) };
+
+				// The histogram shader zeroes the stats words itself when asked (flag bit 1): a first dispatch with
+				// 128 x 9 threads covers all preview_stats::words, then the accumulating one runs. No clear_uav needed.
+				if (array_size > 1)
+					compute.set_pipeline<PSOS::Dev::FrameGraph_Debug_Histogram2DArray>();
+				else
+					compute.set_pipeline<PSOS::Dev::FrameGraph_Debug_Histogram2D>();
+				bind_common(2u);
+				bind_source();
+				compute.dispatch(ivec2(128, 9), ivec2(8, 8));
+
+				bind_common();
+				bind_source();
+				compute.dispatch(ivec2(grid), ivec2(8, 8));
+				bind_common();
+			}
+
 			if (array_size > 1)
-			{
 				compute.set_pipeline<PSOS::Dev::FrameGraph_Debug_Texture2DArray>();
-				Slots::Dev::FrameGraph_Debug_Texture2DArray tex2darr;
-				tex2darr.GetSource()     = *src;
-				tex2darr.GetSourceSize() = res_desc.as_texture().Dimensions.xy;
-				tex2darr.GetOffset()     = snap_pan;
-				tex2darr.GetScale()      = snap_scale;
-				compute.set(tex2darr);
-			}
 			else
-			{
 				compute.set_pipeline<PSOS::Dev::FrameGraph_Debug_Texture2D>();
-				Slots::Dev::FrameGraph_Debug_Texture2D tex2d;
-				tex2d.GetSource()     = *src;
-				tex2d.GetSourceSize() = res_desc.as_texture().Dimensions.xy;
-				tex2d.GetOffset()     = snap_pan;
-				tex2d.GetScale()      = snap_scale;
-				compute.set(tex2d);
-			}
+			bind_source();
+			read_pixel = true;
 		}
 		else if (auto* src = dynamic_cast<HAL::Texture3DView*>(m_source.get()))
 		{
@@ -656,6 +863,35 @@ void resource_preview::render(FrameGraph::FrameContext* context)
 			compute.set_pipeline<PSOS::Dev::FrameGraph_Debug_NotImplemented>();
 		}
 		compute.dispatch(uint3(SZ, 1));
+
+		if (read_pixel && cursor_x >= 0 && cursor_y >= 0 && cursor_x < (int)SZ.x && cursor_y < (int)SZ.y)
+		{
+			PROFILE(L"preview_pixel_readback");
+			context->get_list()->get_copy().read<uint>(*m_stats, 0, 8, [this](std::span<uint> r)
+			{
+				std::string pixel = "Pixel   -", value = "RGBA    -", hex = "Hex     -";
+				float v[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
+				if (r.size() >= 8 && r[6])
+				{
+					std::memcpy(v, r.data(), sizeof(v));
+					auto byte = [](float f) { return (unsigned)(std::clamp(f, 0.0f, 1.0f) * 255.0f + 0.5f); };
+					pixel = std::format("Pixel   {}, {}", (int)r[4], (int)r[5]);
+					value = std::format("RGBA    {:.4f}  {:.4f}  {:.4f}  {:.4f}", v[0], v[1], v[2], v[3]);
+					hex   = std::format("Hex     #{:02X}{:02X}{:02X}{:02X}", byte(v[0]), byte(v[1]), byte(v[2]), byte(v[3]));
+				}
+				run_on_ui([this, pixel, value, hex, v0 = v[0], v1 = v[1], v2 = v[2], v3 = v[3]]()
+				{
+					m_pixel_lbl->text = pixel;
+					m_value_lbl->text = value;
+					m_hex_lbl->text   = hex;
+
+					// The swatch shows the texel the way the preview itself does (same display gamma).
+					auto shown = [](float f) { return std::pow(std::max(f, 0.0f), 1.0f / 2.2f); };
+					m_hud->color = { shown(v0), shown(v1), shown(v2), 1.0f };
+					m_hud->alpha = std::clamp(v3, 0.0f, 1.0f);
+				});
+			});
+		}
 	}
 	else
 	{
@@ -673,7 +909,7 @@ void resource_preview::render(FrameGraph::FrameContext* context)
 						auto tree_data = src->describe(memory.data(), memory.size());
 						run_on_ui([this, tree_data, count, elem_size]()
 						{
-							m_type_lbl->text = "Type:     Buffer";
+							m_type_lbl->text = std::string("Type:     ") + resource_icons::buffer + " Buffer";
 							m_dim_lbl->text  = "Size:     "
 								+ std::to_string(count) + " x "
 								+ std::to_string(elem_size) + "B";
@@ -686,6 +922,7 @@ void resource_preview::render(FrameGraph::FrameContext* context)
 				{
 					m_img->visible         = false;
 					m_buffer_tree->visible = true;
+					set_tools(false, false);
 				});
 			}
 		}
@@ -697,10 +934,11 @@ void resource_preview::render(FrameGraph::FrameContext* context)
 				uint64 sz = res_desc.as_buffer().SizeInBytes;
 				run_on_ui([this, sz]()
 				{
-					m_type_lbl->text       = "Type:     Buffer";
+					m_type_lbl->text       = std::string("Type:     ") + resource_icons::buffer + " Buffer";
 					m_dim_lbl->text        = "Size:     " + std::to_string(sz) + "B";
 					m_img->visible         = false;
 					m_buffer_tree->visible = false;
+					set_tools(false, false);
 				});
 			}
 		}
@@ -720,10 +958,32 @@ bool resource_preview::on_mouse_action(mouse_action action, mouse_button button,
 
 bool resource_preview::on_mouse_move(vec2 pos)
 {
+	{
+		const rect rb = m_img->get_render_bounds();
+		const vec2 local = pos - rb.pos;
+		const bool inside = local.x >= 0 && local.y >= 0 && local.x < rb.w && local.y < rb.h;
+		m_cursor_x = inside && m_pixel_tools ? (int)local.x : -1;
+		m_cursor_y = inside && m_pixel_tools ? (int)local.y : -1;
+
+		// Hover panel: beside the cursor, flipped to the other side when it would leave the image.
+		m_hud->visible = inside && m_pixel_tools && m_img->visible && !m_dragging;
+		if (inside && m_pixel_tools)
+		{
+			const float w = m_hud->size.get().x, h = m_hud->size.get().y;
+			const vec2 origin = rb.pos - get_render_bounds().pos;
+			float x = local.x + 16.0f;
+			float y = local.y + 18.0f;
+			if (x + w > rb.w) x = local.x - w - 10.0f;
+			if (y + h > rb.h) y = local.y - h - 10.0f;
+			m_hud->pos = origin + vec2(std::max(x, 0.0f), std::max(y, 0.0f));
+		}
+	}
+
 	if (pressed && !m_dragging && (pos - m_drag_start).length() > 3.0f)
 	{
-		m_dragging = true;
-		m_prev     = pos;
+		m_dragging  = true;
+		m_user_view = true;
+		m_prev      = pos;
 		set_movable(true);
 	}
 	if (m_dragging)
@@ -739,8 +999,25 @@ bool resource_preview::on_mouse_move(vec2 pos)
 	return m_dragging;
 }
 
+void resource_preview::on_mouse_leave(vec2 pos)
+{
+	base::on_mouse_leave(pos);
+
+	// The GUI also calls this after every on_mouse_move that returned false (not dragging), so only a position
+	// outside the image is a real leave.
+	const rect rb = m_img->get_render_bounds();
+	const vec2 local = pos - rb.pos;
+	if (local.x >= 0 && local.y >= 0 && local.x < rb.w && local.y < rb.h)
+		return;
+
+	m_cursor_x     = -1;
+	m_cursor_y     = -1;
+	m_hud->visible = false;
+}
+
 bool resource_preview::on_wheel(mouse_wheel type, float value, vec2 wpos)
 {
+	m_user_view = true;
 	vec2 pivot = wpos - m_img->get_render_bounds().pos;
 	{
 		Thread::Lockable::guard lk(m_state_mutex);
