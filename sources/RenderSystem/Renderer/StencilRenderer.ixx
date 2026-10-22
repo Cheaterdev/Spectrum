@@ -16,6 +16,8 @@ export class stencil_renderer : public GUI::base, public Events::Runner, public 
 
         MeshAssetInstance::ptr axis;
         camera axis_cam;
+        camera mask_cam;
+        float2 main_jitter = { 0, 0 };
 
         int selected_axis = -1;
         float3 center_pos;
@@ -48,6 +50,8 @@ export class stencil_renderer : public GUI::base, public Events::Runner, public 
         static uint object_id_of(const std::pair<MeshAssetInstance::ptr, int>& obj);
 
         void draw_gizmo(HAL::GraphicsContext& graphics);
+        void draw_mask(HAL::GraphicsContext& graphics, Passes::Editor::stencil_renderer::Context& data,
+                       const std::pair<MeshAssetInstance::ptr, int>& selection);
 
         HAL::StructuredBufferView<vec4> vertex_buffer;
         HAL::IndexBuffer index_buffer;
@@ -83,12 +87,27 @@ export class stencil_renderer : public GUI::base, public Events::Runner, public 
 
         Variable<bool> draw_aabb = { false, "Draw AABB", this };
 
+        // Width is in output pixels; the overlays are drawn after tonemapping.
+        Variable<float> outline_width     = { 3.0f, "Outline width", this, 1.0f, 6.0f };
+        Variable<float> overlay_intensity = { 1.0f, "Overlay intensity", this, 0.5f, 4.0f };
+        // Gain on the outline's antialiased edge strength: above 1 the line gets more opaque.
+        Variable<float> outline_opacity = { 3.0f, "Outline opacity", this, 0.5f, 8.0f };
+        // Weight of last frame's outline: higher = steadier edges, more lag on motion.
+        Variable<float> outline_history_weight = { 0.85f, "Outline history", this, 0.0f, 0.97f };
+
+        // Outline accumulation validity (see m_render_outline).
+        uint     outline_last_id    = 0;
+        uint64_t outline_last_frame = ~0ull;
+        ivec2    outline_last_size  = { 0, 0 };
+
         using ptr = s_ptr<stencil_renderer>;
         std::vector<std::pair<MeshAssetInstance::ptr, int>> selected;
         vec3 direction;
 
         // Setup is generated (stenciler.prism) -- render only.
         Passes::Editor::stencil_renderer::render_func_type m_render;
+        Passes::Editor::stencil_gizmo_resolve::render_func_type m_render_resolve;
+        Passes::Editor::stencil_outline_temporal::render_func_type m_render_outline;
 
         stencil_renderer();
 
@@ -100,5 +119,7 @@ export class stencil_renderer : public GUI::base, public Events::Runner, public 
         explicit stencil_renderer(TPipeline& pipeline) : stencil_renderer()
         {
             pipeline.stencil_renderer.render_func = m_render;
+            pipeline.stencil_gizmo_resolve.render_func = m_render_resolve;
+            pipeline.stencil_outline_temporal.render_func = m_render_outline;
         }
 };

@@ -35,7 +35,7 @@ namespace FrameGraph
 // .prism edit renumbers those enums, a plan from before the edit would not fail
 // to load, it would misapply -- wrong resource, wrong barriers. A plan whose
 // header does not carry this exact value must be rejected.
-constexpr unsigned long long generated_id_space_hash = 8477391330197096210ull;
+constexpr unsigned long long generated_id_space_hash = 5786185398706988338ull;
 
 // One bit per context field, in (struct, field) declaration order.
 enum class ContextFieldID : unsigned int
@@ -579,6 +579,14 @@ static inline const PassContextDeps pass_context_deps[] = {
 		  ContextField::None,
 		true },
 	{ PassID::stencil_renderer,
+		  ContextField::None,
+		  ContextField::None,
+		true },
+	{ PassID::stencil_outline_temporal,
+		  ContextField::None,
+		  ContextField::None,
+		true },
+	{ PassID::stencil_gizmo_resolve,
 		  ContextField::None,
 		  ContextField::None,
 		true },

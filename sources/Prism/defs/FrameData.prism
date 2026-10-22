@@ -61,6 +61,9 @@ namespace Frame
 		# RT miss shader and rtx_combine read it.
 		[Auto = Texture_Null]
 		TextureCube<float4> sky;
+		# The same sky convolved with a cosine lobe: the ambient light a diffuse surface sees.
+		[Auto = Texture_Null]
+		TextureCube<float4> sky_diffuse;
 		float4 sunDir;
 
 		# Texture LOD bias compensating for rendering at frame_size and upscaling

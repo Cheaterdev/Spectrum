@@ -162,13 +162,14 @@ namespace Post
 	#                      pass that touches the pre-upscale ResultTexture.
 	#                      Unjittered, thresholded downsample to level 0, then
 	#                      a temporal resolve into BloomTAA.
-	#   BloomProcess    -- async: everything else, reading only BloomTAA, so it
-	#                      can overlap DLSS (which holds ResultTexture for its
-	#                      Streamline hand-off).
-	#   BloomBuildPost  -- DLSS-RR only: its pre-upscale input is the noisy RT
-	#                      signal (RTXCombine), denoised only inside DLSS-RR, so
-	#                      level 0 comes from the upscaled image (no temporal
-	#                      step) and the processing runs right after.
+	#   BloomProcess    -- everything else, reading only BloomTAA. Runs inline on
+	#                      the graphics queue (not [Async]): overlapping DLSS made
+	#                      the result flicker.
+	#   BloomBuildPost  -- DLSS and DLSS-RR: their pre-upscale image is jittered
+	#                      and aliased (DLSS-RR: also the noisy RT signal,
+	#                      denoised only inside DLSS-RR), and bloom built from it
+	#                      flickers, so level 0 comes from the upscaled image (no
+	#                      temporal step) and the processing runs right after.
 	#   BloomComposite  -- after the upscalers: adds bloom + flare.
 	#
 	# BloomBuild/BloomProcess and BloomBuildPost are mutually exclusive and
@@ -176,7 +177,7 @@ namespace Post
 	# ran.
 	[Static]
 	[Compute]
-	[SetupCondition = BloomSelectors::enabled && !(UpscalerSelectors::upscaling_enabled && UpscalerSelectors::upscaler_type == UpscalerType::DLSSRR)]
+	[SetupCondition = BloomSelectors::enabled && !(UpscalerSelectors::upscaling_enabled && UpscalerSelectors::upscaler_type != UpscalerType::FSR)]
 	PassNode BloomBuild
 	{
 		[Always = Read] Texture ResultTexture;
@@ -204,7 +205,7 @@ namespace Post
 
 	[Static]
 	[Compute]
-	[SetupCondition = BloomSelectors::enabled && !(UpscalerSelectors::upscaling_enabled && UpscalerSelectors::upscaler_type == UpscalerType::DLSSRR)]
+	[SetupCondition = BloomSelectors::enabled && !(UpscalerSelectors::upscaling_enabled && UpscalerSelectors::upscaler_type != UpscalerType::FSR)]
 	PassNode BloomProcess
 	{
 		[Always = Read] Texture BloomTAA;
@@ -231,11 +232,11 @@ namespace Post
 		Texture FlareStreaks;
 	}
 
-	# DLSS-RR path (see above): level 0 straight from the upscaled image, then
+	# DLSS / DLSS-RR path (see above): level 0 straight from the upscaled image, then
 	# the same processing as BloomProcess.
 	[Static]
 	[Compute]
-	[SetupCondition = BloomSelectors::enabled && UpscalerSelectors::upscaling_enabled && UpscalerSelectors::upscaler_type == UpscalerType::DLSSRR]
+	[SetupCondition = BloomSelectors::enabled && UpscalerSelectors::upscaling_enabled && UpscalerSelectors::upscaler_type != UpscalerType::FSR]
 	PassNode BloomBuildPost
 	{
 		[Always = Read] Texture ResultTexture;

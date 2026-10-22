@@ -18,7 +18,7 @@ namespace GI
 			uint albedo; // Texture3D<float4>
 			uint normals; // Texture3D<float4>
 			uint lower; // Texture3D<float4>
-			uint tex_cube; // TextureCube<float4>
+			uint sky_diffuse; // TextureCube<float4>
 			uint output; // RWTexture3D<float4>
 			VSMShadowLookup vsm; // VSMShadowLookup
 			VoxelTilingParams params; // VoxelTilingParams
@@ -28,7 +28,7 @@ namespace GI
 			Texture3D<float4> GetAlbedo() { return ResourceDescriptorHeap[albedo]; }
 			Texture3D<float4> GetNormals() { return ResourceDescriptorHeap[normals]; }
 			Texture3D<float4> GetLower() { return ResourceDescriptorHeap[lower]; }
-			TextureCube<float4> GetTex_cube() { return ResourceDescriptorHeap[tex_cube]; }
+			TextureCube<float4> GetSky_diffuse() { return ResourceDescriptorHeap[sky_diffuse]; }
 		};
 	}
 }

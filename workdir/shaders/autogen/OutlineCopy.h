@@ -11,7 +11,7 @@
 #endif
 
 #include "layout/DefaultLayout.h"
-#include "tables/Countour.h"
+#include "tables/OutlineCopy.h"
 
 #ifndef CB_DEFINED
 #define CB_DEFINED
@@ -19,23 +19,23 @@ struct CB { uint offset; };
 #endif
 
 #ifdef __spirv__
-struct _CB_Countour { uint offset; };
-#ifdef HAL_SHADER_RECORD_Countour
+struct _CB_OutlineCopy { uint offset; };
+#ifdef HAL_SHADER_RECORD_OutlineCopy
 // A ray tracing hit shader's local root constant: on Vulkan it is the shader
 // record's data, right after the group handle in the hit table entry.
-[[vk::shader_record_ext]] ConstantBuffer<_CB_Countour> pass_Countour;
+[[vk::shader_record_ext]] ConstantBuffer<_CB_OutlineCopy> pass_OutlineCopy;
 #else
-static _CB_Countour pass_Countour = { _hal_push.s4 };
+static _CB_OutlineCopy pass_OutlineCopy = { _hal_push.s4 };
 #endif
 #else
-ConstantBuffer<CB> pass_Countour: register(b4, space4);
+ConstantBuffer<CB> pass_OutlineCopy: register(b4, space4);
 #endif
-ConstantBuffer<Countour> CreateCountour()
+ConstantBuffer<OutlineCopy> CreateOutlineCopy()
 {
-	return ResourceDescriptorHeap[pass_Countour.offset];
+	return ResourceDescriptorHeap[pass_OutlineCopy.offset];
 }
 
 #ifndef NO_GLOBAL
-static const ConstantBuffer<Countour> countour_global = CreateCountour();
-ConstantBuffer<Countour> GetCountour() { return countour_global; }
+static const ConstantBuffer<OutlineCopy> outlineCopy_global = CreateOutlineCopy();
+ConstantBuffer<OutlineCopy> GetOutlineCopy() { return outlineCopy_global; }
 #endif

@@ -58,6 +58,7 @@ public:
             Slots::Shadows::VSM::SkyAmbientData ambient;
             gbuffer.SetTable(ambient.GetGbuffer());
             ambient.GetSky()    = data.sky_cubemap_filtered->textureCube;
+            ambient.GetSky_diffuse() = data.sky_cubemap_filtered_diffuse->textureCube;
             ambient.GetResult() = data.ResultTexture->rwTexture2D;
             compute.set(ambient);
 
@@ -171,6 +172,10 @@ public:
             auto sky = graph.builder.get(FrameGraph::ResourceID::sky_cubemap_filtered);
             if (sky && sky->resource)
                 frameInfo.GetSky() = sky->get_handler<Handlers::TextureCube>()->textureCube;
+
+            auto sky_diffuse = graph.builder.get(FrameGraph::ResourceID::sky_cubemap_filtered_diffuse);
+            if (sky_diffuse && sky_diffuse->resource)
+                frameInfo.GetSky_diffuse() = sky_diffuse->get_handler<Handlers::TextureCube>()->textureCube;
             /////////
             frameInfo.GetSunDir().xyz = skyinfo.sunDir;
             frameInfo.GetDebugFlags() = debug_flags;

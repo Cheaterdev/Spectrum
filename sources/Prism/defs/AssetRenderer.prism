@@ -90,6 +90,7 @@ namespace Editor
 		[Always = Read] Texture GBuffer_Speed;
 		[Always = None] Texture GBuffer_DepthMips;
 		[Always = Read] TextureCube sky_cubemap_filtered;
+		[Always = Read] TextureCube sky_cubemap_filtered_diffuse;
 		[Always = UnorderedAccess] Texture ResultTexture;
 	}
 
@@ -104,6 +105,7 @@ namespace Editor
 		[Always = Read] Texture GBuffer_Speed;
 		[Always = None] Texture GBuffer_DepthMips;
 		[Always = Read] TextureCube sky_cubemap_filtered;
+		[Always = Read] TextureCube sky_cubemap_filtered_diffuse;
 		[Always = UnorderedAccess] Texture ResultTexture;
 	}
 

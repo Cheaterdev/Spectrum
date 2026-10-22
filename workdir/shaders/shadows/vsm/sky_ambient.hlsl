@@ -34,10 +34,11 @@ void add_sky(uint2 pixel, uint parts)
 	float3 view = normalize(camera.GetPosition() - pos);
 
 	TextureCube<float4> sky = GetSkyAmbientData().GetSky();
+	TextureCube<float4> sky_diffuse = GetSkyAmbientData().GetSky_diffuse();
 	float3 indirect = 0;
 
 	if (parts & SKY_DIFFUSE)
-		indirect += sky_diffuse_light(sky, material, packed_0.rgb, packed_0.w, normal, view);
+		indirect += sky_diffuse_light(sky_diffuse, material, packed_0.rgb, packed_0.w, normal, view);
 
 	if (parts & SKY_SPECULAR)
 		indirect += sky_specular_light(sky, material, packed_0.rgb, packed_0.w, normal, view, roughness);

@@ -109,6 +109,8 @@ void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 	tasks.emplace_back(PSOBase::create<PSOS::Subsurface::SSSBlurH>(device, pso[PSO::SSSBlurH]));
 	tasks.emplace_back(PSOBase::create<PSOS::Subsurface::SSSBlurV>(device, pso[PSO::SSSBlurV]));
 	tasks.emplace_back(PSOBase::create<PSOS::Shadows::Screen::SS_Shadow>(device, pso[PSO::SS_Shadow]));
+	tasks.emplace_back(PSOBase::create<PSOS::Editor::OutlineTemporal>(device, pso[PSO::OutlineTemporal]));
+	tasks.emplace_back(PSOBase::create<PSOS::Editor::OutlineCopy>(device, pso[PSO::OutlineCopy]));
 	tasks.emplace_back(PSOBase::create<PSOS::Post::TonemapHistogramClear>(device, pso[PSO::TonemapHistogramClear]));
 	tasks.emplace_back(PSOBase::create<PSOS::Post::TonemapHistogramBuild>(device, pso[PSO::TonemapHistogramBuild]));
 	tasks.emplace_back(PSOBase::create<PSOS::Post::TonemapExposureAdapt>(device, pso[PSO::TonemapExposureAdapt]));
@@ -186,8 +188,9 @@ void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 	tasks.emplace_back(PSOBase::create<PSOS::Post::AA::Blending>(device, pso[PSO::Blending]));
 	tasks.emplace_back(PSOBase::create<PSOS::Editor::DrawBox>(device, pso[PSO::DrawBox]));
 	tasks.emplace_back(PSOBase::create<PSOS::Editor::DrawAxis>(device, pso[PSO::DrawAxis]));
+	tasks.emplace_back(PSOBase::create<PSOS::Editor::DrawMask>(device, pso[PSO::DrawMask]));
 	tasks.emplace_back(PSOBase::create<PSOS::Editor::DrawRing>(device, pso[PSO::DrawRing]));
-	tasks.emplace_back(PSOBase::create<PSOS::Editor::StencilerLast>(device, pso[PSO::StencilerLast]));
+	tasks.emplace_back(PSOBase::create<PSOS::Editor::GizmoResolve>(device, pso[PSO::GizmoResolve]));
 	tasks.emplace_back(PSOBase::create<PSOS::UI::NinePatch>(device, pso[PSO::NinePatch]));
 	tasks.emplace_back(PSOBase::create<PSOS::UI::SimpleRect>(device, pso[PSO::SimpleRect]));
 	tasks.emplace_back(PSOBase::create<PSOS::UI::CanvasBack>(device, pso[PSO::CanvasBack]));

@@ -23,9 +23,11 @@ export namespace Table
 			{
 				static constexpr SlotID ID = SlotID::SkyAmbientData;
 				HLSL::TextureCube<float4> sky;
+				HLSL::TextureCube<float4> sky_diffuse;
 				HLSL::RWTexture2D<float4> result;
 				Table::Meshes::GBuffer gbuffer;
 				HLSL::TextureCube<float4>& GetSky() { return sky; }
+				HLSL::TextureCube<float4>& GetSky_diffuse() { return sky_diffuse; }
 				HLSL::RWTexture2D<float4>& GetResult() { return result; }
 				Table::Meshes::GBuffer& GetGbuffer() { return gbuffer; }
 				static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
@@ -33,12 +35,14 @@ export namespace Table
 				void compile(Compiler& compiler) const
 				{
 					compiler.compile(sky, "SkyAmbientData::sky");
+					compiler.compile(sky_diffuse, "SkyAmbientData::sky_diffuse");
 					compiler.compile(result, "SkyAmbientData::result");
 					compiler.compile(gbuffer, "SkyAmbientData::gbuffer");
 				}
 				struct Compiled
 				{
 					uint sky; // TextureCube<float4>
+					uint sky_diffuse; // TextureCube<float4>
 					uint result; // RWTexture2D<float4>
 					Table::Meshes::GBuffer::Compiled gbuffer; // GBuffer
 

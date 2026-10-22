@@ -47,6 +47,9 @@ namespace Shadows
 				Handlers::TextureCube sky_cubemap_filtered = ResourceID::sky_cubemap_filtered;
 
 
+				Handlers::TextureCube sky_cubemap_filtered_diffuse = ResourceID::sky_cubemap_filtered_diffuse;
+
+
 				// Resources this pass always needs whenever it runs, generated from
 				// each field's own [Always=X] annotation (further gated by [Optional=X]
 				// when present -- a raw bool expression, e.g. builder.exists(...) or a
@@ -72,6 +75,8 @@ namespace Shadows
 					builder.need(data.ResultTexture, FrameGraph::ResourceFlags::UnorderedAccess);
 					if (builder.exists(data.sky_cubemap_filtered))
 						builder.need(data.sky_cubemap_filtered, FrameGraph::ResourceFlags::Read);
+					if (builder.exists(data.sky_cubemap_filtered_diffuse))
+						builder.need(data.sky_cubemap_filtered_diffuse, FrameGraph::ResourceFlags::Read);
 				}
 				// Which chain link each handler field resolved to, one named slot per
 				// field. Filled from a live frame's finished Context and applied on a
@@ -88,6 +93,7 @@ namespace Shadows
 					FrameGraph::ChainIndex GBuffer_DepthMips = FrameGraph::ChainIndex::Unresolved;
 					FrameGraph::ChainIndex ResultTexture = FrameGraph::ChainIndex::Unresolved;
 					FrameGraph::ChainIndex sky_cubemap_filtered = FrameGraph::ChainIndex::Unresolved;
+					FrameGraph::ChainIndex sky_cubemap_filtered_diffuse = FrameGraph::ChainIndex::Unresolved;
 				};
 
 				static void save_to_cache([[maybe_unused]] const Context& data, [[maybe_unused]] Cache& cache)
@@ -100,6 +106,7 @@ namespace Shadows
 					cache.GBuffer_DepthMips = FrameGraph::TaskBuilder::cache_slot(data.GBuffer_DepthMips, ResourceID::GBuffer_DepthMips);
 					cache.ResultTexture = FrameGraph::TaskBuilder::cache_slot(data.ResultTexture, ResourceID::ResultTexture);
 					cache.sky_cubemap_filtered = FrameGraph::TaskBuilder::cache_slot(data.sky_cubemap_filtered, ResourceID::sky_cubemap_filtered);
+					cache.sky_cubemap_filtered_diffuse = FrameGraph::TaskBuilder::cache_slot(data.sky_cubemap_filtered_diffuse, ResourceID::sky_cubemap_filtered_diffuse);
 				}
 
 				// Replay counterpart of create_always/need_always. A field this pass
@@ -119,6 +126,7 @@ namespace Shadows
 					builder.load(data.GBuffer_DepthMips, ResourceID::GBuffer_DepthMips, cache.GBuffer_DepthMips);
 					builder.load(data.ResultTexture, ResourceID::ResultTexture, cache.ResultTexture);
 					builder.load(data.sky_cubemap_filtered, ResourceID::sky_cubemap_filtered, cache.sky_cubemap_filtered);
+					builder.load(data.sky_cubemap_filtered_diffuse, ResourceID::sky_cubemap_filtered_diffuse, cache.sky_cubemap_filtered_diffuse);
 				}
 
 				// Resources this pass touches, in declaration order, each paired with
@@ -133,6 +141,7 @@ namespace Shadows
 					{ ResourceID::GBuffer_DepthMips, false },
 					{ ResourceID::ResultTexture, true },
 					{ ResourceID::sky_cubemap_filtered, false },
+					{ ResourceID::sky_cubemap_filtered_diffuse, false },
 				};
 				static constexpr uint resource_count = std::size(resource_accesses);
 			};

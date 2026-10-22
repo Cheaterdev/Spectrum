@@ -42,6 +42,9 @@ namespace Editor
 			Handlers::TextureCube sky_cubemap_filtered = ResourceID::sky_cubemap_filtered;
 
 
+			Handlers::TextureCube sky_cubemap_filtered_diffuse = ResourceID::sky_cubemap_filtered_diffuse;
+
+
 			Handlers::Texture ResultTexture = ResourceID::ResultTexture;
 
 
@@ -68,6 +71,7 @@ namespace Editor
 				builder.need(data.GBuffer_Speed, FrameGraph::ResourceFlags::Read);
 				builder.need(data.GBuffer_DepthMips, FrameGraph::ResourceFlags::None);
 				builder.need(data.sky_cubemap_filtered, FrameGraph::ResourceFlags::Read);
+				builder.need(data.sky_cubemap_filtered_diffuse, FrameGraph::ResourceFlags::Read);
 				builder.need(data.ResultTexture, FrameGraph::ResourceFlags::UnorderedAccess);
 			}
 			// Which chain link each handler field resolved to, one named slot per
@@ -84,6 +88,7 @@ namespace Editor
 				FrameGraph::ChainIndex GBuffer_Speed = FrameGraph::ChainIndex::Unresolved;
 				FrameGraph::ChainIndex GBuffer_DepthMips = FrameGraph::ChainIndex::Unresolved;
 				FrameGraph::ChainIndex sky_cubemap_filtered = FrameGraph::ChainIndex::Unresolved;
+				FrameGraph::ChainIndex sky_cubemap_filtered_diffuse = FrameGraph::ChainIndex::Unresolved;
 				FrameGraph::ChainIndex ResultTexture = FrameGraph::ChainIndex::Unresolved;
 			};
 
@@ -96,6 +101,7 @@ namespace Editor
 				cache.GBuffer_Speed = FrameGraph::TaskBuilder::cache_slot(data.GBuffer_Speed, ResourceID::GBuffer_Speed);
 				cache.GBuffer_DepthMips = FrameGraph::TaskBuilder::cache_slot(data.GBuffer_DepthMips, ResourceID::GBuffer_DepthMips);
 				cache.sky_cubemap_filtered = FrameGraph::TaskBuilder::cache_slot(data.sky_cubemap_filtered, ResourceID::sky_cubemap_filtered);
+				cache.sky_cubemap_filtered_diffuse = FrameGraph::TaskBuilder::cache_slot(data.sky_cubemap_filtered_diffuse, ResourceID::sky_cubemap_filtered_diffuse);
 				cache.ResultTexture = FrameGraph::TaskBuilder::cache_slot(data.ResultTexture, ResourceID::ResultTexture);
 			}
 
@@ -115,6 +121,7 @@ namespace Editor
 				builder.load(data.GBuffer_Speed, ResourceID::GBuffer_Speed, cache.GBuffer_Speed);
 				builder.load(data.GBuffer_DepthMips, ResourceID::GBuffer_DepthMips, cache.GBuffer_DepthMips);
 				builder.load(data.sky_cubemap_filtered, ResourceID::sky_cubemap_filtered, cache.sky_cubemap_filtered);
+				builder.load(data.sky_cubemap_filtered_diffuse, ResourceID::sky_cubemap_filtered_diffuse, cache.sky_cubemap_filtered_diffuse);
 				builder.load(data.ResultTexture, ResourceID::ResultTexture, cache.ResultTexture);
 			}
 
@@ -129,6 +136,7 @@ namespace Editor
 				{ ResourceID::GBuffer_Speed, false },
 				{ ResourceID::GBuffer_DepthMips, false },
 				{ ResourceID::sky_cubemap_filtered, false },
+				{ ResourceID::sky_cubemap_filtered_diffuse, false },
 				{ ResourceID::ResultTexture, true },
 			};
 			static constexpr uint resource_count = std::size(resource_accesses);

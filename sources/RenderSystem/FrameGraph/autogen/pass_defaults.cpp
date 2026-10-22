@@ -66,7 +66,7 @@ FrameGraph::SetupResult PassSetupDefault<Passes::Editor::AssetSkySpecular>::setu
 FrameGraph::SetupResult PassDefault<Passes::Post::BloomBuild>::setup(
 	Passes::Post::BloomBuild::Context& data, FrameGraph::TaskBuilder& builder)
 {
-	if (!(builder.graph->get_context<Table::Post::BloomSelectors>().enabled && !(builder.graph->get_context<Table::Post::Upscale::UpscalerSelectors>().upscaling_enabled && builder.graph->get_context<Table::Post::Upscale::UpscalerSelectors>().upscaler_type == ::Post::Upscale::UpscalerType::DLSSRR)))
+	if (!(builder.graph->get_context<Table::Post::BloomSelectors>().enabled && !(builder.graph->get_context<Table::Post::Upscale::UpscalerSelectors>().upscaling_enabled && builder.graph->get_context<Table::Post::Upscale::UpscalerSelectors>().upscaler_type != ::Post::Upscale::UpscalerType::FSR)))
 		return FrameGraph::SetupResult::Disabled;
 	return FrameGraph::SetupResult::NeedsRender;
 }
@@ -75,7 +75,7 @@ FrameGraph::SetupResult PassDefault<Passes::Post::BloomBuild>::setup(
 FrameGraph::SetupResult PassDefault<Passes::Post::BloomProcess>::setup(
 	Passes::Post::BloomProcess::Context& data, FrameGraph::TaskBuilder& builder)
 {
-	if (!(builder.graph->get_context<Table::Post::BloomSelectors>().enabled && !(builder.graph->get_context<Table::Post::Upscale::UpscalerSelectors>().upscaling_enabled && builder.graph->get_context<Table::Post::Upscale::UpscalerSelectors>().upscaler_type == ::Post::Upscale::UpscalerType::DLSSRR)))
+	if (!(builder.graph->get_context<Table::Post::BloomSelectors>().enabled && !(builder.graph->get_context<Table::Post::Upscale::UpscalerSelectors>().upscaling_enabled && builder.graph->get_context<Table::Post::Upscale::UpscalerSelectors>().upscaler_type != ::Post::Upscale::UpscalerType::FSR)))
 		return FrameGraph::SetupResult::Disabled;
 	return FrameGraph::SetupResult::NeedsRender;
 }
@@ -84,7 +84,7 @@ FrameGraph::SetupResult PassDefault<Passes::Post::BloomProcess>::setup(
 FrameGraph::SetupResult PassDefault<Passes::Post::BloomBuildPost>::setup(
 	Passes::Post::BloomBuildPost::Context& data, FrameGraph::TaskBuilder& builder)
 {
-	if (!(builder.graph->get_context<Table::Post::BloomSelectors>().enabled && builder.graph->get_context<Table::Post::Upscale::UpscalerSelectors>().upscaling_enabled && builder.graph->get_context<Table::Post::Upscale::UpscalerSelectors>().upscaler_type == ::Post::Upscale::UpscalerType::DLSSRR))
+	if (!(builder.graph->get_context<Table::Post::BloomSelectors>().enabled && builder.graph->get_context<Table::Post::Upscale::UpscalerSelectors>().upscaling_enabled && builder.graph->get_context<Table::Post::Upscale::UpscalerSelectors>().upscaler_type != ::Post::Upscale::UpscalerType::FSR))
 		return FrameGraph::SetupResult::Disabled;
 	return FrameGraph::SetupResult::NeedsRender;
 }
@@ -768,6 +768,20 @@ FrameGraph::SetupResult PassDefault<Passes::Subsurface::SSSRR_BlurV>::setup(
 
 FrameGraph::SetupResult PassSetupDefault<Passes::Editor::stencil_renderer>::setup(
 	Passes::Editor::stencil_renderer::Context& data, FrameGraph::TaskBuilder& builder)
+{
+	return FrameGraph::SetupResult::NeedsRender;
+}
+
+
+FrameGraph::SetupResult PassSetupDefault<Passes::Editor::stencil_outline_temporal>::setup(
+	Passes::Editor::stencil_outline_temporal::Context& data, FrameGraph::TaskBuilder& builder)
+{
+	return FrameGraph::SetupResult::NeedsRender;
+}
+
+
+FrameGraph::SetupResult PassSetupDefault<Passes::Editor::stencil_gizmo_resolve>::setup(
+	Passes::Editor::stencil_gizmo_resolve::Context& data, FrameGraph::TaskBuilder& builder)
 {
 	return FrameGraph::SetupResult::NeedsRender;
 }

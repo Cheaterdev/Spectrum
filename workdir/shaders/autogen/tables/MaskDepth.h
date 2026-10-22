@@ -9,14 +9,18 @@
 #include "enums.h"
 namespace Editor
 {
-	struct Countour
+	struct MaskDepth
 	{
-		float4 color; // float4
+		float2 inv_target_size; // float2
+		float2 jitter_uv; // float2
 		uint selected_id; // uint
+		uint scene_depth; // Texture2D<float>
 		uint object_ids; // Texture2D<uint>
-		float4 GetColor() { return color; }
+		float2 GetInv_target_size() { return inv_target_size; }
+		float2 GetJitter_uv() { return jitter_uv; }
 		uint GetSelected_id() { return selected_id; }
+		Texture2D<float> GetScene_depth() { return ResourceDescriptorHeap[scene_depth]; }
 		Texture2D<uint> GetObject_ids() { return ResourceDescriptorHeap[object_ids]; }
 	};
 }
-using Editor::Countour;
+using Editor::MaskDepth;

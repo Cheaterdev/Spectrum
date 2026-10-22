@@ -182,6 +182,6 @@ namespace Environment
 	{
 		[Always = Read] TextureCube sky_cubemap;
 		[Always = UnorderedAccess | Static] [Size = 64] [Format = R11G11B10_FLOAT] [MipCount = 0] TextureCube sky_cubemap_filtered;
-		[Always = UnorderedAccess | Static] [Size = 64] [Format = R11G11B10_FLOAT] [MipCount = 0] TextureCube sky_cubemap_filtered_diffuse;
+		[Always = UnorderedAccess | Static] [Size = 16] [Format = R11G11B10_FLOAT] [MipCount = 0] TextureCube sky_cubemap_filtered_diffuse;
 	}
 }

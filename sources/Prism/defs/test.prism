@@ -176,10 +176,11 @@ namespace Frame
 		# Before the upscalers so BloomBuild reads the pre-upscale image (see
 		# bloom.prism). Must precede SMAA/FSR/DLSS in this list: they recreate
 		# ResultTexture, and a later entry would read the upscaled version.
-		# BloomProcess only reads BloomBuild's output, so on the async queue it
-		# can overlap DLSS.
+		# BloomProcess stays on the direct queue: overlapping it with DLSS (async)
+		# made the bloom/lens flare flicker in DLSS mode.
+
 		BloomBuild;
-		[Async]BloomProcess;
+		BloomProcess;
 
 		[Async]SMAA;
 		[Async]FSR;
@@ -191,7 +192,12 @@ namespace Frame
 		BloomComposite;
 		Tonemap;
 
+		# Editor overlays (selection outline, gizmo) go over the finished frame,
+		# so bloom/lens flare don't touch them and the upscaler's missing data
+		# for them doesn't matter (stenciler.prism).
 		stencil_renderer;
+		stencil_outline_temporal;
+		stencil_gizmo_resolve;
 
 		#Debug stuff
 

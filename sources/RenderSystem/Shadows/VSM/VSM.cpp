@@ -1714,6 +1714,7 @@ VSM::VSM() : VariableContext(L"VSM")
 		Slots::Shadows::VSM::SkyAmbientData ambient;
 		gbuffer.SetTable(ambient.GetGbuffer());
 		ambient.GetSky()    = data.sky_cubemap_filtered->textureCube;
+		ambient.GetSky_diffuse() = data.sky_cubemap_filtered_diffuse->textureCube;
 		ambient.GetResult() = data.ResultTexture->rwTexture2D;
 		compute.set(ambient);
 

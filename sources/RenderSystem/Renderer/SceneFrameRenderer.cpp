@@ -230,6 +230,10 @@ void SceneFrameRenderer::end_frame(Graph& graph)
 			if (sky && sky->resource)
 				frameInfo.GetSky() = *sky->get_handler<Handlers::TextureCube>();
 
+			auto sky_diffuse = graph.builder.get(FrameGraph::ResourceID::sky_cubemap_filtered_diffuse);
+			if (sky_diffuse && sky_diffuse->resource)
+				frameInfo.GetSky_diffuse() = *sky_diffuse->get_handler<Handlers::TextureCube>();
+
 			frameInfo.GetSunDir().xyz = skyinfo.sunDir;
 			frameInfo.GetTime() = { time.time, time.totalTime, 0, 0 };
 

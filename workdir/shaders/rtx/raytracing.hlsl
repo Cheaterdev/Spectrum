@@ -58,7 +58,7 @@ float4 get_voxel(float3 pos, float level)
 // volume's normalized [0,1]^3 space via voxel_info's min/size. Same
 // cone-marching shape as voxel_lighting.hlsl's own trace(), but samples
 // VoxelScreen's screen-facing voxel texture (voxels) and falls back to the
-// sky cubemap (tex_cube) once the cone has mostly resolved.
+// sky cubemap (tex_cube, mip 0) once the cone has mostly resolved.
 float4 trace(VoxelInfo voxel_info, float k, float bias, float3 origin, float3 dir, float angle, out float dist)
 {
 	dir = normalize(dir);
@@ -89,7 +89,9 @@ float4 trace(VoxelInfo voxel_info, float k, float bias, float3 origin, float3 di
 
 	dist = d;
 
-	float4 sky = CreateVoxelScreen().GetTex_cube().SampleLevel(linearSampler, dir, angle * 8);
+	// Mip 0, like MyMissShader: both callers pass a direction already sampled from the lobe, so a blurrier
+	// mip would blur the same lobe twice (and the cube's mips are spaced in roughness, not in cone angle).
+	float4 sky = CreateVoxelScreen().GetTex_cube().SampleLevel(linearSampler, dir, 0);
 	float skyWeight = saturate(1 - 8 * accum.w);
 	accum += sky * pow(skyWeight, 2);
 

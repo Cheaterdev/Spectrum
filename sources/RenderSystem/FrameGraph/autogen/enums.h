@@ -118,6 +118,8 @@ export
 		Library::SSSRR_BlurH SSSRR_BlurH;
 		Library::SSSRR_BlurV SSSRR_BlurV;
 		Library::stencil_renderer stencil_renderer;
+		Library::stencil_outline_temporal stencil_outline_temporal;
+		Library::stencil_gizmo_resolve stencil_gizmo_resolve;
 		Library::Tonemap Tonemap;
 		Library::UI_PreDraw UI_PreDraw;
 		Library::UI_Render UI_Render;

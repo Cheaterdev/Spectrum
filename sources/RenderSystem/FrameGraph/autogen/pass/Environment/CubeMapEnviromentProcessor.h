@@ -65,7 +65,7 @@ namespace Environment
 			static void create_always(Context& data, FrameGraph::TaskBuilder& builder)
 			{
 				builder.create(data.sky_cubemap_filtered, { ivec3(64, 64, 0), HAL::Format::R11G11B10_FLOAT, 1, 0 }, FrameGraph::ResourceFlags::UnorderedAccess | FrameGraph::ResourceFlags::Static);
-				builder.create(data.sky_cubemap_filtered_diffuse, { ivec3(64, 64, 0), HAL::Format::R11G11B10_FLOAT, 1, 0 }, FrameGraph::ResourceFlags::UnorderedAccess | FrameGraph::ResourceFlags::Static);
+				builder.create(data.sky_cubemap_filtered_diffuse, { ivec3(16, 16, 0), HAL::Format::R11G11B10_FLOAT, 1, 0 }, FrameGraph::ResourceFlags::UnorderedAccess | FrameGraph::ResourceFlags::Static);
 			}
 			// Which chain link each handler field resolved to, one named slot per
 			// field. Filled from a live frame's finished Context and applied on a
@@ -97,7 +97,7 @@ namespace Environment
 			{
 				builder.load(data.sky_cubemap, ResourceID::sky_cubemap, cache.sky_cubemap);
 				builder.create_versioned(data.sky_cubemap_filtered, cache.sky_cubemap_filtered, { ivec3(64, 64, 0), HAL::Format::R11G11B10_FLOAT, 1, 0 });
-				builder.create_versioned(data.sky_cubemap_filtered_diffuse, cache.sky_cubemap_filtered_diffuse, { ivec3(64, 64, 0), HAL::Format::R11G11B10_FLOAT, 1, 0 });
+				builder.create_versioned(data.sky_cubemap_filtered_diffuse, cache.sky_cubemap_filtered_diffuse, { ivec3(16, 16, 0), HAL::Format::R11G11B10_FLOAT, 1, 0 });
 			}
 
 			// Resources this pass touches, in declaration order, each paired with

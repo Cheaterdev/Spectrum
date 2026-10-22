@@ -26,7 +26,7 @@ export namespace Table
 				HLSL::Texture3D<float4> albedo;
 				HLSL::Texture3D<float4> normals;
 				HLSL::Texture3D<float4> lower;
-				HLSL::TextureCube<float4> tex_cube;
+				HLSL::TextureCube<float4> sky_diffuse;
 				HLSL::RWTexture3D<float4> output;
 				Table::Shadows::VSM::VSMShadowLookup vsm;
 				Table::GI::Voxel::VoxelTilingParams params;
@@ -34,7 +34,7 @@ export namespace Table
 				HLSL::Texture3D<float4>& GetAlbedo() { return albedo; }
 				HLSL::Texture3D<float4>& GetNormals() { return normals; }
 				HLSL::Texture3D<float4>& GetLower() { return lower; }
-				HLSL::TextureCube<float4>& GetTex_cube() { return tex_cube; }
+				HLSL::TextureCube<float4>& GetSky_diffuse() { return sky_diffuse; }
 				Table::Shadows::VSM::VSMShadowLookup& GetVsm() { return vsm; }
 				Table::GI::Voxel::VoxelTilingParams& GetParams() { return params; }
 				static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
@@ -44,7 +44,7 @@ export namespace Table
 					compiler.compile(albedo, "VoxelLighting::albedo");
 					compiler.compile(normals, "VoxelLighting::normals");
 					compiler.compile(lower, "VoxelLighting::lower");
-					compiler.compile(tex_cube, "VoxelLighting::tex_cube");
+					compiler.compile(sky_diffuse, "VoxelLighting::sky_diffuse");
 					compiler.compile(output, "VoxelLighting::output");
 					compiler.compile(vsm, "VoxelLighting::vsm");
 					compiler.compile(params, "VoxelLighting::params");
@@ -54,7 +54,7 @@ export namespace Table
 					uint albedo; // Texture3D<float4>
 					uint normals; // Texture3D<float4>
 					uint lower; // Texture3D<float4>
-					uint tex_cube; // TextureCube<float4>
+					uint sky_diffuse; // TextureCube<float4>
 					uint output; // RWTexture3D<float4>
 					Table::Shadows::VSM::VSMShadowLookup::Compiled vsm; // VSMShadowLookup
 					Table::GI::Voxel::VoxelTilingParams::Compiled params; // VoxelTilingParams

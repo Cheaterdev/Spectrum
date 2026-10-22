@@ -119,11 +119,14 @@ std::optional<SlotID> get_slot(std::string_view slot_name)
 	if(slot_name == "SSSTilesRead") return SlotID::SSSTilesRead;
 	if(slot_name == "SSSBlurParams") return SlotID::SSSBlurParams;
 	if(slot_name == "DispatchParameters") return SlotID::DispatchParameters;
-	if(slot_name == "Countour") return SlotID::Countour;
+	if(slot_name == "MaskDepth") return SlotID::MaskDepth;
 	if(slot_name == "DrawStencil") return SlotID::DrawStencil;
 	if(slot_name == "PickerBuffer") return SlotID::PickerBuffer;
 	if(slot_name == "Instance") return SlotID::Instance;
 	if(slot_name == "Color") return SlotID::Color;
+	if(slot_name == "GizmoResolveData") return SlotID::GizmoResolveData;
+	if(slot_name == "OutlineData") return SlotID::OutlineData;
+	if(slot_name == "OutlineCopy") return SlotID::OutlineCopy;
 	if(slot_name == "Test") return SlotID::Test;
 	if(slot_name == "TonemapData") return SlotID::TonemapData;
 	if(slot_name == "DisplayOutput") return SlotID::DisplayOutput;
@@ -408,7 +411,7 @@ uint get_table_index(SlotID id)
 
 	if(id == SlotID::DispatchParameters) return Slots::Shadows::Screen::DispatchParameters::Slot::ID;
 
-	if(id == SlotID::Countour) return Slots::Editor::Countour::Slot::ID;
+	if(id == SlotID::MaskDepth) return Slots::Editor::MaskDepth::Slot::ID;
 
 	if(id == SlotID::DrawStencil) return Slots::Editor::DrawStencil::Slot::ID;
 
@@ -417,6 +420,12 @@ uint get_table_index(SlotID id)
 	if(id == SlotID::Instance) return Slots::Editor::Instance::Slot::ID;
 
 	if(id == SlotID::Color) return Slots::Editor::Color::Slot::ID;
+
+	if(id == SlotID::GizmoResolveData) return Slots::Editor::GizmoResolveData::Slot::ID;
+
+	if(id == SlotID::OutlineData) return Slots::Editor::OutlineData::Slot::ID;
+
+	if(id == SlotID::OutlineCopy) return Slots::Editor::OutlineCopy::Slot::ID;
 
 	if(id == SlotID::Test) return Slots::Dev::Test::Slot::ID;
 
@@ -648,11 +657,14 @@ std::string get_slot_name(SlotID id)
 	if(id == SlotID::SSSTilesRead) return "SSSTilesRead";
 	if(id == SlotID::SSSBlurParams) return "SSSBlurParams";
 	if(id == SlotID::DispatchParameters) return "DispatchParameters";
-	if(id == SlotID::Countour) return "Countour";
+	if(id == SlotID::MaskDepth) return "MaskDepth";
 	if(id == SlotID::DrawStencil) return "DrawStencil";
 	if(id == SlotID::PickerBuffer) return "PickerBuffer";
 	if(id == SlotID::Instance) return "Instance";
 	if(id == SlotID::Color) return "Color";
+	if(id == SlotID::GizmoResolveData) return "GizmoResolveData";
+	if(id == SlotID::OutlineData) return "OutlineData";
+	if(id == SlotID::OutlineCopy) return "OutlineCopy";
 	if(id == SlotID::Test) return "Test";
 	if(id == SlotID::TonemapData) return "TonemapData";
 	if(id == SlotID::DisplayOutput) return "DisplayOutput";

@@ -413,10 +413,13 @@ namespace Environment
 		static inline const FrameGraph::PassRef sky_cubemap_filtered_diffuse_c0_pass_refs[] = {
 			{ PassID::CubeMapDownsample, 0 },
 			{ PassID::CubeMapEnviromentProcessor, 0 },
+			{ PassID::VSM_Unshadowed, 0 },
+			{ PassID::SkyAmbient, 0 },
 		};
 		static inline const FrameGraph::PrecompiledState sky_cubemap_filtered_diffuse_c0_states[] = {
 			{ false, { sky_cubemap_filtered_diffuse_c0_pass_refs + 0, 1 } },
 			{ true, { sky_cubemap_filtered_diffuse_c0_pass_refs + 1, 1 } },
+			{ false, { sky_cubemap_filtered_diffuse_c0_pass_refs + 2, 2 } },
 		};
 		static inline const FrameGraph::PassRef VSM_DepthAnalysisResult_c0_pass_refs[] = {
 			{ PassID::VSM_DepthAnalysis, 0 },

@@ -112,6 +112,8 @@ export import "../defines.h";
 #include "pass/Subsurface/SSSRR_BlurH.h"
 #include "pass/Subsurface/SSSRR_BlurV.h"
 #include "pass/Editor/stencil_renderer.h"
+#include "pass/Editor/stencil_outline_temporal.h"
+#include "pass/Editor/stencil_gizmo_resolve.h"
 #include "pass/Post/Tonemap.h"
 #include "pass/UI/UI_PreDraw.h"
 #include "pass/UI/UI_Render.h"
@@ -633,6 +635,14 @@ export namespace Passes
 	namespace Editor
 	{
 		using ::Passes::Editor::stencil_renderer;
+	}
+	namespace Editor
+	{
+		using ::Passes::Editor::stencil_outline_temporal;
+	}
+	namespace Editor
+	{
+		using ::Passes::Editor::stencil_gizmo_resolve;
 	}
 	namespace Post
 	{

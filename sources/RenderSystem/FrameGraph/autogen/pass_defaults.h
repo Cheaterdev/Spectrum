@@ -1484,6 +1484,28 @@ struct PassSetupDefault<Passes::Editor::stencil_renderer>
 
 
 template<>
+struct PassSetupDefault<Passes::Editor::stencil_outline_temporal>
+{
+	static constexpr bool enabled = true;
+
+	// Generated from this pass's [RunAlways]/[SetupCondition]/
+	// [RenderCondition]; defined in autogen/pass_defaults.cpp.
+	static FrameGraph::SetupResult setup(Passes::Editor::stencil_outline_temporal::Context& data, FrameGraph::TaskBuilder& builder);
+};
+
+
+template<>
+struct PassSetupDefault<Passes::Editor::stencil_gizmo_resolve>
+{
+	static constexpr bool enabled = true;
+
+	// Generated from this pass's [RunAlways]/[SetupCondition]/
+	// [RenderCondition]; defined in autogen/pass_defaults.cpp.
+	static FrameGraph::SetupResult setup(Passes::Editor::stencil_gizmo_resolve::Context& data, FrameGraph::TaskBuilder& builder);
+};
+
+
+template<>
 struct PassSetupDefault<Passes::Editor::AssetPreview>
 {
 	static constexpr bool enabled = true;

@@ -206,7 +206,7 @@ namespace
 
 	// The per-frame constants every pass reads (camera, sun, lookup textures, the baked sky). The sky only exists
 	// once the graph has allocated it, so a pass that needs it fills this in itself while it records.
-	Slots::Frame::FrameInfo make_frame_info(FrameGraph::Graph& graph, const HLSL::TextureCube<float4>* sky_cube = nullptr)
+	Slots::Frame::FrameInfo make_frame_info(FrameGraph::Graph& graph, const HLSL::TextureCube<float4>* sky_cube = nullptr, const HLSL::TextureCube<float4>* sky_diffuse_cube = nullptr)
 	{
 		auto& time = graph.get_context<TimeInfo>();
 		auto& skyinfo = graph.get_context<SkyInfo>();
@@ -214,6 +214,8 @@ namespace
 		Slots::Frame::FrameInfo frameInfo;
 		if (sky_cube)
 			frameInfo.GetSky() = *sky_cube;
+		if (sky_diffuse_cube)
+			frameInfo.GetSky_diffuse() = *sky_diffuse_cube;
 		frameInfo.GetSunDir().xyz = skyinfo.sunDir;
 		frameInfo.GetTime() = { time.time, time.totalTime, 0, 0 };
 		frameInfo.GetCamera() = cam.cam->camera_cb.current;
@@ -313,7 +315,8 @@ namespace
 			auto& compute = context.get_list()->get_compute();
 			// Not the generated slot: that one is built before the baked sky exists.
 			if (data.sky_cubemap_filtered)
-				compute.set(make_frame_info(*context.graph, &data.sky_cubemap_filtered->textureCube));
+				compute.set(make_frame_info(*context.graph, &data.sky_cubemap_filtered->textureCube,
+					data.sky_cubemap_filtered_diffuse ? &data.sky_cubemap_filtered_diffuse->textureCube : nullptr));
 			else
 				compute.set(make_frame_info(*context.graph));
 

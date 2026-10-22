@@ -147,49 +147,36 @@ void CS(uint3 DTid : SV_DispatchThreadID)
 #ifdef BUILD_FUNC_CS_Diffuse
 
 
-float3 PrefilterDiffuse(float Roughness, float3 R)
+// Cosine-weighted average radiance around N, which is the irradiance divided by pi: what a Lambertian
+// surface multiplies its albedo by. The samples are drawn with a cosine pdf, so every one weighs the same.
+float3 PrefilterDiffuse(float3 N)
 {
-	float3 N = R;
-	float3 V = R;
-	float3 PrefilteredColor = 0;
-	float TotalWeight = 0.0;
+	float3 Sum = 0;
 
 	float3x3 space = CalculateTangent(N);
 
-	const uint NumSamples = 32;
+	const uint NumSamples = 128;
 	// Solid angle covered by 1 pixel with 6 faces that are EnvMapSize X EnvMapSize
 	float fOmegaP = 4.0 * PI / (6.0 * EnvMapSize * EnvMapSize);
 
 	for (uint i = 0; i < NumSamples; i++)
 	{
 		float2 Xi = hammersley2d(i, NumSamples);
-		float3 H = ImportanceSampleGGX(Xi, Roughness, space);
-		float3 L = 2 * dot(V, H) * H - V;
-		float NoL = dot(N, L);
 
-		if (NoL > 0)
-		{
+		float cos_theta = sqrt(1.0 - Xi.y);
+		float sin_theta = sqrt(Xi.y);
+		float phi = 2.0 * PI * Xi.x;
 
-			// Vectors to evaluate pdf
-			float NdotH = saturate(dot(N, H));
-			float LdotH = saturate(dot(L, H));
+		float3 L = mul(float3(sin_theta * cos(phi), sin_theta * sin(phi), cos_theta), space);
 
-			// Probability Distribution Function
-			float fPdf = D_GGX_Divide_Pi(Roughness, NdotH)*NdotH / (4.0f * LdotH);
+		// Solid angle represented by this sample, to read the source mip that covers it.
+		float fPdf = cos_theta / PI;
+		float fOmegaS = 1.0 / (NumSamples * fPdf);
+		float fMipLevel = clamp(0.5 * log2(fOmegaS / fOmegaP) + 1, 0, 9);
 
-			// Solid angle represented by this sample
-			float fOmegaS = 1.0 / (NumSamples * fPdf);
-
-			// Original paper suggest biasing the mip to improve the results
-			//float fMipBias = 1.0f;
-			int fMipLevel = clamp(0.5 * log2(fOmegaS / fOmegaP) + 1, 0, 9);
-
-			PrefilteredColor += GetEnvSource().GetSourceTex().SampleLevel(linearSampler, L, fMipLevel).rgb * NoL;
-			TotalWeight += NoL;
-		}
+		Sum += GetEnvSource().GetSourceTex().SampleLevel(linearSampler, L, fMipLevel).rgb;
 	}
-	return  PrefilteredColor / TotalWeight;
-
+	return Sum / NumSamples;
 }
 
 
@@ -205,7 +192,7 @@ void CS_Diffuse(uint3 DTid : SV_DispatchThreadID)
 
 	float3 itc = face_direction(DTid.xy, DTid.z, dims.x);
 
-	GetEnvFilter().GetTargets(0)[DTid] = float4(PrefilterDiffuse(1, itc), 1);
+	GetEnvFilter().GetTargets(0)[DTid] = float4(PrefilterDiffuse(itc), 1);
 }
 
 #endif

@@ -1253,7 +1253,7 @@ namespace Shadows
 		}
 
 		# The baked sky as the indirect light of a pipeline with no GI (ray tracing, voxel GI): diffuse ambient from the
-		# blurred top mip of the specular-filtered cube, and the reflection a metal shows. Added onto the direct light
+		# cosine-convolved cube, and the reflection a metal shows (the specular-filtered cube). Added onto the direct light
 		# VSM_Combine / VSM_ShadowResolve (or VSM_Unshadowed's own sky term) wrote. Without it a metallic material
 		# (spec_to_metallic) has no diffuse term and renders black.
 		[Bind = DefaultLayout::Instance0]
@@ -1261,6 +1261,7 @@ namespace Shadows
 		{
 			GBuffer gbuffer;
 			TextureCube<float4> sky;
+			TextureCube<float4> sky_diffuse;
 			RWTexture2D<float4> result;
 		}
 
@@ -1302,6 +1303,7 @@ namespace Shadows
 			[Always = Read] Texture GBuffer_Speed;
 			[Always = None] Texture GBuffer_DepthMips;
 			[Always = Read] TextureCube sky_cubemap_filtered;
+			[Always = Read] TextureCube sky_cubemap_filtered_diffuse;
 			[Always = UnorderedAccess] Texture ResultTexture;
 		}
 
@@ -1323,6 +1325,7 @@ namespace Shadows
 			# the pass itself so it is ordered after the bake and live when render() records; absent when no
 			# pipeline bakes one.
 			[Always = Read] [Optional = exists(sky_cubemap_filtered)] TextureCube sky_cubemap_filtered;
+			[Always = Read] [Optional = exists(sky_cubemap_filtered_diffuse)] TextureCube sky_cubemap_filtered_diffuse;
 		}
 
 		namespace Dev
