@@ -42,7 +42,7 @@ export namespace GUI
                 Text::Layout layout;
                 vec2 text_size;
 
-                Text::Style style() const { return { font_size.get(), Text::Weight::Light }; }
+                Text::Style style() const { return { font_size.get(), Text::Weight::Light, Text::Family::Sans, font }; }
 
                 virtual void on_text_changed(const std::string& str);
                 virtual void on_size_changed(const float& str);
@@ -63,12 +63,17 @@ export namespace GUI
                 using ptr = s_ptr<label>;
                 using wptr = w_ptr<label>;
 
+                // Set before text: the label is measured with it as soon as the text is set.
+                Text::FontId font = 0;
                 property<std::string> text;
                 property<float> font_size;
                 float4 color;
 
                 // Drop shadow behind the text; off while the alpha is 0. The offset is in
                 // layout units, so it scales with the UI.
+                // Takes the UI's default text shadow while it has no shadow of its own; a label
+                // that must stay flat (text on a busy image, a hint) turns it off.
+                bool   default_shadow = true;
                 float4 shadow_color  = float4(0, 0, 0, 0);
                 vec2   shadow_offset = vec2(1, 1);
                 label();

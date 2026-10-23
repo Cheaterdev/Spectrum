@@ -4,6 +4,7 @@ import :Materials.MaterialX;
 import :Materials.PreviewSession;
 import :MeshAsset;
 import :BinaryAsset;
+import :FontAsset;
 import Core;
 
 import GUI;
@@ -100,6 +101,7 @@ namespace GUI
 				};
 				auto texture  = loaded_asset->get_ptr<TextureAsset>();
 				auto binary   = loaded_asset->get_ptr<BinaryAsset>();
+				auto font     = loaded_asset->get_ptr<FontAsset>();
 				auto mesh     = loaded_asset->get_ptr<MeshAsset>();
 				auto material = loaded_asset->get_ptr<MaterialAsset>();
 
@@ -110,7 +112,7 @@ namespace GUI
 					texture->compress();
 				};
 
-				if ((texture || binary || mesh || material) && on_open_preview)
+				if ((texture || binary || font || mesh || material) && on_open_preview)
 					menu->add_item("Preview")->on_click = [this](menu_list_element::ptr e)
 				{
 					if (on_open_preview) on_open_preview(asset->get_asset());
@@ -269,7 +271,7 @@ namespace GUI
 				menu->add_item("Import asset")->on_click = [this](menu_list_element::ptr e)
 				{
 
-					auto files = Application::get().file_open("Choose your destiny", "", "dds|*.dds|" "png|*.png|" "jpg|*.jpg|"  "obj|*.obj|" "fbx|*.fbx|" "glb|*.glb|" "gltf|*.gltf|" "blend|*.blend|" "mtlx|*.mtlx|"  "all|*.*|"   "|");
+					auto files = Application::get().file_open("Choose your destiny", "", "dds|*.dds|" "png|*.png|" "jpg|*.jpg|"  "obj|*.obj|" "fbx|*.fbx|" "glb|*.glb|" "gltf|*.gltf|" "blend|*.blend|" "mtlx|*.mtlx|" "ttf|*.ttf|" "otf|*.otf|"  "all|*.*|"   "|");
 
 					struct material_info
 					{
@@ -341,6 +343,12 @@ namespace GUI
 						if (to_lower(s.substr(s.find_last_of(".") + 1)) == "mtlx")
 						{
 							MaterialXLibrary::get().import_file(std::filesystem::path(s));
+							continue;
+						}
+
+						if (const auto dot = to_lower(s.substr(s.find_last_of(".") + 1)); dot == "ttf" || dot == "otf")
+						{
+							(new FontAsset(convert(s)))->try_register();
 							continue;
 						}
 

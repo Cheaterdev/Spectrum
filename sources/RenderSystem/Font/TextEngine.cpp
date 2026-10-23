@@ -16,40 +16,6 @@ namespace Text
         // handled by Skribidi adding another one instead.
         constexpr int32_t ATLAS_SIZE = 2048;
 
-        struct FontFile
-        {
-            const char* file;
-            uint8_t     family;
-        };
-
-        // Latin text and monospace come from the same bundled files (workdir/fonts, Apache-2.0
-        // Roboto / Droid Sans Mono) on every platform, so a glyph rasterizes identically and the
-        // golden images are shared. Segoe UI / Consolas are Windows-only and not redistributable.
-        constexpr const char* bundled_font_dir = "fonts/";
-        constexpr FontFile bundled_fonts[] = {
-            { "RobotoStatic-Regular.ttf", SKB_FONT_FAMILY_DEFAULT },
-            { "DroidSansMono.ttf",        SKB_FONT_FAMILY_MONOSPACE },
-        };
-
-        // Scripts and emoji the bundled fonts lack fall back to what the OS ships (searched after
-        // the bundled ones, so they never change how Latin text looks).
-#ifdef SPECTRUM_PLATFORM_ANDROID
-        constexpr const char* system_font_dir = "/system/fonts/";
-        constexpr FontFile system_fonts[] = {
-            { "NotoSansHebrew-Regular.ttf",            SKB_FONT_FAMILY_DEFAULT },
-            { "NotoSansHebrew-Bold.ttf",               SKB_FONT_FAMILY_DEFAULT },
-            { "NotoSansSymbols-Regular-Subsetted.ttf", SKB_FONT_FAMILY_DEFAULT },
-            { "NotoSansSymbols-Regular-Subsetted2.ttf", SKB_FONT_FAMILY_DEFAULT },
-            { "NotoColorEmoji.ttf",                    SKB_FONT_FAMILY_EMOJI },
-        };
-#else
-        constexpr FontFile system_fonts[] = {
-            { "segoeui.ttf",  SKB_FONT_FAMILY_DEFAULT },
-            { "seguisym.ttf", SKB_FONT_FAMILY_DEFAULT },
-            { "seguiemj.ttf", SKB_FONT_FAMILY_EMOJI },
-        };
-#endif
-
         skb_weight_t to_skb(Weight weight)
         {
             switch (weight)
@@ -60,10 +26,16 @@ namespace Text
             }
         }
 
-        uint8_t to_skb(Family family)
+        uint8_t to_skb(const Style& style)
         {
-            return family == Family::Mono ? SKB_FONT_FAMILY_MONOSPACE : SKB_FONT_FAMILY_DEFAULT;
+            if (style.font)
+                return style.font;
+
+            return style.family == Family::Mono ? SKB_FONT_FAMILY_MONOSPACE : SKB_FONT_FAMILY_DEFAULT;
         }
+
+        // Skribidi's own family ids stop at SKB_FONT_FAMILY_MATH; FontIds start past them.
+        constexpr uint8_t first_custom_family = 16;
 
         float4 unpack_rgba8(uint32_t c)
         {
@@ -196,6 +168,20 @@ namespace Text
         skb_layout_cache_t*    layouts    = nullptr;
         skb_temp_alloc_t*      temp       = nullptr;
 
+        std::map<Role, skb_font_handle_t>   role_fonts;
+        std::map<FontId, skb_font_handle_t> custom_fonts;
+
+        skb_font_handle_t add_font_data(std::string_view name, std::string_view data, uint8_t family)
+        {
+            auto* copy = new std::string(data);
+            const std::string name_z(name);
+
+            // HarfBuzz owns the copy through its blob and frees it with the font, also when the
+            // face fails to load.
+            return skb_font_collection_add_font_from_data(fonts, name_z.c_str(), copy->data(), copy->size(), copy,
+                [](void* context) { delete static_cast<std::string*>(context); }, family, nullptr);
+        }
+
         std::vector<AtlasTexture> textures;
         bool pending_upload = false;
 
@@ -205,10 +191,11 @@ namespace Text
         const skb_layout_t* get_layout(std::string_view utf8, Style style, std::span<const Link> links = {})
         {
             PROFILE(L"text_layout");
+            ASSERT(role_fonts.contains(Role::Sans) && "no default font: set one with Engine::set_font from a FontAsset");
             const skb_attribute_t attributes[] = {
                 skb_attribute_make_font_size(style.size),
                 skb_attribute_make_font_weight(to_skb(style.weight)),
-                skb_attribute_make_font_family(to_skb(style.family)),
+                skb_attribute_make_font_family(to_skb(style)),
             };
 
             skb_attribute_set_t attribute_set = {};
@@ -226,7 +213,7 @@ namespace Text
             const skb_attribute_t link_attributes[] = {
                 skb_attribute_make_font_size(style.size),
                 skb_attribute_make_font_weight(to_skb(style.weight)),
-                skb_attribute_make_font_family(to_skb(style.family)),
+                skb_attribute_make_font_family(to_skb(style)),
                 skb_attribute_make_paint_color(SKB_PAINT_TEXT, SKB_PAINT_STATE_DEFAULT, skb_color_t{ 90, 160, 255, 255 }),
                 skb_attribute_make_paint_color(SKB_PAINT_TEXT, SKB_PAINT_STATE_HOVER, skb_color_t{ 170, 210, 255, 255 }),
                 skb_attribute_make_decoration(SKB_DECORATION_LINE_UNDER, SKB_DECORATION_STYLE_SOLID, 1.0f, 0.0f, SKB_PAINT_TEXT),
@@ -437,26 +424,6 @@ namespace Text
     {
         impl->fonts = skb_font_collection_create();
 
-#ifdef SPECTRUM_PLATFORM_ANDROID
-        const std::string font_dir = system_font_dir;
-#else
-        char windows_dir[MAX_PATH] = {};
-        GetWindowsDirectoryA(windows_dir, MAX_PATH);
-        const std::string font_dir = std::string(windows_dir) + "\\Fonts\\";
-#endif
-
-        const auto add_fonts = [&](const std::string& dir, const auto& files)
-        {
-            for (auto& f : files)
-            {
-                const std::string path = dir + f.file;
-                if (!skb_font_collection_add_font(impl->fonts, path.c_str(), f.family, nullptr))
-                    Log::get() << Log::LEVEL_WARNING << "Text::Engine: failed to load font " << path << Log::endl;
-            }
-        };
-        add_fonts(bundled_font_dir, bundled_fonts);
-        add_fonts(font_dir, system_fonts);
-
         impl->icons = skb_icon_collection_create();
         add_builtin_icons(impl->icons);
 
@@ -481,6 +448,73 @@ namespace Text
         skb_rasterizer_destroy(impl->rasterizer);
         skb_icon_collection_destroy(impl->icons);
         skb_font_collection_destroy(impl->fonts);
+    }
+
+    FontId Engine::add_font(std::string_view name, std::string_view data)
+    {
+        std::lock_guard<std::mutex> lock(impl->m);
+
+        FontId id = first_custom_family;
+        while (id && impl->custom_fonts.contains(id))
+            ++id;   // wraps to 0 once all 240 ids are taken
+
+        if (!id)
+            return 0;
+
+        const auto handle = impl->add_font_data(name, data, id);
+        if (!handle)
+            return 0;
+
+        impl->custom_fonts[id] = handle;
+        return id;
+    }
+
+    void Engine::remove_font(FontId font)
+    {
+        std::lock_guard<std::mutex> lock(impl->m);
+
+        const auto it = impl->custom_fonts.find(font);
+        if (it == impl->custom_fonts.end())
+            return;
+
+        // Cached layouts keep the handle of the font they were shaped with.
+        skb_layout_cache_destroy(impl->layouts);
+        impl->layouts = skb_layout_cache_create();
+
+        skb_font_collection_remove_font(impl->fonts, it->second);
+        impl->custom_fonts.erase(it);
+    }
+
+    bool Engine::has_glyph(FontId font, char32_t codepoint)
+    {
+        std::lock_guard<std::mutex> lock(impl->m);
+
+        const auto it = impl->custom_fonts.find(font);
+        return it != impl->custom_fonts.end() && skb_font_collection_font_has_codepoint(impl->fonts, it->second, codepoint);
+    }
+
+    void Engine::set_font(Role role, std::string_view name, std::string_view data)
+    {
+        std::lock_guard<std::mutex> lock(impl->m);
+
+        // Cached layouts keep the handle of the font they were shaped with.
+        skb_layout_cache_destroy(impl->layouts);
+        impl->layouts = skb_layout_cache_create();
+
+        if (const auto old = impl->role_fonts.find(role); old != impl->role_fonts.end())
+        {
+            skb_font_collection_remove_font(impl->fonts, old->second);
+            impl->role_fonts.erase(old);
+        }
+
+        const uint8_t family = role == Role::Mono  ? SKB_FONT_FAMILY_MONOSPACE
+                             : role == Role::Emoji ? SKB_FONT_FAMILY_EMOJI
+                                                   : SKB_FONT_FAMILY_DEFAULT;
+
+        if (const auto handle = impl->add_font_data(name, data, family))
+            impl->role_fonts[role] = handle;
+        else
+            Log::get() << Log::LEVEL_WARNING << "Text::Engine: failed to load font " << std::string(name) << Log::endl;
     }
 
     void Engine::build_icon(std::string_view name, vec2 size, Layout& out)
@@ -634,7 +668,7 @@ namespace Text
         impl->pending_upload = false;
     }
 
-    void Engine::draw(HAL::CommandList::ptr& list, const Layout& layout, vec2 pos, float4 color, sizer clip, vec2 window_size, bool raw_output)
+    void Engine::draw(HAL::CommandList::ptr& list, const Layout& layout, vec2 pos, float4 color, sizer clip, vec2 window_size, bool raw_output, const Shadow& shadow)
     {
         if (layout.quads.empty()) return;
 
@@ -711,6 +745,11 @@ namespace Text
             slot.GetQuads()    = view;
             slot.GetTextures() = atlas_handles;
             slot.GetRaw_output() = raw_output ? 1 : 0;
+
+            // The offset in NDC (window pixels to clip space; y runs up there).
+            slot.GetShadow_color()  = shadow.color;
+            slot.GetShadow_offset() = float2(2.0f * shadow.offset.x / window_size.x, -2.0f * shadow.offset.y / window_size.y);
+            slot.GetShadow_blur()   = float2(2.0f * shadow.blur / window_size.x, 2.0f * shadow.blur / window_size.y);
             graphics.set(slot);
 
             graphics.draw(UINT(gpu_quads.size() * 6), 0);
@@ -1085,7 +1124,7 @@ namespace Text
         impl->style     = style;
         impl->paragraph_attributes[0] = skb_attribute_make_font_size(style.size);
         impl->paragraph_attributes[1] = skb_attribute_make_font_weight(to_skb(style.weight));
-        impl->paragraph_attributes[2] = skb_attribute_make_font_family(to_skb(style.family));
+        impl->paragraph_attributes[2] = skb_attribute_make_font_family(to_skb(style));
 
         // Tab stops every four spaces of this style (Skribidi draws tabs only
         // with a positive increment). Falls back to a monospace-ish estimate if

@@ -2,10 +2,23 @@ module Graphics:EngineAssets;
 import :Asset;
 import :MeshAsset;
 import :BinaryAsset;
+import :FontAsset;
 import :TextureAsset;
 
 namespace EngineAssets
 {
+	EngineAsset<FontAsset> default_font(L"default_font", [] {
+		return new FontAsset(to_path(L"fonts\\open-sans.regular.ttf").wstring());
+		});
+
+	EngineAsset<FontAsset> mono_font(L"mono_font", [] {
+		return new FontAsset(to_path(L"fonts\\DroidSansMono.ttf").wstring());
+		});
+
+	EngineAsset<FontAsset> emoji_font(L"emoji_font", [] {
+		return new FontAsset(to_path(L"fonts\\NotoColorEmoji-Regular.ttf").wstring());
+		});
+
 	EngineAsset<MeshAsset> material_tester(L"material_tester", [] {
 		return (new MeshAsset(to_path(L"resources\\mitsuba\\mitsuba-sphere.obj").wstring()));
 		});

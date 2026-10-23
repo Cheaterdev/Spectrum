@@ -15,9 +15,15 @@ namespace UI
 		struct GlyphRender
 		{
 			uint raw_output; // uint
+			float4 shadow_color; // float4
+			float2 shadow_offset; // float2
+			float2 shadow_blur; // float2
 			uint quads; // StructuredBuffer<GlyphQuad>
 			uint textures; // Texture2D<float4>
 			uint GetRaw_output() { return raw_output; }
+			float4 GetShadow_color() { return shadow_color; }
+			float2 GetShadow_offset() { return shadow_offset; }
+			float2 GetShadow_blur() { return shadow_blur; }
 			StructuredBuffer<GlyphQuad> GetQuads() { return ResourceDescriptorHeap[quads]; }
 			Texture2D<float4> GetTextures(int i)
 			{

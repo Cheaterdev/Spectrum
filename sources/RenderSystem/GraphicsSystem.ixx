@@ -5,6 +5,8 @@ import :RTX;
 import :AssetRenderer;
 import :TextureAsset;
 import :Asset;
+import :EngineAssets;
+import :FontAsset;
 import :Materials.UniversalMaterial;
 import :MeshAsset;
 import GUI;
@@ -36,6 +38,17 @@ public:
         // pass's responsibility (brdf, for one, is used by both PSSM and the
         // AssetRenderer).
         preload_engine_assets();
+
+        {
+            const auto set_font = [](Text::Engine::Role role, auto& engine_asset)
+            {
+                if (auto font = engine_asset.get_asset())
+                    Text::Engine::get().set_font(role, convert(font->get_name()), font->get_data());
+            };
+            set_font(Text::Engine::Role::Sans,  EngineAssets::default_font);
+            set_font(Text::Engine::Role::Mono,  EngineAssets::mono_font);
+            set_font(Text::Engine::Role::Emoji, EngineAssets::emoji_font);
+        }
 
         return std::make_shared<GraphicsSystem>();
     }

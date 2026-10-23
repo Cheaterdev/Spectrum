@@ -979,6 +979,14 @@ namespace GUI
             Variable<float> fade_out_duration = { 0.10f, "Fade-out duration (s)", effects_context.get(), 0.02f, 1.5f };
             Variable<bool>  window_animations = { true, "Window open/close fades", effects_context.get() };
 
+            // A soft shadow under every label's text (one extra text draw per label): the
+            // default for labels that have no shadow of their own.
+            Variable<bool>  text_shadow_enabled  = { true, "Text shadow", effects_context.get() };
+            Variable<float> text_shadow_strength = { 0.45f, "Text shadow strength", effects_context.get(), 0.0f, 1.0f };
+            Variable<float> text_shadow_offset   = { 1.0f, "Text shadow offset (px)", effects_context.get(), 0.0f, 4.0f };
+            // How far the shadow's five-tap blur reaches; 0 is a crisp copy of the text.
+            Variable<float> text_shadow_softness = { 1.0f, "Text shadow softness (px)", effects_context.get(), 0.0f, 3.0f };
+
             // Hands each backdrop element its own snapshot slot for the frame:
             // two elements recorded into different command lists must not
             // share a texture. Reset when the draw list is collected.

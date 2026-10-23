@@ -28,6 +28,14 @@ namespace UI
 			# Non-zero: write the sRGB-encoded color as is (off-screen targets such
 			# as asset previews); zero: through ui_output() onto the scRGB swapchain.
 			uint raw_output;
+
+			# A drop shadow drawn in the same pass: the glyph's coverage again, shifted by
+			# shadow_offset (NDC) and tinted shadow_color (straight alpha), under the glyph.
+			# The quad grows to hold it. Alpha 0: none.
+			float4 shadow_color;
+			float2 shadow_offset;
+			# The shadow's softness: a five-tap blur this far (NDC, per axis) out; 0 = crisp.
+			float2 shadow_blur;
 		}
 
 		GraphicsPSO GlyphRender

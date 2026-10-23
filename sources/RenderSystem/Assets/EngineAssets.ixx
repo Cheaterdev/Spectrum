@@ -2,10 +2,15 @@ export module Graphics:EngineAssets;
 import :Asset;
 import :MeshAsset;
 import :BinaryAsset;
+import :FontAsset;
 import :TextureAsset;
 
 export namespace EngineAssets
 {
+	// The fonts of Text::Engine's roles; GraphicsSystem hands them to Text::Engine::set_font.
+	extern EngineAsset<FontAsset> default_font;
+	extern EngineAsset<FontAsset> mono_font;
+	extern EngineAsset<FontAsset> emoji_font;
 	extern EngineAsset<MeshAsset> material_tester;
 	extern EngineAsset<MeshAsset> axis;
 	extern EngineAsset<MeshAsset> plane;

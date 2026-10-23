@@ -13,6 +13,7 @@ export import :Occluder;
 
 export import :Asset;
 export import :BinaryAsset;
+export import :FontAsset;
 export import :TextureAsset;
 export import :MaterialAsset;
 export import :MeshAsset;

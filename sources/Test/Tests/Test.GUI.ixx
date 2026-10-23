@@ -2902,6 +2902,63 @@ export namespace Test
 		ASSERT_TRUE(home->get_scroll() == 0.0f);
 	}
 
+	// Every label gets a soft shadow by default (UI Effects > Text shadow): white text on a mid
+	// grey background leaves darker-than-background pixels only when the shadow is on; a label
+	// can opt out, and one with its own shadow colour keeps that.
+	TEST(Core.HAL, GUILabel_DefaultTextShadow)
+	{
+		THREAD_SCOPE(GUI);
+		constexpr uint W = 200, H = 80;
+
+		auto ui_owner = std::make_shared<GUI::user_interface>();
+		auto& ui = *ui_owner;
+		ui.size = vec2((float)W, (float)H);
+
+		auto background = std::make_shared<GUI::Elements::colored_rect>();
+		background->color   = float4(0.5f, 0.5f, 0.5f, 1.0f);
+		background->docking = GUI::dock::FILL;
+		ui.add_child(background);
+
+		auto label = std::make_shared<GUI::Elements::label>();
+		label->font_size = 32;
+		label->text = "Shadow";
+		label->docking = GUI::dock::NONE;
+		label->pos = vec2(20.0f, 20.0f);
+		ui.add_child(label);
+
+		// Pixels clearly darker than the background, over the label's box and a margin below/right of it.
+		auto dark_pixels = [&]
+		{
+			const auto img = render_ui(ui, W, H);
+			int count = 0;
+			for (uint y = 15; y < 70; y++)
+				for (uint x = 15; x < 190; x++)
+					if (img.at(x, y, 0) < 0.42f)
+						count++;
+			return count;
+		};
+
+		ui.text_shadow_enabled = false;
+		ASSERT_TRUE(dark_pixels() == 0);                                     // white text only
+
+		ui.text_shadow_enabled = true;
+		ASSERT_TRUE(dark_pixels() > 20);                                     // the shadow shows
+
+		label->default_shadow = false;                                       // opted out
+		ASSERT_TRUE(dark_pixels() == 0);
+
+		label->default_shadow = true;
+		const int soft_count = dark_pixels();
+		ui.text_shadow_softness = 0.0f;                                      // crisp: more pixels at full strength, fewer spread
+		ASSERT_TRUE(dark_pixels() > 20);
+		ui.text_shadow_softness = 3.0f;                                      // very soft: reaches further out
+		ASSERT_TRUE(dark_pixels() != soft_count);
+		ui.text_shadow_softness = 1.0f;
+
+		ui.text_shadow_strength = 0.0f;                                      // the setting can fade it away
+		ASSERT_TRUE(dark_pixels() == 0);
+	}
+
 	// Shortcut texts: modifiers and a key joined by '+', any case, written back in one form.
 	TEST(Core.HAL, GUICommands_KeyChordParsing)
 	{

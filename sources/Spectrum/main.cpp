@@ -603,6 +603,7 @@ struct AssetPreviewContext
 // Window content that previews an asset. Dispatches by type:
 //   TextureAsset -> universal resource_preview (GPU), self-driven via a pass.
 //   BinaryAsset  -> MultiLineLabel (one label per line) in a scroll container.
+//   FontAsset    -> FontAsset::samples() drawn in the font, one label each.
 //   MeshAsset    -> a live render in AssetRenderer's OWN framegraph (a second
 //                   main pipeline can't be injected into the shared UI graph),
 //                   re-rendered every frame from think() into a target texture.
@@ -610,6 +611,7 @@ class asset_preview_content : public GUI::base, public FrameGraph::GraphGenerato
 {
 	resource_preview::ptr              m_preview; // textures only
 	std::shared_ptr<TextureAsset>      m_asset;   // keeps the texture alive
+	std::shared_ptr<FontAsset>         m_font;    // keeps the font alive
 	std::shared_ptr<HAL::ResourceView> m_view;
 
 	std::shared_ptr<MeshAssetInstance>  m_mesh_instance;
@@ -646,6 +648,24 @@ public:
 			text->docking = GUI::dock::FILL;
 			text->text    = bin->get_data();
 			add_child(text);
+		}
+		else if (auto font = asset ? asset->get_ptr<FontAsset>() : nullptr)
+		{
+			m_font = font;   // its font is registered with the text engine only while the asset lives
+
+			auto samples     = std::make_shared<GUI::Elements::scroll_container>();
+			samples->docking = GUI::dock::FILL;
+			add_child(samples);
+
+			for (auto& sample : font->samples())
+			{
+				auto line         = std::make_shared<GUI::Elements::label>();
+				line->font        = font->get_font();
+				line->font_size   = sample.size;
+				line->text        = sample.text;
+				line->docking     = GUI::dock::TOP;
+				samples->add_child(line);
+			}
 		}
 		else if (auto mesh = asset ? asset->get_ptr<MeshAsset>() : nullptr)
 		{

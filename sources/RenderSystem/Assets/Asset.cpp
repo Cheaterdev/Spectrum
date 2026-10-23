@@ -15,6 +15,7 @@ CEREAL_FORCE_DYNAMIC_INIT(TextureAsset);
 CEREAL_FORCE_DYNAMIC_INIT(MeshAsset);
 CEREAL_FORCE_DYNAMIC_INIT(MaterialAsset);
 CEREAL_FORCE_DYNAMIC_INIT(BinaryAsset);
+CEREAL_FORCE_DYNAMIC_INIT(FontAsset);
 
 AssetManager::AssetManager()
 {
@@ -504,6 +505,9 @@ AssetStorage::AssetStorage(Asset::ptr _asset) : asset(_asset)
 
 	if (header->type == Asset_Type::TILED_TEXTURE)
 		s_type = L"TiledTextures";
+
+	if (header->type == Asset_Type::FONT)
+		s_type = L"Fonts";
 
 	file_path = to_path(L"assets") / to_path(s_type) / to_path(header->name + L"_" + convert(to_string(header->id)) + L".asset");
 	folder = AssetManager::get().get_folders()->get_folder(file_path).get();
