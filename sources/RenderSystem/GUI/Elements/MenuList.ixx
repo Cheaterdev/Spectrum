@@ -32,6 +32,8 @@ export namespace GUI
 
                 virtual bool on_mouse_action(mouse_action action, mouse_button button, vec2 pos) override;
                 std::shared_ptr<menu_list> get_menu();
+                // Whether a submenu was ever created (get_menu() creates one on demand).
+                bool has_menu() const { return menu != nullptr; }
 
                 virtual void close_menus();
 
@@ -71,6 +73,9 @@ export namespace GUI
                 //	std::function<void(void)> on_click;
                 //		bool draw_background;
                 bool draw_icon = false;
+
+                // The items in the order they were added.
+                const std::vector<menu_list_element::ptr>& get_items() const { return elements; }
 
 
         	void make_fixed_width();

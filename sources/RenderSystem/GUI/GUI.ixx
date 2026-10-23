@@ -26,6 +26,7 @@ export import :ListBox;
 export import :MenuList;
 export import :OptionBox;
 export import :ProgressBar;
+export import :Ribbon;
 export import :Resizable;
 export import :Resizer;
 export import :ScrollBar;

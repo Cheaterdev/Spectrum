@@ -118,6 +118,8 @@ namespace Text
         {
             { IconBuilder i(icons, "chevron_right"); i.polygon({ {5.5f, 3}, {10.5f, 8}, {5.5f, 13}, {4, 11.5f}, {7.5f, 8}, {4, 4.5f} }); }
             { IconBuilder i(icons, "chevron_down");  i.polygon({ {3, 5.5f}, {4.5f, 4}, {8, 7.5f}, {11.5f, 4}, {13, 5.5f}, {8, 10.5f} }); }
+            // chevron_right turned a quarter the other way: the ribbon's collapse arrow.
+            { IconBuilder i(icons, "chevron_up"); i.polygon({ {3, 10.5f}, {8, 5.5f}, {13, 10.5f}, {11.5f, 12}, {8, 8.5f}, {4.5f, 12} }); }
             {
                 // chevron_right turned clockwise about the grid centre in 10-degree
                 // steps, chevron_0 (right) to chevron_90 (down): a tree arrow that

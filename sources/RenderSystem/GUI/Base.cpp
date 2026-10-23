@@ -14,6 +14,21 @@ import TextEngine;
 
 
 using namespace FrameGraph;
+
+// TEMP-POPUPLOG: scratch logging for "popups don't close on an outside click".
+// Appends to popup_log.temp (gitignored) in the working directory; remove with the
+// other TEMP-POPUPLOG marks (Base.cpp, MenuList.cpp, Ribbon.cpp) once it is solved.
+namespace
+{
+    void popup_log(const std::string& line)
+    {
+        static std::mutex log_mutex;
+        std::lock_guard<std::mutex> guard(log_mutex);
+        std::ofstream out("popup_log.temp", std::ios::app);
+        out << line << "\n";
+    }
+}
+
 static const LPCTSTR cursors[] =
 {
     IDC_ARROW,
@@ -1895,7 +1910,10 @@ namespace GUI
             if (action == mouse_action::DOWN)
             {
                 if (press_interpret[i_button])
+                {
+                    popup_log("DOWN ignored: a press was already interpreted this frame");   // TEMP-POPUPLOG
                     return;
+                }
 
                 press_interpret[i_button] = true;
             }
@@ -1936,8 +1954,25 @@ namespace GUI
             if (m_focus)
                 controls.push_back(m_focus);
 
+            if (action == mouse_action::DOWN)   // TEMP-POPUPLOG
+            {
+                std::string line = "DOWN at (" + std::to_string(int(pos.x)) + "," + std::to_string(int(pos.y)) + ") controls=" + std::to_string(controls.size()) + " [";
+                for (auto& c : controls)
+                    line += std::string(typeid(*c).name()) + (c->is_menu_component() ? "(menu) " : " ");
+                popup_log(line + "] ui children=" + std::to_string(childs.size()));
+            }
+
             if (controls.size() == 0)
+            {
+                // A press on nothing clickable still dismisses open menus and popups.
+                if (action == mouse_action::DOWN)
+                {
+                    popup_log("  no controls: close_menus()");   // TEMP-POPUPLOG
+                    close_menus();
+                }
+
                 return;
+            }
 
             if (action == mouse_action::DOWN)
             {
@@ -1950,17 +1985,28 @@ namespace GUI
                     base::ptr control = controls[i];
                     pressed[i_button].push_back(control);
 
-                    if (!control->on_mouse_action(action, button, pos))
+                    const bool took_it = control->on_mouse_action(action, button, pos);
+                    popup_log("  " + std::string(typeid(*control).name()) + " on_mouse_action -> " + (took_it ? "handled" : "not handled"));   // TEMP-POPUPLOG
+
+                    if (!took_it)
                         continue;
 
                     if (!control->is_menu_component())
-                         close_menus();
+                    {
+                        popup_log("  not a menu component: close_menus()");   // TEMP-POPUPLOG
+                        close_menus();
+                    }
+                    else
+                        popup_log("  menu component: menus stay");   // TEMP-POPUPLOG
                     control->on_touch();
                     cursor = control->update_cursor();
                     drag.mouse_action_event(control, action, button, pos);
                     handled = control;
                     break;
                 }
+
+                if (!handled)
+                    popup_log("  nobody handled the press (no close)");   // TEMP-POPUPLOG
 
                 // A press anywhere else takes keyboard focus away: only fields
                 // call focus(), so clicking a button or empty space used to

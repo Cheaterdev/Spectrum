@@ -1783,6 +1783,86 @@ public:
 					// Text-stack playground: an unfiltered edit_text (full Unicode, undo,
 					// word selection) plus a label mirroring what's typed into it.
 					auto test = menu->add_item("Test")->get_menu();
+
+					// Ribbon demo: tabs of captioned groups; large, small and icon buttons,
+					// toggles, a menu button, a disabled one, and a contextual tab. Icons are
+					// emoji (u8 escapes, so the source's encoding doesn't matter).
+					test->add_item("Ribbon demo")->on_click = [this, shown = GUI::Elements::ribbon::ptr()](GUI::Elements::menu_list_element::ptr) mutable
+						{
+							using namespace GUI::Elements;
+
+							if (shown)
+							{
+								shown->remove_from_parent();
+								shown.reset();
+								return;
+							}
+
+							struct demo_state
+							{
+								bool effects = true;
+								bool can_undo = false;
+								bool grid = true;
+							};
+							auto state = std::make_shared<demo_state>();
+							auto emoji = [](const char8_t* s) { return std::string(reinterpret_cast<const char*>(s)); };
+							auto say = [](const char* text) { return [text] { toast_manager::show(text, toast_kind::info, 2.0f); }; };
+
+							auto rb = std::make_shared<ribbon>();
+
+							auto home = rb->add_tab("Home");
+							auto files = home->add_group("File");
+							files->add_large(emoji(u8"\U0001F4C4"), "New", say("New"));
+							files->add_large(emoji(u8"\U0001F4C2"), "Open", say("Open"));
+							files->add_small(emoji(u8"\U0001F4BE"), "Save", say("Save"));
+							files->add_small(emoji(u8"\U0001F4E4"), "Export", say("Export"));
+							files->add_small(emoji(u8"\U0001F5A8"), "Print", say("Print"));
+
+							auto edit = home->add_group("Edit");
+							auto undo = edit->add_large(emoji(u8"↩"), "Undo", [state] { state->can_undo = false; });
+							undo->is_enabled = [state] { return state->can_undo; };
+							edit->add_small(emoji(u8"✂"), "Cut", [state] { state->can_undo = true; });
+							edit->add_small(emoji(u8"\U0001F4D1"), "Copy", [state] { state->can_undo = true; });
+							edit->add_small(emoji(u8"\U0001F4CB"), "Paste", [state] { state->can_undo = true; });
+
+							auto add_menu = std::make_shared<menu_list>();
+							add_menu->add_item("Mesh");
+							add_menu->add_item("Material");
+							add_menu->add_item("Sound");
+							auto tools = home->add_group("Tools");
+							auto fx = tools->add_large(emoji(u8"✨"), "Effects", [state] { state->effects = !state->effects; });
+							fx->is_checked = [state] { return state->effects; };
+							fx->tooltip = "Toggle the demo effect";
+							tools->add_large(emoji(u8"\U0001F3A8"), "Add", {}, add_menu);
+
+							auto view = rb->add_tab("View");
+							auto show = view->add_group("Show");
+							auto grid = show->add_small(emoji(u8"▦"), "Grid", [state] { state->grid = !state->grid; });
+							grid->is_checked = [state] { return state->grid; };
+							show->add_small(emoji(u8"\U0001F4CA"), "Stats", say("Stats"));
+							auto layout = view->add_group("Layout");
+							auto rb_weak = std::weak_ptr<ribbon>(rb);
+							layout->add_large(emoji(u8"\U0001F446"), "Touch mode", [rb_weak]
+								{
+									if (auto r = rb_weak.lock())
+										r->set_touch_mode(!r->is_touch_mode());
+								});
+							layout->add_large(emoji(u8"\U0001F3F7"), "Object tab", [rb_weak]
+								{
+									if (auto r = rb_weak.lock())
+										r->set_tab_visible(2, !r->is_tab_visible(2));
+								});
+
+							auto object = rb->add_tab("Object", true);
+							auto transform = object->add_group("Transform");
+							transform->add_large(emoji(u8"↔"), "Move", say("Move"));
+							transform->add_large(emoji(u8"\U0001F504"), "Rotate", say("Rotate"));
+							transform->add_large(emoji(u8"\U0001F50D"), "Scale", say("Scale"));
+							rb->set_tab_visible(2, false);
+
+							add_child(rb);
+							shown = rb;
+						};
 					test->add_item("Editor")->on_click = [this](GUI::Elements::menu_list_element::ptr elem)
 						{
 							GUI::base::ptr page(new GUI::base());
@@ -2342,7 +2422,47 @@ public:
 							open_code_editor(std::move(file), line, column);
 						};
 
-					add_child(menu);
+					// The ribbon replaces the menu strip. The menus above stay as the list
+					// of commands (each item's on_click is what it does); the ribbon shows
+					// them as tabs of captioned groups. The strip itself is not added. The
+					// old "Help" entry did nothing, so it has no tab.
+					{
+						using namespace GUI::Elements;
+
+						auto emoji = [](const char8_t* s) { return std::string(reinterpret_cast<const char*>(s)); };
+						auto find = [](menu_list::ptr menu_to_search, const char* text) -> menu_list_element::ptr
+							{
+								for (auto& item : menu_to_search->get_items())
+									if (item->text == text)
+										return item;
+								return nullptr;
+							};
+
+						auto rb = std::make_shared<ribbon>();
+
+						auto file_tab = rb->add_tab("File");
+						auto scene_group = file_tab->add_group("Scene");
+						scene_group->add_menu_item(find(file, "New"), emoji(u8"\U0001F4C4"));
+						scene_group->add_menu_item(find(file, "Open"), emoji(u8"\U0001F4C2"));
+						scene_group->add_menu_item(find(file, "Save"), emoji(u8"\U0001F4BE"));
+						file_tab->add_group("Import")->add_menu_item(find(file, "Import MaterialX..."), emoji(u8"\U0001F4E5"));
+						file_tab->add_group("Application")->add_menu_item(find(file, "Quit"), emoji(u8"\U0001F6AA"));
+
+						auto edit_tab = rb->add_tab("Edit");
+						edit_tab->add_group("Debug")->add_menu_item(find(edit, "Debug Graph"), emoji(u8"\U0001F41E"));
+						edit_tab->add_group("Create")->add_menu_item(find(edit, "Add smth"), emoji(u8"➕"));
+
+						auto test_tab = rb->add_tab("Test");
+						auto editors = test_tab->add_group("Editors");
+						editors->add_menu_item(find(test, "Editor"), emoji(u8"✏"));
+						editors->add_menu_item(find(test, "Code editor"), emoji(u8"\U0001F4BB"));
+						auto demos = test_tab->add_group("Demos");
+						demos->add_menu_item(find(test, "Widgets"), emoji(u8"\U0001F9F0"));
+						demos->add_menu_item(find(test, "Effects"), emoji(u8"✨"));
+						demos->add_menu_item(find(test, "Ribbon demo"), emoji(u8"\U0001F39B"));
+
+						add_child(rb);
+					}
 
 					// Shows an element's `tooltip` after a short hover (e.g. the
 					// code editor's compile errors).
