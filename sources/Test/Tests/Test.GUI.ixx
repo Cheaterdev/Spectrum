@@ -2927,13 +2927,15 @@ export namespace Test
 		ui.add_child(label);
 
 		// Pixels clearly darker than the background, over the label's box and a margin below/right of it.
+		// Relative to the background as it reads back (the target may not hold the colour as written).
 		auto dark_pixels = [&]
 		{
 			const auto img = render_ui(ui, W, H);
+			const float background_value = img.at(2, 2, 0);
 			int count = 0;
 			for (uint y = 15; y < 70; y++)
 				for (uint x = 15; x < 190; x++)
-					if (img.at(x, y, 0) < 0.42f)
+					if (img.at(x, y, 0) < background_value * 0.85f)
 						count++;
 			return count;
 		};
