@@ -397,7 +397,7 @@ namespace
 				back->height_size = GUI::size_type::FIXED;
 				back->size = { 0, 48 };
 				back->get_label()->text = "< Back";
-				back->get_label()->font_size = 18.0f;
+				back->get_label()->font_size = GUI::FontSizes::Big;
 				back->get_label()->magnet_text = FW1_CENTER | FW1_VCENTER | FW1_NOWORDWRAP;
 				auto table = std::make_shared<GUI::Elements::scroll_container>();
 				table->contents->size = { 20, 0 };
@@ -434,7 +434,7 @@ namespace
 			auto b = std::make_shared<GUI::Elements::button>();
 			b->docking = GUI::dock::NONE;
 			b->get_label()->text = names[i];
-			b->get_label()->font_size = 16.0f;
+			b->get_label()->font_size = GUI::FontSizes::Default;
 			b->get_label()->magnet_text = FW1_CENTER | FW1_VCENTER | FW1_NOWORDWRAP;
 			b->on_click = [i](GUI::Elements::button::ptr button) {
 				const char* name = names[i];
@@ -452,7 +452,7 @@ namespace
 
 		g_body = std::make_shared<GUI::Elements::label>();
 		g_body->docking = GUI::dock::NONE;
-		g_body->font_size = 16.0f;
+		g_body->font_size = GUI::FontSizes::Default;
 		g_window_el->add_child(g_body);
 
 		auto make_graph = [](const char* title, const char* unit, float min_range, float4 color) {

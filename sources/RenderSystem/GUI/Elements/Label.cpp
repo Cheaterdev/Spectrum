@@ -12,7 +12,7 @@ namespace GUI
 			clickable = false;
 			magnet_text = FW1_LEFT | FW1_TOP | FW1_NOWORDWRAP;
 			color = float4(1, 1, 1, 1);
-			font_size = 16;
+			font_size = FontSizes::Default;
 		}
 
 		label::~label()

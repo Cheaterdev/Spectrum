@@ -1932,7 +1932,7 @@ public:
 
 							auto mirror = std::make_shared<GUI::Elements::label>();
 							mirror->docking = GUI::dock::TOP;
-							mirror->font_size = 20;
+							mirror->font_size = GUI::FontSizes::Big;
 							mirror->text = editor->get_text();
 							page->add_child(mirror);
 

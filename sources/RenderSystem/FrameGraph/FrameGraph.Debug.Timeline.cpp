@@ -32,7 +32,7 @@ class FrameGraphTimelineCanvas : public dock_base
     static inline float PASS_H     = 32.0f;
     static inline float CELL_H     = 64.0f;
     static inline float PAD        = 3.0f;
-    static inline float LABEL_FONT = 10.0f;
+    static inline float LABEL_FONT = GUI::FontSizes::Small;
     static inline float ICON_W     = 18.0f;  // resource-type icon size in left column
 
     static void apply_ui_scale(float k)
@@ -748,7 +748,7 @@ class FrameGraphTimelineCanvas : public dock_base
                 lbl->text        = text;
                 lbl->color       = color;
                 const float k    = FrameGraphDebug::ui_scale;
-                lbl->font_size   = 11.0f * k;
+                lbl->font_size   = GUI::FontSizes::Small * k;
                 lbl->docking     = GUI::dock::NONE;
                 lbl->width_size  = GUI::size_type::MATCH_PARENT;
                 lbl->height_size = GUI::size_type::FIXED;
@@ -896,7 +896,7 @@ class FrameGraphTimelineCanvas : public dock_base
                 lbl->text        = text;
                 lbl->color       = color;
                 const float k    = FrameGraphDebug::ui_scale;
-                lbl->font_size   = 11.0f * k;
+                lbl->font_size   = GUI::FontSizes::Small * k;
                 lbl->docking     = GUI::dock::NONE;
                 lbl->width_size  = GUI::size_type::MATCH_PARENT;
                 lbl->height_size = GUI::size_type::FIXED;
@@ -1292,7 +1292,7 @@ class FrameGraphTimelineCanvas : public dock_base
             {
                 auto back         = std::make_shared<clickable_label>();
                 back->text        = "< Back";
-                back->font_size   = 18.0f * FrameGraphDebug::ui_scale;
+                back->font_size   = GUI::FontSizes::Big *FrameGraphDebug::ui_scale;
                 back->docking     = GUI::dock::TOP;
                 back->width_size  = GUI::size_type::MATCH_PARENT;
                 back->height_size = GUI::size_type::FIXED;
@@ -2100,7 +2100,7 @@ private:
             }
             if (!type_str.empty())
             {
-                auto tlbl            = make_label(LABEL_W - 4.0f, 14.0f, type_str, C_TEXT_DIM, 9.0f);
+                auto tlbl            = make_label(LABEL_W - 4.0f, 14.0f, type_str, C_TEXT_DIM, GUI::FontSizes::Small);
                 tlbl->pos            = { 2.0f, row_top + ROW_H - 15.0f };
                 tlbl->magnet_text    = FW1_RIGHT | FW1_VCENTER | FW1_NOWORDWRAP;
                 m_left_panel->add_child(tlbl);
@@ -2208,9 +2208,9 @@ private:
                         img->fade.push_back(lbl);
                         return lbl;
                     };
-                    add_line(binfo.title, C_TEXT_BRIGHT, 13.0f, 26.0f);
+                    add_line(binfo.title, C_TEXT_BRIGHT, GUI::FontSizes::Default, 26.0f);
                     auto info_lbl = add_line(binfo.counted ? std::format("? / {} x {}B", binfo.capacity, binfo.stride) : binfo.detail,
-                                             binfo.counted ? float4(0.55f, 0.82f, 1.0f, 1.0f) : C_TEXT_DIM, 11.0f, 18.0f);
+                                             binfo.counted ? float4(0.55f, 0.82f, 1.0f, 1.0f) : C_TEXT_DIM, GUI::FontSizes::Small, 18.0f);
 
                     // A write starts a new counter reading; the reads after it show that same value.
                     if (binfo.counted)

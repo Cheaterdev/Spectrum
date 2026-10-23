@@ -35,6 +35,15 @@ export enum FW1_TEXT_FLAG : unsigned int
 
 export namespace GUI
 {
+    // The UI's text sizes: every text label takes one of these instead of a literal.
+    // Not for labels that show an emoji or an icon glyph, those size themselves.
+    namespace FontSizes
+    {
+        inline float Small   = 9.0f;
+        inline float Default = 12.0f;
+        inline float Big     = 16.0f;
+    }
+
     namespace Elements
     {
         class label : public base

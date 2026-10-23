@@ -21,8 +21,8 @@ export namespace GUI
             float small_button   = 24.0f;
             float icon_large     = 26.0f;
             float icon_small     = 15.0f;
-            float text_size      = 13.0f;
-            float caption_size   = 11.0f;
+            float text_size      = FontSizes::Default;
+            float caption_size   = FontSizes::Small;
             float pad            = 8.0f;
 
             static ribbon_metrics for_touch()
@@ -34,8 +34,8 @@ export namespace GUI
                 m.small_button = 36.0f;
                 m.icon_large   = 36.0f;
                 m.icon_small   = 20.0f;
-                m.text_size    = 16.0f;
-                m.caption_size = 12.0f;
+                m.text_size    = FontSizes::Big;
+                m.caption_size = FontSizes::Default;
                 m.pad          = 12.0f;
                 return m;
             }

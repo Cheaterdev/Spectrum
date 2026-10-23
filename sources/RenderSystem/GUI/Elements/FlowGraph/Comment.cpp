@@ -45,7 +45,7 @@ GUI::Elements::FlowGraph::comment::comment(canvas* canva, ::FlowGraph::window* w
     label_text->text = "textures ";
     label_text->magnet_text = FW1_LEFT | FW1_VCENTER | FW1_NOWORDWRAP;
     label_text->docking = dock::FILL;
-    label_text->font_size = 24;
+    label_text->font_size = FontSizes::Big;
     title_bar.reset(new dragger());
     title_bar->size = vec2(0, 25);
     //title_bar->width_size = size_type::MATCH_PARENT;

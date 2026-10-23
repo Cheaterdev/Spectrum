@@ -69,7 +69,7 @@ namespace GUI
             width_size  = size_type::FIXED;
             height_size = size_type::FIXED;
 
-            text_label = make_label("", 12.0f, label_flags);
+            text_label = make_label("", FontSizes::Default, label_flags);
             text_label->color        = float4(0.08f, 0.08f, 0.08f, 1.0f);
             text_label->width_size   = size_type::NONE;
             text_label->height_size  = size_type::NONE;

@@ -51,11 +51,11 @@ namespace GUI
             };
 
             // Colours follow line_color and are applied in layout_labels.
-            header_label = make_label(15.0f, line_color);
-            _cur.lbl     = make_label(15.0f, line_color);
-            _avg.lbl     = make_label(13.0f, line_color);
-            _max.lbl     = make_label(13.0f, line_color);
-            _min.lbl     = make_label(13.0f, line_color);
+            header_label = make_label(FontSizes::Big, line_color);
+            _cur.lbl     = make_label(FontSizes::Big, line_color);
+            _avg.lbl     = make_label(FontSizes::Default, line_color);
+            _max.lbl     = make_label(FontSizes::Default, line_color);
+            _min.lbl     = make_label(FontSizes::Default, line_color);
 
             draw_tex.mul_color = {1, 1, 1, 1};
             draw_tex.add_color = {0, 0, 0, 0};

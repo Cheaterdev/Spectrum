@@ -370,7 +370,7 @@ resource_preview::resource_preview()
 		{
 			auto lbl         = std::make_shared<label>();
 			lbl->text        = text;
-			lbl->font_size   = 13.0f;
+			lbl->font_size   = GUI::FontSizes::Default;
 			lbl->docking     = GUI::dock::NONE;
 			lbl->width_size  = GUI::size_type::FIXED;
 			lbl->height_size = GUI::size_type::FIXED;
@@ -508,7 +508,7 @@ resource_preview::resource_preview()
 		{
 			auto lbl         = std::make_shared<label>();
 			lbl->text        = text;
-			lbl->font_size   = 13.0f;
+			lbl->font_size   = GUI::FontSizes::Default;
 			lbl->docking     = GUI::dock::NONE;
 			lbl->width_size  = GUI::size_type::MATCH_PARENT;
 			lbl->height_size = GUI::size_type::FIXED;
