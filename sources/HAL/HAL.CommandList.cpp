@@ -573,7 +573,17 @@ namespace HAL
 			get_base().add_resource_usage(table_dsv.get_resource_info());
 	}
 
-	void GraphicsContext::set_rtv(const CompiledRT& rt, RTOptions options, float depth, uint stencil, vec4 clear_color)
+	// The clear value baked into the resource behind a bound view -- what a clear
+	// uses when its caller passed none. A view that isn't bound (Null) gets zero.
+	template<class View, class H>
+	static vec4 resource_clear_value(const H& h)
+	{
+		if (auto* v = std::get_if<View>(&h.get_resource_info().view); v && v->Resource)
+			return v->Resource->get_clear_value();
+		return vec4(0, 0, 0, 0);
+	}
+
+	void GraphicsContext::set_rtv(const CompiledRT& rt, RTOptions options, std::optional<float> depth, std::optional<uint> stencil, std::optional<vec4> clear_color)
 	{
 		compiled_rt = rt;
 		const Handles::RTV& table_rtv = rt.table_rtv;
@@ -601,12 +611,16 @@ namespace HAL
 		if (check(options & RTOptions::ClearColor))
 		{
 			for (uint i = 0; i < table_rtv.get_count(); i++)
-				list->clear_rtv(table_rtv[i], clear_color);
+				list->clear_rtv(table_rtv[i], clear_color ? *clear_color : resource_clear_value<Views::RenderTarget>(table_rtv[i]));
 		}
 
 		if (table_dsv && check(options & (RTOptions::ClearStencil | RTOptions::ClearDepth)))
+		{
+			const vec4 baked = resource_clear_value<Views::DepthStencil>(table_dsv[0]);
 			list->clear_depth_stencil(table_dsv[0], check(options & RTOptions::ClearDepth),
-			                          check(options & RTOptions::ClearStencil), depth, stencil);
+			                          check(options & RTOptions::ClearStencil),
+			                          depth ? *depth : baked.x, stencil ? (UINT8)*stencil : (UINT8)baked.y);
+		}
 
 		{ PROFILE(L"post_command"); base.post_command<false, false>(*this, BarrierSync::DRAW); }
 		uint2 size;
@@ -2259,11 +2273,11 @@ namespace HAL
 		track_object(*(info.resource));
 	}
 
-	void CommandList::clear_uav(const Handles::UAV& h, vec4 ClearColor, bool whole_resource)
+	void CommandList::clear_uav(const Handles::UAV& h, std::optional<vec4> ClearColor, bool whole_resource)
 	{
 		begin_op(BarrierSync::CLEAR_UNORDERED_ACCESS_VIEW);
 		add_resource_usage(h.get_resource_info(), BarrierSync::CLEAR_UNORDERED_ACCESS_VIEW, whole_resource);
-		compiler.clear_uav(h, ClearColor);
+		compiler.clear_uav(h, ClearColor ? *ClearColor : resource_clear_value<Views::UnorderedAccess>(h));
 	}
 
 	void CommandList::clear_uav_uint(const Handles::UAV& h, uint4 ClearColor, bool whole_resource)
@@ -2273,7 +2287,8 @@ namespace HAL
 		compiler.clear_uav_uint(h, ClearColor);
 	}
 
-	void CommandList::clear_dsv(const Handles::DSV& h, bool clear_depth, bool clear_stencil, float depth, UINT8 stencil,
+	void CommandList::clear_dsv(const Handles::DSV& h, bool clear_depth, bool clear_stencil,
+	                            std::optional<float> depth, std::optional<UINT8> stencil,
 	                            bool whole_resource)
 	{
 		// begin_op (not a bracketing barrier-point pair) so consecutive
@@ -2285,7 +2300,9 @@ namespace HAL
 		// pre_command/post_command.
 		begin_op(BarrierSync::DEPTH_STENCIL);
 		add_resource_usage(h.get_resource_info(), BarrierSync::DEPTH_STENCIL, whole_resource);
-		compiler.clear_depth_stencil(h, clear_depth, clear_stencil, depth, stencil);
+		const vec4 baked = resource_clear_value<Views::DepthStencil>(h);
+		compiler.clear_depth_stencil(h, clear_depth, clear_stencil,
+		                             depth ? *depth : baked.x, stencil ? *stencil : (UINT8)baked.y);
 	}
 
 	void CommandList::add_heaviest_barrier()

@@ -106,9 +106,11 @@ namespace HAL
 
                 if (check(desc.Flags & HAL::ResFlags::DepthStencil))
                 {
+                    // x = depth, y = stencil. The (0,0,0,0) default keeps the
+                    // old hardcoded 0/0 -- reversed-Z, so 0 is the far plane.
                     value.Format = to_native(texture_desc.Format.to_dsv());
-                    value.DepthStencil.Depth = 0.0f;
-                    value.DepthStencil.Stencil = 0;
+                    value.DepthStencil.Depth = clear_value.x;
+                    value.DepthStencil.Stencil = (UINT8)clear_value.y;
                     pass_value = &value;
                 }
 
@@ -215,6 +217,7 @@ namespace HAL
     {
         auto t = CounterManager::get().start_count<Resource>();
         m_device = &device;
+        baked_clear_value = clear_value;
 
         alloc_info = device.get_alloc_info(desc);
 
@@ -253,12 +256,13 @@ namespace HAL
         }
     }
 
-    Resource::Resource(Device& device, const ResourceDesc& desc, PlacementAddress address) : tiled_manager(this)
+    Resource::Resource(Device& device, const ResourceDesc& desc, PlacementAddress address, vec4 clear_value) : tiled_manager(this)
     {
         auto t = CounterManager::get().start_count<Resource>();
         m_device = &device;
+        baked_clear_value = clear_value;
 
-        init(device, desc, address, TextureLayout::UNDEFINED);
+        init(device, desc, address, TextureLayout::UNDEFINED, clear_value);
     }
 
     Resource::Resource(Device& device, const API::NativeImportHandle& handle, TextureLayout initialLayout) : tiled_manager(this)

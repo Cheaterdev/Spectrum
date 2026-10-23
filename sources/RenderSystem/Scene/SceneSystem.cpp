@@ -34,7 +34,7 @@ void PassDefault<Passes::Meshes::Scene>::render(
     gbuffer.HalfBuffer.hiZ_depth     = *(data.GBuffer_HiZ);
     gbuffer.HalfBuffer.hiZ_depth_uav = *(data.GBuffer_HiZ_UAV);
 
-    command_list->clear_uav(gbuffer.depth_mips.rwTexture2D, vec4(0, 0, 0, 0));
+    command_list->clear_uav(gbuffer.depth_mips.rwTexture2D);
 
     // NormalsPrev / DepthPrev are history-linked and provisioned automatically —
     // not touched here. SpecularPrev history was unused (denoiser roughness-history

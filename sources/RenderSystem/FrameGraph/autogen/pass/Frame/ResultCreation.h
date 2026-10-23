@@ -39,7 +39,7 @@ namespace Frame
 			// runtime state.
 			static void create_always(Context& data, FrameGraph::TaskBuilder& builder)
 			{
-				builder.create(data.ResultTexture, { ivec3(builder.graph->get_context<Table::Frame::ViewportContext>().frame_size, 0), HAL::Format::R16G16B16A16_FLOAT, 1, 1 }, FrameGraph::ResourceFlags::RenderTarget);
+				builder.create(data.ResultTexture, { ivec3(builder.graph->get_context<Table::Frame::ViewportContext>().frame_size, 0), HAL::Format::R16G16B16A16_FLOAT, 1, 1, vec4(0, 0, 0, 0) }, FrameGraph::ResourceFlags::RenderTarget);
 			}
 			// Which chain link each handler field resolved to, one named slot per
 			// field. Filled from a live frame's finished Context and applied on a
@@ -65,7 +65,7 @@ namespace Frame
 			// previous link's desc, which LoadGraph does once every pass has loaded.
 			static void load_from_cache([[maybe_unused]] Context& data, [[maybe_unused]] const Cache& cache, [[maybe_unused]] const FrameGraph::TaskBuilder& builder)
 			{
-				builder.create_versioned(data.ResultTexture, cache.ResultTexture, { ivec3(builder.graph->get_context<Table::Frame::ViewportContext>().frame_size, 0), HAL::Format::R16G16B16A16_FLOAT, 1, 1 });
+				builder.create_versioned(data.ResultTexture, cache.ResultTexture, { ivec3(builder.graph->get_context<Table::Frame::ViewportContext>().frame_size, 0), HAL::Format::R16G16B16A16_FLOAT, 1, 1, vec4(0, 0, 0, 0) });
 			}
 
 			// Resources this pass touches, in declaration order, each paired with

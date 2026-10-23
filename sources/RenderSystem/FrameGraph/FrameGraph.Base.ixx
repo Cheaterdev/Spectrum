@@ -455,6 +455,10 @@ public:
 		HAL::ResourceHandle alloc_ptr;
 
 		HAL::ResourceDesc d3ddesc;
+		// Optimized clear value for create_resource(), copied from the desc in
+		// UniversalHandler::init. Set on every init, so a reused slot never
+		// keeps the previous resource's value.
+		vec4 clear_value = vec4(0, 0, 0, 0);
 		// Initialised, because not every path assigns it: create_resources() skips
 		// passed resources, and these slots are reused across frames, so an
 		// uninitialised value is indeterminate rather than merely wrong. Anything
@@ -627,6 +631,11 @@ public:
 					desc.min_storage_buffer_offset_alignment = info.min_storage_buffer_offset_alignment;
 				info.d3ddesc = desc.create_resource_desc(info.flags);
 
+				if constexpr (requires { desc.clear_value; })
+					info.clear_value = desc.clear_value;
+				else
+					info.clear_value = vec4(0, 0, 0, 0);
+
 				// "The FrameGraph owns this resource's transitions" is now
 				// Resource::frame_graph_managed, set on the resource itself in
 				// create_resources -- no longer a creation-desc flag.
@@ -743,6 +752,10 @@ public:
 			HAL::Format format;
 			UINT array_count;
 			UINT mip_count;
+			// The optimized clear value baked in when the resource is created
+			// (a RenderTarget's colour, or a DepthStencil's x = depth / y = stencil);
+			// Prism's [ClearValue]. D3D12 ignores it for anything else.
+			vec4 clear_value = vec4(0, 0, 0, 0);
 
 			// mip_count == 0 means "full chain". Resolving it returns the count
 			// instead of writing it back into this desc: create_resource_desc used
@@ -783,6 +796,7 @@ public:
 			HAL::Format format;
 			UINT array_count;
 			UINT mip_count;
+			vec4 clear_value = vec4(0, 0, 0, 0); // see TextureDesc::clear_value
 
 			// See TextureDesc::resolved_mips().
 			UINT resolved_mips() const;

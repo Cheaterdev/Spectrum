@@ -860,7 +860,7 @@ VSM::VSM() : VariableContext(L"VSM")
 			// reconcile every one of them individually.
 			for (int mip = 0; mip < pyramid_mip_count; mip++)
 				command_list->clear_uav(data.VSM_PageHiZ->create_mip(mip, *command_list).rwTexture2DArray,
-				                        vec4(0, 0, 0, 0), /*whole_resource*/ true);
+				                        {}, /*whole_resource*/ true);
 		}
 
 		{
@@ -878,7 +878,7 @@ VSM::VSM() : VariableContext(L"VSM")
 			// reconcile all 2048 subresources one at a time.
 			for (int slot : dsv_clear_slots)
 				command_list->clear_dsv(atlas_slot_views[slot].depthStencil,
-				                        true, false, 0, 0, /*whole_resource*/ true);
+				                        true, false, {}, {}, /*whole_resource*/ true);
 		}
 
 		if (!any_dirty)
@@ -1424,7 +1424,7 @@ VSM::VSM() : VariableContext(L"VSM")
 		// tiles resolved directly in stage 1 never reach this pass, so they
 		// rely on this clear (not an explicit write) to read back as "not
 		// ambiguous".
-		list.clear_uav(data.VSM_AmbiguousMask->rwTexture2D, vec4(0, 0, 0, 0));
+		list.clear_uav(data.VSM_AmbiguousMask->rwTexture2D);
 
 		{
 			Slots::Shadows::VSM::VSMSearchVerdictAppend verdict;

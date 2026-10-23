@@ -20,7 +20,7 @@ namespace
 	// TiledDepth: sparse (tiled) depth textures -- VSM's atlas; AMD has none.
 	const std::set<std::string> REQUIRES_VALUES = { "Raytracing", "TiledDepth" };
 	const std::set<std::string> RESOURCE_FIELD_OPTIONS = {
-		"Always", "ArrayCount", "Format", "MipCount", "Optional", "PrevFor", "Recreate", "RecreateFlags",
+		"Always", "ArrayCount", "ClearValue", "Format", "MipCount", "Optional", "PrevFor", "Recreate", "RecreateFlags",
 		"Size", "SkipEnablement", "Write",
 		"Counted", // buffer gets a counter (StructuredDesc::counted)
 	};
@@ -548,6 +548,23 @@ namespace
 			for (const char* name : { "Size", "ArrayCount", "MipCount" })
 				if (const option* o = p.find_option(name); o && !o->value_atom.is_raw)
 					check_size_expression(parsed, *o, owner.name + "." + p.name);
+
+			// [ClearValue] is baked into the desc the generated create/recreate call
+			// builds, so it needs a texture this pass describes itself ([Size] or
+			// [Format]); it is pasted into that desc as-is, hence a backtick expression.
+			if (const option* c = p.find_option("ClearValue"))
+			{
+				const std::string where = owner.name + "." + p.name;
+				if (p.class_no_template != "Texture" && p.class_no_template != "TextureCube")
+					diagnostics().error(*c, std::format("[ClearValue] on '{}': only a Texture or TextureCube has one, this is a {}",
+						where, p.class_no_template));
+				else if (!p.find_option("Size") && !p.find_option("Format"))
+					diagnostics().error(*c, std::format("[ClearValue] on '{}': needs [Size]/[Format] -- only a texture this pass "
+						"creates has a desc to put the value in", where));
+				if (!c->value_atom.is_raw)
+					diagnostics().error(*c, std::format("[ClearValue] on '{}' takes a backtick expression, "
+						"e.g. [ClearValue = `vec4(0, 0, 0, 1)`]", where));
+			}
 
 			if (const View* view = parsed.views.find(p.class_no_template))
 			{

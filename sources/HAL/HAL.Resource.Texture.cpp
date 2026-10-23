@@ -72,8 +72,8 @@ namespace HAL
 		init();
 	}
 
-	TextureResource::TextureResource(Device& device, const ResourceDesc& desc, PlacementAddress handle)
-		: Resource(device, desc, handle)
+	TextureResource::TextureResource(Device& device, const ResourceDesc& desc, PlacementAddress handle, vec4 clear_value)
+		: Resource(device, desc, handle, clear_value)
 	{
 		init();
 	}

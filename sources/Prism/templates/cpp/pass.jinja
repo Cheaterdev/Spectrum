@@ -146,6 +146,8 @@ public:
 		static void create_always(Context& data, FrameGraph::TaskBuilder& builder)
 		{
 {%- for v in pass.params %}
+{#- [ClearValue]: the 5th element of a texture desc (TextureDesc::clear_value). -#}
+{%- set clear_suffix = (", " + v.options.ClearValue.value_atom.expr) if v.options.ClearValue is defined else "" %}
 {%- if v.options.Always is defined and (v.options.Size is defined or v.options.Format is defined) and v.options.Recreate is undefined %}
 {%- if v.options.Optional is defined %}
 			if ({{v.options.Optional.value_atom.expr}})
@@ -153,9 +155,9 @@ public:
 {%- endif %}
 {%- if v.type == "Texture" or v.type == "TextureCube" or v.type == "Texture3D" %}
 {%- if size_is_scalar(pass.name, v.name) %}
-			builder.create(data.{{v.name}}, { ivec3({{resolve_size_expr(pass.name, v.name)}}, {{resolve_size_expr(pass.name, v.name)}}, 0), HAL::Format::{{v.options.Format.value_atom.expr}}, {{v.options.ArrayCount.value_atom.expr if v.options.ArrayCount is defined else 1}}, {{v.options.MipCount.value_atom.expr if v.options.MipCount is defined else 1}} }, {{ resolve_flags_expr(pass.name, v.name) }});
+			builder.create(data.{{v.name}}, { ivec3({{resolve_size_expr(pass.name, v.name)}}, {{resolve_size_expr(pass.name, v.name)}}, 0), HAL::Format::{{v.options.Format.value_atom.expr}}, {{v.options.ArrayCount.value_atom.expr if v.options.ArrayCount is defined else 1}}, {{v.options.MipCount.value_atom.expr if v.options.MipCount is defined else 1}}{{clear_suffix}} }, {{ resolve_flags_expr(pass.name, v.name) }});
 {%- else %}
-			builder.create(data.{{v.name}}, { ivec3({{resolve_size_expr(pass.name, v.name)}}, 0), HAL::Format::{{v.options.Format.value_atom.expr}}, {{v.options.ArrayCount.value_atom.expr if v.options.ArrayCount is defined else 1}}, {{v.options.MipCount.value_atom.expr if v.options.MipCount is defined else 1}} }, {{ resolve_flags_expr(pass.name, v.name) }});
+			builder.create(data.{{v.name}}, { ivec3({{resolve_size_expr(pass.name, v.name)}}, 0), HAL::Format::{{v.options.Format.value_atom.expr}}, {{v.options.ArrayCount.value_atom.expr if v.options.ArrayCount is defined else 1}}, {{v.options.MipCount.value_atom.expr if v.options.MipCount is defined else 1}}{{clear_suffix}} }, {{ resolve_flags_expr(pass.name, v.name) }});
 {%- endif %}
 {%- else %}
 			builder.create(data.{{v.name}}, { {{resolve_size_expr(pass.name, v.name)}}{{ ", true" if v.options.Counted is defined }} }, {{ resolve_flags_expr(pass.name, v.name) }});
@@ -178,9 +180,9 @@ public:
 {%- if v.options.Size is defined or v.options.Format is defined %}
 {%- if v.type == "Texture" or v.type == "TextureCube" or v.type == "Texture3D" %}
 {%- if size_is_scalar(pass.name, v.name) %}
-			builder.recreate(data.{{v.options.Recreate.value_atom.expr}}, { ivec3({{resolve_size_expr(pass.name, v.name)}}, {{resolve_size_expr(pass.name, v.name)}}, 0), HAL::Format::{{v.options.Format.value_atom.expr}}, 1, {{v.options.MipCount.value_atom.expr if v.options.MipCount is defined else 1}} }, {{ resolve_recreate_flags_expr(pass.name, v.name) }});
+			builder.recreate(data.{{v.options.Recreate.value_atom.expr}}, { ivec3({{resolve_size_expr(pass.name, v.name)}}, {{resolve_size_expr(pass.name, v.name)}}, 0), HAL::Format::{{v.options.Format.value_atom.expr}}, 1, {{v.options.MipCount.value_atom.expr if v.options.MipCount is defined else 1}}{{clear_suffix}} }, {{ resolve_recreate_flags_expr(pass.name, v.name) }});
 {%- else %}
-			builder.recreate(data.{{v.options.Recreate.value_atom.expr}}, { ivec3({{resolve_size_expr(pass.name, v.name)}}, 0), HAL::Format::{{v.options.Format.value_atom.expr}}, 1, {{v.options.MipCount.value_atom.expr if v.options.MipCount is defined else 1}} }, {{ resolve_recreate_flags_expr(pass.name, v.name) }});
+			builder.recreate(data.{{v.options.Recreate.value_atom.expr}}, { ivec3({{resolve_size_expr(pass.name, v.name)}}, 0), HAL::Format::{{v.options.Format.value_atom.expr}}, 1, {{v.options.MipCount.value_atom.expr if v.options.MipCount is defined else 1}}{{clear_suffix}} }, {{ resolve_recreate_flags_expr(pass.name, v.name) }});
 {%- endif %}
 {%- else %}
 			builder.recreate(data.{{v.options.Recreate.value_atom.expr}}, { {{resolve_size_expr(pass.name, v.name)}}{{ ", true" if v.options.Counted is defined }} }, {{ resolve_recreate_flags_expr(pass.name, v.name) }});
@@ -234,6 +236,7 @@ public:
 		static void load_from_cache([[maybe_unused]] Context& data, [[maybe_unused]] const Cache& cache, [[maybe_unused]] const FrameGraph::TaskBuilder& builder)
 		{
 {%- for v in pass.params %}
+{%- set clear_suffix = (", " + v.options.ClearValue.value_atom.expr) if v.options.ClearValue is defined else "" %}
 {%- if not (v.type == "int" or v.type == "uint" or v.type == "bool" or v.type == "float") and parsed.tables[v.type] is undefined %}
 {%- if v.options.Always is defined and (v.options.Size is defined or v.options.Format is defined) and v.options.Recreate is undefined %}
 {%- if v.options.Optional is defined %}
@@ -241,9 +244,9 @@ public:
 {%- endif %}
 {%- if v.type == "Texture" or v.type == "TextureCube" or v.type == "Texture3D" %}
 {%- if size_is_scalar(pass.name, v.name) %}
-			builder.create_versioned(data.{{v.name}}, cache.{{v.name}}, { ivec3({{resolve_size_expr(pass.name, v.name)}}, {{resolve_size_expr(pass.name, v.name)}}, 0), HAL::Format::{{v.options.Format.value_atom.expr}}, {{v.options.ArrayCount.value_atom.expr if v.options.ArrayCount is defined else 1}}, {{v.options.MipCount.value_atom.expr if v.options.MipCount is defined else 1}} });
+			builder.create_versioned(data.{{v.name}}, cache.{{v.name}}, { ivec3({{resolve_size_expr(pass.name, v.name)}}, {{resolve_size_expr(pass.name, v.name)}}, 0), HAL::Format::{{v.options.Format.value_atom.expr}}, {{v.options.ArrayCount.value_atom.expr if v.options.ArrayCount is defined else 1}}, {{v.options.MipCount.value_atom.expr if v.options.MipCount is defined else 1}}{{clear_suffix}} });
 {%- else %}
-			builder.create_versioned(data.{{v.name}}, cache.{{v.name}}, { ivec3({{resolve_size_expr(pass.name, v.name)}}, 0), HAL::Format::{{v.options.Format.value_atom.expr}}, {{v.options.ArrayCount.value_atom.expr if v.options.ArrayCount is defined else 1}}, {{v.options.MipCount.value_atom.expr if v.options.MipCount is defined else 1}} });
+			builder.create_versioned(data.{{v.name}}, cache.{{v.name}}, { ivec3({{resolve_size_expr(pass.name, v.name)}}, 0), HAL::Format::{{v.options.Format.value_atom.expr}}, {{v.options.ArrayCount.value_atom.expr if v.options.ArrayCount is defined else 1}}, {{v.options.MipCount.value_atom.expr if v.options.MipCount is defined else 1}}{{clear_suffix}} });
 {%- endif %}
 {%- else %}
 			builder.create_versioned(data.{{v.name}}, cache.{{v.name}}, { {{resolve_size_expr(pass.name, v.name)}}{{ ", true" if v.options.Counted is defined }} });
@@ -259,9 +262,9 @@ public:
 {%- if v.options.Always is defined and (v.options.Size is defined or v.options.Format is defined) %}
 {%- if v.type == "Texture" or v.type == "TextureCube" or v.type == "Texture3D" %}
 {%- if size_is_scalar(pass.name, v.name) %}
-			builder.create_versioned(data.{{v.options.Recreate.value_atom.expr}}, cache.{{v.options.Recreate.value_atom.expr}}, { ivec3({{resolve_size_expr(pass.name, v.name)}}, {{resolve_size_expr(pass.name, v.name)}}, 0), HAL::Format::{{v.options.Format.value_atom.expr}}, 1, {{v.options.MipCount.value_atom.expr if v.options.MipCount is defined else 1}} });
+			builder.create_versioned(data.{{v.options.Recreate.value_atom.expr}}, cache.{{v.options.Recreate.value_atom.expr}}, { ivec3({{resolve_size_expr(pass.name, v.name)}}, {{resolve_size_expr(pass.name, v.name)}}, 0), HAL::Format::{{v.options.Format.value_atom.expr}}, 1, {{v.options.MipCount.value_atom.expr if v.options.MipCount is defined else 1}}{{clear_suffix}} });
 {%- else %}
-			builder.create_versioned(data.{{v.options.Recreate.value_atom.expr}}, cache.{{v.options.Recreate.value_atom.expr}}, { ivec3({{resolve_size_expr(pass.name, v.name)}}, 0), HAL::Format::{{v.options.Format.value_atom.expr}}, 1, {{v.options.MipCount.value_atom.expr if v.options.MipCount is defined else 1}} });
+			builder.create_versioned(data.{{v.options.Recreate.value_atom.expr}}, cache.{{v.options.Recreate.value_atom.expr}}, { ivec3({{resolve_size_expr(pass.name, v.name)}}, 0), HAL::Format::{{v.options.Format.value_atom.expr}}, 1, {{v.options.MipCount.value_atom.expr if v.options.MipCount is defined else 1}}{{clear_suffix}} });
 {%- endif %}
 {%- else %}
 			builder.create_versioned(data.{{v.options.Recreate.value_atom.expr}}, cache.{{v.options.Recreate.value_atom.expr}}, { {{resolve_size_expr(pass.name, v.name)}}{{ ", true" if v.options.Counted is defined }} });

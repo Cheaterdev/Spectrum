@@ -406,9 +406,10 @@ namespace HAL
     }
 
     void Resource::_init(Device& device, const ResourceDesc& desc, HeapType heap_type,
-                         TextureLayout initialLayout, vec4 /*clear_value*/)
+                         TextureLayout initialLayout, vec4 clear_value)
     {
         m_device = &device;
+        baked_clear_value = clear_value; // Vulkan has no optimized clear value, but clears still default to it
         this->heap_type = heap_type;
         alloc_info = device.get_alloc_info(desc);
 
@@ -433,10 +434,11 @@ namespace HAL
             alloc_handle = handle;
     }
 
-    Resource::Resource(Device& device, const ResourceDesc& desc, PlacementAddress address)
+    Resource::Resource(Device& device, const ResourceDesc& desc, PlacementAddress address, vec4 clear_value)
         : tiled_manager(this)
     {
         m_device = &device;
+        baked_clear_value = clear_value;
         init(device, desc, address, TextureLayout::UNDEFINED);
     }
 

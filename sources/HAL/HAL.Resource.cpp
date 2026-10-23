@@ -25,12 +25,12 @@ namespace HAL
 	// The inline forwards to _create_resource_placed_impl below.
 
 
-	Resource::ptr create_resource(Device& device, const HAL::ResourceDesc& desc, HeapType heap_type)
+	Resource::ptr create_resource(Device& device, const HAL::ResourceDesc& desc, HeapType heap_type, vec4 clear_value)
 	{
 		PROFILE(L"create_resource heap_type");
 		if (desc.is_buffer())
 			return std::make_shared<HAL::Buffer>(device, desc, heap_type);
-		return std::make_shared<TextureResource>(device, desc, heap_type);
+		return std::make_shared<TextureResource>(device, desc, heap_type, TextureLayout::UNDEFINED, clear_value);
 	}
 	std::mutex t;
 
@@ -117,13 +117,14 @@ namespace HAL
 	// Resource in the return type is from THIS partition — always [HAL], no mismatch.
 	Resource::ptr _create_resource_placed_impl(Device& device,
 	                                            const ResourceDesc& desc,
-	                                            void* heap_raw, size_t offset)
+	                                            void* heap_raw, size_t offset,
+	                                            vec4 clear_value)
 	{
 		auto* heap = static_cast<Heap*>(heap_raw);
 		PlacementAddress placement{ heap, offset };
 		if (desc.is_buffer())
 			return std::make_shared<Buffer>(device, desc, placement);
-		return std::make_shared<TextureResource>(device, desc, placement);
+		return std::make_shared<TextureResource>(device, desc, placement, clear_value);
 	}
 
 } // namespace HAL

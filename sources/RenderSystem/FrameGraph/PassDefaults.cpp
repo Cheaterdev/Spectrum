@@ -117,7 +117,7 @@ void PassDefault<Passes::Shadows::RTXShadow>::render(
 	auto& compute = context.get_list()->get_compute();
 
 	if (data.ShadowMask.is_new())
-		context.get_list()->clear_uav(data.ShadowMask->rwTexture2D, vec4(0, 0, 0, 0));
+		context.get_list()->clear_uav(data.ShadowMask->rwTexture2D);
 
 	//context.graph->set_slot(SlotID::VoxelInfo, compute);
 	context.graph->set_slot(SlotID::FrameInfo, compute);

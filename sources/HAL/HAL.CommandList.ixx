@@ -474,7 +474,8 @@ export{
 			// entire resource instead of the subresources this view names, so a
 			// caller clearing selected slices/mips of a resource it then uses as
 			// a whole does not diverge the group's per-subresource tracking.
-			void clear_uav(const Handles::UAV& h, vec4 ClearColor = vec4(0, 0, 0, 0),
+			// ClearColor unset: the resource's own clear value (get_clear_value()).
+			void clear_uav(const Handles::UAV& h, std::optional<vec4> ClearColor = {},
 			               bool whole_resource = false);
 
 			// Uint variant -- clear_uav's ClearUnorderedAccessViewFloat call
@@ -497,7 +498,9 @@ export{
 			// declarations diverge the group's per-subresource tracking, and the
 			// next whole-resource use then has to reconcile every subresource
 			// individually.
-			void clear_dsv(const Handles::DSV& h, bool clear_depth = true, bool clear_stencil = false, float depth = 0, UINT8 stencil = 0,
+			// depth / stencil unset: the resource's own clear value (x / y).
+			void clear_dsv(const Handles::DSV& h, bool clear_depth = true, bool clear_stencil = false,
+			               std::optional<float> depth = {}, std::optional<UINT8> stencil = {},
 			               bool whole_resource = false);
 
 		};
@@ -737,15 +740,20 @@ export{
 		public:
 			std::vector<HAL::Format> get_formats() const;
 
+			// depth / stencil / clear_color: what ClearDepth / ClearStencil / ClearColor
+			// clear to. Left unset, each target clears with the clear value its own
+			// resource was created with (Resource::get_clear_value(); colour per
+			// RTV, x = depth / y = stencil for the DSV), so a clear matches the
+			// optimized clear value and never takes D3D12's slow path (#820).
 			template<SIG_TYPES::RT RT>
-			CompiledRT set_rtv(const RT& rt, RTOptions options = RTOptions::Default, float depth = 0, uint stencil = 0, vec4 clear_color = vec4(0, 0, 0, 0))
+			CompiledRT set_rtv(const RT& rt, RTOptions options = RTOptions::Default, std::optional<float> depth = {}, std::optional<uint> stencil = {}, std::optional<vec4> clear_color = {})
 			{
 				auto compiled = rt.compile(*this);
 				set_rtv(compiled, options, depth, stencil, clear_color);
 				return compiled;
 			}
 
-			void set_rtv(const CompiledRT& rt, RTOptions options = RTOptions::Default, float depth = 0, uint stencil = 0, vec4 clear_color = vec4(0, 0, 0, 0));
+			void set_rtv(const CompiledRT& rt, RTOptions options = RTOptions::Default, std::optional<float> depth = {}, std::optional<uint> stencil = {}, std::optional<vec4> clear_color = {});
 
 			CommandList& get_base();
 

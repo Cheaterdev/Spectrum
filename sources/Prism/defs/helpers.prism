@@ -34,6 +34,9 @@ namespace Frame
 	[RenderCondition = `true`]
 	PassNode ResultCreation
 	{
-		[Always = RenderTarget] [Size = ViewportContext::frame_size] [Format = R16G16B16A16_FLOAT] Texture ResultTexture;
+		# [ClearValue] is the optimized clear value baked into the texture when it is created (RenderTarget: RGBA,
+		# DepthStencil: x = depth, y = stencil). Keep it equal to what render() clears with, or D3D12 takes the slow
+		# clear path and warns. A texture that is neither gets none.
+		[Always = RenderTarget] [Size = ViewportContext::frame_size] [Format = R16G16B16A16_FLOAT] [ClearValue = `vec4(0, 0, 0, 0)`] Texture ResultTexture;
 	}
 }

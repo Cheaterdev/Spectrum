@@ -66,8 +66,8 @@ void PassDefault<Passes::Denoise::NRD::NRD_REBLUR_Execute>::render(
 	// combine passes skip them, but the outputs are transient and their
 	// memory reused, so without a clear they hold whatever was there before --
 	// different every run, and garbage in the debug views.
-	context.get_list()->clear_uav(data.RTXIndirectDenoised->rwTexture2D, vec4(0, 0, 0, 0));
-	context.get_list()->clear_uav(data.RTXReflectionDenoised->rwTexture2D, vec4(0, 0, 0, 0));
+	context.get_list()->clear_uav(data.RTXIndirectDenoised->rwTexture2D);
+	context.get_list()->clear_uav(data.RTXReflectionDenoised->rwTexture2D);
 
 	nvidia::NRD::get().execute_reblur(*context.get_list(), inputs);
 

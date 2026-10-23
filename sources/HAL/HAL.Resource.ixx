@@ -143,6 +143,7 @@ export{
 			HeapType heap_type = HeapType::RESERVED; // safe sentinel; _init() always overwrites
 			ResourceDesc desc;
 			Device* m_device = nullptr;
+			vec4 baked_clear_value = vec4(0, 0, 0, 0); // see get_clear_value()
 
 		protected:
 			TiledResourceManager tiled_manager;
@@ -174,6 +175,13 @@ export{
 			bool initialized = false;
 			bool is_ready() const;
 
+			// The clear value this resource was created with: the optimized clear
+			// value on a RenderTarget/DepthStencil (colour, or x = depth / y =
+			// stencil), kept for any other texture too. set_rtv/clear_uav/clear_dsv
+			// clear with it when the caller passes none, so a clear can't drift from
+			// what creation baked in. (0,0,0,0) when none was given.
+			const vec4& get_clear_value() const { return baked_clear_value; }
+
 			ResourceType get_type() const;
 			const ResourceDesc& get_desc() const;
 			ResourceHandle alloc_handle;
@@ -197,7 +205,7 @@ export{
 	protected:
 			Resource(Device& device, const ResourceDesc& desc, HeapType heap_type, TextureLayout initialLayout = TextureLayout::UNDEFINED, vec4 clear_value = vec4(0, 0, 0, 0));
 			Resource(Device& device, const API::NativeImportHandle& handle, TextureLayout initialLayout);
-			Resource(Device& device, const ResourceDesc& desc, PlacementAddress handle);
+			Resource(Device& device, const ResourceDesc& desc, PlacementAddress handle, vec4 clear_value = vec4(0, 0, 0, 0));
 
 			Resource(Device& device, const ResourceDesc& desc, ResourceHandle handle, bool own = false);
 			Resource();
@@ -234,7 +242,7 @@ export{
 
 
 
-		Resource::ptr create_resource(Device& device, const HAL::ResourceDesc& desc, HeapType heap_type);
+		Resource::ptr create_resource(Device& device, const HAL::ResourceDesc& desc, HeapType heap_type, vec4 clear_value = vec4(0, 0, 0, 0));
 
 		// MSVC C++20 module $$_A/$$_B fix for the ResourceHandle overload.
 		//
@@ -255,13 +263,14 @@ export{
 		//   interface, so it's always [HAL] on both sides.
 		Resource::ptr _create_resource_placed_impl(Device& device,
 		                                            const ResourceDesc& desc,
-		                                            void* heap_raw, size_t offset);
+		                                            void* heap_raw, size_t offset,
+		                                            vec4 clear_value);
 
-		inline Resource::ptr create_resource(Device& device, const HAL::ResourceDesc& desc, ResourceHandle addr)
+		inline Resource::ptr create_resource(Device& device, const HAL::ResourceDesc& desc, ResourceHandle addr, vec4 clear_value = vec4(0, 0, 0, 0))
 		{
 			return _create_resource_placed_impl(device, desc,
 				static_cast<void*>(addr.get_heap().get()),
-				addr.get_offset());
+				addr.get_offset(), clear_value);
 		}
 	}
 
