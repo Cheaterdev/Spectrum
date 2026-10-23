@@ -159,6 +159,16 @@ void GUI::Elements::menu_list::cancel_close()
     fade_to(1.0f, user_ui ? float(user_ui->fade_in_duration) : 0.1f);
 }
 
+GUI::Elements::menu_list_element::ptr GUI::Elements::menu_list::add_command(command::ptr cmd)
+{
+    if (!cmd)
+        return nullptr;
+
+    auto item = add_item(cmd->get_title());
+    item->on_click = [cmd](menu_list_element::ptr) { cmd->execute(); };
+    return item;
+}
+
 void GUI::Elements::menu_list::remove_all()
 {
     contents->remove_all();

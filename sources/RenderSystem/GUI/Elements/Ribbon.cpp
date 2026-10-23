@@ -527,6 +527,30 @@ namespace GUI
             return b;
         }
 
+        ribbon_button::ptr ribbon_group::add_command(command::ptr cmd, bool large, menu_list::ptr dropdown, bool split)
+        {
+            if (!cmd)
+                return nullptr;
+
+            std::function<void()> click = [cmd] { cmd->execute(); };
+
+            auto b = large ? add_large(cmd->get_icon(), cmd->get_title(), std::move(click), std::move(dropdown), split)
+                           : add_small(cmd->get_icon(), cmd->get_short_title(), std::move(click), std::move(dropdown), split);
+
+            b->tooltip    = cmd->get_tooltip();
+            b->is_enabled = [cmd] { return cmd->is_enabled(); };
+
+            if (cmd->is_toggle())
+                b->is_checked = [cmd] { return cmd->is_checked(); };
+
+            return b;
+        }
+
+        ribbon_button::ptr ribbon_group::add_command(const command_registry& registry, std::string_view id, bool large)
+        {
+            return add_command(registry.find(id), large);
+        }
+
         ribbon_button::ptr ribbon_group::add_menu_item(menu_list_element::ptr item, std::string icon, bool large)
         {
             if (!item)
@@ -1682,6 +1706,7 @@ namespace GUI
                             if (minimized)
                                 open_strip();
                             key_level = 2;
+                            key_focus = 0;   // however the strip is entered, the first button has the ring
                             show_button_tips();
                             return true;
                         }

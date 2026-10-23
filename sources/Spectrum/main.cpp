@@ -814,6 +814,10 @@ class GraphRender : public Window, public GUI::user_interface
 	// Opens a file in a Code editor tab; see where it is assigned (menu setup).
 	std::function<void(std::string file_name, int line, int column)> open_code_editor;
 
+	// The application's actions, defined once (the File commands so far); the ribbon shows
+	// them and their shortcuts work through its key hook.
+	GUI::command_registry commands;
+
 	tick_timer main_timer;
 	ivec2 new_size;
 
@@ -1736,50 +1740,59 @@ public:
 			{
 				{
 					GUI::Elements::menu_strip::ptr menu(new GUI::Elements::menu_strip());
-					auto file = menu->add_item("File")->get_menu();
 					auto edit = menu->add_item("Edit")->get_menu();
 					auto help = menu->add_item("Help"); // ->get_menu();
-					file->add_item("New")->on_click = [this](GUI::Elements::menu_list_element::ptr elem)
-						{
-							add_task([this]()
-								{
-									if (!drawer) return;
-									drawer->scene->remove_all();
-								});
-						};
-					file->add_item("Open")->on_click = [this](GUI::Elements::menu_list_element::ptr elem)
-						{
-							add_task([this]()
-								{
-									if (!drawer) return;
-									try
+
+					// The File commands, defined once: the ribbon's File tab shows them, and their
+					// shortcuts work through the registry's key hook (installed below).
+					commands.add("file.new").title("New").icon(u8"\U0001F4C4").shortcut("Ctrl+N")
+						.tooltip("Remove everything from the scene")
+						.run([this]()
+							{
+								add_task([this]()
 									{
-										auto f = FileSystem::get().get_file(to_path(L"scene.dat"))->load_all();
-										Serializer::deserialize(f, *drawer->scene);
-									}
-									catch (std::exception e)
+										if (!drawer) return;
+										drawer->scene->remove_all();
+									});
+							});
+					commands.add("file.open").title("Open").icon(u8"\U0001F4C2").shortcut("Ctrl+O")
+						.tooltip("Load the scene")
+						.run([this]()
+							{
+								add_task([this]()
 									{
-										message_box("error", "cant open", [](bool)
-											{
-											});
-									}
-								});
-						};
-					file->add_item("Import MaterialX...")->on_click = [this](GUI::Elements::menu_list_element::ptr elem)
-						{
-							for (auto& path : Application::get().file_open("Choose a MaterialX file", "", "mtlx|*.mtlx|" "all|*.*|" "|"))
-								MaterialXLibrary::get().import_file(std::filesystem::path(path));
-						};
-					file->add_item("Save")->on_click = [this](GUI::Elements::menu_list_element::ptr elem)
-						{
-							if (!drawer) return;
-							auto data = Serializer::serialize(*drawer->scene);
-							FileSystem::get().save_data(to_path(L"scene.dat"), data);
-						};
-					file->add_item("Quit")->on_click = [this](GUI::Elements::menu_list_element::ptr elem)
-						{
-							on_destroy();
-						};
+										if (!drawer) return;
+										try
+										{
+											auto f = FileSystem::get().get_file(to_path(L"scene.dat"))->load_all();
+											Serializer::deserialize(f, *drawer->scene);
+										}
+										catch (std::exception e)
+										{
+											message_box("error", "cant open", [](bool)
+												{
+												});
+										}
+									});
+							});
+					commands.add("file.save").title("Save").icon(u8"\U0001F4BE").shortcut("Ctrl+S")
+						.tooltip("Save the scene")
+						.enabled([this] { return drawer != nullptr; })
+						.run([this]()
+							{
+								if (!drawer) return;
+								auto data = Serializer::serialize(*drawer->scene);
+								FileSystem::get().save_data(to_path(L"scene.dat"), data);
+							});
+					commands.add("file.import_materialx").title("Import MaterialX...").short_title("Import").icon(u8"\U0001F4E5")
+						.tooltip("Import a MaterialX file")
+						.run([this]()
+							{
+								for (auto& path : Application::get().file_open("Choose a MaterialX file", "", "mtlx|*.mtlx|" "all|*.*|" "|"))
+									MaterialXLibrary::get().import_file(std::filesystem::path(path));
+							});
+					commands.add("file.quit").title("Quit").icon(u8"\U0001F6AA").shortcut("Ctrl+Q")
+						.run([this]() { on_destroy(); });
 
 					edit->add_item("Debug Graph")->on_click = [this](GUI::Elements::menu_list_element::ptr elem)
 						{
@@ -2465,12 +2478,12 @@ public:
 
 						auto file_tab = rb->add_tab("File");
 						auto scene_group = file_tab->add_group("Scene");
-						scene_group->add_menu_item(find(file, "New"), emoji(u8"\U0001F4C4"));
-						scene_group->add_menu_item(find(file, "Open"), emoji(u8"\U0001F4C2"));
-						scene_group->add_menu_item(find(file, "Save"), emoji(u8"\U0001F4BE"));
-						file_tab->add_group("Import")->add_menu_item(find(file, "Import MaterialX..."), emoji(u8"\U0001F4E5"));
+						scene_group->add_command(commands, "file.new");
+						scene_group->add_command(commands, "file.open");
+						scene_group->add_command(commands, "file.save");
+						file_tab->add_group("Import")->add_command(commands, "file.import_materialx");
 						auto application_group = file_tab->add_group("Application");
-						application_group->add_menu_item(find(file, "Quit"), emoji(u8"\U0001F6AA"));
+						application_group->add_command(commands, "file.quit");
 
 						// When the window gets narrow the groups with the lowest priority shrink
 						// first: the scene commands stay large longest, import goes first.
@@ -2494,6 +2507,9 @@ public:
 						demos->add_menu_item(find(test, "Ribbon demo"), emoji(u8"\U0001F39B"));
 
 						add_child(rb);
+
+						// After the ribbon, so its Alt key mode sees the keys first.
+						commands.install_shortcuts(*this);
 					}
 
 					// Shows an element's `tooltip` after a short hover (e.g. the

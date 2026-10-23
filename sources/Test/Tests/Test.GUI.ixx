@@ -2902,6 +2902,182 @@ export namespace Test
 		ASSERT_TRUE(home->get_scroll() == 0.0f);
 	}
 
+	// Shortcut texts: modifiers and a key joined by '+', any case, written back in one form.
+	TEST(Core.HAL, GUICommands_KeyChordParsing)
+	{
+		auto ctrl_s = GUI::key_chord::parse("ctrl + s");
+		ASSERT_TRUE(ctrl_s.has_value());
+		ASSERT_TRUE(ctrl_s->ctrl && !ctrl_s->shift && !ctrl_s->alt && ctrl_s->key == 'S');
+		ASSERT_TRUE(ctrl_s->to_string() == "Ctrl+S");
+
+		auto all = GUI::key_chord::parse("Alt+Shift+Ctrl+F5");
+		ASSERT_TRUE(all.has_value() && all->ctrl && all->shift && all->alt && all->key == 0x74);
+		ASSERT_TRUE(all->to_string() == "Ctrl+Shift+Alt+F5");
+
+		ASSERT_TRUE(GUI::key_chord::parse("Del")->key == 0x2E);
+		ASSERT_TRUE(GUI::key_chord::parse("Esc")->key == 0x1B);
+		ASSERT_TRUE(GUI::key_chord::parse("Ctrl+Left")->key == 0x25);
+		ASSERT_TRUE(GUI::key_chord::parse("7")->key == '7');
+		ASSERT_TRUE(GUI::key_chord::parse("Ctrl+Del")->to_string() == "Ctrl+Delete");
+
+		// Text that is not a shortcut.
+		ASSERT_TRUE(!GUI::key_chord::parse("").has_value());
+		ASSERT_TRUE(!GUI::key_chord::parse("Ctrl+").has_value());          // no key
+		ASSERT_TRUE(!GUI::key_chord::parse("Ctrl").has_value());
+		ASSERT_TRUE(!GUI::key_chord::parse("Ctrl+A+B").has_value());       // two keys
+		ASSERT_TRUE(!GUI::key_chord::parse("Ctrl+Banana").has_value());
+		ASSERT_TRUE(!GUI::key_chord::parse("F13").has_value());
+	}
+
+	// The registry: one command per id (adding it again returns the same one), lookup, running
+	// with the enabled state respected, and the titles falling back sensibly.
+	TEST(Core.HAL, GUICommands_RegistryBasics)
+	{
+		GUI::command_registry commands;
+		int saves = 0;
+		bool allowed = false;
+
+		commands.add("file.save").title("Save").shortcut("Ctrl+S").enabled([&] { return allowed; }).run([&] { saves++; });
+		ASSERT_TRUE(&commands.add("file.save") == commands.find("file.save").get());   // the same command
+		ASSERT_TRUE(commands.all().size() == 1);
+
+		ASSERT_TRUE(commands.find("nothing") == nullptr);
+		ASSERT_TRUE(!commands.run("nothing"));
+
+		ASSERT_TRUE(!commands.run("file.save") && saves == 0);              // disabled: not run
+		allowed = true;
+		ASSERT_TRUE(commands.run("file.save") && saves == 1);
+
+		auto save = commands.find("file.save");
+		ASSERT_TRUE(save->get_tooltip() == "Save (Ctrl+S)");
+
+		auto& bare = commands.add("view.grid");                             // only an id so far
+		ASSERT_TRUE(bare.get_title() == "view.grid");
+		ASSERT_TRUE(bare.get_short_title() == "view.grid");
+		ASSERT_TRUE(!bare.is_toggle() && bare.is_enabled() && !bare.execute());   // nothing to run
+
+		commands.add("view.grid").title("Grid").short_title("G").checked([] { return true; });
+		ASSERT_TRUE(bare.get_short_title() == "G" && bare.is_toggle() && bare.is_checked());
+
+		ASSERT_TRUE(commands.find_shortcut(*GUI::key_chord::parse("Ctrl+S")) == save);
+		ASSERT_TRUE(commands.find_shortcut(*GUI::key_chord::parse("Ctrl+Shift+S")) == nullptr);
+	}
+
+	// Shortcuts: a key hook runs the command for a chord, but not a disabled one, not a plain key
+	// while a text field has the focus, and not while the ribbon's Alt mode holds the keyboard.
+	TEST(Core.HAL, GUICommands_ShortcutDispatch)
+	{
+		THREAD_SCOPE(GUI);
+
+		auto ui_owner = std::make_shared<GUI::user_interface>();
+		auto& ui = *ui_owner;
+		ui.size = vec2(800.0f, 400.0f);
+
+		GUI::command_registry commands;
+		int saves = 0, grids = 0;
+		bool allowed = true;
+		commands.add("file.save").shortcut("Ctrl+S").enabled([&] { return allowed; }).run([&] { saves++; });
+		commands.add("view.grid").shortcut("G").run([&] { grids++; });
+		commands.install_shortcuts(ui);
+
+		auto field = std::make_shared<GUI::Elements::edit_text>();
+		ui.add_child(field);
+
+		auto press = [&](long code, bool ctrl)
+		{
+			key_mods mods;
+			mods.ctrl = ctrl;
+			ui.key_action_event_internal(key_action::DOWN, code, mods);
+			ui.key_action_event_internal(key_action::UP, code, mods);
+		};
+
+		press('S', true);
+		ASSERT_TRUE(saves == 1);
+		press('S', false);                                                   // no Ctrl: another chord
+		ASSERT_TRUE(saves == 1);
+
+		allowed = false;
+		press('S', true);                                                    // disabled: not run
+		ASSERT_TRUE(saves == 1);
+		allowed = true;
+
+		press('G', false);                                                   // a plain key, nothing focused
+		ASSERT_TRUE(grids == 1);
+
+		field->focus();
+		press('G', false);                                                   // typing in a field: left alone
+		ASSERT_TRUE(grids == 1);
+		press('S', true);                                                    // with Ctrl it still runs
+		ASSERT_TRUE(saves == 2);
+		field->unfocus();
+
+		ui.keys_captured = true;                                             // the ribbon's Alt mode
+		press('S', true);
+		ASSERT_TRUE(saves == 2);
+	}
+
+	// The adapters: a ribbon button takes everything from the command (and follows its state),
+	// a menu item runs it.
+	TEST(Core.HAL, GUICommands_RibbonAndMenuAdapters)
+	{
+		THREAD_SCOPE(GUI);
+
+		auto ui_owner = std::make_shared<GUI::user_interface>();
+		auto& ui = *ui_owner;
+		ui.size = vec2(800.0f, 400.0f);
+
+		GUI::command_registry commands;
+		int saves = 0;
+		bool allowed = false, lit = false;
+		commands.add("file.save").title("Save").short_title("Sv").icon("S").shortcut("Ctrl+S")
+			.enabled([&] { return allowed; }).run([&] { saves++; });
+		commands.add("view.grid").title("Grid").checked([&] { return lit; }).run([&] { lit = !lit; });
+
+		auto rb = std::make_shared<GUI::Elements::ribbon>();
+		auto group = rb->add_tab("Home")->add_group("File");
+		auto save = group->add_command(commands, "file.save");
+		auto small_save = group->add_command(commands.find("file.save"), false);
+		auto grid = group->add_command(commands, "view.grid");
+		ASSERT_TRUE(group->add_command(commands, "nothing") == nullptr);
+		ui.add_child(rb);
+
+		ASSERT_TRUE(save->get_text() == "Save" && small_save->get_text() == "Sv");   // title, short title
+		ASSERT_TRUE(save->get_icon() == "S");
+		ASSERT_TRUE(save->tooltip == "Save (Ctrl+S)");
+
+		auto frame = [&](float dt)
+		{
+			ui.process_ui(dt);
+			FrameGraph::Graph graph;
+			ui.create_graph(graph);
+		};
+		for (int i = 0; i < 6; i++)
+			frame(0.03f);
+
+		const rect S = save->get_render_bounds();
+		save->on_mouse_action(mouse_action::UP, mouse_button::LEFT, vec2(S.x + 2.0f, S.y + 2.0f));
+		ASSERT_TRUE(saves == 0);                                             // disabled: the button follows the command
+		allowed = true;
+		frame(0.03f);
+		save->on_mouse_action(mouse_action::UP, mouse_button::LEFT, vec2(S.x + 2.0f, S.y + 2.0f));
+		ASSERT_TRUE(saves == 1);
+
+		const rect G = grid->get_render_bounds();
+		grid->on_mouse_action(mouse_action::UP, mouse_button::LEFT, vec2(G.x + 2.0f, G.y + 2.0f));
+		ASSERT_TRUE(lit);                                                    // a toggle command toggles
+
+		// A menu item.
+		GUI::Elements::menu_list menu;
+		auto item = menu.add_command(commands.find("file.save"));
+		ASSERT_TRUE(item->text == "Save");
+		item->on_click(item);
+		ASSERT_TRUE(saves == 2);
+		allowed = false;
+		item->on_click(item);
+		ASSERT_TRUE(saves == 2);                                             // disabled
+		ASSERT_TRUE(menu.add_command(nullptr) == nullptr);
+	}
+
 	// A finger drags an overflowing strip sideways; a finger that stays put is still a tap.
 	TEST(Core.HAL, GUIRibbon_TouchDragScrollsOverflow)
 	{

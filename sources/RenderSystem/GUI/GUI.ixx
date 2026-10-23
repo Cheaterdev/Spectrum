@@ -3,6 +3,7 @@ export module GUI;
 export import :Base;
 export import :Renderer;
 export import :Skin;
+export import :Commands;
 
 export import :Button;
 export import :CollapsibleSection;

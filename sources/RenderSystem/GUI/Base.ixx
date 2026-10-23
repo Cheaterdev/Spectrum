@@ -1011,6 +1011,8 @@ namespace GUI
             ~user_interface();
 
             base::wptr get_hovered() const { return hovered; }
+            // Whether some element has the keyboard focus (a text field being edited).
+            bool has_focused_element() const { return !focused.expired(); }
             vec2       get_mouse_pos() const { return last_mouse_pos; }
 
             void mouse_move_event_internal(vec2 pos);

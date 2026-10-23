@@ -5,6 +5,7 @@ import :MenuList;
 import :ColoredRect;
 import :Button;
 import :VectorIcon;
+import :Commands;
 
 export namespace GUI
 {
@@ -160,6 +161,13 @@ export namespace GUI
                 // Fills the open stack; a fourth one starts the next column.
                 ribbon_button::ptr add_small(std::string icon, std::string text, std::function<void()> on_click = {}, menu_list::ptr dropdown = {}, bool split = false);
                 ribbon_button::ptr add_icon(std::string icon, std::function<void()> on_click = {}, menu_list::ptr dropdown = {});
+                // A button for a command: its icon, title (the short title on a small button),
+                // tooltip (with the shortcut), enabled state and toggle state all come from the
+                // command, and a click runs it. With a drop-down it opens that menu instead,
+                // unless `split`. Null when the command is null.
+                ribbon_button::ptr add_command(command::ptr cmd, bool large = true, menu_list::ptr dropdown = {}, bool split = false);
+                // The same for the command with that id in the registry (null when there is none).
+                ribbon_button::ptr add_command(const command_registry& registry, std::string_view id, bool large = true);
                 // A button for an existing menu item: it calls the item's on_click, or, when
                 // the item has a submenu, opens that as its drop-down. Lets the old menus
                 // keep defining what the commands do while the ribbon shows them.

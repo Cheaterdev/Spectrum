@@ -2,6 +2,7 @@ export module GUI:MenuList;
 import :Base;
 import :ScrollContainer;
 import :Label;
+import :Commands;
 
 
 
@@ -73,6 +74,10 @@ export namespace GUI
                 //	std::function<void(void)> on_click;
                 //		bool draw_background;
                 bool draw_icon = false;
+
+                // An item for a command: its title as the text, and a click runs it (a disabled
+                // command does nothing). Null when the command is null.
+                menu_list_element::ptr add_command(command::ptr cmd);
 
                 // The items in the order they were added.
                 const std::vector<menu_list_element::ptr>& get_items() const { return elements; }
