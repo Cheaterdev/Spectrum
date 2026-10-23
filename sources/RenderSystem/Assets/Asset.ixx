@@ -15,7 +15,8 @@ enum class Asset_Type : int
 	MESH,
 	MATERIAL,
 	BINARY,
-	TILED_TEXTURE
+	TILED_TEXTURE,
+	FONT
 };
 
 // What an asset file is for. An asset class serializes the parts the target needs and records in the file

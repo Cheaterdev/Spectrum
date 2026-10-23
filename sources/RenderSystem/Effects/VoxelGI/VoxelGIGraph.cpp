@@ -429,7 +429,7 @@ VoxelGI::VoxelGI(Scene::ptr& scene, VSM& vsm) :scene(scene), vsm(vsm), VariableC
 	m_lighting_render = [this](Passes::GI::Voxel::Lighting::Context& data, FrameGraph::FrameContext& context)
 	{
 		auto& command_list = context.get_list();
-		auto  sky_cubemap_filtered = *data.sky_cubemap_filtered;
+		auto  sky_cubemap_diffuse = *data.sky_cubemap_filtered_diffuse;
 		auto& cam = context.graph->get_context<CameraInfo>();
 
 		MeshRenderContext::ptr mesh_ctx(new MeshRenderContext());
@@ -449,7 +449,7 @@ VoxelGI::VoxelGI(Scene::ptr& scene, VSM& vsm) :scene(scene), vsm(vsm), VariableC
 			ligthing.GetAlbedo()  = albedo.tex_result->texture_3d().texture3D;
 			ligthing.GetNormals() = normal.tex_result->texture_3d().texture3D;
 			ligthing.GetOutput()  = tex_lighting.tex_result->texture_3d().mips[0].rwTexture3D;
-			ligthing.GetTex_cube() = sky_cubemap_filtered.textureCube;
+			ligthing.GetSky_diffuse() = sky_cubemap_diffuse.textureCube;
 
 			HAL::Texture3DViewDesc subres;
 			subres.MipLevels = tex_lighting.tex_result->get_desc().as_texture().MipLevels - 1;

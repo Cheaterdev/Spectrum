@@ -843,35 +843,37 @@ export namespace Test
 	// against D3D12 goldens, tonemapped to 8 bits.
 	TEST(RenderSystem.FrameGraph, Effect_SkyBake)
 	{
-		constexpr int size = 64;   // sky_cubemap_filtered / _diffuse, sky.prism
-		auto sink = make_sink(size, size, 12, 1, HAL::Format::R11G11B10_FLOAT);
+		// The two filtered cubes differ in size (sky.prism: 64 specular, 16 diffuse), so each is read back
+		// into a sink of its own size.
+		auto bake = [](int size, bool diffuse)
+		{
+			auto sink = make_sink(size, size, 6, 1, HAL::Format::R11G11B10_FLOAT);
 
-		FGT_SkyPipeline p;
-		SkyRender sky(p);
-		p.fGT_CopySkyToSink.render_func = [](auto& data, FrameContext& ctx) {
-			auto& copy = ctx.get_list()->get_copy();
-			const auto& filtered = data.sky_cubemap_filtered.info->resource;
-			const auto& diffuse  = data.sky_cubemap_filtered_diffuse.info->resource;
-			const uint filtered_mips = filtered->get_desc().as_texture().MipLevels;
-			const uint diffuse_mips  = diffuse->get_desc().as_texture().MipLevels;
-			for (uint f = 0; f < 6; ++f)
-			{
-				copy.copy_texture(data.FGT_Sink.info->resource, f,     filtered, f * filtered_mips);
-				copy.copy_texture(data.FGT_Sink.info->resource, 6 + f, diffuse,  f * diffuse_mips);
-			}
+			FGT_SkyPipeline p;
+			SkyRender sky(p);
+			p.fGT_CopySkyToSink.render_func = [diffuse](auto& data, FrameContext& ctx) {
+				auto& copy = ctx.get_list()->get_copy();
+				const auto& cube = diffuse ? data.sky_cubemap_filtered_diffuse.info->resource : data.sky_cubemap_filtered.info->resource;
+				const uint mips = cube->get_desc().as_texture().MipLevels;
+				for (uint f = 0; f < 6; ++f)
+					copy.copy_texture(data.FGT_Sink.info->resource, f, cube, f * mips);
+			};
+
+			GraphRunner r;
+			r.graph.get_context<SkyInfo>().sunDir = float3(0.3f, 0.6f, 0.4f).normalize();
+			r.on_frame = add_frame_info;
+			r.run(p, sink, ivec2(size, size));
+
+			return read_sink_subresources(sink.get());
 		};
 
-		GraphRunner r;
-		r.graph.get_context<SkyInfo>().sunDir = float3(0.3f, 0.6f, 0.4f).normalize();
-		r.on_frame = add_frame_info;
-		r.run(p, sink, ivec2(size, size));
-
-		auto subs = read_sink_subresources(sink.get());
+		auto specular = bake(64, false);
+		auto diffuse  = bake(16, true);
 		const Test::TextureCompare hdr{ .tolerance = 4, .float_encoding = Test::FloatEncoding::Tonemapped, .exposure = 1.0f };
 		for (uint f = 0; f < 6; ++f)
 		{
-			Test::check_texture_data_reference(subs[f],     "fg_sky_specular_f" + std::to_string(f), hdr);
-			Test::check_texture_data_reference(subs[6 + f], "fg_sky_diffuse_f" + std::to_string(f), hdr);
+			Test::check_texture_data_reference(specular[f], "fg_sky_specular_f" + std::to_string(f), hdr);
+			Test::check_texture_data_reference(diffuse[f],  "fg_sky_diffuse_f" + std::to_string(f), hdr);
 		}
 	}
 

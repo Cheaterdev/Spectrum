@@ -28,6 +28,7 @@ export namespace Table
 			HLSL::Texture2D<float4> bestFitNormals;
 			HLSL::Texture3D<float4> brdf;
 			HLSL::TextureCube<float4> sky;
+			HLSL::TextureCube<float4> sky_diffuse;
 			HLSL::Texture2D<float> mainHiZ;
 			Table::Frame::Camera camera;
 			Table::Frame::Camera prevCamera;
@@ -35,6 +36,7 @@ export namespace Table
 			HLSL::Texture2D<float4>& GetBestFitNormals() { return bestFitNormals; }
 			HLSL::Texture3D<float4>& GetBrdf() { return brdf; }
 			HLSL::TextureCube<float4>& GetSky() { return sky; }
+			HLSL::TextureCube<float4>& GetSky_diffuse() { return sky_diffuse; }
 			float4& GetSunDir() { return sunDir; }
 			float& GetMipBias() { return mipBias; }
 			HLSL::Texture2D<float>& GetMainHiZ() { return mainHiZ; }
@@ -54,6 +56,7 @@ export namespace Table
 				compiler.compile(bestFitNormals, "FrameInfo::bestFitNormals");
 				compiler.compile(brdf, "FrameInfo::brdf");
 				compiler.compile_auto(sky, "FrameInfo::sky");
+				compiler.compile_auto(sky_diffuse, "FrameInfo::sky_diffuse");
 				compiler.compile_auto(mainHiZ, "FrameInfo::mainHiZ");
 				compiler.compile(camera, "FrameInfo::camera");
 				compiler.compile(prevCamera, "FrameInfo::prevCamera");
@@ -68,6 +71,7 @@ export namespace Table
 				uint bestFitNormals; // Texture2D<float4>
 				uint brdf; // Texture3D<float4>
 				uint sky; // TextureCube<float4>
+				uint sky_diffuse; // TextureCube<float4>
 				uint mainHiZ; // Texture2D<float>
 				Table::Frame::Camera::Compiled camera; // Camera
 				Table::Frame::Camera::Compiled prevCamera; // Camera

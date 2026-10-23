@@ -256,7 +256,7 @@ namespace GI
 			Texture3D<float4> normals;
 			Texture3D<float4> lower;
 
-			TextureCube<float4> tex_cube;
+			TextureCube<float4> sky_diffuse;
 
 			VSMShadowLookup vsm;
 
@@ -814,7 +814,7 @@ namespace GI
 			[Always = UnorderedAccess] Texture3D VoxelLighted;
 			[Always = Read] Texture3D VoxelAlbedo;
 			[Always = Read] Texture3D VoxelNormal;
-			[Always = Read] TextureCube sky_cubemap_filtered;
+			[Always = Read] TextureCube sky_cubemap_filtered_diffuse;
 			[Always = Read] Texture VoxelAlbedoStatic;
 			[Always = Read] Texture VoxelNormalStatic;
 			[Always = Read] Texture VoxelAlbedoDynamic;

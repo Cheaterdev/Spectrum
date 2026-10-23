@@ -19,6 +19,7 @@ export
 
 	enum class PSO: int
 	{
+		PreviewDiff,
 		BloomDownsample,
 		BloomUpsample,
 		BloomComposite,
@@ -100,11 +101,15 @@ export
 		SSSBlurH,
 		SSSBlurV,
 		SS_Shadow,
+		OutlineTemporal,
+		OutlineCopy,
 		TonemapHistogramClear,
 		TonemapHistogramBuild,
 		TonemapExposureAdapt,
 		TonemapApply,
 		BackdropBlur,
+		FrameGraph_Debug_Histogram2D,
+		FrameGraph_Debug_Histogram2DArray,
 		FrameGraph_Debug_Texture2D,
 		FrameGraph_Debug_Texture2DArray,
 		FrameGraph_Debug_Texture3D,
@@ -140,6 +145,8 @@ export
 		VSMGatherDispatchMaterial,
 		VSMScreenSpaceShadow,
 		SkyAmbient,
+		SkyAmbientDiffuse,
+		SkyAmbientSpecular,
 		VSMDepthAnalysis,
 		DebugLinesDraw,
 		DebugLinesOccluded,
@@ -174,8 +181,9 @@ export
 		Blending,
 		DrawBox,
 		DrawAxis,
+		DrawMask,
 		DrawRing,
-		StencilerLast,
+		GizmoResolve,
 		NinePatch,
 		SimpleRect,
 		CanvasBack,
@@ -197,6 +205,7 @@ export
 	enum class SlotID: unsigned int
 	{
 		TextureRenderer = "TextureRenderer"_crc32,
+		PreviewDiffParams = "PreviewDiffParams"_crc32,
 		BloomSelectors = "BloomSelectors"_crc32,
 		BloomDownsample = "BloomDownsample"_crc32,
 		BloomUpsample = "BloomUpsample"_crc32,
@@ -350,11 +359,14 @@ export
 		SSSTilesRead = "SSSTilesRead"_crc32,
 		SSSBlurParams = "SSSBlurParams"_crc32,
 		DispatchParameters = "DispatchParameters"_crc32,
-		Countour = "Countour"_crc32,
+		MaskDepth = "MaskDepth"_crc32,
 		DrawStencil = "DrawStencil"_crc32,
 		PickerBuffer = "PickerBuffer"_crc32,
 		Instance = "Instance"_crc32,
 		Color = "Color"_crc32,
+		GizmoResolveData = "GizmoResolveData"_crc32,
+		OutlineData = "OutlineData"_crc32,
+		OutlineCopy = "OutlineCopy"_crc32,
 		Test = "Test"_crc32,
 		TonemapSelectors = "TonemapSelectors"_crc32,
 		TonemapData = "TonemapData"_crc32,
@@ -485,7 +497,8 @@ namespace Dev
 {
 		enum class RTXDebugFlags : uint
 		{
-			DisableSkyFallback = 1
+			DisableSkyFallback = 1,
+			HideMaterialLobe = 2
 		};
 }
 namespace Post

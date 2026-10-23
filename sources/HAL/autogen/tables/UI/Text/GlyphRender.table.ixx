@@ -23,22 +23,34 @@ export namespace Table
 			{
 				static constexpr SlotID ID = SlotID::GlyphRender;
 				uint raw_output;
+				float4 shadow_color;
+				float2 shadow_offset;
+				float2 shadow_blur;
 				HLSL::StructuredBuffer<Table::UI::Text::GlyphQuad> quads;
 				std::vector<HLSL::Texture2D<float4>> textures;
 				HLSL::StructuredBuffer<Table::UI::Text::GlyphQuad>& GetQuads() { return quads; }
 				uint& GetRaw_output() { return raw_output; }
+				float4& GetShadow_color() { return shadow_color; }
+				float2& GetShadow_offset() { return shadow_offset; }
+				float2& GetShadow_blur() { return shadow_blur; }
 				std::vector<HLSL::Texture2D<float4>>& GetTextures() { return textures; }
 				static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 				template<class Compiler>
 				void compile(Compiler& compiler) const
 				{
 					compiler.compile(raw_output, "GlyphRender::raw_output");
+					compiler.compile(shadow_color, "GlyphRender::shadow_color");
+					compiler.compile(shadow_offset, "GlyphRender::shadow_offset");
+					compiler.compile(shadow_blur, "GlyphRender::shadow_blur");
 					compiler.compile(quads, "GlyphRender::quads");
 					compiler.compile_auto(textures, "GlyphRender::textures");
 				}
 				struct Compiled
 				{
 					uint raw_output; // uint
+					float4 shadow_color; // float4
+					float2 shadow_offset; // float2
+					float2 shadow_blur; // float2
 					uint quads; // StructuredBuffer<GlyphQuad>
 					uint textures; // Texture2D<float4>
 
@@ -47,6 +59,9 @@ export namespace Table
 					SERIALIZE()
 					{
 						ar& NVP(raw_output);
+						ar& NVP(shadow_color);
+						ar& NVP(shadow_offset);
+						ar& NVP(shadow_blur);
 					}
 
 
@@ -60,6 +75,9 @@ export namespace Table
 				SERIALIZE()
 				{
 					ar& NVP(raw_output);
+					ar& NVP(shadow_color);
+					ar& NVP(shadow_offset);
+					ar& NVP(shadow_blur);
 				}
 
 			};

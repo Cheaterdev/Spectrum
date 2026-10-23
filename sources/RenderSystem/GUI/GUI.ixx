@@ -3,6 +3,7 @@ export module GUI;
 export import :Base;
 export import :Renderer;
 export import :Skin;
+export import :Commands;
 
 export import :Button;
 export import :CollapsibleSection;
@@ -26,6 +27,7 @@ export import :ListBox;
 export import :MenuList;
 export import :OptionBox;
 export import :ProgressBar;
+export import :Ribbon;
 export import :Resizable;
 export import :Resizer;
 export import :ScrollBar;

@@ -18,6 +18,19 @@ void aniso_alphas(float roughness, float anisotropy, out float at, out float ab)
     ab = max(a * (1.0 - anisotropy), 0.002);
 }
 
+// Environment lookup for an anisotropic surface (Filament, after "Revisiting Physically Based
+// Shading at Imageworks"): the normal is bent towards the direction the highlight stretches
+// along, so a prefiltered environment is sampled as if through that elongated lobe. T is the
+// tangent (aniso_decode_tangent); a positive anisotropy stretches along the bitangent.
+float3 aniso_bent_normal(float3 N, float3 V, float3 T, float anisotropy)
+{
+    float3 direction = anisotropy >= 0.0 ? cross(N, T) : T;
+    float3 tangential = cross(direction, V);
+    float3 stretched = cross(tangential, direction);
+
+    return normalize(lerp(N, stretched, abs(anisotropy)));
+}
+
 float aniso_D_ggx(float NH, float TH, float BH, float at, float ab)
 {
     float a2 = at * ab;

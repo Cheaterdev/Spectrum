@@ -75,7 +75,7 @@ namespace Frame
 		struct Instance5
 		{
 			static const uint ID = 9;
-			static const uint CB = 2;
+			static const uint CB = 3;
 			static const uint CB_ID = 30;
 			static const uint SRV = 4;
 			static const uint SRV_ID = 32;

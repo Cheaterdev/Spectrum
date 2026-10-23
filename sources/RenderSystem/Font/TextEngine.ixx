@@ -28,11 +28,16 @@ export namespace Text
         Mono    // Consolas
     };
 
+    // A font added with Engine::add_font. 0 = none.
+    using FontId = uint8_t;
+
     struct Style
     {
         float  size = 16;   // pixels
         Weight weight = Weight::Normal;
         Family family = Family::Sans;
+        // Set: draws with this font alone (no Segoe/emoji fallback), whatever family says.
+        FontId font = 0;
     };
 
     // Syntax highlighting, one line at a time: fills colors (one packed RGBA8
@@ -98,6 +103,24 @@ export namespace Text
         // Once per frame, before any build(): evicts unused atlas items and layouts.
         void begin_frame();
 
+        // Fonts from memory (a FontAsset's file). Each gets a family of its own, picked with
+        // Style::font; the engine copies data. Returns 0 when the data is not a font or all
+        // ids are taken.
+        FontId add_font(std::string_view name, std::string_view data);
+        void   remove_font(FontId font);
+
+        // Whether a font added with add_font has a glyph for the codepoint.
+        bool   has_glyph(FontId font, char32_t codepoint);
+
+        // The fonts text uses when a Style names none. Every font reaches the engine through a
+        // FontAsset; the engine reads no font files itself. Sans is required: text built without
+        // it asserts. Emoji runs always take the Emoji font, and have no glyphs without one.
+        enum class Role { Sans, Mono, Emoji };
+
+        // Replaces the font of a role. Meant for startup: it drops every cached layout, so call it
+        // before any text is built.
+        void set_font(Role role, std::string_view name, std::string_view data);
+
         // Layout-cache queries: request no glyphs, so they are safe to call
         // outside the UI tree walk. Offsets are in codepoints.
         vec2         measure(std::string_view utf8, Style style);
@@ -129,8 +152,20 @@ export namespace Text
         // raw_output writes the sRGB color as is, for off-screen targets such as
         // asset previews; otherwise it goes through ui_output() for the scRGB
         // swapchain, which needs the UI pass's DisplayOutput bound.
+        // A drop shadow drawn by the glyph shader in the same pass (no second draw): the glyphs'
+        // coverage again, moved by offset window pixels and tinted color (straight alpha; the
+        // text's own alpha scales it), under the text. Alpha 0 = none. The quads grow to hold
+        // it, so it may reach outside clip.
+        struct Shadow
+        {
+            float4 color  = float4(0, 0, 0, 0);
+            vec2   offset = vec2(0, 0);
+            // A five-tap blur this many window pixels out (0 = crisp); the quads grow by it too.
+            float  blur   = 0.0f;
+        };
+
         void draw(HAL::CommandList::ptr& list, const Layout& layout, vec2 pos, float4 color, sizer clip, vec2 window_size,
-                  bool raw_output = false);
+                  bool raw_output = false, const Shadow& shadow = {});
     };
 
     // A compiler message pinned to the text: drawn as a wavy underline plus an

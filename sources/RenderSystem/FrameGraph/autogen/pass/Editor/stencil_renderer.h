@@ -24,7 +24,10 @@ namespace Editor
 			Handlers::Texture GBuffer_ObjectID = ResourceID::GBuffer_ObjectID;
 
 
-			Handlers::Texture ResultTexture = ResourceID::ResultTexture;
+			Handlers::Texture GBuffer_Depth = ResourceID::GBuffer_Depth;
+
+
+			Handlers::Texture GizmoColor = ResourceID::GizmoColor;
 
 
 			Handlers::StructuredBuffer<UINT> axis_id_buffer = ResourceID::axis_id_buffer;
@@ -47,7 +50,7 @@ namespace Editor
 			static void need_always(Context& data, FrameGraph::TaskBuilder& builder)
 			{
 				builder.need(data.GBuffer_ObjectID, FrameGraph::ResourceFlags::Read);
-				builder.need(data.ResultTexture, FrameGraph::ResourceFlags::RenderTarget);
+				builder.need(data.GBuffer_Depth, FrameGraph::ResourceFlags::Read);
 			}
 
 			// Resources this pass always creates with a fixed desc, generated from
@@ -65,6 +68,7 @@ namespace Editor
 			// runtime state.
 			static void create_always(Context& data, FrameGraph::TaskBuilder& builder)
 			{
+				builder.create(data.GizmoColor, { ivec3(builder.graph->get_context<Table::Frame::ViewportContext>().upscale_size * 2, 0), HAL::Format::R16G16B16A16_FLOAT, 1, 1 }, FrameGraph::ResourceFlags::RenderTarget);
 				builder.create(data.axis_id_buffer, { 1 }, FrameGraph::ResourceFlags::UnorderedAccess);
 			}
 			// Which chain link each handler field resolved to, one named slot per
@@ -75,14 +79,16 @@ namespace Editor
 			struct Cache
 			{
 				FrameGraph::ChainIndex GBuffer_ObjectID = FrameGraph::ChainIndex::Unresolved;
-				FrameGraph::ChainIndex ResultTexture = FrameGraph::ChainIndex::Unresolved;
+				FrameGraph::ChainIndex GBuffer_Depth = FrameGraph::ChainIndex::Unresolved;
+				FrameGraph::ChainIndex GizmoColor = FrameGraph::ChainIndex::Unresolved;
 				FrameGraph::ChainIndex axis_id_buffer = FrameGraph::ChainIndex::Unresolved;
 			};
 
 			static void save_to_cache([[maybe_unused]] const Context& data, [[maybe_unused]] Cache& cache)
 			{
 				cache.GBuffer_ObjectID = FrameGraph::TaskBuilder::cache_slot(data.GBuffer_ObjectID, ResourceID::GBuffer_ObjectID);
-				cache.ResultTexture = FrameGraph::TaskBuilder::cache_slot(data.ResultTexture, ResourceID::ResultTexture);
+				cache.GBuffer_Depth = FrameGraph::TaskBuilder::cache_slot(data.GBuffer_Depth, ResourceID::GBuffer_Depth);
+				cache.GizmoColor = FrameGraph::TaskBuilder::cache_slot(data.GizmoColor, ResourceID::GizmoColor);
 				cache.axis_id_buffer = FrameGraph::TaskBuilder::cache_slot(data.axis_id_buffer, ResourceID::axis_id_buffer);
 			}
 
@@ -96,7 +102,8 @@ namespace Editor
 			static void load_from_cache([[maybe_unused]] Context& data, [[maybe_unused]] const Cache& cache, [[maybe_unused]] const FrameGraph::TaskBuilder& builder)
 			{
 				builder.load(data.GBuffer_ObjectID, ResourceID::GBuffer_ObjectID, cache.GBuffer_ObjectID);
-				builder.load(data.ResultTexture, ResourceID::ResultTexture, cache.ResultTexture);
+				builder.load(data.GBuffer_Depth, ResourceID::GBuffer_Depth, cache.GBuffer_Depth);
+				builder.create_versioned(data.GizmoColor, cache.GizmoColor, { ivec3(builder.graph->get_context<Table::Frame::ViewportContext>().upscale_size * 2, 0), HAL::Format::R16G16B16A16_FLOAT, 1, 1 });
 				builder.create_versioned(data.axis_id_buffer, cache.axis_id_buffer, { 1 });
 			}
 
@@ -105,7 +112,8 @@ namespace Editor
 			// [Write] / [Write = {leaves...}] for resources inside a view group).
 			static inline const FrameGraph::ResourceAccess resource_accesses[] = {
 				{ ResourceID::GBuffer_ObjectID, false },
-				{ ResourceID::ResultTexture, true },
+				{ ResourceID::GBuffer_Depth, false },
+				{ ResourceID::GizmoColor, true },
 				{ ResourceID::axis_id_buffer, true },
 			};
 			static constexpr uint resource_count = std::size(resource_accesses);

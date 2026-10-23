@@ -28,6 +28,23 @@ namespace
 		if (code == EXCEPTION_ACCESS_VIOLATION && info->ExceptionRecord->NumberParameters >= 2)
 			std::fprintf(stderr, "  %s address 0x%llX\n", info->ExceptionRecord->ExceptionInformation[0] ? "writing" : "reading",
 				(unsigned long long)info->ExceptionRecord->ExceptionInformation[1]);
+		// Raw frames first, as offsets into test.exe (look them up in bin/<config>/test.map: the
+		// symbolized trace below comes out empty on some machines).
+		{
+			void* frames[48] = {};
+			const USHORT count = CaptureStackBackTrace(0, 48, frames, nullptr);
+			const auto base = reinterpret_cast<unsigned long long>(GetModuleHandleW(nullptr));
+			std::fprintf(stderr, "  frames (RVA in test.exe, or the raw address outside it):\n");
+			for (USHORT i = 0; i < count; i++)
+			{
+				const auto address = reinterpret_cast<unsigned long long>(frames[i]);
+				if (address >= base && address < base + 0x10000000ull)
+					std::fprintf(stderr, "    #%u 0x%llX\n", unsigned(i), address - base);
+				else
+					std::fprintf(stderr, "    #%u %p\n", unsigned(i), frames[i]);
+			}
+		}
+
 		std::fputs(std::to_string(std::stacktrace::current()).c_str(), stderr);
 		std::fputs("\n", stderr);
 		std::fflush(stderr);

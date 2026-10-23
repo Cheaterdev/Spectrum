@@ -32,6 +32,10 @@ export
 	struct SkyInfo
 	{
 		float3 sunDir;
+		// 1 replaces the atmosphere with the studio environment (sky/studio.hlsl); the
+		// material preview's glass, metal and coat need something with contrast to reflect.
+		float studio = 0;
+		float studio_fill = 1;
 	};
 	struct SceneInfo
 	{

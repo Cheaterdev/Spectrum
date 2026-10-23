@@ -16,13 +16,23 @@ namespace Dev
 		float3 maxColor; // float3
 		uint selectedMip; // uint
 		uint selectedArrayIndex; // uint
+		uint channelMask; // uint
+		int2 cursor; // int2
+		uint flags; // uint
+		float exposure; // float
 		uint target; // RWTexture2D<float4>
+		uint stats; // RWStructuredBuffer<uint>
 		uint2 GetTargetSize() { return targetSize; }
 		float3 GetMinColor() { return minColor; }
 		float3 GetMaxColor() { return maxColor; }
 		uint GetSelectedMip() { return selectedMip; }
 		uint GetSelectedArrayIndex() { return selectedArrayIndex; }
+		uint GetChannelMask() { return channelMask; }
+		int2 GetCursor() { return cursor; }
+		uint GetFlags() { return flags; }
+		float GetExposure() { return exposure; }
 		RWTexture2D<float4> GetTarget() { return ResourceDescriptorHeap[target]; }
+		RWStructuredBuffer<uint> GetStats() { return ResourceDescriptorHeap[stats]; }
 	};
 }
 using Dev::FrameGraph_Debug_Common;

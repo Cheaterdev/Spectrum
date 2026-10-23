@@ -456,6 +456,83 @@ stencil_renderer::stencil_renderer() : VariableContext(L"stencil")
 
 	// ---- Pass function members -----------------------------------------------
 
+	m_render_resolve = [this](Passes::Editor::stencil_gizmo_resolve::Context& data, FrameGraph::FrameContext& context)
+	{
+		if (selected.empty())
+			return;
+
+		auto& graphics = context.get_list()->get_graphics();
+		graphics.set_signature(Layouts::DefaultLayout);
+		graphics.set_viewport(data.ResultTexture->get_viewport());
+		graphics.set_scissor(data.ResultTexture->get_scissor());
+		{
+			RT::Frame::SingleColor rt;
+			rt.GetColor() = data.ResultTexture->renderTarget;
+			graphics.set_rtv(rt);
+		}
+
+		PROFILE(L"stencil_gizmo_resolve");
+		graphics.set_pipeline<PSOS::Editor::GizmoResolve>();
+		graphics.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::STRIP);
+		{
+			Slots::Editor::GizmoResolveData resolve;
+			resolve.GetSource()        = *data.GizmoColor;
+			resolve.GetOutline_color() = { 1.0f * overlay_intensity, 0.5f * overlay_intensity, 0, float(outline_opacity) };
+			resolve.GetEdge()          = data.OutlineEdge->texture2D;
+			graphics.set(resolve);
+		}
+		graphics.draw(4);
+	};
+
+	m_render_outline = [this](Passes::Editor::stencil_outline_temporal::Context& data, FrameGraph::FrameContext& context)
+	{
+		if (selected.empty() || !selected[0].first)
+		{
+			outline_last_id = 0;
+			return;
+		}
+
+		auto& compute = context.get_list()->get_compute();
+		compute.set_signature(Layouts::DefaultLayout);
+		// FrameInfo: camera / prevCamera for the sky reprojection.
+		context.graph->set_slot(SlotID::FrameInfo, compute);
+
+		const uint64_t frame = context.graph->get_context<TimeInfo>().frame;
+		const uint     id    = object_id_of(selected[0]);
+		const ivec2    size  = data.OutlineEdge->get_size();
+		const bool reset = outline_last_id != id || outline_last_frame + 1 != frame || outline_last_size != size;
+		outline_last_id    = id;
+		outline_last_frame = frame;
+		outline_last_size  = size;
+
+		{
+			PROFILE(L"stencil_outline_edge");
+			compute.set_pipeline<PSOS::Editor::OutlineTemporal>();
+
+			Slots::Editor::OutlineData params;
+			params.GetMask()           = data.GizmoColor->texture2D;
+			params.GetDepth()          = data.GBuffer_Depth->texture2D;
+			params.GetMotion()         = data.GBuffer_Speed->texture2D;
+			params.GetHistory()        = data.OutlineHistory->texture2D;
+			params.GetEdge()           = data.OutlineEdge->rwTexture2D;
+			params.GetWidth()          = outline_width;
+			params.GetHistory_weight() = outline_history_weight;
+			params.GetReset()          = reset ? 1u : 0u;
+			compute.set(params);
+			compute.dispatch(size, ivec2{ 8, 8 });
+		}
+		{
+			PROFILE(L"stencil_outline_history");
+			compute.set_pipeline<PSOS::Editor::OutlineCopy>();
+
+			Slots::Editor::OutlineCopy params;
+			params.GetSource() = data.OutlineEdge->texture2D;
+			params.GetTarget() = data.OutlineHistory->rwTexture2D;
+			compute.set(params);
+			compute.dispatch(size, ivec2{ 8, 8 });
+		}
+	};
+
 	m_render = [this](Passes::Editor::stencil_renderer::Context& data, FrameGraph::FrameContext& context)
 	{
 		auto& list     = *context.get_list();
@@ -488,38 +565,26 @@ stencil_renderer::stencil_renderer() : VariableContext(L"stencil")
 		compute.clear(*data.axis_id_buffer);
 
 		auto selection = selected.empty() ? std::pair<MeshAssetInstance::ptr, int>{} : selected[0];
+
+		// Cleared even with nothing selected: stencil_gizmo_resolve reads it every frame.
+		graphics.set_signature(Layouts::DefaultLayout);
+		graphics.set_viewport(data.GizmoColor->get_viewport());
+		graphics.set_scissor(data.GizmoColor->get_scissor());
+		{
+			RT::Frame::SingleColor rt;
+			rt.GetColor() = data.GizmoColor->renderTarget;
+			graphics.set_rtv(rt, HAL::RTOptions::Default | HAL::RTOptions::ClearColor, 0, 0, vec4(0, 0, 0, 0));
+		}
+
 		if (selection.first)
 		{
-			graphics.set_signature(Layouts::DefaultLayout);
 			graphics.set(scene->compiledScene);
 			context.graph->set_slot(SlotID::FrameInfo, graphics);
 
-			graphics.set_viewport(data.ResultTexture->get_viewport());
-			graphics.set_scissor(data.ResultTexture->get_scissor());
-			{
-				RT::Frame::SingleColor rt;
-				rt.GetColor() = data.ResultTexture->renderTarget;
-				graphics.set_rtv(rt);
-			}
+			draw_mask(graphics, data, selection);
 
 			{
-				PROFILE(L"stencil_outline");
-				graphics.set_pipeline<PSOS::Editor::StencilerLast>();
-				graphics.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::STRIP);
-				{
-					Slots::Editor::Countour contour;
-					contour.GetColor()       = { 1, 0.5f, 0, 1 };
-					contour.GetObject_ids()  = *data.GBuffer_ObjectID;
-					contour.GetSelected_id() = object_id_of(selection);
-					graphics.set(contour);
-				}
-				graphics.draw(4);
-			}
-
-			// Countour shares Instance0 with PickerBuffer; the outline draw above
-			// is done with it, so rebinding here is safe.
-			{
-				ivec2 size = data.ResultTexture->get_size();
+				ivec2 size = data.GizmoColor->get_size();
 				Slots::Editor::PickerBuffer picker;
 				picker.GetViewBuffer() = *data.axis_id_buffer;
 				picker.GetMouse_pos()  = mouse_inside ? uint2(uint(uv.x * size.x), uint(uv.y * size.y)) : uint2(~0u, ~0u);
@@ -536,6 +601,44 @@ stencil_renderer::stencil_renderer() : VariableContext(L"stencil")
 			run([this, axis]() { mouse_on_axis = axis; });
 		});
 	};
+}
+
+// The selected part's silhouette, flat, into the gizmo target (alpha 0.5): the
+// resolve pass turns it into the outline. Drawn with the unjittered camera, so
+// the shape is the same every frame.
+void stencil_renderer::draw_mask(HAL::GraphicsContext& graphics, Passes::Editor::stencil_renderer::Context& data,
+	const std::pair<MeshAssetInstance::ptr, int>& selection)
+{
+	PROFILE(L"stencil_mask");
+
+	if (!RenderSystem::get().device().is_mesh_shader_supported())
+		return;
+
+	graphics.set_index_buffer(HAL::Views::IndexBuffer());
+	{
+		Slots::Frame::FrameInfo frameInfo;
+		frameInfo.GetCamera()         = mask_cam.camera_cb.current;
+		frameInfo.GetBrdf()           = EngineAssets::brdf.get_asset()->get_texture()->texture_3d().texture3D;
+		frameInfo.GetBestFitNormals() = EngineAssets::best_fit_normals.get_asset()->get_texture()->texture_2d().texture2D;
+		graphics.set(frameInfo);
+	}
+	{
+		Slots::Editor::MaskDepth mask;
+		const ivec2 target_size = data.GizmoColor->get_size();
+		mask.GetScene_depth()     = data.GBuffer_Depth->texture2D;
+		mask.GetInv_target_size() = { 1.0f / target_size.x, 1.0f / target_size.y };
+		mask.GetJitter_uv()       = { main_jitter.x, -main_jitter.y };
+		mask.GetObject_ids()      = *data.GBuffer_ObjectID;
+		mask.GetSelected_id()     = object_id_of(selection);
+		graphics.set(mask);
+	}
+	graphics.set_pipeline<PSOS::Editor::DrawMask>();
+	graphics.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::LIST);
+
+	auto& m = selection.first->rendering[selection.second];
+	graphics.set(m.compiled_mesh_info);
+	graphics.set(m.mesh_instance_info);
+	graphics.dispatch_mesh(m.dispatch_mesh_arguments);
 }
 
 void stencil_renderer::draw_gizmo(HAL::GraphicsContext& graphics)
@@ -581,7 +684,8 @@ void stencil_renderer::draw_gizmo(HAL::GraphicsContext& graphics)
 			float lighted = (mouse_on_axis == i) * 0.7f;
 			{
 				Slots::Editor::Color color;
-				color.GetColor() = { i == 0 ? 1.0f : lighted, i == 1 ? 1.0f : lighted, i == 2 ? 1.0f : lighted, 1 };
+				const float k = overlay_intensity;
+				color.GetColor() = { (i == 0 ? 1.0f : lighted) * k, (i == 1 ? 1.0f : lighted) * k, (i == 2 ? 1.0f : lighted) * k, 1 };
 				graphics.set(color);
 			}
 			{
@@ -612,7 +716,8 @@ void stencil_renderer::draw_gizmo(HAL::GraphicsContext& graphics)
 			float lighted = (mouse_on_axis == 3 + a) * 0.7f;
 			{
 				Slots::Editor::Color color;
-				color.GetColor() = { a == 0 ? 1.0f : lighted, a == 1 ? 1.0f : lighted, a == 2 ? 1.0f : lighted, 1 };
+				const float k = overlay_intensity;
+				color.GetColor() = { (a == 0 ? 1.0f : lighted) * k, (a == 1 ? 1.0f : lighted) * k, (a == 2 ? 1.0f : lighted) * k, 1 };
 				graphics.set(color);
 			}
 			{
@@ -692,7 +797,10 @@ void stencil_renderer::update_frame(FrameGraph::Graph& graph)
 	// Distance scales with viewport height so the gizmo keeps a constant on-screen
 	// pixel size. Clamp to the known-good base distance so it can't cross the near
 	// plane (or swallow the camera) at small viewport sizes.
-	float frame_h = float(graph.get_context<ViewportInfo>().frame_size.y);
+	// Output height, not render height: the gizmo is drawn at output scale,
+	// not the (smaller) render resolution.
+	const auto& vp = graph.get_context<ViewportInfo>();
+	float frame_h = float(vp.upscale_size.y > 0 ? vp.upscale_size.y : vp.frame_size.y);
 	float dist    = 200.0f * frame_h / gizmo_ref_height;
 	if (dist < 200.0f) dist = 200.0f;
 	axis_cam.position *= dist;
@@ -701,4 +809,8 @@ void stencil_renderer::update_frame(FrameGraph::Graph& graph)
 	// how far the camera sits (at dist == 200 this is exactly near=1 / far=1000).
 	axis_cam.set_projection_params(dist * 0.005f, dist * 5.0f);
 	axis_cam.update();
+
+	mask_cam = *caminfo.cam;
+	main_jitter = float2(caminfo.cam->camera_cb.current.jitter.x, caminfo.cam->camera_cb.current.jitter.y);
+	mask_cam.update();
 }

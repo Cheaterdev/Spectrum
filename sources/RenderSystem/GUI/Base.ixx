@@ -79,6 +79,25 @@ enum class mouse_wheel : int
 
 
 
+// For a window that draws its own title bar: what a point of the client area counts as
+// when the window frame asks (WM_NCHITTEST). client = the ordinary UI.
+enum class window_hit : int
+{
+    client,
+    caption,    // drags the window, a double click maximises it
+    minimize,
+    maximize,
+    close
+};
+
+// What the UI's own minimise / maximise / close buttons ask the window to do.
+enum class window_command : int
+{
+    minimize,
+    maximize_restore,
+    close
+};
+
 struct InputHandler
 {
 	virtual	void mouse_move_event(vec2 pos) = 0;
@@ -91,6 +110,10 @@ struct InputHandler
 	// Puts the hovered element's cursor on screen. Called from WM_SETCURSOR as well as after input,
 	// so the window's default arrow never gets a frame in between.
 	virtual	void apply_cursor() {}
+
+	// Called on the window thread, from WM_NCHITTEST, for a client-area point. Must not
+	// touch the UI tree: it answers from what the last drawn frame recorded.
+	virtual	window_hit hit_test_window(vec2 pos) { return window_hit::client; }
 };
 
 namespace GUI
@@ -612,6 +635,10 @@ namespace GUI
             bool can_multitouch = false;   // wants all of its fingers in one on_touch_move call
             int  touch_id = -1;            // the finger this element is currently pressed by
             bool clickable;
+            // What the window frame makes of a press on this element when the window draws
+            // its own title bar (user_interface::hit_test_window). The tab bar is `caption`,
+            // the window buttons are minimize / maximize / close.
+            window_hit window_region = window_hit::client;
             bool draw_helper = false;
             bool map_to_pixels = false;
             bool drag_listener = false;
@@ -952,12 +979,34 @@ namespace GUI
             Variable<float> fade_out_duration = { 0.10f, "Fade-out duration (s)", effects_context.get(), 0.02f, 1.5f };
             Variable<bool>  window_animations = { true, "Window open/close fades", effects_context.get() };
 
+            // A soft shadow under every label's text (one extra text draw per label): the
+            // default for labels that have no shadow of their own.
+            Variable<bool>  text_shadow_enabled  = { true, "Text shadow", effects_context.get() };
+            Variable<float> text_shadow_strength = { 0.45f, "Text shadow strength", effects_context.get(), 0.0f, 1.0f };
+            Variable<float> text_shadow_offset   = { 1.0f, "Text shadow offset (px)", effects_context.get(), 0.0f, 4.0f };
+            // How far the shadow's five-tap blur reaches; 0 is a crisp copy of the text.
+            Variable<float> text_shadow_softness = { 1.0f, "Text shadow softness (px)", effects_context.get(), 0.0f, 3.0f };
+
             // Hands each backdrop element its own snapshot slot for the frame:
             // two elements recorded into different command lists must not
             // share a texture. Reset when the draw list is collected.
             uint32_t backdrop_counter = 0;
             // The same for group-opacity layers (one snapshot texture each).
             uint32_t layer_counter = 0;
+
+            // Where the window frame should treat clicks as title bar or window buttons.
+            // The tree walk records every visible element that has a window_region or is
+            // clickable, in draw order, into building_regions (UI thread); at the end of the
+            // walk the list is published to window_regions under the mutex, which the
+            // window thread reads. The last one under the point wins (it is on top).
+            struct frame_region
+            {
+                rect       bounds;
+                window_hit hit;
+            };
+            std::vector<frame_region> building_regions;
+            std::vector<frame_region> window_regions;
+            std::mutex                window_regions_mutex;
 
             using ptr = s_ptr<user_interface>;
             using wptr = w_ptr<user_interface>;
@@ -970,6 +1019,8 @@ namespace GUI
             ~user_interface();
 
             base::wptr get_hovered() const { return hovered; }
+            // Whether some element has the keyboard focus (a text field being edited).
+            bool has_focused_element() const { return !focused.expired(); }
             vec2       get_mouse_pos() const { return last_mouse_pos; }
 
             void mouse_move_event_internal(vec2 pos);
@@ -989,6 +1040,26 @@ namespace GUI
             virtual void key_action_event(key_action action, long key, key_mods mods);
             virtual void char_event(char32_t ch);
             virtual void apply_cursor() override;
+
+            // The window frame's hit test, answered from window_regions (see below).
+            virtual window_hit hit_test_window(vec2 pos) override;
+
+            // Set by the application when the window draws its own title bar: the UI's
+            // minimise / maximise / close buttons call the handler; the query says
+            // whether the window is maximised (the maximise button shows "restore").
+            std::function<void(window_command)> window_command_handler;
+            std::function<bool()>               window_maximized;
+
+            // Key hooks see every key event before the focused element does, and a mouse
+            // press as a key of -1 (the result of that one is ignored): for things that
+            // listen to the keyboard without focus, such as the ribbon's Alt key tips. A
+            // hook that returns true consumes the key. The owner is held weakly; a hook
+            // whose owner is gone is skipped. While keys_captured is set, typed characters
+            // go nowhere (they would otherwise land in the focused text field).
+            using key_hook_fn = std::function<bool(key_action, long, key_mods)>;
+            void add_key_hook(base::ptr owner, key_hook_fn hook);
+            bool keys_captured = false;
+            std::vector<std::pair<base::wptr, key_hook_fn>> key_hooks;
 
          //   virtual void draw_ui(Context&);
 

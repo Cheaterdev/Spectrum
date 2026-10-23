@@ -1,4 +1,4 @@
-﻿module Graphics:Asset;
+module Graphics:Asset;
 import RenderSystem;
 import Core;
 import ppl;
@@ -15,6 +15,7 @@ CEREAL_FORCE_DYNAMIC_INIT(TextureAsset);
 CEREAL_FORCE_DYNAMIC_INIT(MeshAsset);
 CEREAL_FORCE_DYNAMIC_INIT(MaterialAsset);
 CEREAL_FORCE_DYNAMIC_INIT(BinaryAsset);
+CEREAL_FORCE_DYNAMIC_INIT(FontAsset);
 
 AssetManager::AssetManager()
 {
@@ -72,29 +73,67 @@ void AssetManager::add_func(std::function<void()> f)
 	funcs.emplace_back(f);
 }
 
+namespace
+{
+	// Previews are drawn on the render thread, from tact(). A preview is a render of a Scene, and every
+	// scene draws from the same global node/mesh/material GPU buffers, which PreScene uploads into the
+	// command list of whoever calls it first. Drawn from another thread while the main frame uploads, a
+	// preview reads data that has not reached the GPU and comes out black.
+	//
+	// A job returns false when what it draws is not ready yet (a pipeline still compiling) and is tried
+	// again on a later frame.
+	std::mutex preview_jobs_mutex;
+	std::deque<std::function<bool()>> preview_jobs;
+
+	constexpr int PREVIEW_MAX_ATTEMPTS = 1200;   // frames; a material that never compiles is given up on
+	constexpr auto PREVIEW_FRAME_BUDGET = std::chrono::milliseconds(8);
+}
+
 void AssetManager::add_preview(Asset::ptr asset)
 {
-	preview_executor.enqueue([this, asset]() {
-		try {
-			auto& preview = asset->holder->get_preview();
+	auto attempts = std::make_shared<int>(0);
 
-			if (!preview || !preview->is_rt())
-			{
-				HAL::Texture::ptr new_preview;
-				new_preview.reset(new HAL::Texture(RenderSystem::get().device(), HAL::ResourceDesc::Tex2D(HAL::Format::R16G16B16A16_FLOAT, { 256, 256 }, 1, 0, HAL::ResFlags::ShaderResource | HAL::ResFlags::RenderTarget | HAL::ResFlags::UnorderedAccess)));
-				asset->holder->editor->preview = new_preview;
-			}
+	// Drawn into a texture of its own and handed over only when finished: the one the UI shows is never
+	// drawn into.
+	auto target = std::make_shared<HAL::Texture::ptr>();
 
-			asset->update_preview(asset->holder->get_preview());
+	auto job = [this, asset, attempts, target]() -> bool
+	{
+		try
+		{
+			if (!*target)
+				target->reset(new HAL::Texture(RenderSystem::get().device(), HAL::ResourceDesc::Tex2D(HAL::Format::R16G16B16A16_FLOAT, { 256, 256 }, 1, 0, HAL::ResFlags::ShaderResource | HAL::ResFlags::RenderTarget | HAL::ResFlags::UnorderedAccess)));
+
+			AssetRenderer::take_deferred();
+			asset->update_preview(*target);
 			RenderSystem::get().device().get_queue(HAL::CommandListType::DIRECT)->signal_and_wait();
+
+			if (AssetRenderer::take_deferred())
+			{
+				if (++*attempts < PREVIEW_MAX_ATTEMPTS)
+					return false;
+
+				Log::get() << Log::LEVEL_WARNING << "Preview of " << convert(asset->get_name()) << " gave up: what it draws never became ready" << Log::endl;
+				return true;
+			}
 		}
-		catch (const std::exception& e) { Log::get() << Log::LEVEL_ERROR << e.what() << Log::endl; }
-		// Fire on_preview on the render thread so resource state tracking is coherent
-		auto preview = asset->holder->get_preview();
-		add_func([asset, preview]() {
-			asset->holder->on_preview(preview);
+		catch (const std::exception& e)
+		{
+			Log::get() << Log::LEVEL_ERROR << e.what() << Log::endl;
+			return true;
+		}
+
+		// Published on the render thread, so resource state tracking is coherent.
+		add_func([asset, finished = *target]() {
+			asset->holder->editor->preview = finished;
+			asset->holder->on_preview(asset->holder->get_preview());
 		});
-	});
+
+		return true;
+	};
+
+	std::lock_guard<std::mutex> g(preview_jobs_mutex);
+	preview_jobs.push_back(job);
 }
 
 AssetStorage::ptr AssetManager::get_storage(Guid id)
@@ -128,6 +167,40 @@ bool AssetManager::promt(EditObject* obj)
 
 void AssetManager::tact()
 {
+	// Previews, on this (the render) thread, for a few milliseconds a frame: a texture preview is cheap,
+	// a mesh or a material takes the whole budget.
+	{
+		std::deque<std::function<bool()>> batch;
+		{
+			std::lock_guard<std::mutex> g(preview_jobs_mutex);
+			batch.swap(preview_jobs);
+		}
+
+		if (!batch.empty())
+		{
+			// Uploads wait for this thread's flush: do it now rather than at the next frame.
+			RenderSystem::get().device().flush_uploads();
+
+			std::deque<std::function<bool()>> not_ready;
+			const auto start = std::chrono::steady_clock::now();
+
+			while (!batch.empty() && std::chrono::steady_clock::now() - start < PREVIEW_FRAME_BUDGET)
+			{
+				auto job = std::move(batch.front());
+				batch.pop_front();
+
+				if (!job())
+					not_ready.push_back(std::move(job));
+			}
+
+			// What did not fit comes back first, then what was not ready, ahead of new requests.
+			batch.insert(batch.end(), std::make_move_iterator(not_ready.begin()), std::make_move_iterator(not_ready.end()));
+
+			std::lock_guard<std::mutex> g(preview_jobs_mutex);
+			preview_jobs.insert(preview_jobs.begin(), std::make_move_iterator(batch.begin()), std::make_move_iterator(batch.end()));
+		}
+	}
+
 	std::vector<std::function<void()>> copy;
 	{
 		std::lock_guard<std::mutex> g(m);
@@ -433,6 +506,9 @@ AssetStorage::AssetStorage(Asset::ptr _asset) : asset(_asset)
 	if (header->type == Asset_Type::TILED_TEXTURE)
 		s_type = L"TiledTextures";
 
+	if (header->type == Asset_Type::FONT)
+		s_type = L"Fonts";
+
 	file_path = to_path(L"assets") / to_path(s_type) / to_path(header->name + L"_" + convert(to_string(header->id)) + L".asset");
 	folder = AssetManager::get().get_folders()->get_folder(file_path).get();
 	folder->add_asset(ptr(this));
@@ -593,34 +669,52 @@ std::future<Asset::ptr> AssetStorage::load_asset()
 		std::shared_ptr<std::promise<Asset::ptr>> p(new std::promise<Asset::ptr>);
 		when_all(begin(tasks), end(tasks)).then([this, p, archive](std::vector<bool> results)
 			{
-				std::lock_guard<std::mutex> g(archive_mutex);
-
-				try
+				bool refresh_header = false;
 				{
-					for (auto r : results)
-						if (!r)
-						{
-							p->set_value(nullptr);
-							return;
-						}
+					std::lock_guard<std::mutex> g(archive_mutex);
 
-					auto t = CounterManager::get().start_count<AssetStorage>(convert(header->name));
+					try
+					{
+						for (auto r : results)
+							if (!r)
+							{
+								p->set_value(nullptr);
+								return;
+							}
+
+						auto t = CounterManager::get().start_count<AssetStorage>(convert(header->name));
 
 
-					UniversalContext load_ctx;
-					if (RenderSystem::is_good())
-						load_ctx.get_context<HAL::Device*>() = &RenderSystem::get().device();
-					asset = archive->get<Asset::ptr>("asset", &load_ctx);
+						UniversalContext load_ctx;
+						if (RenderSystem::is_good())
+							load_ctx.get_context<HAL::Device*>() = &RenderSystem::get().device();
+						asset = archive->get<Asset::ptr>("asset", &load_ctx);
 
-					asset->holder = this;
+						asset->holder = this;
 
+						// Files saved before references were tracked, or edited since, carry a stale header.
+						refresh_header = asset->get_reference_ids() != header->references;
+					}
+					catch (const std::exception& e)
+					{
+						Log::get() << "asset loading fail" << e.what() << Log::endl;
+					}
+
+					p->set_value(asset);
 				}
-				catch (const std::exception& e)
+
+				// save() takes archive_mutex itself. Only when the header differs, so the next load is a no-op.
+				if (refresh_header)
 				{
-					Log::get() << "asset loading fail" << e.what() << Log::endl;
+					try
+					{
+						save();
+					}
+					catch (const std::exception& e)
+					{
+						Log::get() << "asset header refresh fail" << e.what() << Log::endl;
+					}
 				}
-
-				p->set_value(asset);
 			});
 		return p->get_future();
 	}
@@ -736,6 +830,10 @@ std::shared_ptr<FileDataStorage> AssetStorage::get_archive()
 
 std::set<Guid> AssetStorage::get_references()
 {
+	// The header's set is only refreshed by save(); a loaded asset knows its current references.
+	if (asset)
+		return asset->get_reference_ids();
+
 	return header->references;
 }
 

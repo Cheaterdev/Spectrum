@@ -18,6 +18,7 @@ float3 depth_to_wpos_center(float d, float2 tc, matrix mat)
 }
 
 #include "sky_common.hlsl"
+#include "studio.hlsl"
 
 static const float ISun = 20.0;
 // Visible sun disk only (the sky pass); the environment cubemap goes through
@@ -200,6 +201,9 @@ float3 sunColor(float3 x, float t, float3 v, float3 s, float r, float mu)
 
 float3 get_sky(float3 p, float3 v, float t)
 {
+    if (GetSkyData().GetStudio() > 0.5)
+        return studio_environment(v, GetSkyData().GetSunDir(), GetSkyData().GetStudio_fill());
+
     p.y = max(110, p.y);
     float3 x = Scaler * p + float3(0, Rg, 0);
     float r = 0;
@@ -215,6 +219,9 @@ float3 get_sky(float3 p, float3 v, float t)
 
 float3 get_sky_only(float3 p, float3 v, float t)
 {
+    if (GetSkyData().GetStudio() > 0.5)
+        return studio_environment(v, GetSkyData().GetSunDir(), GetSkyData().GetStudio_fill());
+
     p.y = max(110, p.y);
     float3 x = Scaler * p + float3(0, Rg, 0);
     float r = 0;

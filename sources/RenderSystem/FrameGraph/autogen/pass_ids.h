@@ -12,6 +12,8 @@ namespace FrameGraph
 	{
 		AssetGBuffer,
 		AssetMip,
+		AssetSkyDiffuse,
+		AssetSkySpecular,
 		BloomBuild,
 		BloomProcess,
 		BloomBuildPost,
@@ -106,6 +108,8 @@ namespace FrameGraph
 		SSSRR_BlurH,
 		SSSRR_BlurV,
 		stencil_renderer,
+		stencil_outline_temporal,
+		stencil_gizmo_resolve,
 		Tonemap,
 		UI_PreDraw,
 		UI_Render,

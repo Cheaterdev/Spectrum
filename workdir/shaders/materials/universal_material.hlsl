@@ -95,9 +95,20 @@ GBuffer universal(vertex_output i, float4 albedo, float metallic,float roughness
     GBuffer result;
 
     result.albedo = float4(albedo.rgb, metallic);
-    result.normals = float4(GetFrameInfo().compress_normals(normal), max(MIN_ROUGHNESS, roughness));
+    float3 stored_normal = normal;
+    result.normals = float4(GetFrameInfo().compress_normals(stored_normal), max(MIN_ROUGHNESS, roughness));
 	result.specular = float4(saturate(glow.rgb), 0);
-	result.material = pack_material_from_graph(coat, coat_roughness, sheen, sheen_roughness, anisotropy, aniso_rotation, sss_weight, sss_radius, sss_scale, sheen_tint, film_thickness, film_ior, normal, i.tangent);
+
+	// The tangent angle is relative to a frame built from the normal, and every lighting pass rebuilds that
+	// frame from the 8-bit best-fit normal. Encode against that same quantized normal: the exact one gives a
+	// frame twisted by the quantization error (visible as the best-fit lattice in anisotropic highlights, and
+	// a seam where the frame jumps at N.z = 0).
+	float3 decoded_normal = normalize(round(stored_normal * 255.0) / 255.0 * 2.0 - 1.0);
+	result.material = pack_material_from_graph(coat, coat_roughness, sheen, sheen_roughness, anisotropy, aniso_rotation, sss_weight, sss_radius, sss_scale, sheen_tint, film_thickness, film_ior, decoded_normal, i.tangent);
+
+	// Material preview: show the material without its extra lobe.
+	if ((GetFrameInfo().GetDebugFlags() & (uint)RTXDebugFlags::HideMaterialLobe) != 0)
+		result.material = pack_material(SHADING_MODEL_STANDARD, 0.0);
       
 
     float2 cur_p = float2(0.5, 0.5) + float2(0.5, -0.5)*(i.cur_pos.xy / i.cur_pos.w);

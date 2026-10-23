@@ -12,12 +12,16 @@ namespace Environment
 	struct SkyData
 	{
 		float3 sunDir; // float3
+		float studio; // float
+		float studio_fill; // float
 		uint depthBuffer; // Texture2D<float>
 		uint transmittance; // Texture2D<float4>
 		uint inscatter; // Texture3D<float4>
 		uint irradiance; // Texture2D<float4>
 		uint result; // RWTexture2D<float4>
 		float3 GetSunDir() { return sunDir; }
+		float GetStudio() { return studio; }
+		float GetStudio_fill() { return studio_fill; }
 		Texture2D<float> GetDepthBuffer() { return ResourceDescriptorHeap[depthBuffer]; }
 		Texture2D<float4> GetTransmittance() { return ResourceDescriptorHeap[transmittance]; }
 		Texture3D<float4> GetInscatter() { return ResourceDescriptorHeap[inscatter]; }

@@ -161,8 +161,8 @@ namespace GUI
 			// anything queued ahead of it must reach the list first.
 			c.renderer->flush(c);
 
-			// Two offset passes, the far one fainter, so the shadow fades out instead of
-			// reading as a hard duplicate of the glyphs.
+			// A label's own shadow: two offset passes, the far one fainter, so it fades out
+			// instead of reading as a hard duplicate of the glyphs.
 			if (shadow_color.w > 0.0f)
 			{
 				const vec2 step = shadow_offset * c.scale;
@@ -172,8 +172,20 @@ namespace GUI
 					float4(shadow_color.x, shadow_color.y, shadow_color.z, shadow_color.w * 0.35f), shadow_clip, c.window_size);
 				Text::Engine::get().draw(c.command_list, layout, pos + step, shadow_color, shadow_clip, c.window_size);
 			}
+			// Otherwise the UI's default text shadow (UI Effects > Text shadow): black, as strong as
+			// the setting says (it follows the text's own alpha, so a fading label fades it too).
+			// The glyph shader draws it together with the text, in the same single draw, so every
+			// label gets a little depth without each one asking for it and at no extra draw cost.
+			Text::Engine::Shadow default_text_shadow;
+			if (shadow_color.w <= 0.0f && default_shadow && user_ui && user_ui->text_shadow_enabled)
+			{
+				const float offset = float(user_ui->text_shadow_offset) * c.scale;
+				default_text_shadow.color  = float4(0, 0, 0, float(user_ui->text_shadow_strength));
+				default_text_shadow.offset = vec2(offset, offset);
+				default_text_shadow.blur   = float(user_ui->text_shadow_softness) * c.scale;
+			}
 
-			Text::Engine::get().draw(c.command_list, layout, pos, color, clip, c.window_size);
+			Text::Engine::get().draw(c.command_list, layout, pos, color, clip, c.window_size, false, default_text_shadow);
 		}
 
 		unsigned int label::get_index(vec2 at)

@@ -67,6 +67,8 @@
 #include "../Post/BloomComposite.h"
 #include "../Post/Tonemap.h"
 #include "../Editor/stencil_renderer.h"
+#include "../Editor/stencil_outline_temporal.h"
+#include "../Editor/stencil_gizmo_resolve.h"
 #include "../Raytrace/Dev/RTXColorPass.h"
 #include "../GI/Voxel/Dev/VoxelDebug.h"
 #include "../Dev/DebugView.h"
@@ -110,6 +112,8 @@ namespace Frame
 		Passes::Environment::Sky sky;
 		Passes::Post::AA::SMAA sMAA;
 		Passes::Editor::stencil_renderer stencil_renderer;
+		Passes::Editor::stencil_outline_temporal stencil_outline_temporal;
+		Passes::Editor::stencil_gizmo_resolve stencil_gizmo_resolve;
 		Passes::GI::Voxel::Dev::VoxelDebug voxelDebug;
 		Passes::Dev::DebugView debugView;
 
@@ -196,6 +200,8 @@ namespace Frame
 			Passes::Post::BloomComposite::Name.ptr,
 			Passes::Post::Tonemap::Name.ptr,
 			Passes::Editor::stencil_renderer::Name.ptr,
+			Passes::Editor::stencil_outline_temporal::Name.ptr,
+			Passes::Editor::stencil_gizmo_resolve::Name.ptr,
 			Passes::Raytrace::Dev::RTXColorPass::Name.ptr,
 			Passes::GI::Voxel::Dev::VoxelDebug::Name.ptr,
 			Passes::Dev::DebugView::Name.ptr,
@@ -315,7 +321,10 @@ namespace Frame
 			L"SMAA_blend",
 			L"FSRTemp",
 			L"ExposureHistogram",
+			L"GizmoColor",
 			L"axis_id_buffer",
+			L"OutlineEdge",
+			L"OutlineHistory",
 			L"ColorOutput",
 			L"VoxelDebug",
 		};
@@ -568,10 +577,12 @@ namespace Frame
 			{ PassID::BloomBuild, 0 },
 			{ PassID::UpscalingDLSS, 0 },
 			{ PassID::UpscalingDLSSRR, 0 },
+			{ PassID::stencil_renderer, 0 },
+			{ PassID::stencil_outline_temporal, 0 },
 		};
 		static inline const FrameGraph::PrecompiledState GBuffer_Depth_c0_states[] = {
 			{ true, { GBuffer_Depth_c0_pass_refs + 0, 1 } },
-			{ false, { GBuffer_Depth_c0_pass_refs + 1, 6 } },
+			{ false, { GBuffer_Depth_c0_pass_refs + 1, 8 } },
 		};
 		static inline const FrameGraph::PassRef GBuffer_Specular_c0_pass_refs[] = {
 			{ PassID::Scene, 0 },
@@ -636,11 +647,12 @@ namespace Frame
 			{ PassID::BloomBuild, 0 },
 			{ PassID::UpscalingDLSS, 0 },
 			{ PassID::UpscalingDLSSRR, 0 },
+			{ PassID::stencil_outline_temporal, 0 },
 			{ PassID::VoxelDebug, 0 },
 		};
 		static inline const FrameGraph::PrecompiledState GBuffer_Speed_c0_states[] = {
 			{ true, { GBuffer_Speed_c0_pass_refs + 0, 1 } },
-			{ false, { GBuffer_Speed_c0_pass_refs + 1, 29 } },
+			{ false, { GBuffer_Speed_c0_pass_refs + 1, 30 } },
 		};
 		static inline const FrameGraph::PassRef GBuffer_ObjectID_c0_pass_refs[] = {
 			{ PassID::Scene, 0 },
@@ -750,7 +762,6 @@ namespace Frame
 		static inline const FrameGraph::PassRef sky_cubemap_filtered_c0_pass_refs[] = {
 			{ PassID::CubeMapDownsample, 0 },
 			{ PassID::CubeMapEnviromentProcessor, 0 },
-			{ PassID::Lighting, 0 },
 			{ PassID::ReflectionRTXHalf, 0 },
 			{ PassID::ReflectionRTX, 0 },
 			{ PassID::IndirectRTXHalf, 0 },
@@ -769,20 +780,22 @@ namespace Frame
 		static inline const FrameGraph::PrecompiledState sky_cubemap_filtered_c0_states[] = {
 			{ false, { sky_cubemap_filtered_c0_pass_refs + 0, 1 } },
 			{ true, { sky_cubemap_filtered_c0_pass_refs + 1, 1 } },
-			{ false, { sky_cubemap_filtered_c0_pass_refs + 2, 15 } },
+			{ false, { sky_cubemap_filtered_c0_pass_refs + 2, 14 } },
 		};
 		static inline const FrameGraph::PassRef sky_cubemap_filtered_diffuse_c0_pass_refs[] = {
 			{ PassID::CubeMapDownsample, 0 },
 			{ PassID::CubeMapEnviromentProcessor, 0 },
+			{ PassID::Lighting, 0 },
 			{ PassID::ReflectionRTXHalf, 0 },
 			{ PassID::ReflectionRTX, 0 },
 			{ PassID::IndirectRTXHalf, 0 },
 			{ PassID::IndirectRTX, 0 },
+			{ PassID::VSM_Unshadowed, 0 },
 		};
 		static inline const FrameGraph::PrecompiledState sky_cubemap_filtered_diffuse_c0_states[] = {
 			{ false, { sky_cubemap_filtered_diffuse_c0_pass_refs + 0, 1 } },
 			{ true, { sky_cubemap_filtered_diffuse_c0_pass_refs + 1, 1 } },
-			{ false, { sky_cubemap_filtered_diffuse_c0_pass_refs + 2, 4 } },
+			{ false, { sky_cubemap_filtered_diffuse_c0_pass_refs + 2, 6 } },
 		};
 		static inline const FrameGraph::PassRef VoxelLighted_c0_pass_refs[] = {
 			{ PassID::Lighting, 0 },
@@ -1715,7 +1728,7 @@ namespace Frame
 		static inline const FrameGraph::PassRef ResultTexture_c6_pass_refs[] = {
 			{ PassID::BloomComposite, 0 },
 			{ PassID::Tonemap, 0 },
-			{ PassID::stencil_renderer, 0 },
+			{ PassID::stencil_gizmo_resolve, 0 },
 		};
 		static inline const FrameGraph::PrecompiledState ResultTexture_c6_states[] = {
 			{ true, { ResultTexture_c6_pass_refs + 0, 1 } },
@@ -1728,11 +1741,34 @@ namespace Frame
 		static inline const FrameGraph::PrecompiledState ExposureHistogram_c0_states[] = {
 			{ true, { ExposureHistogram_c0_pass_refs + 0, 1 } },
 		};
+		static inline const FrameGraph::PassRef GizmoColor_c0_pass_refs[] = {
+			{ PassID::stencil_renderer, 0 },
+			{ PassID::stencil_outline_temporal, 0 },
+			{ PassID::stencil_gizmo_resolve, 0 },
+		};
+		static inline const FrameGraph::PrecompiledState GizmoColor_c0_states[] = {
+			{ true, { GizmoColor_c0_pass_refs + 0, 1 } },
+			{ false, { GizmoColor_c0_pass_refs + 1, 2 } },
+		};
 		static inline const FrameGraph::PassRef axis_id_buffer_c0_pass_refs[] = {
 			{ PassID::stencil_renderer, 0 },
 		};
 		static inline const FrameGraph::PrecompiledState axis_id_buffer_c0_states[] = {
 			{ true, { axis_id_buffer_c0_pass_refs + 0, 1 } },
+		};
+		static inline const FrameGraph::PassRef OutlineEdge_c0_pass_refs[] = {
+			{ PassID::stencil_outline_temporal, 0 },
+			{ PassID::stencil_gizmo_resolve, 0 },
+		};
+		static inline const FrameGraph::PrecompiledState OutlineEdge_c0_states[] = {
+			{ true, { OutlineEdge_c0_pass_refs + 0, 1 } },
+			{ false, { OutlineEdge_c0_pass_refs + 1, 1 } },
+		};
+		static inline const FrameGraph::PassRef OutlineHistory_c0_pass_refs[] = {
+			{ PassID::stencil_outline_temporal, 0 },
+		};
+		static inline const FrameGraph::PrecompiledState OutlineHistory_c0_states[] = {
+			{ true, { OutlineHistory_c0_pass_refs + 0, 1 } },
 		};
 		static inline const FrameGraph::PassRef ColorOutput_c0_pass_refs[] = {
 			{ PassID::RTXColorPass, 0 },
@@ -1859,7 +1895,10 @@ namespace Frame
 			{ ResourceID::ResultTexture, 5, ResultTexture_c5_states },
 			{ ResourceID::ResultTexture, 6, ResultTexture_c6_states },
 			{ ResourceID::ExposureHistogram, 0, ExposureHistogram_c0_states },
+			{ ResourceID::GizmoColor, 0, GizmoColor_c0_states },
 			{ ResourceID::axis_id_buffer, 0, axis_id_buffer_c0_states },
+			{ ResourceID::OutlineEdge, 0, OutlineEdge_c0_states },
+			{ ResourceID::OutlineHistory, 0, OutlineHistory_c0_states },
 			{ ResourceID::ColorOutput, 0, ColorOutput_c0_states },
 			{ ResourceID::VoxelDebug, 0, VoxelDebug_c0_states },
 		};
@@ -2788,6 +2827,13 @@ namespace Frame
 			{ PassID::VSM_Unshadowed, 0 },
 		};
 		static inline const FrameGraph::PassRef stencil_renderer_0_prev[] = {
+			{ PassID::Scene, 0 },
+		};
+		static inline const FrameGraph::PassRef stencil_outline_temporal_0_prev[] = {
+			{ PassID::Scene, 0 },
+			{ PassID::stencil_renderer, 0 },
+		};
+		static inline const FrameGraph::PassRef stencil_gizmo_resolve_0_prev[] = {
 			{ PassID::BloomBuild, 0 },
 			{ PassID::BloomBuildPost, 0 },
 			{ PassID::BloomComposite, 0 },
@@ -2800,7 +2846,6 @@ namespace Frame
 			{ PassID::SMAA, 0 },
 			{ PassID::SSS_BlurH, 0 },
 			{ PassID::SSS_BlurV, 0 },
-			{ PassID::Scene, 0 },
 			{ PassID::Sky, 0 },
 			{ PassID::Tonemap, 0 },
 			{ PassID::TranslucentRTX, 0 },
@@ -2810,6 +2855,8 @@ namespace Frame
 			{ PassID::VSM_DebugClassifyOverlay, 0 },
 			{ PassID::VSM_ShadowResolve, 0 },
 			{ PassID::VSM_Unshadowed, 0 },
+			{ PassID::stencil_outline_temporal, 0 },
+			{ PassID::stencil_renderer, 0 },
 		};
 		static inline const FrameGraph::PassRef RTXColorPass_0_prev[] = {
 			{ PassID::CubeMapDownsample, 0 },
@@ -2898,7 +2945,7 @@ namespace Frame
 			{ PassID::Sky, 0, true, Sky_0_prev },
 			{ PassID::TranslucentRTX, 0, false, TranslucentRTX_0_prev },
 			{ PassID::BloomBuild, 0, false, BloomBuild_0_prev },
-			{ PassID::BloomProcess, 0, true, BloomProcess_0_prev },
+			{ PassID::BloomProcess, 0, false, BloomProcess_0_prev },
 			{ PassID::SMAA, 0, true, SMAA_0_prev },
 			{ PassID::FSR, 0, true, FSR_0_prev },
 			{ PassID::UpscalingDLSS, 0, false, UpscalingDLSS_0_prev },
@@ -2907,6 +2954,8 @@ namespace Frame
 			{ PassID::BloomComposite, 0, false, BloomComposite_0_prev },
 			{ PassID::Tonemap, 0, false, Tonemap_0_prev },
 			{ PassID::stencil_renderer, 0, false, stencil_renderer_0_prev },
+			{ PassID::stencil_outline_temporal, 0, false, stencil_outline_temporal_0_prev },
+			{ PassID::stencil_gizmo_resolve, 0, false, stencil_gizmo_resolve_0_prev },
 			{ PassID::RTXColorPass, 0, false, RTXColorPass_0_prev },
 			{ PassID::VoxelDebug, 0, false, VoxelDebug_0_prev },
 			{ PassID::DebugView, 0, false, DebugView_0_prev },
@@ -3072,7 +3121,7 @@ namespace Frame
 				graph.add_library_pass<Passes::Environment::Sky>(PassSetupDefault<Passes::Environment::Sky>::setup, sky.render_func, (sky.flags));
 			graph.add_library_pass<Passes::Raytrace::TranslucentRTX>(PassDefault<Passes::Raytrace::TranslucentRTX>::setup, PassDefault<Passes::Raytrace::TranslucentRTX>::render, (PassDefault<Passes::Raytrace::TranslucentRTX>::flags & ~FrameGraph::PassFlags::Compute));
 			graph.add_library_pass<Passes::Post::BloomBuild>(PassDefault<Passes::Post::BloomBuild>::setup, PassDefault<Passes::Post::BloomBuild>::render, (PassDefault<Passes::Post::BloomBuild>::flags & ~FrameGraph::PassFlags::Compute));
-			graph.add_library_pass<Passes::Post::BloomProcess>(PassDefault<Passes::Post::BloomProcess>::setup, PassDefault<Passes::Post::BloomProcess>::render, (PassDefault<Passes::Post::BloomProcess>::flags));
+			graph.add_library_pass<Passes::Post::BloomProcess>(PassDefault<Passes::Post::BloomProcess>::setup, PassDefault<Passes::Post::BloomProcess>::render, (PassDefault<Passes::Post::BloomProcess>::flags & ~FrameGraph::PassFlags::Compute));
 			// Setup is generated (PassSetupDefault<T>, pass_defaults.h); the owner
 			// only supplies render_func, so that is what gates registration.
 			if (sMAA.render_func)
@@ -3087,6 +3136,14 @@ namespace Frame
 			// only supplies render_func, so that is what gates registration.
 			if (stencil_renderer.render_func)
 				graph.add_library_pass<Passes::Editor::stencil_renderer>(PassSetupDefault<Passes::Editor::stencil_renderer>::setup, stencil_renderer.render_func, (stencil_renderer.flags & ~FrameGraph::PassFlags::Compute));
+			// Setup is generated (PassSetupDefault<T>, pass_defaults.h); the owner
+			// only supplies render_func, so that is what gates registration.
+			if (stencil_outline_temporal.render_func)
+				graph.add_library_pass<Passes::Editor::stencil_outline_temporal>(PassSetupDefault<Passes::Editor::stencil_outline_temporal>::setup, stencil_outline_temporal.render_func, (stencil_outline_temporal.flags & ~FrameGraph::PassFlags::Compute));
+			// Setup is generated (PassSetupDefault<T>, pass_defaults.h); the owner
+			// only supplies render_func, so that is what gates registration.
+			if (stencil_gizmo_resolve.render_func)
+				graph.add_library_pass<Passes::Editor::stencil_gizmo_resolve>(PassSetupDefault<Passes::Editor::stencil_gizmo_resolve>::setup, stencil_gizmo_resolve.render_func, (stencil_gizmo_resolve.flags & ~FrameGraph::PassFlags::Compute));
 			graph.add_library_pass<Passes::Raytrace::Dev::RTXColorPass>(PassDefault<Passes::Raytrace::Dev::RTXColorPass>::setup, PassDefault<Passes::Raytrace::Dev::RTXColorPass>::render, (PassDefault<Passes::Raytrace::Dev::RTXColorPass>::flags & ~FrameGraph::PassFlags::Compute));
 			// Setup is generated (PassSetupDefault<T>, pass_defaults.h); the owner
 			// only supplies render_func, so that is what gates registration.

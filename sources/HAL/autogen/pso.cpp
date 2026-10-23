@@ -28,6 +28,7 @@ void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 	std::vector<task<void>> tasks;
 
 
+	tasks.emplace_back(PSOBase::create<PSOS::Editor::PreviewDiff>(device, pso[PSO::PreviewDiff]));
 	tasks.emplace_back(PSOBase::create<PSOS::Post::BloomDownsample>(device, pso[PSO::BloomDownsample]));
 	tasks.emplace_back(PSOBase::create<PSOS::Post::BloomUpsample>(device, pso[PSO::BloomUpsample]));
 	tasks.emplace_back(PSOBase::create<PSOS::Post::BloomComposite>(device, pso[PSO::BloomComposite]));
@@ -108,11 +109,15 @@ void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 	tasks.emplace_back(PSOBase::create<PSOS::Subsurface::SSSBlurH>(device, pso[PSO::SSSBlurH]));
 	tasks.emplace_back(PSOBase::create<PSOS::Subsurface::SSSBlurV>(device, pso[PSO::SSSBlurV]));
 	tasks.emplace_back(PSOBase::create<PSOS::Shadows::Screen::SS_Shadow>(device, pso[PSO::SS_Shadow]));
+	tasks.emplace_back(PSOBase::create<PSOS::Editor::OutlineTemporal>(device, pso[PSO::OutlineTemporal]));
+	tasks.emplace_back(PSOBase::create<PSOS::Editor::OutlineCopy>(device, pso[PSO::OutlineCopy]));
 	tasks.emplace_back(PSOBase::create<PSOS::Post::TonemapHistogramClear>(device, pso[PSO::TonemapHistogramClear]));
 	tasks.emplace_back(PSOBase::create<PSOS::Post::TonemapHistogramBuild>(device, pso[PSO::TonemapHistogramBuild]));
 	tasks.emplace_back(PSOBase::create<PSOS::Post::TonemapExposureAdapt>(device, pso[PSO::TonemapExposureAdapt]));
 	tasks.emplace_back(PSOBase::create<PSOS::Post::TonemapApply>(device, pso[PSO::TonemapApply]));
 	tasks.emplace_back(PSOBase::create<PSOS::UI::BackdropBlur>(device, pso[PSO::BackdropBlur]));
+	tasks.emplace_back(PSOBase::create<PSOS::Dev::FrameGraph_Debug_Histogram2D>(device, pso[PSO::FrameGraph_Debug_Histogram2D]));
+	tasks.emplace_back(PSOBase::create<PSOS::Dev::FrameGraph_Debug_Histogram2DArray>(device, pso[PSO::FrameGraph_Debug_Histogram2DArray]));
 	tasks.emplace_back(PSOBase::create<PSOS::Dev::FrameGraph_Debug_Texture2D>(device, pso[PSO::FrameGraph_Debug_Texture2D]));
 	tasks.emplace_back(PSOBase::create<PSOS::Dev::FrameGraph_Debug_Texture2DArray>(device, pso[PSO::FrameGraph_Debug_Texture2DArray]));
 	tasks.emplace_back(PSOBase::create<PSOS::Dev::FrameGraph_Debug_Texture3D>(device, pso[PSO::FrameGraph_Debug_Texture3D]));
@@ -148,6 +153,8 @@ void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 	tasks.emplace_back(PSOBase::create<PSOS::Shadows::VSM::VSMGatherDispatchMaterial>(device, pso[PSO::VSMGatherDispatchMaterial]));
 	tasks.emplace_back(PSOBase::create<PSOS::Shadows::VSM::VSMScreenSpaceShadow>(device, pso[PSO::VSMScreenSpaceShadow]));
 	tasks.emplace_back(PSOBase::create<PSOS::Shadows::VSM::SkyAmbient>(device, pso[PSO::SkyAmbient]));
+	tasks.emplace_back(PSOBase::create<PSOS::Shadows::VSM::SkyAmbientDiffuse>(device, pso[PSO::SkyAmbientDiffuse]));
+	tasks.emplace_back(PSOBase::create<PSOS::Shadows::VSM::SkyAmbientSpecular>(device, pso[PSO::SkyAmbientSpecular]));
 	tasks.emplace_back(PSOBase::create<PSOS::Shadows::VSM::VSMDepthAnalysis>(device, pso[PSO::VSMDepthAnalysis]));
 
 
@@ -183,8 +190,9 @@ void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 	tasks.emplace_back(PSOBase::create<PSOS::Post::AA::Blending>(device, pso[PSO::Blending]));
 	tasks.emplace_back(PSOBase::create<PSOS::Editor::DrawBox>(device, pso[PSO::DrawBox]));
 	tasks.emplace_back(PSOBase::create<PSOS::Editor::DrawAxis>(device, pso[PSO::DrawAxis]));
+	tasks.emplace_back(PSOBase::create<PSOS::Editor::DrawMask>(device, pso[PSO::DrawMask]));
 	tasks.emplace_back(PSOBase::create<PSOS::Editor::DrawRing>(device, pso[PSO::DrawRing]));
-	tasks.emplace_back(PSOBase::create<PSOS::Editor::StencilerLast>(device, pso[PSO::StencilerLast]));
+	tasks.emplace_back(PSOBase::create<PSOS::Editor::GizmoResolve>(device, pso[PSO::GizmoResolve]));
 	tasks.emplace_back(PSOBase::create<PSOS::UI::NinePatch>(device, pso[PSO::NinePatch]));
 	tasks.emplace_back(PSOBase::create<PSOS::UI::SimpleRect>(device, pso[PSO::SimpleRect]));
 	tasks.emplace_back(PSOBase::create<PSOS::UI::CanvasBack>(device, pso[PSO::CanvasBack]));

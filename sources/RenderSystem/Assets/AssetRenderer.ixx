@@ -9,6 +9,46 @@ import :Texture;
 
 class SceneRenderWorkflow;
 
+// What the material editor's live preview shows the material on and under. Variables, so
+// the Properties panel lists them and the editor panel builds its rows from them.
+export enum class PreviewShape
+{
+    MaterialTester,   // the Mitsuba test object: a ball inside a glass case
+    Sphere,
+    RoundedCube,
+    Slab,             // a thick plate: glass, absorption, subsurface depth
+    Cloth,            // a draped sheet: sheen, anisotropy
+};
+
+export enum class PreviewEnvironment
+{
+    Sky,
+    Studio,           // softboxes on a dark backdrop (sky/studio.hlsl)
+};
+
+export enum class PreviewLobes
+{
+    All,
+    WithoutLobe,      // the material's extra lobe (coat, sheen, ...) switched off
+    LobeDifference,   // what that lobe adds, as |with - without| x 4
+};
+
+export class PreviewSettings : public VariableContext
+{
+public:
+    PreviewSettings() : VariableContext(L"Preview Settings") {}
+
+    Variable<PreviewShape>       shape         = { PreviewShape::MaterialTester, "Shape", this };
+    // Scene units matter to transmission depth and subsurface radius; the shapes are about 2 units across.
+    Variable<float>              scale         = { 1.0f, "Scale", this, 0.05f, 10.0f };
+    Variable<PreviewEnvironment> environment   = { PreviewEnvironment::Sky, "Environment", this };
+    Variable<float>              sun_azimuth   = { 45.0f, "Sun azimuth", this, 0.0f, 360.0f };
+    Variable<float>              sun_elevation = { 35.3f, "Sun elevation", this, 5.0f, 90.0f };
+    // Studio only: scales every light but the key.
+    Variable<float>              studio_fill   = { 1.0f, "Studio fill", this, 0.0f, 4.0f };
+    Variable<PreviewLobes>       lobes         = { PreviewLobes::All, "Lobes", this };
+};
+
 export  class AssetRenderer : public Singleton<AssetRenderer>
 {
     FrameGraph::Graph graph;
@@ -45,6 +85,12 @@ export  class AssetRenderer : public Singleton<AssetRenderer>
         virtual void draw(MaterialAsset::ptr m, HAL::Texture::ptr result);
 		virtual void draw(scene_object::ptr scene, HAL::Texture::ptr result);
 
+        // Previews are drawn on the render thread (AssetManager::tact), which must not wait. A preview
+        // whose materials are still compiling calls defer_preview() instead of drawing; the caller asks
+        // take_deferred() afterwards and tries again on a later frame.
+        static void defer_preview();
+        static bool take_deferred();
+
 };
 
 
@@ -68,9 +114,21 @@ export class SceneTextureRenderer
 
         MeshAssetInstance::ptr mesh_plane;
         MeshAssetInstance::ptr material_tester; // test mesh for material previews
+        // One instance per PreviewSettings::shape other than the material tester, made on first use.
+        std::map<PreviewShape, MeshAssetInstance::ptr> shape_instances;
+
+        // Owned here so each preview has its own; attached under preview_context.
+        std::unique_ptr<PreviewSettings> settings;
+
+        // The two renders PreviewLobes::LobeDifference subtracts.
+        HAL::Texture::ptr lobe_with, lobe_without;
 
         Scene::ptr scene;
         std::mutex lock;
+
+        MeshAssetInstance::ptr get_shape_instance();
+        void render_scene(Scene::ptr scene, HAL::Texture::ptr result, bool hide_lobe);
+        void subtract_lobes(HAL::Texture::ptr with, HAL::Texture::ptr without, HAL::Texture::ptr result);
 
         // Orbit camera around the auto-fit center: yaw/pitch + zoom distance.
         vec2  m_orbit = { 0.785398f, 0.35f }; // ~pi/4 yaw, slight pitch
@@ -78,6 +136,8 @@ export class SceneTextureRenderer
 
     public:
         SceneTextureRenderer();
+
+        PreviewSettings& get_settings() { return *settings; }
 
         camera& get_camera() { return cam; }
 

@@ -44,6 +44,25 @@ namespace Editor
 		[Always = Read] StructuredBuffer<uint> scene;
 	}
 
+	# PreviewLobes::LobeDifference: |a - b| x gain, the two renders of the material preview with and
+	# without the material's extra lobe.
+	[Bind = DefaultLayout::Instance0]
+	struct PreviewDiffParams
+	{
+		Texture2D<float4> a;
+		Texture2D<float4> b;
+		RWTexture2D<float4> result;
+		float gain;
+	}
+
+	ComputePSO PreviewDiff
+	{
+		root = DefaultLayout;
+
+		[EntryPoint = CS]
+		compute = "postprocess/preview_diff.hlsl";
+	}
+
 	[RunAlways]
 	PassNode AssetMip
 	{
@@ -56,6 +75,39 @@ namespace Editor
 	}
 
 
+
+	# The baked sky as the preview's indirect light (common/sky_indirect.hlsl), in two halves so the
+	# subsurface blur can run on the diffuse light alone: the sky's ambient and sheen first, then
+	# SSS_Classify / SSS_BlurH / SSS_BlurV, then the sky's reflection (metal, coat, thin film).
+	[RunAlways]
+	[Compute]
+	PassNode AssetSkyDiffuse
+	{
+		[Always = Read] Texture GBuffer_Albedo;
+		[Always = Read] Texture GBuffer_Normals;
+		[Always = Read] Texture GBuffer_Specular;
+		[Always = Read] Texture GBuffer_Material;
+		[Always = Read] Texture GBuffer_Speed;
+		[Always = None] Texture GBuffer_DepthMips;
+		[Always = Read] TextureCube sky_cubemap_filtered;
+		[Always = Read] TextureCube sky_cubemap_filtered_diffuse;
+		[Always = UnorderedAccess] Texture ResultTexture;
+	}
+
+	[RunAlways]
+	[Compute]
+	PassNode AssetSkySpecular
+	{
+		[Always = Read] Texture GBuffer_Albedo;
+		[Always = Read] Texture GBuffer_Normals;
+		[Always = Read] Texture GBuffer_Specular;
+		[Always = Read] Texture GBuffer_Material;
+		[Always = Read] Texture GBuffer_Speed;
+		[Always = None] Texture GBuffer_DepthMips;
+		[Always = Read] TextureCube sky_cubemap_filtered;
+		[Always = Read] TextureCube sky_cubemap_filtered_diffuse;
+		[Always = UnorderedAccess] Texture ResultTexture;
+	}
 
 	Pipeline AssetPipeline
 	{
@@ -81,6 +133,13 @@ namespace Editor
 		PSSM_GenerateMask;
 		[Async]
 		PSSM_Combine;
+
+		# indirect light from the sky; the subsurface blur sits between its diffuse and specular halves
+		AssetSkyDiffuse;
+		SSS_Classify;
+		SSS_BlurH;
+		SSS_BlurV;
+		AssetSkySpecular;
 
 		# sky + post
 		[Async]

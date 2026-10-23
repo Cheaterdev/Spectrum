@@ -498,6 +498,20 @@ public:
 			add_child(row);
 		}
 
+		// What the preview shows the material on and under (shape, scale, environment,
+		// sun, lobe isolation): the renderer's PreviewSettings variables, as property rows.
+		{
+			auto& preview = m_mesh_renderer->get_settings();
+
+			add_child(GUI::Elements::create_property(preview.shape));
+			add_child(GUI::Elements::create_property(preview.scale));
+			add_child(GUI::Elements::create_property(preview.environment));
+			add_child(GUI::Elements::create_property(preview.sun_azimuth));
+			add_child(GUI::Elements::create_property(preview.sun_elevation));
+			add_child(GUI::Elements::create_property(preview.studio_fill));
+			add_child(GUI::Elements::create_property(preview.lobes));
+		}
+
 		// The generated pixel shader: HLSL-highlighted, selectable and copyable,
 		// but not editable -- it is rebuilt from the graph, so edits would be lost.
 		m_text = std::make_shared<GUI::Elements::edit_text>(Text::Style{ 13, Text::Weight::Normal, Text::Family::Mono });
@@ -589,6 +603,7 @@ struct AssetPreviewContext
 // Window content that previews an asset. Dispatches by type:
 //   TextureAsset -> universal resource_preview (GPU), self-driven via a pass.
 //   BinaryAsset  -> MultiLineLabel (one label per line) in a scroll container.
+//   FontAsset    -> FontAsset::samples() drawn in the font, one label each.
 //   MeshAsset    -> a live render in AssetRenderer's OWN framegraph (a second
 //                   main pipeline can't be injected into the shared UI graph),
 //                   re-rendered every frame from think() into a target texture.
@@ -596,6 +611,7 @@ class asset_preview_content : public GUI::base, public FrameGraph::GraphGenerato
 {
 	resource_preview::ptr              m_preview; // textures only
 	std::shared_ptr<TextureAsset>      m_asset;   // keeps the texture alive
+	std::shared_ptr<FontAsset>         m_font;    // keeps the font alive
 	std::shared_ptr<HAL::ResourceView> m_view;
 
 	std::shared_ptr<MeshAssetInstance>  m_mesh_instance;
@@ -632,6 +648,24 @@ public:
 			text->docking = GUI::dock::FILL;
 			text->text    = bin->get_data();
 			add_child(text);
+		}
+		else if (auto font = asset ? asset->get_ptr<FontAsset>() : nullptr)
+		{
+			m_font = font;   // its font is registered with the text engine only while the asset lives
+
+			auto samples     = std::make_shared<GUI::Elements::scroll_container>();
+			samples->docking = GUI::dock::FILL;
+			add_child(samples);
+
+			for (auto& sample : font->samples())
+			{
+				auto line         = std::make_shared<GUI::Elements::label>();
+				line->font        = font->get_font();
+				line->font_size   = sample.size;
+				line->text        = sample.text;
+				line->docking     = GUI::dock::TOP;
+				samples->add_child(line);
+			}
 		}
 		else if (auto mesh = asset ? asset->get_ptr<MeshAsset>() : nullptr)
 		{
@@ -799,6 +833,10 @@ class GraphRender : public Window, public GUI::user_interface
 
 	// Opens a file in a Code editor tab; see where it is assigned (menu setup).
 	std::function<void(std::string file_name, int line, int column)> open_code_editor;
+
+	// The application's actions, defined once (the File commands so far); the ribbon shows
+	// them and their shortcuts work through its key hook.
+	GUI::command_registry commands;
 
 	tick_timer main_timer;
 	ivec2 new_size;
@@ -1227,6 +1265,20 @@ public:
 
 		//scale = 1.25f;
 		Window::input_handler = this;
+
+		// The window draws its own title bar (Window::custom_frame): the ribbon's minimise,
+		// maximise and close buttons ask for these. Posted to the window thread.
+		window_command_handler = [this](window_command command)
+			{
+				switch (command)
+				{
+					case window_command::minimize:         Window::minimize(); break;
+					case window_command::maximize_restore: Window::toggle_maximize(); break;
+					case window_command::close:            Window::request_close(); break;
+				}
+			};
+		window_maximized = [this] { return Window::is_maximized(); };
+
 		HAL::swap_chain_desc desc;
 		// scRGB; the UI PSOs (ui.prism) are compiled for this format.
 		desc.format = HAL::Format::R16G16B16A16_FLOAT;
@@ -1708,50 +1760,59 @@ public:
 			{
 				{
 					GUI::Elements::menu_strip::ptr menu(new GUI::Elements::menu_strip());
-					auto file = menu->add_item("File")->get_menu();
 					auto edit = menu->add_item("Edit")->get_menu();
 					auto help = menu->add_item("Help"); // ->get_menu();
-					file->add_item("New")->on_click = [this](GUI::Elements::menu_list_element::ptr elem)
-						{
-							add_task([this]()
-								{
-									if (!drawer) return;
-									drawer->scene->remove_all();
-								});
-						};
-					file->add_item("Open")->on_click = [this](GUI::Elements::menu_list_element::ptr elem)
-						{
-							add_task([this]()
-								{
-									if (!drawer) return;
-									try
+
+					// The File commands, defined once: the ribbon's File tab shows them, and their
+					// shortcuts work through the registry's key hook (installed below).
+					commands.add("file.new").title("New").icon(u8"\U0001F4C4").shortcut("Ctrl+N")
+						.tooltip("Remove everything from the scene")
+						.run([this]()
+							{
+								add_task([this]()
 									{
-										auto f = FileSystem::get().get_file(to_path(L"scene.dat"))->load_all();
-										Serializer::deserialize(f, *drawer->scene);
-									}
-									catch (std::exception e)
+										if (!drawer) return;
+										drawer->scene->remove_all();
+									});
+							});
+					commands.add("file.open").title("Open").icon(u8"\U0001F4C2").shortcut("Ctrl+O")
+						.tooltip("Load the scene")
+						.run([this]()
+							{
+								add_task([this]()
 									{
-										message_box("error", "cant open", [](bool)
-											{
-											});
-									}
-								});
-						};
-					file->add_item("Import MaterialX...")->on_click = [this](GUI::Elements::menu_list_element::ptr elem)
-						{
-							for (auto& path : Application::get().file_open("Choose a MaterialX file", "", "mtlx|*.mtlx|" "all|*.*|" "|"))
-								MaterialXLibrary::get().import_file(std::filesystem::path(path));
-						};
-					file->add_item("Save")->on_click = [this](GUI::Elements::menu_list_element::ptr elem)
-						{
-							if (!drawer) return;
-							auto data = Serializer::serialize(*drawer->scene);
-							FileSystem::get().save_data(to_path(L"scene.dat"), data);
-						};
-					file->add_item("Quit")->on_click = [this](GUI::Elements::menu_list_element::ptr elem)
-						{
-							on_destroy();
-						};
+										if (!drawer) return;
+										try
+										{
+											auto f = FileSystem::get().get_file(to_path(L"scene.dat"))->load_all();
+											Serializer::deserialize(f, *drawer->scene);
+										}
+										catch (std::exception e)
+										{
+											message_box("error", "cant open", [](bool)
+												{
+												});
+										}
+									});
+							});
+					commands.add("file.save").title("Save").icon(u8"\U0001F4BE").shortcut("Ctrl+S")
+						.tooltip("Save the scene")
+						.enabled([this] { return drawer != nullptr; })
+						.run([this]()
+							{
+								if (!drawer) return;
+								auto data = Serializer::serialize(*drawer->scene);
+								FileSystem::get().save_data(to_path(L"scene.dat"), data);
+							});
+					commands.add("file.import_materialx").title("Import MaterialX...").short_title("Import").icon(u8"\U0001F4E5")
+						.tooltip("Import a MaterialX file")
+						.run([this]()
+							{
+								for (auto& path : Application::get().file_open("Choose a MaterialX file", "", "mtlx|*.mtlx|" "all|*.*|" "|"))
+									MaterialXLibrary::get().import_file(std::filesystem::path(path));
+							});
+					commands.add("file.quit").title("Quit").icon(u8"\U0001F6AA").shortcut("Ctrl+Q")
+						.run([this]() { on_destroy(); });
 
 					edit->add_item("Debug Graph")->on_click = [this](GUI::Elements::menu_list_element::ptr elem)
 						{
@@ -1769,6 +1830,87 @@ public:
 					// Text-stack playground: an unfiltered edit_text (full Unicode, undo,
 					// word selection) plus a label mirroring what's typed into it.
 					auto test = menu->add_item("Test")->get_menu();
+
+					// Ribbon demo: tabs of captioned groups; large, small and icon buttons,
+					// toggles, a menu button, a disabled one, and a contextual tab. Icons are
+					// emoji (u8 escapes, so the source's encoding doesn't matter).
+					test->add_item("Ribbon demo")->on_click = [this, shown = GUI::Elements::ribbon::ptr()](GUI::Elements::menu_list_element::ptr) mutable
+						{
+							using namespace GUI::Elements;
+
+							if (shown)
+							{
+								shown->remove_from_parent();
+								shown.reset();
+								return;
+							}
+
+							struct demo_state
+							{
+								bool effects = true;
+								bool can_undo = false;
+								bool grid = true;
+							};
+							auto state = std::make_shared<demo_state>();
+							auto emoji = [](const char8_t* s) { return std::string(reinterpret_cast<const char*>(s)); };
+							auto say = [](const char* text) { return [text] { toast_manager::show(text, toast_kind::info, 2.0f); }; };
+
+							auto rb = std::make_shared<ribbon>();
+
+							auto home = rb->add_tab("Home");
+							auto files = home->add_group("File");
+							files->add_large(emoji(u8"\U0001F4C4"), "New", say("New"));
+							files->add_large(emoji(u8"\U0001F4C2"), "Open", say("Open"));
+							files->add_small(emoji(u8"\U0001F4BE"), "Save", say("Save"));
+							files->add_small(emoji(u8"\U0001F4E4"), "Export", say("Export"));
+							files->add_small(emoji(u8"\U0001F5A8"), "Print", say("Print"));
+
+							auto edit = home->add_group("Edit");
+							auto undo = edit->add_large(emoji(u8"↩"), "Undo", [state] { state->can_undo = false; });
+							undo->is_enabled = [state] { return state->can_undo; };
+							edit->add_small(emoji(u8"✂"), "Cut", [state] { state->can_undo = true; });
+							edit->add_small(emoji(u8"\U0001F4D1"), "Copy", [state] { state->can_undo = true; });
+							edit->add_small(emoji(u8"\U0001F4CB"), "Paste", [state] { state->can_undo = true; });
+
+							auto add_menu = std::make_shared<menu_list>();
+							add_menu->add_item("Mesh");
+							add_menu->add_item("Material");
+							add_menu->add_item("Sound");
+							auto tools = home->add_group("Tools");
+							auto fx = tools->add_large(emoji(u8"✨"), "Effects", [state] { state->effects = !state->effects; });
+							fx->is_checked = [state] { return state->effects; };
+							fx->tooltip = "Toggle the demo effect";
+							// A split button: the icon runs the action, the arrow opens the menu.
+							tools->add_large(emoji(u8"\U0001F3A8"), "Add", say("Add"), add_menu, true);
+
+							auto view = rb->add_tab("View");
+							auto show = view->add_group("Show");
+							auto grid = show->add_small(emoji(u8"▦"), "Grid", [state] { state->grid = !state->grid; });
+							grid->is_checked = [state] { return state->grid; };
+							show->add_small(emoji(u8"\U0001F4CA"), "Stats", say("Stats"));
+							auto layout = view->add_group("Layout");
+							auto rb_weak = std::weak_ptr<ribbon>(rb);
+							layout->add_large(emoji(u8"\U0001F446"), "Touch mode", [rb_weak]
+								{
+									if (auto r = rb_weak.lock())
+										r->set_touch_mode(!r->is_touch_mode());
+								});
+							layout->add_large(emoji(u8"\U0001F3F7"), "Object tab", [rb_weak]
+								{
+									if (auto r = rb_weak.lock())
+										r->set_tab_visible(2, !r->is_tab_visible(2));
+								});
+
+							auto object = rb->add_tab("Object", true);
+							auto transform = object->add_group("Transform");
+							transform->add_large(emoji(u8"↔"), "Move", say("Move"));
+							transform->add_large(emoji(u8"\U0001F504"), "Rotate", say("Rotate"));
+							transform->add_large(emoji(u8"\U0001F50D"), "Scale", say("Scale"));
+							rb->set_tab_visible(2, false);
+
+							add_child(rb);
+							shown = rb;
+						};
 					test->add_item("Editor")->on_click = [this](GUI::Elements::menu_list_element::ptr elem)
 						{
 							GUI::base::ptr page(new GUI::base());
@@ -2328,7 +2470,67 @@ public:
 							open_code_editor(std::move(file), line, column);
 						};
 
-					add_child(menu);
+					// The ribbon replaces the menu strip. The menus above stay as the list
+					// of commands (each item's on_click is what it does); the ribbon shows
+					// them as tabs of captioned groups. The strip itself is not added. The
+					// old "Help" entry did nothing, so it has no tab.
+					{
+						using namespace GUI::Elements;
+
+						auto emoji = [](const char8_t* s) { return std::string(reinterpret_cast<const char*>(s)); };
+						auto find = [](menu_list::ptr menu_to_search, const char* text) -> menu_list_element::ptr
+							{
+								for (auto& item : menu_to_search->get_items())
+									if (item->text == text)
+										return item;
+								return nullptr;
+							};
+
+						auto rb = std::make_shared<ribbon>();
+
+						// With the system title bar gone the tab bar is the title bar.
+						if (Window::has_custom_frame())
+						{
+							rb->set_window_icon("app");
+							rb->set_window_controls(true);
+							rb->set_window_title("Spectrum");
+						}
+
+						auto file_tab = rb->add_tab("File");
+						auto scene_group = file_tab->add_group("Scene");
+						scene_group->add_command(commands, "file.new");
+						scene_group->add_command(commands, "file.open");
+						scene_group->add_command(commands, "file.save");
+						file_tab->add_group("Import")->add_command(commands, "file.import_materialx");
+						auto application_group = file_tab->add_group("Application");
+						application_group->add_command(commands, "file.quit");
+
+						// When the window gets narrow the groups with the lowest priority shrink
+						// first: the scene commands stay large longest, import goes first.
+						scene_group->set_priority(3);
+						application_group->set_priority(1);
+
+						auto edit_tab = rb->add_tab("Edit");
+						edit_tab->add_group("Debug")->add_menu_item(find(edit, "Debug Graph"), emoji(u8"\U0001F41E"));
+						auto create_group = edit_tab->add_group("Create");
+						create_group->add_menu_item(find(edit, "Add smth"), emoji(u8"➕"));
+						create_group->set_priority(2);
+
+						auto test_tab = rb->add_tab("Test");
+						auto editors = test_tab->add_group("Editors");
+						editors->set_priority(2);
+						editors->add_menu_item(find(test, "Editor"), emoji(u8"✏"));
+						editors->add_menu_item(find(test, "Code editor"), emoji(u8"\U0001F4BB"));
+						auto demos = test_tab->add_group("Demos");
+						demos->add_menu_item(find(test, "Widgets"), emoji(u8"\U0001F9F0"));
+						demos->add_menu_item(find(test, "Effects"), emoji(u8"✨"));
+						demos->add_menu_item(find(test, "Ribbon demo"), emoji(u8"\U0001F39B"));
+
+						add_child(rb);
+
+						// After the ribbon, so its Alt key mode sees the keys first.
+						commands.install_shortcuts(*this);
+					}
 
 					// Shows an element's `tooltip` after a short hover (e.g. the
 					// code editor's compile errors).
@@ -2463,6 +2665,10 @@ public:
 		alive = false;
 		task_end.wait();
 
+		// What is left in the queue are UI tasks (a FlowGraph canvas adding its nodes, say) that process_ui would
+		// have run under the GUI scope. The UI thread has stopped, so this thread owns the UI now; without the
+		// scope add_child's thread check asserts.
+		THREAD_SCOPE(GUI);
 		while (Events::Runner::has_tasks())
 		{
 			PROFILE(L"process_tasks");

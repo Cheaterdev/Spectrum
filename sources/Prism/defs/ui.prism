@@ -367,6 +367,30 @@ namespace Dev
 		float3 maxColor;
 		uint selectedMip;
 		uint selectedArrayIndex;
+		uint channelMask;
+		int2 cursor;
+		uint flags;
+		float exposure;   # stops (EV); 0 = unchanged, so a table that never sets it still displays correctly
+
+		# [Auto]: only resource_preview binds it (pixel pick + histogram); the timeline thumbnails never touch it.
+		[Auto = Texture_Null]
+		RWStructuredBuffer<uint> stats;
+	}
+
+	ComputePSO FrameGraph_Debug_Histogram2D
+	{
+		root = DefaultLayout;
+
+		[EntryPoint = CS]
+		compute = "framegraph/histogram_2d.hlsl";
+	}
+
+	ComputePSO FrameGraph_Debug_Histogram2DArray
+	{
+		root = DefaultLayout;
+
+		[EntryPoint = CS]
+		compute = "framegraph/histogram_2d_array.hlsl";
 	}
 
 	[Bind = DefaultLayout::Instance1]

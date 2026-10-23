@@ -35,7 +35,7 @@ namespace FrameGraph
 // .prism edit renumbers those enums, a plan from before the edit would not fail
 // to load, it would misapply -- wrong resource, wrong barriers. A plan whose
 // header does not carry this exact value must be rejected.
-constexpr unsigned long long generated_id_space_hash = 13088206348554744531ull;
+constexpr unsigned long long generated_id_space_hash = 5786185398706988338ull;
 
 // One bit per context field, in (struct, field) declaration order.
 enum class ContextFieldID : unsigned int
@@ -53,6 +53,8 @@ enum class ContextFieldID : unsigned int
 	RenderDeviceCapabilities_rtx_supported,
 	RenderDeviceCapabilities_dlss_available,
 	SkyState_prev_sun_dir,
+	SkyState_prev_studio,
+	SkyState_prev_studio_fill,
 	SkyState_sky_changed,
 	TonemapSelectors_enabled,
 	UIState_UI_Passes_needed,
@@ -108,6 +110,8 @@ namespace ContextField
 	constexpr ContextFieldMask RenderDeviceCapabilities_rtx_supported = context_field_bit(ContextFieldID::RenderDeviceCapabilities_rtx_supported);
 	constexpr ContextFieldMask RenderDeviceCapabilities_dlss_available = context_field_bit(ContextFieldID::RenderDeviceCapabilities_dlss_available);
 	constexpr ContextFieldMask SkyState_prev_sun_dir = context_field_bit(ContextFieldID::SkyState_prev_sun_dir);
+	constexpr ContextFieldMask SkyState_prev_studio = context_field_bit(ContextFieldID::SkyState_prev_studio);
+	constexpr ContextFieldMask SkyState_prev_studio_fill = context_field_bit(ContextFieldID::SkyState_prev_studio_fill);
 	constexpr ContextFieldMask SkyState_sky_changed = context_field_bit(ContextFieldID::SkyState_sky_changed);
 	constexpr ContextFieldMask TonemapSelectors_enabled = context_field_bit(ContextFieldID::TonemapSelectors_enabled);
 	constexpr ContextFieldMask UIState_UI_Passes_needed = context_field_bit(ContextFieldID::UIState_UI_Passes_needed);
@@ -168,6 +172,14 @@ static inline const PassContextDeps pass_context_deps[] = {
 		  ContextField::None,
 		true },
 	{ PassID::AssetMip,
+		  ContextField::None,
+		  ContextField::None,
+		true },
+	{ PassID::AssetSkyDiffuse,
+		  ContextField::None,
+		  ContextField::None,
+		true },
+	{ PassID::AssetSkySpecular,
 		  ContextField::None,
 		  ContextField::None,
 		true },
@@ -567,6 +579,14 @@ static inline const PassContextDeps pass_context_deps[] = {
 		  ContextField::None,
 		true },
 	{ PassID::stencil_renderer,
+		  ContextField::None,
+		  ContextField::None,
+		true },
+	{ PassID::stencil_outline_temporal,
+		  ContextField::None,
+		  ContextField::None,
+		true },
+	{ PassID::stencil_gizmo_resolve,
 		  ContextField::None,
 		  ContextField::None,
 		true },

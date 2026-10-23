@@ -2,12 +2,41 @@ module Graphics:EngineAssets;
 import :Asset;
 import :MeshAsset;
 import :BinaryAsset;
+import :FontAsset;
 import :TextureAsset;
 
 namespace EngineAssets
 {
+	EngineAsset<FontAsset> default_font(L"default_font", [] {
+		return new FontAsset(to_path(L"fonts\\open-sans.regular.ttf").wstring());
+		});
+
+	EngineAsset<FontAsset> mono_font(L"mono_font", [] {
+		return new FontAsset(to_path(L"fonts\\DroidSansMono.ttf").wstring());
+		});
+
+	EngineAsset<FontAsset> emoji_font(L"emoji_font", [] {
+		return new FontAsset(to_path(L"fonts\\NotoColorEmoji-Regular.ttf").wstring());
+		});
+
 	EngineAsset<MeshAsset> material_tester(L"material_tester", [] {
 		return (new MeshAsset(to_path(L"resources\\mitsuba\\mitsuba-sphere.obj").wstring()));
+		});
+
+	EngineAsset<MeshAsset> preview_sphere(L"preview_sphere", [] {
+		return (new MeshAsset(to_path(L"resources\\preview\\preview_sphere.obj")));
+		});
+
+	EngineAsset<MeshAsset> preview_rounded_cube(L"preview_rounded_cube", [] {
+		return (new MeshAsset(to_path(L"resources\\preview\\preview_rounded_cube.obj")));
+		});
+
+	EngineAsset<MeshAsset> preview_slab(L"preview_slab", [] {
+		return (new MeshAsset(to_path(L"resources\\preview\\preview_slab.obj")));
+		});
+
+	EngineAsset<MeshAsset> preview_cloth(L"preview_cloth", [] {
+		return (new MeshAsset(to_path(L"resources\\preview\\preview_cloth.obj")));
 		});
 
 	EngineAsset<MeshAsset> plane(L"plane", [] {

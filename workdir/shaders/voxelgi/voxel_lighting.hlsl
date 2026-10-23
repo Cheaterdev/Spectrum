@@ -11,7 +11,7 @@ static const RWTexture3D<float4> output = GetVoxelLighting().GetOutput();
 static const Texture3D<float4> tex_albedo = GetVoxelLighting().GetAlbedo();
 static const Texture3D<float4> tex_normals = GetVoxelLighting().GetNormals();
 static const Texture3D<float4> tex_lower = GetVoxelLighting().GetLower();
-static const TextureCube<float4> tex_cube = GetVoxelLighting().GetTex_cube();
+static const TextureCube<float4> sky_diffuse = GetVoxelLighting().GetSky_diffuse();
 
 static const float3 voxel_min = voxel_info.GetMin().xyz;
 static const float3 voxel_size = voxel_info.GetSize().xyz;
@@ -45,12 +45,6 @@ float get_shadow(float3 wpos, float3 normal)
 	return get_shadow_vsm_simple(c, lighting, wpos, normal, dir);
 }
 
-float4 get_sky(float3 dir, float level)
-{
-	level *= 8;
-    return tex_cube.SampleLevel(linearSampler, dir, level);
-}
-
 float4 get_voxel(float3 pos, float level)
 {
 	return float4(1, 1, 1, 1) * tex_lower.SampleLevel(linearClampSampler, pos, level);
@@ -62,7 +56,9 @@ float get_shadow_voxel(float3 pos)
 }
 
 
-float4 trace(float3 origin, float3 dir, float3 normal, float angle)
+// The voxel light a cone gathers, and in sky_visibility how much of it escaped to the sky; the sky's own
+// light is added once per voxel from the cosine-convolved cube (getGI), not per cone.
+float4 trace(float3 origin, float3 dir, float3 normal, float angle, out float sky_visibility)
 {
 	dir = normalize(dir);
 
@@ -97,9 +93,7 @@ float4 trace(float3 origin, float3 dir, float3 normal, float angle)
 
 	//	accum.xyz *= angle_coeff;
 
-	float4 sky = get_sky(dir, angle);
-	float sampleWeight = saturate(1 - 18*accum.w);
-	accum += sky * pow(sampleWeight, 8);
+	sky_visibility = pow(saturate(1 - 18 * accum.w), 8);
 
 	return accum;
 
@@ -107,37 +101,39 @@ float4 trace(float3 origin, float3 dir, float3 normal, float angle)
 
 }
 
-float4 get_direction(float3 pos, float3 normal, float3 dir, float k, float a)
+float4 get_direction(float3 pos, float3 normal, float3 dir, float k, float a, inout float sky_visibility)
 {
+	float visibility;
+	float4 result = trace(pos + normal/100, dir, normal, a, visibility); // *pow(dot(normal, dir), 1);
+	sky_visibility += visibility;
 
-    return trace(pos + normal/100, dir, normal, a); // *pow(dot(normal, dir), 1);
+	return result;
 }
 float4 getGI(float3 Pos, float3 Normal)
 {
 	float a = 0.2;
 
 	float4 Color = 0;
+	float sky_visibility = 0;
 	float t = 1;
 	float k = 1;
 	float3 right = t * normalize(cross(Normal, float3(0, 1, 0.001)));
 	float3 tangent = t * normalize(cross(right, Normal));
 
-	//Color += get_direction(Pos, Normal, normalize(Normal), k, a);// trace(Pos + k*normalize(Normal + right), normalize(Normal + right), a);
-	//return Color;
+	Color += get_direction(Pos, Normal, normalize(Normal + right), k, a, sky_visibility);
+	Color += get_direction(Pos, Normal, normalize(Normal - right), k, a, sky_visibility);
+	Color += get_direction(Pos, Normal, normalize(Normal + tangent), k, a, sky_visibility);
+	Color += get_direction(Pos, Normal, normalize(Normal - tangent), k, a, sky_visibility);
+	Color += get_direction(Pos, Normal, normalize(Normal + tangent - right), k, a, sky_visibility);
+	Color += get_direction(Pos, Normal, normalize(Normal + tangent + right), k, a, sky_visibility);
+	Color += get_direction(Pos, Normal, normalize(Normal - tangent - right), k, a, sky_visibility);
+	Color += get_direction(Pos, Normal, normalize(Normal - tangent + right), k, a, sky_visibility);
 
+	// The sky's share: its cosine-weighted irradiance around the normal, times the fraction of the eight
+	// cones that left the volume without hitting anything.
+	Color.rgb += sky_diffuse.SampleLevel(linearSampler, Normal, 0).rgb * sky_visibility;
 
-	Color += get_direction(Pos, Normal, normalize(Normal + right), k, a);// trace(Pos + k*normalize(Normal + right), normalize(Normal + right), a);
-	Color += get_direction(Pos, Normal, normalize(Normal - right), k, a);//trace(Pos + k*normalize(Normal - right), normalize(Normal - right), a);
-	Color += get_direction(Pos, Normal, normalize(Normal + tangent), k, a);//trace(Pos + k*normalize(Normal + tangent), normalize(Normal + tangent), a);
-	Color += get_direction(Pos, Normal, normalize(Normal - tangent), k, a);//trace(Pos + k*normalize(Normal - tangent), normalize(Normal - tangent), a);
-	Color += get_direction(Pos, Normal, normalize(Normal + tangent - right), k, a);//trace(Pos + k*normalize(Normal + tangent - right), normalize(Normal + tangent - right), a);
-	Color += get_direction(Pos, Normal, normalize(Normal + tangent + right), k, a);//trace(Pos + k*normalize(Normal + tangent + right), normalize(Normal + tangent + right), a);
-	Color += get_direction(Pos, Normal, normalize(Normal - tangent - right), k, a);//trace(Pos + k*normalize(Normal - tangent - right), normalize(Normal - tangent - right), a);
-	Color += get_direction(Pos, Normal, normalize(Normal - tangent + right), k, a);//trace(Pos + k*normalize(Normal - tangent + right), normalize(Normal - tangent + right), a);
-																				   //  Color /= 3.14f;
-																				   //Color *= getAO(Pos-0*Normal, Normal);
 	return  Color / 8;
-	
 }
 
 

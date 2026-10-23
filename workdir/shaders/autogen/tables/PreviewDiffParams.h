@@ -9,14 +9,16 @@
 #include "enums.h"
 namespace Editor
 {
-	struct Countour
+	struct PreviewDiffParams
 	{
-		float4 color; // float4
-		uint selected_id; // uint
-		uint object_ids; // Texture2D<uint>
-		float4 GetColor() { return color; }
-		uint GetSelected_id() { return selected_id; }
-		Texture2D<uint> GetObject_ids() { return ResourceDescriptorHeap[object_ids]; }
+		float gain; // float
+		uint a; // Texture2D<float4>
+		uint b; // Texture2D<float4>
+		uint result; // RWTexture2D<float4>
+		float GetGain() { return gain; }
+		Texture2D<float4> GetA() { return ResourceDescriptorHeap[a]; }
+		Texture2D<float4> GetB() { return ResourceDescriptorHeap[b]; }
+		RWTexture2D<float4> GetResult() { return ResourceDescriptorHeap[result]; }
 	};
 }
-using Editor::Countour;
+using Editor::PreviewDiffParams;

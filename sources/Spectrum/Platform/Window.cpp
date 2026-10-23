@@ -14,6 +14,101 @@ void TrackMouse(HWND hwnd)
 }
 
 
+namespace
+{
+    struct dwm_margins
+    {
+        int left, right, top, bottom;
+    };
+
+    // dwmapi is loaded by hand: the windows module doesn't pull in its header or import
+    // library, and one function is all it takes.
+    void extend_frame_into_client(HWND hwnd)
+    {
+        HMODULE dwm = LoadLibraryW(L"dwmapi.dll");
+        if (!dwm)
+            return;
+
+        using extend_fn = HRESULT(WINAPI*)(HWND, const dwm_margins*);
+        if (auto extend = reinterpret_cast<extend_fn>(GetProcAddress(dwm, "DwmExtendFrameIntoClientArea")))
+        {
+            const dwm_margins margins = { 0, 0, 1, 0 };
+            extend(hwnd, &margins);
+        }
+
+        // Windows 11: ask for the rounded corners explicitly (DWMWA_WINDOW_CORNER_PREFERENCE
+        // = 33, DWMWCP_ROUND = 2); older versions don't know the attribute and ignore the call.
+        using attribute_fn = HRESULT(WINAPI*)(HWND, DWORD, const void*, DWORD);
+        if (auto set_attribute = reinterpret_cast<attribute_fn>(GetProcAddress(dwm, "DwmSetWindowAttribute")))
+        {
+            const int round = 2;
+            set_attribute(hwnd, 33, &round, sizeof(round));
+        }
+    }
+
+    // GetDpiForWindow needs Windows 10 1607; 96 (100%) when it is not there.
+    UINT window_dpi(HWND hwnd)
+    {
+        using dpi_fn = UINT(WINAPI*)(HWND);
+        static const auto get_dpi = reinterpret_cast<dpi_fn>(GetProcAddress(GetModuleHandleW(L"user32.dll"), "GetDpiForWindow"));
+        return get_dpi ? get_dpi(hwnd) : 96;
+    }
+
+    // The application icon, drawn in code at the size asked for (a prism outline in the UI's
+    // accent colour), so no resource file is needed. Straight alpha, three by three samples
+    // per pixel for smooth edges. It lives as long as the process.
+    HICON make_app_icon(int size)
+    {
+        std::vector<uint32_t> pixels(size_t(size) * size, 0);
+
+        struct point { float x, y; };
+        const point a = { 0.50f, 0.08f }, b = { 0.93f, 0.90f }, c = { 0.07f, 0.90f };
+        const point centre = { (a.x + b.x + c.x) / 3.0f, (a.y + b.y + c.y) / 3.0f };
+
+        // Inside the triangle scaled about its centre by k (1 = the outline's outer edge).
+        auto inside = [&](float px, float py, float k)
+        {
+            auto scaled = [&](point p) { return point{ centre.x + (p.x - centre.x) * k, centre.y + (p.y - centre.y) * k }; };
+            const point s0 = scaled(a), s1 = scaled(b), s2 = scaled(c);
+            auto side = [](point p, point q, float x, float y) { return (q.x - p.x) * (y - p.y) - (q.y - p.y) * (x - p.x); };
+            const float d0 = side(s0, s1, px, py), d1 = side(s1, s2, px, py), d2 = side(s2, s0, px, py);
+            return (d0 >= 0 && d1 >= 0 && d2 >= 0) || (d0 <= 0 && d1 <= 0 && d2 <= 0);
+        };
+
+        for (int y = 0; y < size; y++)
+            for (int x = 0; x < size; x++)
+            {
+                int covered = 0;
+                for (int sy = 0; sy < 3; sy++)
+                    for (int sx = 0; sx < 3; sx++)
+                    {
+                        const float px = (x + (sx + 0.5f) / 3.0f) / size;
+                        const float py = (y + (sy + 0.5f) / 3.0f) / size;
+                        if (inside(px, py, 1.0f) && !inside(px, py, 0.55f))
+                            covered++;
+                    }
+
+                const uint32_t alpha = uint32_t(covered * 255 / 9);
+                pixels[size_t(y) * size + x] = (alpha << 24) | (53u << 16) | (114u << 8) | 202u;   // BGRA: accent blue
+            }
+
+        std::vector<uint8_t> mask((size_t(size + 31) / 32 * 4) * size, 0);   // ignored: the colour bitmap has alpha
+        ICONINFO info = {};
+        info.fIcon    = TRUE;
+        info.hbmMask  = CreateBitmap(size, size, 1, 1, mask.data());
+        info.hbmColor = CreateBitmap(size, size, 1, 32, pixels.data());
+        HICON icon = CreateIconIndirect(&info);
+        DeleteObject(info.hbmMask);
+        DeleteObject(info.hbmColor);
+        return icon;
+    }
+
+    bool is_window_button_hit(WPARAM hit)
+    {
+        return hit == HTMINBUTTON || hit == HTMAXBUTTON || hit == HTCLOSE;
+    }
+}
+
 LRESULT CALLBACK MyWndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
     // Recover the pointer to our class, don't forget to type cast it back
@@ -55,9 +150,41 @@ void Window::InitWindow(int width, int height, LPCTSTR name)
     wc.lpszClassName = wname.c_str();
     wc.hIconSm = NULL;
     RegisterClassExW(&wc);
-    HWND hWindow = CreateWindowExW((WS_EX_WINDOWEDGE) , wname.c_str(), wname.c_str(), WS_OVERLAPPEDWINDOW, -1, -1, width, height, NULL, NULL, GetModuleHandle(NULL), NULL);
+    // Opens in the middle of the work area (the screen without the taskbar) of the monitor the
+    // mouse is on, never partly off its top left corner; a window larger than the area is
+    // shrunk to fit.
+    POINT cursor = { 0, 0 };
+    GetCursorPos(&cursor);
+    MONITORINFO monitor = { sizeof(MONITORINFO) };
+    int x = CW_USEDEFAULT, y = CW_USEDEFAULT;
+    if (GetMonitorInfoW(MonitorFromPoint(cursor, MONITOR_DEFAULTTOPRIMARY), &monitor))
+    {
+        const int area_width  = monitor.rcWork.right - monitor.rcWork.left;
+        const int area_height = monitor.rcWork.bottom - monitor.rcWork.top;
+        width  = std::min(width, area_width);
+        height = std::min(height, area_height);
+        x = monitor.rcWork.left + (area_width - width) / 2;
+        y = monitor.rcWork.top + (area_height - height) / 2;
+    }
+
+    HWND hWindow = CreateWindowExW((WS_EX_WINDOWEDGE) , wname.c_str(), wname.c_str(), WS_OVERLAPPEDWINDOW, x, y, width, height, NULL, NULL, GetModuleHandle(NULL), NULL);
     SetWindowLongPtrW(hWindow, GWLP_USERDATA, (LONG_PTR)this);
     hwnd = hWindow;
+
+    // The taskbar and Alt+Tab icon.
+    SendMessageW(hWindow, WM_SETICON, ICON_BIG, (LPARAM)make_app_icon(GetSystemMetrics(SM_CXICON)));
+    SendMessageW(hWindow, WM_SETICON, ICON_SMALL, (LPARAM)make_app_icon(GetSystemMetrics(SM_CXSMICON)));
+
+    if (custom_frame)
+    {
+        // Keeps the system shadow and rounded corners with the frame gone: a one pixel
+        // frame extension is enough for DWM to keep drawing them.
+        extend_frame_into_client(hWindow);
+
+        // Applies WM_NCCALCSIZE (client = the whole window) to the window just created.
+        SetWindowPos(hWindow, nullptr, 0, 0, 0, 0, SWP_FRAMECHANGED | SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
+    }
+
     ShowWindow(hWindow, SW_SHOWNORMAL);
     UpdateWindow(hWindow);
 }
@@ -250,6 +377,139 @@ LRESULT Window::MsgProc(MSG msg)
             }
             return DefWindowProcW(msg.hwnd, msg.message, msg.wParam, msg.lParam);
 
+        // Alt on its own arrives as a system key. It is the UI's (the ribbon's key tips), and
+        // swallowing it also keeps Windows from opening the system menu on release. Alt with
+        // another key (Alt+F4, Alt+Space) is left to the default handling.
+        case WM_SYSKEYDOWN:
+        case WM_SYSKEYUP:
+            if (msg.wParam == VK_MENU && input_handler)
+            {
+                const bool repeat = msg.message == WM_SYSKEYDOWN && (msg.lParam & (1 << 30)) != 0;
+                if (!repeat)
+                    input_handler->key_action_event(msg.message == WM_SYSKEYDOWN ? key_action::DOWN : key_action::UP, (long)msg.wParam, current_key_mods());
+                return 0;
+            }
+            break;
+
+        // Moved to a monitor with another scale: Windows suggests the window rectangle that
+        // keeps it the same physical size; without taking it the window would jump in size.
+        case WM_DPICHANGED:
+        {
+            const RECT* suggested = reinterpret_cast<const RECT*>(msg.lParam);
+            SetWindowPos(hwnd, nullptr, suggested->left, suggested->top,
+                         suggested->right - suggested->left, suggested->bottom - suggested->top,
+                         SWP_NOZORDER | SWP_NOACTIVATE);
+            return 0;
+        }
+
+        case WM_NCCALCSIZE:
+            if (custom_frame && msg.wParam)
+            {
+                // The client area is the whole window: no system title bar or borders.
+                auto* params = reinterpret_cast<NCCALCSIZE_PARAMS*>(msg.lParam);
+
+                if (IsZoomed(hwnd))
+                {
+                    // A maximised window overhangs the monitor by its invisible frame, whose
+                    // size depends on the DPI of the monitor it is on. The work area of that
+                    // monitor (the screen minus the taskbar) is what it should fill.
+                    MONITORINFO info = { sizeof(MONITORINFO) };
+                    if (GetMonitorInfoW(MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST), &info))
+                    {
+                        RECT work = info.rcWork;
+
+                        // An auto-hiding taskbar leaves the work area equal to the monitor, and a
+                        // window covering every pixel would keep the taskbar from coming back:
+                        // one pixel off the bottom (the usual place) leaves it a hot edge.
+                        if (EqualRect(&info.rcWork, &info.rcMonitor))
+                            work.bottom -= 1;
+
+                        params->rgrc[0] = work;
+                    }
+                }
+
+                return 0;
+            }
+            break;
+
+        case WM_NCHITTEST:
+            if (custom_frame)
+            {
+                POINT point = { GET_X_LPARAM(msg.lParam), GET_Y_LPARAM(msg.lParam) };
+                ScreenToClient(hwnd, &point);
+
+                RECT client;
+                GetClientRect(hwnd, &client);
+
+                // The resize borders are ours to report now; none while maximised.
+                // 6 px at 100% (the system's own is about 8, which here would eat into the tab
+                // bar's top row), scaled by the DPI of this window's monitor.
+                const int border = IsZoomed(hwnd) ? 0 : std::max(4, MulDiv(6, int(window_dpi(hwnd)), 96));
+                const bool at_left   = point.x < border;
+                const bool at_right  = point.x >= client.right - border;
+                const bool at_top    = point.y < border;
+                const bool at_bottom = point.y >= client.bottom - border;
+
+                if (at_top && at_left)     return HTTOPLEFT;
+                if (at_top && at_right)    return HTTOPRIGHT;
+                if (at_bottom && at_left)  return HTBOTTOMLEFT;
+                if (at_bottom && at_right) return HTBOTTOMRIGHT;
+                if (at_top)                return HTTOP;
+                if (at_bottom)             return HTBOTTOM;
+                if (at_left)               return HTLEFT;
+                if (at_right)              return HTRIGHT;
+
+                if (input_handler)
+                {
+                    switch (input_handler->hit_test_window(vec2(float(point.x), float(point.y))))
+                    {
+                        case window_hit::caption:  return HTCAPTION;
+                        case window_hit::minimize: return HTMINBUTTON;
+                        case window_hit::maximize: return HTMAXBUTTON;
+                        case window_hit::close:    return HTCLOSE;
+                        default: break;
+                    }
+                }
+
+                return HTCLIENT;
+            }
+            break;
+
+        // The window buttons are in the non-client area as far as Windows is concerned
+        // (so Windows 11 shows its snap layouts over the maximise button), but the UI draws
+        // and handles them: the pointer is forwarded as ordinary mouse events.
+        // Over the caption and the resize borders too: no client mouse move arrives there, so
+        // without this the last element hovered stays lit (the first tab, when the pointer
+        // enters the title bar from the left).
+        case WM_NCMOUSEMOVE:
+            if (custom_frame && input_handler)
+            {
+                POINT point = { GET_X_LPARAM(msg.lParam), GET_Y_LPARAM(msg.lParam) };
+                ScreenToClient(hwnd, &point);
+                input_handler->mouse_move_event(vec2(float(point.x), float(point.y)));
+
+                TRACKMOUSEEVENT track = { sizeof(TRACKMOUSEEVENT), TME_LEAVE | TME_NONCLIENT, hwnd, 0 };
+                TrackMouseEvent(&track);
+            }
+            break;
+
+        case WM_NCMOUSELEAVE:
+            if (custom_frame && input_handler)
+                input_handler->mouse_move_event(vec2(-10000.0f, -10000.0f));   // nothing is hovered any more
+            break;
+
+        case WM_NCLBUTTONDOWN:
+        case WM_NCLBUTTONUP:
+            if (custom_frame && input_handler && is_window_button_hit(msg.wParam))
+            {
+                POINT point = { GET_X_LPARAM(msg.lParam), GET_Y_LPARAM(msg.lParam) };
+                ScreenToClient(hwnd, &point);
+                input_handler->mouse_action_event(msg.message == WM_NCLBUTTONDOWN ? mouse_action::DOWN : mouse_action::UP,
+                                                  mouse_button::LEFT, vec2(float(point.x), float(point.y)));
+                return 0;
+            }
+            break;
+
         case WM_GETMINMAXINFO:
             LPMINMAXINFO pMaxInfo = (LPMINMAXINFO)msg.lParam;
 
@@ -260,6 +520,26 @@ LRESULT Window::MsgProc(MSG msg)
     }
 
     return DefWindowProcW(msg.hwnd, msg.message, msg.wParam, msg.lParam);
+}
+
+void Window::minimize()
+{
+    PostMessageW(hwnd, WM_SYSCOMMAND, SC_MINIMIZE, 0);
+}
+
+void Window::toggle_maximize()
+{
+    PostMessageW(hwnd, WM_SYSCOMMAND, IsZoomed(hwnd) ? SC_RESTORE : SC_MAXIMIZE, 0);
+}
+
+void Window::request_close()
+{
+    PostMessageW(hwnd, WM_CLOSE, 0, 0);
+}
+
+bool Window::is_maximized() const
+{
+    return hwnd && IsZoomed(hwnd);
 }
 
 void Window::process_messages()

@@ -20,12 +20,16 @@ export namespace Table
 		{
 			static constexpr SlotID ID = SlotID::SkyData;
 			float3 sunDir;
+			float studio;
+			float studio_fill;
 			HLSL::Texture2D<float> depthBuffer;
 			HLSL::Texture2D<float4> transmittance;
 			HLSL::Texture3D<float4> inscatter;
 			HLSL::Texture2D<float4> irradiance;
 			HLSL::RWTexture2D<float4> result;
 			float3& GetSunDir() { return sunDir; }
+			float& GetStudio() { return studio; }
+			float& GetStudio_fill() { return studio_fill; }
 			HLSL::Texture2D<float>& GetDepthBuffer() { return depthBuffer; }
 			HLSL::Texture2D<float4>& GetTransmittance() { return transmittance; }
 			HLSL::Texture3D<float4>& GetInscatter() { return inscatter; }
@@ -36,6 +40,8 @@ export namespace Table
 			void compile(Compiler& compiler) const
 			{
 				compiler.compile(sunDir, "SkyData::sunDir");
+				compiler.compile(studio, "SkyData::studio");
+				compiler.compile(studio_fill, "SkyData::studio_fill");
 				compiler.compile_auto(depthBuffer, "SkyData::depthBuffer");
 				compiler.compile(transmittance, "SkyData::transmittance");
 				compiler.compile(inscatter, "SkyData::inscatter");
@@ -45,6 +51,8 @@ export namespace Table
 			struct Compiled
 			{
 				float3 sunDir; // float3
+				float studio; // float
+				float studio_fill; // float
 				uint depthBuffer; // Texture2D<float>
 				uint transmittance; // Texture2D<float4>
 				uint inscatter; // Texture3D<float4>
@@ -56,6 +64,8 @@ export namespace Table
 				SERIALIZE()
 				{
 					ar& NVP(sunDir);
+					ar& NVP(studio);
+					ar& NVP(studio_fill);
 				}
 
 
@@ -69,6 +79,8 @@ export namespace Table
 			SERIALIZE()
 			{
 				ar& NVP(sunDir);
+				ar& NVP(studio);
+				ar& NVP(studio_fill);
 			}
 
 		};

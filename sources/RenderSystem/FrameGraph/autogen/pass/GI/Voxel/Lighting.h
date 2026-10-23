@@ -40,7 +40,7 @@ namespace GI
 				Handlers::Texture3D VoxelNormal = ResourceID::VoxelNormal;
 
 
-				Handlers::TextureCube sky_cubemap_filtered = ResourceID::sky_cubemap_filtered;
+				Handlers::TextureCube sky_cubemap_filtered_diffuse = ResourceID::sky_cubemap_filtered_diffuse;
 
 
 				Handlers::Texture VoxelAlbedoStatic = ResourceID::VoxelAlbedoStatic;
@@ -77,7 +77,7 @@ namespace GI
 					builder.need(data.VoxelLighted, FrameGraph::ResourceFlags::UnorderedAccess);
 					builder.need(data.VoxelAlbedo, FrameGraph::ResourceFlags::Read);
 					builder.need(data.VoxelNormal, FrameGraph::ResourceFlags::Read);
-					builder.need(data.sky_cubemap_filtered, FrameGraph::ResourceFlags::Read);
+					builder.need(data.sky_cubemap_filtered_diffuse, FrameGraph::ResourceFlags::Read);
 					builder.need(data.VoxelAlbedoStatic, FrameGraph::ResourceFlags::Read);
 					builder.need(data.VoxelNormalStatic, FrameGraph::ResourceFlags::Read);
 					builder.need(data.VoxelAlbedoDynamic, FrameGraph::ResourceFlags::Read);
@@ -96,7 +96,7 @@ namespace GI
 					FrameGraph::ChainIndex VoxelLighted = FrameGraph::ChainIndex::Unresolved;
 					FrameGraph::ChainIndex VoxelAlbedo = FrameGraph::ChainIndex::Unresolved;
 					FrameGraph::ChainIndex VoxelNormal = FrameGraph::ChainIndex::Unresolved;
-					FrameGraph::ChainIndex sky_cubemap_filtered = FrameGraph::ChainIndex::Unresolved;
+					FrameGraph::ChainIndex sky_cubemap_filtered_diffuse = FrameGraph::ChainIndex::Unresolved;
 					FrameGraph::ChainIndex VoxelAlbedoStatic = FrameGraph::ChainIndex::Unresolved;
 					FrameGraph::ChainIndex VoxelNormalStatic = FrameGraph::ChainIndex::Unresolved;
 					FrameGraph::ChainIndex VoxelAlbedoDynamic = FrameGraph::ChainIndex::Unresolved;
@@ -111,7 +111,7 @@ namespace GI
 					cache.VoxelLighted = FrameGraph::TaskBuilder::cache_slot(data.VoxelLighted, ResourceID::VoxelLighted);
 					cache.VoxelAlbedo = FrameGraph::TaskBuilder::cache_slot(data.VoxelAlbedo, ResourceID::VoxelAlbedo);
 					cache.VoxelNormal = FrameGraph::TaskBuilder::cache_slot(data.VoxelNormal, ResourceID::VoxelNormal);
-					cache.sky_cubemap_filtered = FrameGraph::TaskBuilder::cache_slot(data.sky_cubemap_filtered, ResourceID::sky_cubemap_filtered);
+					cache.sky_cubemap_filtered_diffuse = FrameGraph::TaskBuilder::cache_slot(data.sky_cubemap_filtered_diffuse, ResourceID::sky_cubemap_filtered_diffuse);
 					cache.VoxelAlbedoStatic = FrameGraph::TaskBuilder::cache_slot(data.VoxelAlbedoStatic, ResourceID::VoxelAlbedoStatic);
 					cache.VoxelNormalStatic = FrameGraph::TaskBuilder::cache_slot(data.VoxelNormalStatic, ResourceID::VoxelNormalStatic);
 					cache.VoxelAlbedoDynamic = FrameGraph::TaskBuilder::cache_slot(data.VoxelAlbedoDynamic, ResourceID::VoxelAlbedoDynamic);
@@ -133,7 +133,7 @@ namespace GI
 					builder.load(data.VoxelLighted, ResourceID::VoxelLighted, cache.VoxelLighted);
 					builder.load(data.VoxelAlbedo, ResourceID::VoxelAlbedo, cache.VoxelAlbedo);
 					builder.load(data.VoxelNormal, ResourceID::VoxelNormal, cache.VoxelNormal);
-					builder.load(data.sky_cubemap_filtered, ResourceID::sky_cubemap_filtered, cache.sky_cubemap_filtered);
+					builder.load(data.sky_cubemap_filtered_diffuse, ResourceID::sky_cubemap_filtered_diffuse, cache.sky_cubemap_filtered_diffuse);
 					builder.load(data.VoxelAlbedoStatic, ResourceID::VoxelAlbedoStatic, cache.VoxelAlbedoStatic);
 					builder.load(data.VoxelNormalStatic, ResourceID::VoxelNormalStatic, cache.VoxelNormalStatic);
 					builder.load(data.VoxelAlbedoDynamic, ResourceID::VoxelAlbedoDynamic, cache.VoxelAlbedoDynamic);
@@ -150,7 +150,7 @@ namespace GI
 					{ ResourceID::VoxelLighted, true },
 					{ ResourceID::VoxelAlbedo, false },
 					{ ResourceID::VoxelNormal, false },
-					{ ResourceID::sky_cubemap_filtered, false },
+					{ ResourceID::sky_cubemap_filtered_diffuse, false },
 					{ ResourceID::VoxelAlbedoStatic, false },
 					{ ResourceID::VoxelNormalStatic, false },
 					{ ResourceID::VoxelAlbedoDynamic, false },

@@ -15,10 +15,12 @@ namespace Shadows
 		struct SkyAmbientData
 		{
 			uint sky; // TextureCube<float4>
+			uint sky_diffuse; // TextureCube<float4>
 			uint result; // RWTexture2D<float4>
 			GBuffer gbuffer; // GBuffer
 			GBuffer GetGbuffer() { return gbuffer; }
 			TextureCube<float4> GetSky() { return ResourceDescriptorHeap[sky]; }
+			TextureCube<float4> GetSky_diffuse() { return ResourceDescriptorHeap[sky_diffuse]; }
 			RWTexture2D<float4> GetResult() { return ResourceDescriptorHeap[result]; }
 		};
 	}

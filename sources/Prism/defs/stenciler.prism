@@ -1,9 +1,18 @@
 namespace Editor
 {
-	[Bind = DefaultLayout::Instance0]
-	struct Countour
+	# Scene depth for the selection mask's occlusion test (Instance5 is free in
+	# DrawMask: only the cluster-capture permutation of the mesh shader uses it).
+	[Bind = DefaultLayout::Instance5]
+	struct MaskDepth
 	{
-		float4 color;
+		Texture2D<float> scene_depth;
+		# 1 / size of the target being drawn, to map a pixel to a depth uv.
+		float2 inv_target_size;
+		# The scene depth was rendered with this jitter (uv units, y already
+		# flipped to uv's direction); the mask is not.
+		float2 jitter_uv;
+		# GBuffer_ObjectID and the selected part's id: a texel with the selected
+		# id is the mesh itself, so it never occludes it.
 		Texture2D<uint> object_ids;
 		uint selected_id;
 	}
@@ -75,6 +84,29 @@ namespace Editor
 		cull = None;
 
 		rtv = { R16G16B16A16_FLOAT };
+		blend = { Additive };
+	}
+
+	# The selected mesh part's silhouette, flat (alpha 0.5 at full coverage) into the same
+	# supersampled target as the gizmo; gizmo draws add on top (alpha 1), so the
+	# fractional part of alpha is the mask and the integer part is the gizmo.
+	GraphicsPSO DrawMask
+	{
+		root = DefaultLayout;
+
+		[EntryPoint = VS]
+		mesh = "gbuffer/mesh_shader.hlsl";
+
+		[EntryPoint = AS]
+		amplification = "gbuffer/mesh_shader.hlsl";
+
+		[EntryPoint = PS_MASK]
+		pixel = "postprocess/stencil.hlsl";
+
+		enable_depth = false;
+		cull = None;
+
+		rtv = { R16G16B16A16_FLOAT };
 	}
 
 
@@ -92,36 +124,122 @@ namespace Editor
 		cull = None;
 
 		rtv = { R16G16B16A16_FLOAT };
+		blend = { Additive };
 	}
 
 
-	GraphicsPSO StencilerLast
+	# Editor overlay resolve: the selected part's mask and the gizmo are drawn into
+	# GizmoColor at twice the output size (stencil_renderer), and here the
+	# outline is derived from the mask and everything is averaged 2x2 over the
+	# finished frame. DLSS has no depth/motion for either, so it can't antialias
+	# them; this does.
+	[Bind = DefaultLayout::Instance0]
+	struct GizmoResolveData
+	{
+		Texture2D<float4> source;
+		# Selection outline strength per output pixel (OutlineEdge) and colour.
+		Texture2D<float> edge;
+		float4 outline_color;
+	}
+
+	# Selection outline, from the mask in GizmoColor (alpha fraction, 0.5 =
+	# fully visible) at supersampled resolution, then accumulated over frames:
+	# the occluder edges in the mask come from jittered depth/ids and crawl
+	# every frame, so the result is blended with last frame's reprojected by
+	# motion vectors, like a TAA resolve. history is a copy of edge for next
+	# frame (separate because the resolve reads neighbouring history texels).
+	[Bind = DefaultLayout::Instance0]
+	struct OutlineData
+	{
+		Texture2D<float4> mask;
+		# Render resolution; sampled by uv.
+		Texture2D<float> depth;
+		Texture2D<float2> motion;
+		Texture2D<float> history;
+		RWTexture2D<float> edge;
+		# Kernel radius in output pixels.
+		float width;
+		# Weight of the reprojected history.
+		float history_weight;
+		# Non-zero: ignore history (selection changed, resize, first frame).
+		uint reset;
+	}
+
+	[Bind = DefaultLayout::Instance0]
+	struct OutlineCopy
+	{
+		Texture2D<float> source;
+		RWTexture2D<float> target;
+	}
+
+	ComputePSO OutlineTemporal
+	{
+		root = DefaultLayout;
+
+		[EntryPoint = CS_Outline]
+		compute = "postprocess/outline.hlsl";
+	}
+
+	ComputePSO OutlineCopy
+	{
+		root = DefaultLayout;
+
+		[EntryPoint = CS_Copy]
+		compute = "postprocess/outline.hlsl";
+	}
+
+	GraphicsPSO GizmoResolve
 	{
 		root = DefaultLayout;
 
 		[EntryPoint = VS]
-		vertex = "postprocess/contour.hlsl";
+		vertex = "postprocess/gizmo_resolve.hlsl";
 
 		[EntryPoint = PS]
-		pixel = "postprocess/contour.hlsl";
+		pixel = "postprocess/gizmo_resolve.hlsl";
 
 		enable_depth = false;
 		cull = None;
 
 		rtv = { R16G16B16A16_FLOAT };
-		blend = { Additive };
+		blend = { AlphaBlend };
 	}
 
 	# Scene picking reads GBuffer_ObjectID (written by the GBuffer pass, see
-	# MeshInfo::object_id) back under the mouse; the selection outline is an
-	# edge-detect on the same texture. Gizmo handles are drawn on top and pick
-	# themselves through PickerBuffer.
+	# MeshInfo::object_id) back under the mouse. The selection mask and gizmo
+	# handles are drawn into the supersampled GizmoColor; handles pick
+	# themselves through PickerBuffer. GBuffer_Depth only occludes the mask.
 	[Required]
 	[RunAlways]
 	PassNode stencil_renderer
 	{
 		[Always = Read] Texture GBuffer_ObjectID;
-		[Always = RenderTarget] Texture ResultTexture;
+		[Always = Read] Texture GBuffer_Depth;
+		[Always = RenderTarget] [Size = ViewportContext::upscale_size * 2] [Format = R16G16B16A16_FLOAT]
+		Texture GizmoColor;
 		[Always = UnorderedAccess] [Size = 1] StructuredBuffer<UINT> axis_id_buffer;
+	}
+
+	[Compute]
+	[Required]
+	[RunAlways]
+	PassNode stencil_outline_temporal
+	{
+		[Always = Read] Texture GizmoColor;
+		[Always = Read] Texture GBuffer_Depth;
+		[Always = Read] Texture GBuffer_Speed;
+		[Always = UnorderedAccess] [Size = ViewportContext::upscale_size] [Format = R16_FLOAT]
+		Texture OutlineEdge;
+		[Always = UnorderedAccess | Static] [Size = ViewportContext::upscale_size] [Format = R16_FLOAT]
+		Texture OutlineHistory;
+	}
+
+	[Required]
+	[RunAlways]
+	PassNode stencil_gizmo_resolve
+	{
+		[Always = Read] Texture GizmoColor;
+		[Always = Read] Texture OutlineEdge;
+		[Always = RenderTarget] Texture ResultTexture;
 	}
 }

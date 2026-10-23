@@ -143,7 +143,7 @@ float4 unshadowed_result(float2 tc)
 			lerp(0.04, albedo, metallic), max(MIN_ROUGHNESS, packed_n.w), albedo, metallic);
 	}
 
-	result += sky_indirect_light(GetFrameInfo().GetSky(), albedo, metallic, normal, view,
+	result += sky_indirect_light(GetFrameInfo().GetSky(), GetFrameInfo().GetSky_diffuse(), material, albedo, metallic, normal, view,
 		pow(max(MIN_ROUGHNESS, packed_n.w), 2));
 	return float4(result, 1);
 }

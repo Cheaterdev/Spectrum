@@ -14,6 +14,7 @@ import TextEngine;
 
 
 using namespace FrameGraph;
+
 static const LPCTSTR cursors[] =
 {
     IDC_ARROW,
@@ -879,6 +880,11 @@ namespace GUI
 
         c.scale = result_scale;
 
+        // For the window frame's hit test: tagged elements, and clickable ones, which
+        // block what lies under them (a tab title on the caption area is a click).
+        if (visibility && (window_region != window_hit::client || clickable))
+            user_ui->building_regions.push_back({ r_bounds, window_region });
+
         sizer_long entry_scissors = c.scissors;
         if (self_scissor.has_value())
             entry_scissors = intersect(entry_scissors, math::convert(*self_scissor));
@@ -1557,10 +1563,26 @@ namespace GUI
 
         draw_infos.clear();
         pre_draw_infos.clear();
+        building_regions.clear();
         backdrop_counter = 0;
         layer_counter = 0;
         draw_recursive(c);
         drag.draw(c);
+
+        std::lock_guard<std::mutex> guard(window_regions_mutex);
+        window_regions.swap(building_regions);
+     }
+
+     window_hit user_interface::hit_test_window(vec2 pos)
+     {
+        std::lock_guard<std::mutex> guard(window_regions_mutex);
+
+        for (auto it = window_regions.rbegin(); it != window_regions.rend(); ++it)
+            if (pos.x >= it->bounds.x && pos.x < it->bounds.x + it->bounds.w
+                && pos.y >= it->bounds.y && pos.y < it->bounds.y + it->bounds.h)
+                return it->hit;
+
+        return window_hit::client;
      }
 
      void user_interface::create_graph(Graph& graph)
@@ -1898,6 +1920,13 @@ namespace GUI
                     return;
 
                 press_interpret[i_button] = true;
+
+                // A mouse press is a "key" of -1 to the key hooks (the ribbon leaves its Alt
+                // key tips on it); what they answer doesn't matter here.
+                const auto hooks = key_hooks;
+                for (auto& hook : hooks)
+                    if (hook.first.lock())
+                        hook.second(key_action::DOWN, -1, key_mods());
             }
 
             if (action == mouse_action::UP)
@@ -1937,7 +1966,13 @@ namespace GUI
                 controls.push_back(m_focus);
 
             if (controls.size() == 0)
+            {
+                // A press on nothing clickable still dismisses open menus and popups.
+                if (action == mouse_action::DOWN)
+                    close_menus();
+
                 return;
+            }
 
             if (action == mouse_action::DOWN)
             {
@@ -2125,8 +2160,27 @@ namespace GUI
         if (frame_gen)
             frame_generators.insert(frame_gen);
     }
+	void user_interface::add_key_hook(base::ptr owner, key_hook_fn hook)
+	{
+		for (auto& existing : key_hooks)
+			if (existing.first.lock() == owner)
+			{
+				existing.second = std::move(hook);
+				return;
+			}
+
+		key_hooks.emplace_back(owner, std::move(hook));
+	}
+
 	void user_interface::key_action_event_internal(key_action action, long key, key_mods mods)
 	{
+		// A hook may change the list (a ribbon opening a menu...): walk a copy.
+		const auto hooks = key_hooks;
+
+		for (auto& hook : hooks)
+			if (hook.first.lock() && hook.second(action, key, mods))
+				return;
+
 		auto really_focused = focused.lock();
 
 		if (really_focused)
@@ -2135,6 +2189,9 @@ namespace GUI
 
 	void user_interface::char_event_internal(char32_t ch)
 	{
+		if (keys_captured)
+			return;
+
 		auto really_focused = focused.lock();
 
 		if (really_focused)

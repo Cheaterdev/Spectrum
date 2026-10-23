@@ -2262,6 +2262,1033 @@ export namespace Test
 		ASSERT_TRUE(icon->turn_amount() == 1.0f);                          // off: jumps
 	}
 
+	// Ribbon tabs: the first tab shows, selecting another swaps the strips with a fade,
+	// a hidden (contextual) tab hands the selection on, and minimising collapses the
+	// strip to the tab bar and back. The touch set makes everything finger-sized.
+	TEST(Core.HAL, GUIRibbon_TabsMinimizeAndTouch)
+	{
+		THREAD_SCOPE(GUI);
+
+		auto ui_owner = std::make_shared<GUI::user_interface>();
+		auto& ui = *ui_owner;
+		ui.size = vec2(800.0f, 400.0f);
+
+		auto rb = std::make_shared<GUI::Elements::ribbon>();
+		auto home = rb->add_tab("Home");
+		auto view = rb->add_tab("View");
+		auto object = rb->add_tab("Object", true);
+		home->add_group("File")->add_large("A", "New");
+		view->add_group("Show")->add_large("B", "Grid");
+		object->add_group("Transform")->add_large("C", "Move");
+		ui.add_child(rb);
+
+		auto frame = [&](float dt)
+		{
+			ui.process_ui(dt);
+			FrameGraph::Graph graph;
+			ui.create_graph(graph);
+		};
+		auto settle = [&] { for (int i = 0; i < 30; i++) frame(0.03f); };
+
+		settle();
+		ASSERT_TRUE(rb->selected() == 0);
+		ASSERT_TRUE(home->visible.get() && !view->visible.get() && !object->visible.get());
+		ASSERT_TRUE(std::abs(rb->get_render_bounds().h - (28.0f + 96.0f)) < 2.0f);   // tab bar + strip
+
+		rb->select(1);
+		frame(0.03f);
+		ASSERT_TRUE(view->visible.get() && !home->visible.get());
+		ASSERT_TRUE(view->layer_opacity < 1.0f);                                    // fading in
+		settle();
+		ASSERT_TRUE(view->layer_opacity == 1.0f);
+		ASSERT_TRUE(view->margin->left == 0.0f);                                     // slid into place
+
+		rb->set_tab_visible(1, false);                                               // the selected tab goes away
+		ASSERT_TRUE(rb->selected() == 0 && home->visible.get() && !view->visible.get());
+		rb->set_tab_visible(2, false);
+		rb->select(2);                                                               // a hidden tab can't be selected
+		ASSERT_TRUE(rb->selected() == 0);
+		rb->set_tab_visible(2, true);
+		rb->select(2);
+		ASSERT_TRUE(rb->selected() == 2);
+		rb->select(0);
+
+		rb->set_minimized(true);
+		frame(0.03f);
+		ASSERT_TRUE(rb->get_render_bounds().h > 28.0f + 1.0f);                       // collapsing, not cut
+		settle();
+		ASSERT_TRUE(std::abs(rb->get_render_bounds().h - 28.0f) < 2.0f);              // just the bar
+		rb->set_minimized(false);
+		settle();
+		ASSERT_TRUE(std::abs(rb->get_render_bounds().h - (28.0f + 96.0f)) < 2.0f);
+
+		rb->set_touch_mode(true);
+		settle();
+		ASSERT_TRUE(std::abs(rb->get_render_bounds().h - (40.0f + 136.0f)) < 2.0f);
+		rb->set_touch_mode(false);
+		settle();
+		ASSERT_TRUE(std::abs(rb->get_render_bounds().h - (28.0f + 96.0f)) < 2.0f);
+	}
+
+	// Buttons: a large one fills the group's height, small ones stack three high then
+	// start a new column of equal-width buttons; is_enabled gates clicks, is_checked is
+	// asked every frame, and a menu button opens its menu under it.
+	TEST(Core.HAL, GUIRibbon_ButtonsStateAndLayout)
+	{
+		THREAD_SCOPE(GUI);
+
+		auto ui_owner = std::make_shared<GUI::user_interface>();
+		auto& ui = *ui_owner;
+		ui.size = vec2(800.0f, 400.0f);
+
+		auto rb = std::make_shared<GUI::Elements::ribbon>();
+		auto home = rb->add_tab("Home");
+		auto group = home->add_group("Clipboard");
+
+		int clicks = 0;
+		bool enabled = false;
+		bool checked = false;
+		auto large = group->add_large("A", "Paste", [&] { clicks++; });
+		large->is_enabled = [&] { return enabled; };
+		large->is_checked = [&] { return checked; };
+		auto s1 = group->add_small("B", "Cut");
+		auto s2 = group->add_small("C", "Copy file");
+		auto s3 = group->add_small("D", "Dup");
+		auto s4 = group->add_small("E", "Next column");
+		auto menu = std::make_shared<GUI::Elements::menu_list>();
+		menu->add_item("Mesh");
+		auto dropdown = group->add_large("F", "Add", {}, menu);
+		ui.add_child(rb);
+
+		auto frame = [&](float dt)
+		{
+			ui.process_ui(dt);
+			FrameGraph::Graph graph;
+			ui.create_graph(graph);
+		};
+		for (int i = 0; i < 10; i++)
+			frame(0.03f);
+
+		const rect L = large->get_render_bounds();
+		const rect b1 = s1->get_render_bounds(), b2 = s2->get_render_bounds(), b3 = s3->get_render_bounds(), b4 = s4->get_render_bounds();
+		ASSERT_TRUE(std::abs(L.h - 72.0f) < 1.0f);
+		ASSERT_TRUE(std::abs(b1.h - 24.0f) < 1.0f);
+		ASSERT_TRUE(std::abs(b1.x - b2.x) < 1.0f && std::abs(b2.x - b3.x) < 1.0f);        // one column
+		ASSERT_TRUE(b2.y > b1.y + 20.0f && b3.y > b2.y + 20.0f);                          // stacked
+		ASSERT_TRUE(std::abs(b1.w - b2.w) < 1.0f && std::abs(b2.w - b3.w) < 1.0f);        // equal widths
+		ASSERT_TRUE(b1.w > 40.0f);
+		ASSERT_TRUE(b4.x > b1.x + b1.w - 1.0f);                                           // the fourth starts a new column
+		ASSERT_TRUE(L.x < b1.x);                                                          // buttons keep their order
+		ASSERT_TRUE(dropdown->get_render_bounds().x > b4.x);
+
+		// Disabled: a click does nothing. Enabled: it calls back.
+		large->on_mouse_action(mouse_action::UP, mouse_button::LEFT, vec2(L.x + 2.0f, L.y + 2.0f));
+		ASSERT_TRUE(clicks == 0);
+		enabled = true;
+		frame(0.03f);
+		large->on_mouse_action(mouse_action::UP, mouse_button::LEFT, vec2(L.x + 2.0f, L.y + 2.0f));
+		ASSERT_TRUE(clicks == 1);
+
+		// The state callbacks are read per frame, not cached.
+		checked = true;
+		frame(0.03f);
+		checked = false;
+		frame(0.03f);
+
+		// A menu button opens its menu under itself, and a second click closes it.
+		ASSERT_TRUE(!menu->is_self_open());
+		dropdown->activate();
+		ASSERT_TRUE(menu->is_self_open());
+		const rect D = dropdown->get_render_bounds();
+		ASSERT_TRUE(std::abs(menu->pos->x - D.x) < 1.0f && std::abs(menu->pos->y - (D.y + D.h)) < 1.0f);
+		ASSERT_TRUE(std::abs(menu->size->x - D.w) < 1.0f);                                 // as wide as the button
+		dropdown->activate();
+		for (int i = 0; i < 12; i++)
+			frame(0.03f);
+		ASSERT_TRUE(!menu->is_self_open());
+	}
+
+	// Compact forms: when the ribbon gets narrower its groups shrink through small
+	// buttons and icons to a single popup button, right to left, and come back when
+	// there is room again.
+	TEST(Core.HAL, GUIRibbon_CompactForms)
+	{
+		THREAD_SCOPE(GUI);
+
+		auto ui_owner = std::make_shared<GUI::user_interface>();
+		auto& ui = *ui_owner;
+		ui.size = vec2(1400.0f, 400.0f);
+
+		auto rb = std::make_shared<GUI::Elements::ribbon>();
+		auto home = rb->add_tab("Home");
+		for (const char* title : { "Clipboard", "Font", "Paragraph", "Styles" })
+		{
+			auto g = home->add_group(title);
+			g->add_large("A", "Paste it");
+			g->add_large("B", "Cut it");
+			g->add_small("C", "Copy file");
+			g->add_small("D", "Format");
+			g->add_small("E", "Select");
+		}
+		ui.add_child(rb);
+
+		auto frame = [&](float dt)
+		{
+			ui.process_ui(dt);
+			FrameGraph::Graph graph;
+			ui.create_graph(graph);
+		};
+		auto settle = [&] { for (int i = 0; i < 6; i++) frame(0.03f); };
+		auto available = [&] { return rb->get_render_bounds().w - 8.0f; };
+		auto level = [&](int i) { return home->group(i)->get_level(); };
+
+		settle();
+		for (int i = 0; i < 4; i++)
+			ASSERT_TRUE(level(i) == 0);                                              // roomy: as authored
+		const float full = home->measure_total();
+		ASSERT_TRUE(full < available());
+
+		// Narrower than the full width: the right-most groups give up room first.
+		ui.size = vec2(full * 0.8f, 400.0f);
+		settle();
+		bool any = false;
+		for (int i = 0; i < 4; i++)
+			any = any || level(i) > 0;
+		ASSERT_TRUE(any);
+		for (int i = 0; i + 1 < 4; i++)
+			ASSERT_TRUE(level(i) <= level(i + 1));                                    // never a left group further down than one on its right
+		ASSERT_TRUE(home->measure_total() <= available() + 0.5f);                     // and it fits
+
+		// Very narrow: every group is a popup button holding its buttons.
+		ui.size = vec2(200.0f, 400.0f);
+		settle();
+		for (int i = 0; i < 4; i++)
+		{
+			ASSERT_TRUE(level(i) == GUI::Elements::ribbon_group::max_level);
+			ASSERT_TRUE(home->group(i)->get_popup() != nullptr);
+			ASSERT_TRUE(home->group(i)->get_popup()->contents->get_child_count() == 1);   // the group's body moved in
+		}
+
+		// Room again: back to the authored form, the bodies back in their groups.
+		ui.size = vec2(1400.0f, 400.0f);
+		settle();
+		for (int i = 0; i < 4; i++)
+		{
+			ASSERT_TRUE(level(i) == 0);
+			ASSERT_TRUE(home->group(i)->get_popup()->contents->get_child_count() == 0);
+		}
+		ASSERT_TRUE(std::abs(home->measure_total() - full) < 1.0f);
+	}
+
+	// A drop-down or collapsed-group popup closes on a press anywhere else: on another
+	// control, on empty ribbon, on empty window. Real mouse events through the UI.
+	TEST(Core.HAL, GUIRibbon_PopupClosesOnOutsideClick)
+	{
+		THREAD_SCOPE(GUI);
+
+		auto ui_owner = std::make_shared<GUI::user_interface>();
+		auto& ui = *ui_owner;
+		ui.size = vec2(1000.0f, 500.0f);
+
+		auto rb = std::make_shared<GUI::Elements::ribbon>();
+		auto home = rb->add_tab("Home");
+		auto group = home->add_group("Create");
+		auto menu = std::make_shared<GUI::Elements::menu_list>();
+		menu->add_item("Mesh");
+		auto dropdown = group->add_large("A", "Add", {}, menu);
+		ui.add_child(rb);
+
+		auto below = std::make_shared<GUI::Elements::colored_rect>();
+		below->color = float4(0.2f, 0.2f, 0.2f, 1.0f);
+		below->docking = GUI::dock::FILL;
+		below->clickable = true;
+		ui.add_child(below);
+
+		auto frame = [&](float dt)
+		{
+			ui.process_ui(dt);
+			FrameGraph::Graph graph;
+			ui.create_graph(graph);
+		};
+		auto settle = [&] { for (int i = 0; i < 15; i++) frame(0.03f); };
+		auto click_at = [&](vec2 p)
+		{
+			ui.mouse_move_event_internal(p);
+			frame(0.016f);
+			ui.mouse_action_event_internal(mouse_action::DOWN, mouse_button::LEFT, p);
+			frame(0.016f);
+			ui.mouse_action_event_internal(mouse_action::UP, mouse_button::LEFT, p);
+			settle();
+		};
+
+		settle();
+		const rect R = rb->get_render_bounds();
+		const rect B = below->get_render_bounds();
+		ASSERT_TRUE(B.h > 50.0f);
+
+		// On another control.
+		dropdown->activate();
+		settle();
+		ASSERT_TRUE(menu->is_self_open());
+		click_at(vec2(B.x + B.w * 0.5f, B.y + B.h * 0.5f));
+		ASSERT_TRUE(!menu->is_self_open());
+
+		// On an empty part of the ribbon (far right of the tab bar, and of the strip).
+		dropdown->activate();
+		settle();
+		ASSERT_TRUE(menu->is_self_open());
+		click_at(vec2(R.x + R.w - 40.0f, R.y + 10.0f));
+		ASSERT_TRUE(!menu->is_self_open());
+
+		dropdown->activate();
+		settle();
+		ASSERT_TRUE(menu->is_self_open());
+		click_at(vec2(R.x + R.w - 40.0f, R.y + 28.0f + 40.0f));
+		ASSERT_TRUE(!menu->is_self_open());
+
+		// A press on the button itself closes it, and the release does not bring it back.
+		dropdown->activate();
+		settle();
+		ASSERT_TRUE(menu->is_self_open());
+		const rect D = dropdown->get_render_bounds();
+		click_at(vec2(D.x + D.w * 0.5f, D.y + D.h * 0.5f));
+		ASSERT_TRUE(!menu->is_self_open());
+	}
+
+	// A minimised ribbon shows only the tab bar; clicking a tab opens its strip as a
+	// popup that closes again on a click anywhere else, like a menu. The arrow button
+	// brings the strip back for good.
+	TEST(Core.HAL, GUIRibbon_MinimizedStripIsAPopup)
+	{
+		THREAD_SCOPE(GUI);
+
+		auto ui_owner = std::make_shared<GUI::user_interface>();
+		auto& ui = *ui_owner;
+		ui.size = vec2(1000.0f, 500.0f);
+
+		auto rb = std::make_shared<GUI::Elements::ribbon>();
+		auto home = rb->add_tab("Home");
+		home->add_group("File")->add_large("A", "New");
+		auto view = rb->add_tab("View");
+		view->add_group("Show")->add_large("B", "Grid");
+		ui.add_child(rb);
+
+		auto below = std::make_shared<GUI::Elements::colored_rect>();
+		below->color = float4(0.2f, 0.2f, 0.2f, 1.0f);
+		below->docking = GUI::dock::FILL;
+		below->clickable = true;
+		ui.add_child(below);
+
+		auto frame = [&](float dt)
+		{
+			ui.process_ui(dt);
+			FrameGraph::Graph graph;
+			ui.create_graph(graph);
+		};
+		auto settle = [&] { for (int i = 0; i < 20; i++) frame(0.03f); };
+		auto click_at = [&](vec2 p)
+		{
+			ui.mouse_move_event_internal(p);
+			frame(0.016f);
+			ui.mouse_action_event_internal(mouse_action::DOWN, mouse_button::LEFT, p);
+			frame(0.016f);
+			ui.mouse_action_event_internal(mouse_action::UP, mouse_button::LEFT, p);
+			settle();
+		};
+
+		settle();
+		rb->set_minimized(true);
+		settle();
+		ASSERT_TRUE(std::abs(rb->get_render_bounds().h - 28.0f) < 2.0f);             // only the bar
+		ASSERT_TRUE(rb->get_strip_popup() != nullptr);
+		ASSERT_TRUE(!rb->get_strip_popup()->is_self_open());
+		ASSERT_TRUE(!rb->tab_looks_selected(0));                                        // no tab on show, so none looks selected
+
+		click_at(vec2(30.0f, 14.0f));                                                  // the first tab
+		ASSERT_TRUE(rb->get_strip_popup()->is_self_open());
+		ASSERT_TRUE(rb->tab_looks_selected(0));                                         // its strip is open
+		ASSERT_TRUE(std::abs(rb->get_render_bounds().h - 28.0f) < 2.0f);             // nothing pushed down
+
+		const rect B = below->get_render_bounds();
+		click_at(vec2(B.x + B.w * 0.5f, B.y + B.h * 0.5f));                           // elsewhere
+		ASSERT_TRUE(!rb->get_strip_popup()->is_self_open());
+		ASSERT_TRUE(!rb->tab_looks_selected(0));                                        // and it can highlight on hover again
+
+		click_at(vec2(30.0f, 14.0f));                                                  // and again
+		ASSERT_TRUE(rb->get_strip_popup()->is_self_open());
+
+		// The arrow button un-minimises for good: the strip is back in the ribbon.
+		rb->set_minimized(false);
+		settle();
+		ASSERT_TRUE(!rb->get_strip_popup()->is_self_open());
+		ASSERT_TRUE(std::abs(rb->get_render_bounds().h - (28.0f + 96.0f)) < 2.0f);
+	}
+
+	// A double click on a tab title does what the arrow button does, in both directions:
+	// minimised ribbon back to full, full ribbon to minimised.
+	TEST(Core.HAL, GUIRibbon_DoubleClickTabTogglesMinimize)
+	{
+		THREAD_SCOPE(GUI);
+
+		auto ui_owner = std::make_shared<GUI::user_interface>();
+		auto& ui = *ui_owner;
+		ui.size = vec2(1000.0f, 500.0f);
+
+		auto rb = std::make_shared<GUI::Elements::ribbon>();
+		auto home = rb->add_tab("Home");
+		home->add_group("File")->add_large("A", "New");
+		rb->add_tab("View")->add_group("Show")->add_large("B", "Grid");
+		ui.add_child(rb);
+
+		auto frame = [&](float dt)
+		{
+			ui.process_ui(dt);
+			FrameGraph::Graph graph;
+			ui.create_graph(graph);
+		};
+		auto settle = [&] { for (int i = 0; i < 25; i++) frame(0.03f); };
+		auto press = [&](vec2 p)
+		{
+			ui.mouse_action_event_internal(mouse_action::DOWN, mouse_button::LEFT, p);
+			frame(0.016f);
+			ui.mouse_action_event_internal(mouse_action::UP, mouse_button::LEFT, p);
+			frame(0.016f);
+		};
+		auto double_click = [&](vec2 p)
+		{
+			ui.mouse_move_event_internal(p);
+			frame(0.016f);
+			press(p);
+			press(p);
+			settle();
+		};
+
+		settle();
+		ASSERT_TRUE(!rb->is_minimized());
+
+		const vec2 tab(30.0f, 14.0f);
+		double_click(tab);
+		ASSERT_TRUE(rb->is_minimized());
+		ASSERT_TRUE(std::abs(rb->get_render_bounds().h - 28.0f) < 2.0f);
+
+		double_click(tab);
+		ASSERT_TRUE(!rb->is_minimized());
+		ASSERT_TRUE(std::abs(rb->get_render_bounds().h - (28.0f + 96.0f)) < 2.0f);
+
+		// Two slow clicks are two single clicks: nothing toggles.
+		ui.mouse_move_event_internal(tab);
+		frame(0.016f);
+		press(tab);
+		settle();
+		press(tab);
+		settle();
+		ASSERT_TRUE(!rb->is_minimized());
+	}
+
+	// A window that draws its own title bar asks the UI what each point is (WM_NCHITTEST):
+	// the ribbon's tab bar is the caption, its window buttons report as minimise / maximise /
+	// close, and tab titles and the strip stay ordinary UI. A click on a window button runs
+	// the UI's window command handler.
+	TEST(Core.HAL, GUIRibbon_WindowControlsAndHitTest)
+	{
+		THREAD_SCOPE(GUI);
+
+		auto ui_owner = std::make_shared<GUI::user_interface>();
+		auto& ui = *ui_owner;
+		constexpr float W = 1000.0f;
+		ui.size = vec2(W, 500.0f);
+
+		std::vector<window_command> commands;
+		ui.window_command_handler = [&](window_command c) { commands.push_back(c); };
+		ui.window_maximized = [] { return false; };
+
+		auto rb = std::make_shared<GUI::Elements::ribbon>();
+		rb->set_window_icon("app");
+		rb->set_window_controls(true);
+		rb->set_window_title("Spectrum");
+		auto home = rb->add_tab("Home");
+		home->add_group("File")->add_large("A", "New");
+		ui.add_child(rb);
+
+		auto frame = [&](float dt)
+		{
+			ui.process_ui(dt);
+			FrameGraph::Graph graph;
+			ui.create_graph(graph);
+		};
+		for (int i = 0; i < 10; i++)
+			frame(0.03f);
+
+		// Buttons are 46 px wide at the default metrics; close is the outermost.
+		ASSERT_TRUE(ui.hit_test_window(vec2(W - 23.0f, 14.0f)) == window_hit::close);
+		ASSERT_TRUE(ui.hit_test_window(vec2(W - 46.0f - 23.0f, 14.0f)) == window_hit::maximize);
+		ASSERT_TRUE(ui.hit_test_window(vec2(W - 92.0f - 23.0f, 14.0f)) == window_hit::minimize);
+
+		ASSERT_TRUE(ui.hit_test_window(vec2(W * 0.5f, 14.0f)) == window_hit::caption);   // empty tab bar: drag the window
+		ASSERT_TRUE(ui.hit_test_window(vec2(18.0f, 14.0f)) == window_hit::caption);      // the app icon is part of the title bar
+		ASSERT_TRUE(ui.hit_test_window(vec2(70.0f, 14.0f)) == window_hit::client);       // a tab title is a click
+		ASSERT_TRUE(ui.hit_test_window(vec2(W - 138.0f - 14.0f, 14.0f)) == window_hit::client);   // the collapse button too
+		ASSERT_TRUE(ui.hit_test_window(vec2(300.0f, 28.0f + 40.0f)) == window_hit::client);       // the strip
+		ASSERT_TRUE(ui.hit_test_window(vec2(300.0f, 400.0f)) == window_hit::client);              // below the ribbon
+
+		// Clicking a window button runs the command; the same pointer events the window forwards.
+		const vec2 close_at(W - 23.0f, 14.0f);
+		ui.mouse_move_event_internal(close_at);
+		frame(0.016f);
+		ui.mouse_action_event_internal(mouse_action::DOWN, mouse_button::LEFT, close_at);
+		frame(0.016f);
+		ui.mouse_action_event_internal(mouse_action::UP, mouse_button::LEFT, close_at);
+		frame(0.016f);
+		ASSERT_TRUE(commands.size() == 1 && commands[0] == window_command::close);
+
+		// Without window controls the tab bar is plain UI again.
+		rb->set_window_controls(false);
+		for (int i = 0; i < 5; i++)
+			frame(0.03f);
+		ASSERT_TRUE(ui.hit_test_window(vec2(W * 0.5f, 14.0f)) == window_hit::client);
+	}
+
+	// Group priority: when the ribbon runs out of width, the groups with the lowest priority
+	// shrink first, so a high-priority group keeps its full form longer.
+	TEST(Core.HAL, GUIRibbon_GroupPriorityDecidesWhoShrinksFirst)
+	{
+		THREAD_SCOPE(GUI);
+
+		auto ui_owner = std::make_shared<GUI::user_interface>();
+		auto& ui = *ui_owner;
+		ui.size = vec2(1400.0f, 400.0f);
+
+		auto rb = std::make_shared<GUI::Elements::ribbon>();
+		auto home = rb->add_tab("Home");
+		for (const char* title : { "Clipboard", "Font", "Styles" })
+		{
+			auto g = home->add_group(title);
+			g->add_large("A", "Paste it");
+			g->add_large("B", "Cut it");
+			g->add_small("C", "Copy file");
+			g->add_small("D", "Format");
+			g->add_small("E", "Select");
+		}
+		home->group(2)->set_priority(5);                                  // the right-most one matters most
+		ui.add_child(rb);
+
+		auto frame = [&](float dt)
+		{
+			ui.process_ui(dt);
+			FrameGraph::Graph graph;
+			ui.create_graph(graph);
+		};
+		auto settle = [&] { for (int i = 0; i < 6; i++) frame(0.03f); };
+		auto level = [&](int i) { return home->group(i)->get_level(); };
+
+		settle();
+		const float full = home->measure_total();
+
+		ui.size = vec2(full * 0.86f, 400.0f);
+		settle();
+		ASSERT_TRUE(level(0) + level(1) > 0);                             // somebody shrank
+		ASSERT_TRUE(level(2) <= level(0) && level(2) <= level(1));        // but not the one that matters most
+	}
+
+	// A split button has two parts: the main part calls on_click, the arrow part opens the menu.
+	TEST(Core.HAL, GUIRibbon_SplitButtonHalves)
+	{
+		THREAD_SCOPE(GUI);
+
+		auto ui_owner = std::make_shared<GUI::user_interface>();
+		auto& ui = *ui_owner;
+		ui.size = vec2(800.0f, 400.0f);
+
+		auto rb = std::make_shared<GUI::Elements::ribbon>();
+		auto group = rb->add_tab("Home")->add_group("Clipboard");
+
+		int clicks = 0;
+		auto menu = std::make_shared<GUI::Elements::menu_list>();
+		menu->add_item("Paste special");
+		auto large = group->add_large("A", "Paste", [&] { clicks++; }, menu, true);
+		ui.add_child(rb);
+
+		auto frame = [&](float dt)
+		{
+			ui.process_ui(dt);
+			FrameGraph::Graph graph;
+			ui.create_graph(graph);
+		};
+		auto press = [&](GUI::Elements::ribbon_button& b, vec2 p)
+		{
+			b.on_mouse_action(mouse_action::DOWN, mouse_button::LEFT, p);
+			b.on_mouse_action(mouse_action::UP, mouse_button::LEFT, p);
+		};
+		for (int i = 0; i < 10; i++)
+			frame(0.03f);
+
+		const rect L = large->get_render_bounds();
+		ASSERT_TRUE(large->is_split());
+
+		press(*large, vec2(L.x + L.w * 0.5f, L.y + 6.0f));                 // the icon part
+		ASSERT_TRUE(clicks == 1);
+		ASSERT_TRUE(!menu->is_self_open());
+
+		press(*large, vec2(L.x + L.w * 0.5f, L.y + L.h - 4.0f));           // the arrow part
+		ASSERT_TRUE(clicks == 1);                                           // not the main action
+		ASSERT_TRUE(menu->is_self_open());
+
+		menu->self_close();
+		for (int i = 0; i < 12; i++)
+			frame(0.03f);
+		ASSERT_TRUE(!menu->is_self_open());
+
+		// A small one: the strip at the right edge is the arrow.
+		auto small = group->add_small("B", "Paste text", [&] { clicks += 10; }, menu, true);
+		for (int i = 0; i < 6; i++)
+			frame(0.03f);
+		const rect S = small->get_render_bounds();
+
+		press(*small, vec2(S.x + 8.0f, S.y + S.h * 0.5f));
+		ASSERT_TRUE(clicks == 11);
+		press(*small, vec2(S.x + S.w - 5.0f, S.y + S.h * 0.5f));
+		ASSERT_TRUE(clicks == 11);
+		ASSERT_TRUE(menu->is_self_open());
+	}
+
+	// When even the smallest forms don't fit, the strip scrolls: the wheel moves it, the
+	// range follows the width, and it is back to zero when there is room.
+	TEST(Core.HAL, GUIRibbon_OverflowScrolls)
+	{
+		THREAD_SCOPE(GUI);
+
+		auto ui_owner = std::make_shared<GUI::user_interface>();
+		auto& ui = *ui_owner;
+		ui.size = vec2(1400.0f, 400.0f);
+
+		auto rb = std::make_shared<GUI::Elements::ribbon>();
+		auto home = rb->add_tab("Home");
+		for (const char* title : { "Clipboard", "Font", "Paragraph", "Styles", "Editing" })
+		{
+			auto g = home->add_group(title);
+			g->add_large("A", "Paste it");
+			g->add_small("C", "Copy file");
+			g->add_small("D", "Format");
+		}
+		ui.add_child(rb);
+
+		auto frame = [&](float dt)
+		{
+			ui.process_ui(dt);
+			FrameGraph::Graph graph;
+			ui.create_graph(graph);
+		};
+		auto settle = [&] { for (int i = 0; i < 6; i++) frame(0.03f); };
+
+		settle();
+		ASSERT_TRUE(home->get_max_scroll() == 0.0f);
+
+		ui.size = vec2(150.0f, 400.0f);
+		settle();
+		ASSERT_TRUE(home->get_max_scroll() > 0.0f);
+		ASSERT_TRUE(home->get_scroll() == 0.0f);
+
+		home->on_wheel(mouse_wheel::VERTICAL, -1.0f, vec2(10.0f, 60.0f));      // wheel down scrolls towards the end
+		ASSERT_TRUE(home->get_scroll() > 0.0f);
+		for (int i = 0; i < 40; i++)
+			home->on_wheel(mouse_wheel::VERTICAL, -1.0f, vec2(10.0f, 60.0f));
+		ASSERT_TRUE(home->get_scroll() == home->get_max_scroll());              // clamped at the end
+		home->on_wheel(mouse_wheel::VERTICAL, 1.0f, vec2(10.0f, 60.0f));
+		ASSERT_TRUE(home->get_scroll() < home->get_max_scroll());
+
+		ui.size = vec2(1400.0f, 400.0f);
+		settle();
+		ASSERT_TRUE(home->get_max_scroll() == 0.0f);
+		ASSERT_TRUE(home->get_scroll() == 0.0f);
+	}
+
+	// Every label gets a soft shadow by default (UI Effects > Text shadow): white text on a mid
+	// grey background leaves darker-than-background pixels only when the shadow is on; a label
+	// can opt out, and one with its own shadow colour keeps that.
+	TEST(Core.HAL, GUILabel_DefaultTextShadow)
+	{
+		THREAD_SCOPE(GUI);
+		constexpr uint W = 200, H = 80;
+
+		auto ui_owner = std::make_shared<GUI::user_interface>();
+		auto& ui = *ui_owner;
+		ui.size = vec2((float)W, (float)H);
+
+		auto background = std::make_shared<GUI::Elements::colored_rect>();
+		background->color   = float4(0.5f, 0.5f, 0.5f, 1.0f);
+		background->docking = GUI::dock::FILL;
+		ui.add_child(background);
+
+		auto label = std::make_shared<GUI::Elements::label>();
+		label->font_size = 32;
+		label->text = "Shadow";
+		label->docking = GUI::dock::NONE;
+		label->pos = vec2(20.0f, 20.0f);
+		ui.add_child(label);
+
+		// Pixels clearly darker than the background, over the label's box and a margin below/right of it.
+		// Relative to the background as it reads back (the target may not hold the colour as written).
+		auto dark_pixels = [&]
+		{
+			const auto img = render_ui(ui, W, H);
+			const float background_value = img.at(2, 2, 0);
+			int count = 0;
+			for (uint y = 15; y < 70; y++)
+				for (uint x = 15; x < 190; x++)
+					if (img.at(x, y, 0) < background_value * 0.85f)
+						count++;
+			return count;
+		};
+
+		ui.text_shadow_enabled = false;
+		ASSERT_TRUE(dark_pixels() == 0);                                     // white text only
+
+		ui.text_shadow_enabled = true;
+		ASSERT_TRUE(dark_pixels() > 20);                                     // the shadow shows
+
+		label->default_shadow = false;                                       // opted out
+		ASSERT_TRUE(dark_pixels() == 0);
+
+		label->default_shadow = true;
+		const int soft_count = dark_pixels();
+		ui.text_shadow_softness = 0.0f;                                      // crisp: more pixels at full strength, fewer spread
+		ASSERT_TRUE(dark_pixels() > 20);
+		ui.text_shadow_softness = 3.0f;                                      // very soft: reaches further out
+		ASSERT_TRUE(dark_pixels() != soft_count);
+		ui.text_shadow_softness = 1.0f;
+
+		ui.text_shadow_strength = 0.0f;                                      // the setting can fade it away
+		ASSERT_TRUE(dark_pixels() == 0);
+	}
+
+	// Shortcut texts: modifiers and a key joined by '+', any case, written back in one form.
+	TEST(Core.HAL, GUICommands_KeyChordParsing)
+	{
+		auto ctrl_s = GUI::key_chord::parse("ctrl + s");
+		ASSERT_TRUE(ctrl_s.has_value());
+		ASSERT_TRUE(ctrl_s->ctrl && !ctrl_s->shift && !ctrl_s->alt && ctrl_s->key == 'S');
+		ASSERT_TRUE(ctrl_s->to_string() == "Ctrl+S");
+
+		auto all = GUI::key_chord::parse("Alt+Shift+Ctrl+F5");
+		ASSERT_TRUE(all.has_value() && all->ctrl && all->shift && all->alt && all->key == 0x74);
+		ASSERT_TRUE(all->to_string() == "Ctrl+Shift+Alt+F5");
+
+		ASSERT_TRUE(GUI::key_chord::parse("Del")->key == 0x2E);
+		ASSERT_TRUE(GUI::key_chord::parse("Esc")->key == 0x1B);
+		ASSERT_TRUE(GUI::key_chord::parse("Ctrl+Left")->key == 0x25);
+		ASSERT_TRUE(GUI::key_chord::parse("7")->key == '7');
+		ASSERT_TRUE(GUI::key_chord::parse("Ctrl+Del")->to_string() == "Ctrl+Delete");
+
+		// Text that is not a shortcut.
+		ASSERT_TRUE(!GUI::key_chord::parse("").has_value());
+		ASSERT_TRUE(!GUI::key_chord::parse("Ctrl+").has_value());          // no key
+		ASSERT_TRUE(!GUI::key_chord::parse("Ctrl").has_value());
+		ASSERT_TRUE(!GUI::key_chord::parse("Ctrl+A+B").has_value());       // two keys
+		ASSERT_TRUE(!GUI::key_chord::parse("Ctrl+Banana").has_value());
+		ASSERT_TRUE(!GUI::key_chord::parse("F13").has_value());
+	}
+
+	// The registry: one command per id (adding it again returns the same one), lookup, running
+	// with the enabled state respected, and the titles falling back sensibly.
+	TEST(Core.HAL, GUICommands_RegistryBasics)
+	{
+		GUI::command_registry commands;
+		int saves = 0;
+		bool allowed = false;
+
+		commands.add("file.save").title("Save").shortcut("Ctrl+S").enabled([&] { return allowed; }).run([&] { saves++; });
+		ASSERT_TRUE(&commands.add("file.save") == commands.find("file.save").get());   // the same command
+		ASSERT_TRUE(commands.all().size() == 1);
+
+		ASSERT_TRUE(commands.find("nothing") == nullptr);
+		ASSERT_TRUE(!commands.run("nothing"));
+
+		ASSERT_TRUE(!commands.run("file.save") && saves == 0);              // disabled: not run
+		allowed = true;
+		ASSERT_TRUE(commands.run("file.save") && saves == 1);
+
+		auto save = commands.find("file.save");
+		ASSERT_TRUE(save->get_tooltip() == "Save (Ctrl+S)");
+
+		auto& bare = commands.add("view.grid");                             // only an id so far
+		ASSERT_TRUE(bare.get_title() == "view.grid");
+		ASSERT_TRUE(bare.get_short_title() == "view.grid");
+		ASSERT_TRUE(!bare.is_toggle() && bare.is_enabled() && !bare.execute());   // nothing to run
+
+		commands.add("view.grid").title("Grid").short_title("G").checked([] { return true; });
+		ASSERT_TRUE(bare.get_short_title() == "G" && bare.is_toggle() && bare.is_checked());
+
+		ASSERT_TRUE(commands.find_shortcut(*GUI::key_chord::parse("Ctrl+S")) == save);
+		ASSERT_TRUE(commands.find_shortcut(*GUI::key_chord::parse("Ctrl+Shift+S")) == nullptr);
+	}
+
+	// Shortcuts: a key hook runs the command for a chord, but not a disabled one, not a plain key
+	// while a text field has the focus, and not while the ribbon's Alt mode holds the keyboard.
+	TEST(Core.HAL, GUICommands_ShortcutDispatch)
+	{
+		THREAD_SCOPE(GUI);
+
+		auto ui_owner = std::make_shared<GUI::user_interface>();
+		auto& ui = *ui_owner;
+		ui.size = vec2(800.0f, 400.0f);
+
+		GUI::command_registry commands;
+		int saves = 0, grids = 0;
+		bool allowed = true;
+		commands.add("file.save").shortcut("Ctrl+S").enabled([&] { return allowed; }).run([&] { saves++; });
+		commands.add("view.grid").shortcut("G").run([&] { grids++; });
+		commands.install_shortcuts(ui);
+
+		auto field = std::make_shared<GUI::Elements::edit_text>();
+		ui.add_child(field);
+
+		auto press = [&](long code, bool ctrl)
+		{
+			key_mods mods;
+			mods.ctrl = ctrl;
+			ui.key_action_event_internal(key_action::DOWN, code, mods);
+			ui.key_action_event_internal(key_action::UP, code, mods);
+		};
+
+		press('S', true);
+		ASSERT_TRUE(saves == 1);
+		press('S', false);                                                   // no Ctrl: another chord
+		ASSERT_TRUE(saves == 1);
+
+		allowed = false;
+		press('S', true);                                                    // disabled: not run
+		ASSERT_TRUE(saves == 1);
+		allowed = true;
+
+		press('G', false);                                                   // a plain key, nothing focused
+		ASSERT_TRUE(grids == 1);
+
+		field->focus();
+		press('G', false);                                                   // typing in a field: left alone
+		ASSERT_TRUE(grids == 1);
+		press('S', true);                                                    // with Ctrl it still runs
+		ASSERT_TRUE(saves == 2);
+		field->unfocus();
+
+		ui.keys_captured = true;                                             // the ribbon's Alt mode
+		press('S', true);
+		ASSERT_TRUE(saves == 2);
+	}
+
+	// The adapters: a ribbon button takes everything from the command (and follows its state),
+	// a menu item runs it.
+	TEST(Core.HAL, GUICommands_RibbonAndMenuAdapters)
+	{
+		THREAD_SCOPE(GUI);
+
+		auto ui_owner = std::make_shared<GUI::user_interface>();
+		auto& ui = *ui_owner;
+		ui.size = vec2(800.0f, 400.0f);
+
+		GUI::command_registry commands;
+		int saves = 0;
+		bool allowed = false, lit = false;
+		commands.add("file.save").title("Save").short_title("Sv").icon("S").shortcut("Ctrl+S")
+			.enabled([&] { return allowed; }).run([&] { saves++; });
+		commands.add("view.grid").title("Grid").checked([&] { return lit; }).run([&] { lit = !lit; });
+
+		auto rb = std::make_shared<GUI::Elements::ribbon>();
+		auto group = rb->add_tab("Home")->add_group("File");
+		auto save = group->add_command(commands, "file.save");
+		auto small_save = group->add_command(commands.find("file.save"), false);
+		auto grid = group->add_command(commands, "view.grid");
+		ASSERT_TRUE(group->add_command(commands, "nothing") == nullptr);
+		ui.add_child(rb);
+
+		ASSERT_TRUE(save->get_text() == "Save" && small_save->get_text() == "Sv");   // title, short title
+		ASSERT_TRUE(save->get_icon() == "S");
+		ASSERT_TRUE(save->tooltip == "Save (Ctrl+S)");
+
+		auto frame = [&](float dt)
+		{
+			ui.process_ui(dt);
+			FrameGraph::Graph graph;
+			ui.create_graph(graph);
+		};
+		for (int i = 0; i < 6; i++)
+			frame(0.03f);
+
+		const rect S = save->get_render_bounds();
+		save->on_mouse_action(mouse_action::UP, mouse_button::LEFT, vec2(S.x + 2.0f, S.y + 2.0f));
+		ASSERT_TRUE(saves == 0);                                             // disabled: the button follows the command
+		allowed = true;
+		frame(0.03f);
+		save->on_mouse_action(mouse_action::UP, mouse_button::LEFT, vec2(S.x + 2.0f, S.y + 2.0f));
+		ASSERT_TRUE(saves == 1);
+
+		const rect G = grid->get_render_bounds();
+		grid->on_mouse_action(mouse_action::UP, mouse_button::LEFT, vec2(G.x + 2.0f, G.y + 2.0f));
+		ASSERT_TRUE(lit);                                                    // a toggle command toggles
+
+		// A menu item.
+		GUI::Elements::menu_list menu;
+		auto item = menu.add_command(commands.find("file.save"));
+		ASSERT_TRUE(item->text == "Save");
+		item->on_click(item);
+		ASSERT_TRUE(saves == 2);
+		allowed = false;
+		item->on_click(item);
+		ASSERT_TRUE(saves == 2);                                             // disabled
+		ASSERT_TRUE(menu.add_command(nullptr) == nullptr);
+	}
+
+	// A finger drags an overflowing strip sideways; a finger that stays put is still a tap.
+	TEST(Core.HAL, GUIRibbon_TouchDragScrollsOverflow)
+	{
+		THREAD_SCOPE(GUI);
+
+		auto ui_owner = std::make_shared<GUI::user_interface>();
+		auto& ui = *ui_owner;
+		ui.size = vec2(1400.0f, 400.0f);
+
+		auto rb = std::make_shared<GUI::Elements::ribbon>();
+		auto home = rb->add_tab("Home");
+		for (const char* title : { "Clipboard", "Font", "Paragraph", "Styles", "Editing" })
+		{
+			auto g = home->add_group(title);
+			g->add_large("A", "Paste it");
+			g->add_small("C", "Copy file");
+			g->add_small("D", "Format");
+		}
+		ui.add_child(rb);
+
+		auto frame = [&](float dt)
+		{
+			ui.process_ui(dt);
+			FrameGraph::Graph graph;
+			ui.create_graph(graph);
+		};
+		auto settle = [&] { for (int i = 0; i < 6; i++) frame(0.03f); };
+
+		ui.size = vec2(150.0f, 400.0f);
+		settle();
+		ASSERT_TRUE(home->get_max_scroll() > 0.0f);
+
+		const float y = 28.0f + 40.0f;
+		ui.on_touch_event(make_touch(GUI::touch_event::DOWN, 1, 120.0f, y));
+		ui.on_touch_event(make_touch(GUI::touch_event::MOVE, 1, 118.0f, y));
+		ASSERT_TRUE(home->get_scroll() == 0.0f);                                // inside the slop: a tap, no scrolling
+
+		ui.on_touch_event(make_touch(GUI::touch_event::MOVE, 1, 90.0f, y));    // past it: the drag begins
+		ui.on_touch_event(make_touch(GUI::touch_event::MOVE, 1, 40.0f, y));
+		ASSERT_TRUE(home->get_scroll() > 0.0f);                                 // left drag shows what is to the right
+		const float after_left = home->get_scroll();
+
+		ui.on_touch_event(make_touch(GUI::touch_event::MOVE, 1, 100.0f, y));   // and back
+		ASSERT_TRUE(home->get_scroll() < after_left);
+		ui.on_touch_event(make_touch(GUI::touch_event::UP, 1, 100.0f, y));
+	}
+
+	// Keyboard access: Alt on its own shows letters over the tabs, a letter opens that tab
+	// and shows letters over its buttons, a letter there runs the button.
+	TEST(Core.HAL, GUIRibbon_KeyTips)
+	{
+		THREAD_SCOPE(GUI);
+
+		auto ui_owner = std::make_shared<GUI::user_interface>();
+		auto& ui = *ui_owner;
+		ui.size = vec2(1000.0f, 500.0f);
+
+		int views = 0;
+		auto rb = std::make_shared<GUI::Elements::ribbon>();
+		auto home = rb->add_tab("Home");
+		int deletes = 0;
+		auto file_group = home->add_group("File");
+		file_group->add_large("A", "Paste");
+		file_group->add_large("B", "Delete", [&] { deletes++; });
+		auto view = rb->add_tab("View");
+		view->add_group("Show")->add_large("B", "Grid", [&] { views++; });
+		ui.add_child(rb);
+
+		auto frame = [&](float dt)
+		{
+			ui.process_ui(dt);
+			FrameGraph::Graph graph;
+			ui.create_graph(graph);
+		};
+		auto key = [&](long code, key_action action)
+		{
+			ui.key_action_event_internal(action, code, key_mods());
+			frame(0.016f);
+		};
+		auto tap = [&](long code) { key(code, key_action::DOWN); key(code, key_action::UP); };
+		constexpr long alt = 0x12, escape = 0x1B;
+
+		for (int i = 0; i < 6; i++)
+			frame(0.03f);
+		ASSERT_TRUE(rb->get_key_level() == 0);
+
+		tap(alt);
+		ASSERT_TRUE(rb->get_key_level() == 1);
+		ASSERT_TRUE(ui.keys_captured);                                        // typed characters go nowhere meanwhile
+
+		tap('V');                                                              // View
+		ASSERT_TRUE(rb->selected() == 1);
+		ASSERT_TRUE(rb->get_key_level() == 2);
+
+		const auto targets = view->key_targets();
+		ASSERT_TRUE(targets.size() == 1);
+		ASSERT_TRUE(targets[0]->get_key_tip().size() == 1);
+		tap(targets[0]->get_key_tip()[0]);                                     // the button's letter runs it
+		ASSERT_TRUE(views == 1);
+		ASSERT_TRUE(rb->get_key_level() == 0);
+		ASSERT_TRUE(!ui.keys_captured);
+
+		// Alt with another key is not a tap.
+		key(alt, key_action::DOWN);
+		tap('H');
+		key(alt, key_action::UP);
+		ASSERT_TRUE(rb->get_key_level() == 0);
+
+		// Escape goes back a step, then out.
+		tap(alt);
+		tap('H');
+		ASSERT_TRUE(rb->selected() == 0 && rb->get_key_level() == 2);
+		tap(escape);
+		ASSERT_TRUE(rb->get_key_level() == 1);
+		tap(escape);
+		ASSERT_TRUE(rb->get_key_level() == 0);
+
+		// Arrow keys change tab.
+		tap(alt);
+		tap(0x27);                                                             // Right
+		ASSERT_TRUE(rb->selected() == 1);
+		tap(0x25);                                                             // Left
+		ASSERT_TRUE(rb->selected() == 0);
+		tap(escape);
+
+		// In the strip the arrows move a focus ring over the buttons; Enter runs the focused one.
+		tap(alt);
+		tap('H');
+		const auto home_targets = home->key_targets();
+		ASSERT_TRUE(home_targets.size() == 2);
+		ASSERT_TRUE(home_targets[0]->has_key_focus() && !home_targets[1]->has_key_focus());
+		tap(0x27);                                                             // Right
+		ASSERT_TRUE(!home_targets[0]->has_key_focus() && home_targets[1]->has_key_focus());
+		tap(0x27);                                                             // already on the last one
+		ASSERT_TRUE(home_targets[1]->has_key_focus());
+		tap(0x25);                                                             // Left
+		ASSERT_TRUE(home_targets[0]->has_key_focus());
+		tap(0x28);                                                             // Down: the next one
+		tap(0x0D);                                                             // Enter
+		ASSERT_TRUE(deletes == 1);
+		ASSERT_TRUE(rb->get_key_level() == 0);
+		ASSERT_TRUE(!home_targets[1]->has_key_focus());                        // the ring goes with the mode
+
+		// A mouse press leaves it too.
+		tap(alt);
+		ASSERT_TRUE(rb->get_key_level() == 1);
+		ui.mouse_action_event_internal(mouse_action::DOWN, mouse_button::LEFT, vec2(500.0f, 300.0f));
+		frame(0.016f);
+		ASSERT_TRUE(rb->get_key_level() == 0);
+		ASSERT_TRUE(!ui.keys_captured);
+	}
+
 	class gui_test_node : public ::tree<gui_test_node, my_unique_vector<std::shared_ptr<gui_test_node>>>
 	{
 		std::wstring name;
@@ -2333,7 +3360,13 @@ export namespace Test
 		ASSERT_TRUE(collapsed < full - 20.0f);
 
 		branch_element->toogle();                      // expand again
-		frame(0.016f);
+		// While the children are being measured nothing below may move: the content
+		// must not grow past the collapsed height until the slide actually starts.
+		for (int i = 0; i < 2; i++)
+		{
+			frame(0.001f);
+			ASSERT_TRUE(content_height() <= collapsed + 0.5f);
+		}
 		frame(0.016f);
 		frame(0.05f);
 		ASSERT_TRUE(content_height() > collapsed - 0.5f && content_height() < full - 0.5f);   // opening

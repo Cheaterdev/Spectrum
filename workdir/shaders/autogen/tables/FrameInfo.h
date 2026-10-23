@@ -20,6 +20,7 @@ namespace Frame
 		uint bestFitNormals; // Texture2D<float4>
 		uint brdf; // Texture3D<float4>
 		uint sky; // TextureCube<float4>
+		uint sky_diffuse; // TextureCube<float4>
 		uint mainHiZ; // Texture2D<float>
 		Camera camera; // Camera
 		Camera prevCamera; // Camera
@@ -33,6 +34,7 @@ namespace Frame
 		Texture2D<float4> GetBestFitNormals() { return ResourceDescriptorHeap[bestFitNormals]; }
 		Texture3D<float4> GetBrdf() { return ResourceDescriptorHeap[brdf]; }
 		TextureCube<float4> GetSky() { return ResourceDescriptorHeap[sky]; }
+		TextureCube<float4> GetSky_diffuse() { return ResourceDescriptorHeap[sky_diffuse]; }
 		Texture2D<float> GetMainHiZ() { return ResourceDescriptorHeap[mainHiZ]; }
 			float2 IntegrateBRDF(float Roughness, float Metallic, float NoV)
 			{

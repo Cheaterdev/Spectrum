@@ -2,6 +2,7 @@ export module GUI:MenuList;
 import :Base;
 import :ScrollContainer;
 import :Label;
+import :Commands;
 
 
 
@@ -32,6 +33,8 @@ export namespace GUI
 
                 virtual bool on_mouse_action(mouse_action action, mouse_button button, vec2 pos) override;
                 std::shared_ptr<menu_list> get_menu();
+                // Whether a submenu was ever created (get_menu() creates one on demand).
+                bool has_menu() const { return menu != nullptr; }
 
                 virtual void close_menus();
 
@@ -71,6 +74,13 @@ export namespace GUI
                 //	std::function<void(void)> on_click;
                 //		bool draw_background;
                 bool draw_icon = false;
+
+                // An item for a command: its title as the text, and a click runs it (a disabled
+                // command does nothing). Null when the command is null.
+                menu_list_element::ptr add_command(command::ptr cmd);
+
+                // The items in the order they were added.
+                const std::vector<menu_list_element::ptr>& get_items() const { return elements; }
 
 
         	void make_fixed_width();

@@ -48,7 +48,7 @@ export namespace PSOS
 			
 
 				mpso.rtv_formats = { HAL::Format::R16G16B16A16_FLOAT };	
-				mpso.blend = {  };
+				mpso.blend = { HAL::Blends::Additive };
 
 				mpso.enable_depth =false;
 				mpso.cull =HAL::CullMode::None;

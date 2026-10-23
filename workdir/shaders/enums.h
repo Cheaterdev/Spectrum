@@ -68,7 +68,8 @@ namespace Dev
 {
 	enum class RTXDebugFlags : uint
 	{
-		DisableSkyFallback = 1
+		DisableSkyFallback = 1,
+		HideMaterialLobe = 2
 	};
 }
 using Dev::RTXDebugFlags;

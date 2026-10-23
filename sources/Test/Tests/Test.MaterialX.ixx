@@ -501,6 +501,13 @@ float frame_probe() { mx_set_time(2.0); return mx_frame(); }
 			{ "film: F0 round trip",   "iri_schlick(iridescent_f0(0.8, 80.0, 2.488, float3(0.441, 0.4, 0.361)), 0.8) - iridescent_fresnel(0.8, 80.0, 2.488, float3(0.441, 0.4, 0.361))", { 0, 0, 0, 0 }, 2e-3f },
 			{ "film: packed",          "float3(thinfilm_thickness(pack_material_from_graph(0.0, 0.1, 0.0, 0.3, 0.0, 0.0, 0.0, float3(1, 1, 1), 1.0, 0.0, 80.0, 2.0, " + up + ", float3(1, 0, 0))), thinfilm_ior(pack_material_from_graph(0.0, 0.1, 0.0, 0.3, 0.0, 0.0, 0.0, float3(1, 1, 1), 1.0, 0.0, 80.0, 2.0, " + up + ", float3(1, 0, 0))), material_model(pack_material_from_graph(0.0, 0.1, 0.0, 0.3, 0.0, 0.0, 0.0, float3(1, 1, 1), 1.0, 0.0, 80.0, 2.0, " + up + ", float3(1, 0, 0))))", { 80.0f, 2.0f, 5.0f, 0 }, 1e-3f },
 			{ "film: metal highlight", "base_sun_specular(pack_material(SHADING_MODEL_THINFILM, float3(0.08, 0.744, 0.0)), " + up + ", " + up + ", " + up + ", 1.0, float3(0.441, 0.4, 0.361), 0.5, 1.0)", { 0.244f, 0.968f, 1.344f, 0 }, 2e-2f },
+			// Environment lookup of an anisotropic surface (aniso_bent_normal): unchanged when
+			// looking straight down, bent towards the view for a tilted one, blended by strength.
+			{ "aniso IBL: head-on",      "aniso_bent_normal(" + up + ", " + up + ", float3(1, 0, 0), 0.5)", { 0, 1, 0, 0 }, 1e-4f },
+			{ "aniso IBL: full",         "aniso_bent_normal(" + up + ", float3(0.6, 0.8, 0), float3(1, 0, 0), 1.0)", { 0.6f, 0.8f, 0, 0 }, 1e-4f },
+			{ "aniso IBL: half",         "aniso_bent_normal(" + up + ", float3(0.6, 0.8, 0), float3(1, 0, 0), 0.5)", { 0.31623f, 0.94868f, 0, 0 }, 1e-4f },
+			{ "aniso IBL: other axis",   "aniso_bent_normal(" + up + ", float3(0.6, 0.8, 0), float3(1, 0, 0), -1.0)", { 0, 1, 0, 0 }, 1e-4f },
+			{ "aniso IBL: none",         "aniso_bent_normal(" + up + ", float3(0.6, 0.8, 0), float3(1, 0, 0), 0.0)", { 0, 1, 0, 0 }, 1e-4f },
 			// The coat takes F of the light before the base layer sees it: 1 - weight * F.
 			{ "coat attenuation head-on", "coat_base_attenuation(" + coated + ", " + up + ", " + up + ")", { 0.96f, 0, 0, 0 }, 1e-4f },
 			{ "coat attenuation grazing", "coat_base_attenuation(" + coated + ", " + up + ", float3(1, 0, 0))", { 0.0f, 0, 0, 0 }, 1e-4f },
@@ -766,6 +773,27 @@ float frame_probe() { mx_set_time(2.0); return mx_frame(); }
 	{
 		using Graphs = std::vector<std::pair<std::string, MaterialGraph::ptr>>;
 
+		// A preview is drawn on the render thread, which does not wait for shaders: while a pipeline
+		// compiles, update_preview draws nothing and asks to be called again (defer_preview).
+		template<class Asset>
+		void update_preview_when_ready(Asset& asset, HAL::Texture::ptr preview)
+		{
+			const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(60);
+
+			do
+			{
+				AssetRenderer::take_deferred();
+				asset.update_preview(preview);
+
+				if (!AssetRenderer::take_deferred())
+					return;
+
+				std::this_thread::sleep_for(std::chrono::milliseconds(50));
+			} while (std::chrono::steady_clock::now() < deadline);
+
+			throw Test::TestFailure("the preview never became ready");
+		}
+
 		// Writes the document to a scratch file (textures are named by absolute
 		// path, so the location doesn't matter) and builds its graphs.
 		inline Graphs build(const std::string& body)
@@ -952,6 +980,22 @@ float frame_probe() { mx_set_time(2.0); return mx_frame(); }
 		auto v = source_as<VectorNode>(g->get_subsurface_radius())->get_value();
 		ASSERT_EQ(std::string(), close({ v.x, v.y, v.z }, { 1.0f, 0.35f, 0.2f }));
 
+		// standard_surface defaults subsurface_color to white; at weight 1 that must not replace an
+		// authored base colour (the skin sample came out white).
+		auto tinted = build(surface("standard_surface",
+			R"(<input name="base_color" type="color3" value="0.8, 0.55, 0.45" />
+			   <input name="subsurface" type="float" value="1.0" />)"));
+		ASSERT_EQ(size_t(1), tinted.size());
+		ASSERT_EQ(std::string(), close(value_of(source_as<VectorNode>(tinted[0].second->get_base_color())), { 0.8f, 0.55f, 0.45f, 1.0f }));
+
+		// An authored subsurface_color does take over the base colour at weight 1.
+		auto authored = build(surface("standard_surface",
+			R"(<input name="base_color" type="color3" value="0.8, 0.55, 0.45" />
+			   <input name="subsurface" type="float" value="1.0" />
+			   <input name="subsurface_color" type="color3" value="0.2, 0.4, 0.6" />)"));
+		ASSERT_EQ(size_t(1), authored.size());
+		ASSERT_EQ(std::string(), close(value_of(source_as<VectorNode>(authored[0].second->get_base_color())), { 0.2f, 0.4f, 0.6f, 1.0f }));
+
 		// Lowest priority of the shading models.
 		auto anisotropic = build(surface("standard_surface",
 			R"(<input name="specular_anisotropy" type="float" value="0.7" />
@@ -1014,6 +1058,362 @@ float frame_probe() { mx_set_time(2.0); return mx_frame(); }
 		ASSERT_EQ(size_t(1), opaque.size());
 		ASSERT_TRUE(source(opaque[0].second->get_transmission_weight()) == nullptr);
 		ASSERT_TRUE(source(opaque[0].second->get_ior()) == nullptr);
+	}
+
+	// The material preview's lighting: a mirror-like metal is lit by the baked sky
+	// (ambient and reflection), not just by the sun's highlight. Rendering a bright and
+	// a black metal must differ over a large part of the frame; with the sun alone they
+	// differ only in the highlight.
+	TEST(MaterialX.GPU, PreviewSkyLight)
+	{
+		using namespace mx_import;
+
+		if (!AssetRenderer::is_good())
+			throw Test::TestSkipped("this backend has no asset renderer");
+
+		auto render = [&](const std::string& base_color)
+		{
+			auto graphs = build(surface("standard_surface",
+				"<input name=\"metalness\" type=\"float\" value=\"1.0\" />"
+				"<input name=\"specular_roughness\" type=\"float\" value=\"0.2\" />"
+				"<input name=\"base_color\" type=\"color3\" value=\"" + base_color + "\" />"));
+
+			if (graphs.size() != 1)
+				throw Test::TestFailure("import produced " + std::to_string(graphs.size()) + " graphs");
+
+			auto* material = new materials::universal_material(graphs[0].second);
+			material->register_new(L"preview_sky_light");
+
+			HAL::Texture::ptr preview(new HAL::Texture(RenderSystem::get().device(),
+				HAL::ResourceDesc::Tex2D(HAL::Format::R32G32B32A32_FLOAT, { 256, 256 }, 1, 0,
+					HAL::ResFlags::ShaderResource | HAL::ResFlags::RenderTarget | HAL::ResFlags::UnorderedAccess)));
+
+			update_preview_when_ready(*material->get_ptr<MaterialAsset>(), preview);
+
+			auto data = readback_texture(preview->resource.get());
+			auto& mip = data->array[0]->mips[0];
+			std::vector<float> luminance(256 * 256);
+
+			for (uint y = 0; y < 256; y++)
+				for (uint x = 0; x < 256; x++)
+				{
+					auto px = reinterpret_cast<const float*>(mip->data.data() + (size_t)y * mip->width_stride) + x * 4;
+					luminance[y * 256 + x] = 0.2126f * px[0] + 0.7152f * px[1] + 0.0722f * px[2];
+				}
+
+			return luminance;
+		};
+
+		auto bright = render("0.9, 0.9, 0.9");
+		auto black  = render("0.0, 0.0, 0.0");
+
+		size_t differing = 0;
+
+		for (size_t i = 0; i < bright.size(); i++)
+			if (std::abs(bright[i] - black[i]) > 0.1f)
+				differing++;
+
+		const float fraction = float(differing) / float(bright.size());
+
+		// Measured: about 26% with the sky lighting the metal, 10% (the sun highlight and its
+		// upscaling halo) with the sky switched off.
+		if (fraction < 0.18f)
+			throw Test::TestFailure("only " + std::to_string(fraction * 100) + "% of the preview differs between a bright and a black metal");
+	}
+
+	// The preview runs the subsurface blur: a material with subsurface scattering must
+	// not render like the same material without it (the blur softens the terminator and
+	// shadow edges of its diffuse light).
+	TEST(MaterialX.GPU, PreviewSubsurface)
+	{
+		using namespace mx_import;
+
+		if (!AssetRenderer::is_good())
+			throw Test::TestSkipped("this backend has no asset renderer");
+
+		auto render = [&](const std::string& subsurface)
+		{
+			auto graphs = build(surface("standard_surface",
+				"<input name=\"base_color\" type=\"color3\" value=\"0.8, 0.5, 0.4\" />"
+				"<input name=\"subsurface\" type=\"float\" value=\"" + subsurface + "\" />"
+				"<input name=\"subsurface_radius\" type=\"color3\" value=\"1.0, 0.4, 0.2\" />"
+				"<input name=\"subsurface_scale\" type=\"float\" value=\"0.3\" />"
+				"<input name=\"subsurface_color\" type=\"color3\" value=\"0.8, 0.5, 0.4\" />"));   // the base colour: only the blur differs
+
+			if (graphs.size() != 1)
+				throw Test::TestFailure("import produced " + std::to_string(graphs.size()) + " graphs");
+
+			auto* material = new materials::universal_material(graphs[0].second);
+			material->register_new(L"preview_subsurface");
+
+			HAL::Texture::ptr preview(new HAL::Texture(RenderSystem::get().device(),
+				HAL::ResourceDesc::Tex2D(HAL::Format::R32G32B32A32_FLOAT, { 256, 256 }, 1, 0,
+					HAL::ResFlags::ShaderResource | HAL::ResFlags::RenderTarget | HAL::ResFlags::UnorderedAccess)));
+
+			update_preview_when_ready(*material->get_ptr<MaterialAsset>(), preview);
+
+			auto data = readback_texture(preview->resource.get());
+			auto& mip = data->array[0]->mips[0];
+			std::vector<float> luminance(256 * 256);
+
+			for (uint y = 0; y < 256; y++)
+				for (uint x = 0; x < 256; x++)
+				{
+					auto px = reinterpret_cast<const float*>(mip->data.data() + (size_t)y * mip->width_stride) + x * 4;
+					luminance[y * 256 + x] = 0.2126f * px[0] + 0.7152f * px[1] + 0.0722f * px[2];
+				}
+
+			return luminance;
+		};
+
+		auto scattering = render("1.0");
+		auto plain      = render("0.0");
+
+		size_t differing = 0;
+
+		for (size_t i = 0; i < plain.size(); i++)
+			if (std::abs(scattering[i] - plain[i]) > 0.01f)
+				differing++;
+
+		const float fraction = float(differing) / float(plain.size());
+
+		// Measured: about 14% of the frame differs with the blur, 0.002% (rounding) without it.
+		if (fraction < 0.05f)
+			throw Test::TestFailure("only " + std::to_string(fraction * 100) + "% of the preview differs with subsurface scattering on");
+	}
+
+	namespace preview_detail
+	{
+		// A material imported from standard_surface inputs, ready to draw.
+		inline MaterialAsset::ptr make_material(const std::string& inputs)
+		{
+			using namespace mx_import;
+
+			auto graphs = build(surface("standard_surface", inputs));
+
+			if (graphs.size() != 1)
+				throw Test::TestFailure("import produced " + std::to_string(graphs.size()) + " graphs");
+
+			auto* material = new materials::universal_material(graphs[0].second);
+			material->register_new(L"preview_settings_test");
+			return material->get_ptr<MaterialAsset>();
+		}
+
+		// Luminance of a 256x256 render of the material through the editor's preview renderer.
+		inline std::vector<float> render(SceneTextureRenderer& renderer, MaterialAsset::ptr material)
+		{
+			HAL::Texture::ptr target(new HAL::Texture(RenderSystem::get().device(),
+				HAL::ResourceDesc::Tex2D(HAL::Format::R8G8B8A8_UNORM, { 256, 256 }, 1, 6,
+					HAL::ResFlags::ShaderResource | HAL::ResFlags::RenderTarget | HAL::ResFlags::UnorderedAccess)));
+
+			// The first draw creates the material's pipeline; its shaders compile in the background.
+			renderer.draw(material, target);
+
+			const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(30);
+
+			while (!material->is_ready_to_draw() && std::chrono::steady_clock::now() < deadline)
+				std::this_thread::sleep_for(std::chrono::milliseconds(50));
+
+			renderer.draw(material, target);
+
+			auto data = readback_texture(target->resource.get());
+			auto& mip = data->array[0]->mips[0];
+			std::vector<float> luminance(256 * 256);
+
+			for (uint y = 0; y < 256; y++)
+				for (uint x = 0; x < 256; x++)
+				{
+					auto px = reinterpret_cast<const uint8_t*>(mip->data.data() + (size_t)y * mip->width_stride) + x * 4;
+					luminance[y * 256 + x] = (0.2126f * px[0] + 0.7152f * px[1] + 0.0722f * px[2]) / 255.0f;
+				}
+
+			return luminance;
+		}
+
+		// Fraction of pixels differing by more than `threshold`.
+		inline float difference(const std::vector<float>& a, const std::vector<float>& b, float threshold = 0.05f)
+		{
+			size_t count = 0;
+
+			for (size_t i = 0; i < a.size(); i++)
+				count += std::abs(a[i] - b[i]) > threshold;
+
+			return float(count) / float(a.size());
+		}
+
+		inline float mean(const std::vector<float>& v)
+		{
+			double sum = 0;
+
+			for (float x : v)
+				sum += x;
+
+			return float(sum / v.size());
+		}
+	}
+
+	// A mesh's asset-browser preview is drawn with its materials' pipelines built: drawn
+	// straight away they are still compiling and every draw is skipped (a black preview).
+	TEST(MaterialX.GPU, MeshPreviewWaitsForMaterials)
+	{
+		if (!AssetRenderer::is_good())
+			throw Test::TestSkipped("this backend has no asset renderer");
+
+		auto mesh = EngineAssets::preview_rounded_cube.get_asset();
+
+		HAL::Texture::ptr target(new HAL::Texture(RenderSystem::get().device(),
+			HAL::ResourceDesc::Tex2D(HAL::Format::R8G8B8A8_UNORM, { 256, 256 }, 1, 6,
+				HAL::ResFlags::ShaderResource | HAL::ResFlags::RenderTarget | HAL::ResFlags::UnorderedAccess)));
+
+		mx_import::update_preview_when_ready(*mesh, target);
+
+		auto data = readback_texture(target->resource.get());
+		auto& mip = data->array[0]->mips[0];
+		size_t lit = 0;
+
+		for (uint y = 0; y < 256; y++)
+			for (uint x = 0; x < 256; x++)
+			{
+				auto px = reinterpret_cast<const uint8_t*>(mip->data.data() + (size_t)y * mip->width_stride) + x * 4;
+				lit += (px[0] + px[1] + px[2]) > 30;
+			}
+
+		// The floor and the object cover most of the frame; an all-skipped draw leaves it black.
+		if (lit < 256 * 256 / 10)
+			throw Test::TestFailure("only " + std::to_string(100.0f * lit / (256 * 256)) + "% of the mesh preview is lit");
+	}
+
+	// The very first thumbnail the asset renderer draws, with nothing drawn before it, shows the
+	// object: a red diffuse ball must be red somewhere. (Run alone: `--filter=FirstThumbnail`.)
+	TEST(MaterialX.GPU, FirstThumbnailShowsTheObject)
+	{
+		using namespace preview_detail;
+
+		if (!AssetRenderer::is_good())
+			throw Test::TestSkipped("this backend has no asset renderer");
+
+		auto material = make_material(R"(<input name="base_color" type="color3" value="0.9, 0.05, 0.05" /><input name="specular_roughness" type="float" value="0.8" />)");
+
+		const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(60);
+
+		while (!material->is_ready_to_draw() && std::chrono::steady_clock::now() < deadline)
+			std::this_thread::sleep_for(std::chrono::milliseconds(50));
+
+		HAL::Texture::ptr target(new HAL::Texture(RenderSystem::get().device(),
+			HAL::ResourceDesc::Tex2D(HAL::Format::R8G8B8A8_UNORM, { 256, 256 }, 1, 6,
+				HAL::ResFlags::ShaderResource | HAL::ResFlags::RenderTarget | HAL::ResFlags::UnorderedAccess)));
+
+		// One draw, the first of the process.
+		AssetRenderer::get().draw(material, target);
+
+		auto data = readback_texture(target->resource.get());
+		auto& mip = data->array[0]->mips[0];
+		size_t red = 0, lit = 0;
+
+		for (uint y = 0; y < 256; y++)
+			for (uint x = 0; x < 256; x++)
+			{
+				auto px = reinterpret_cast<const uint8_t*>(mip->data.data() + (size_t)y * mip->width_stride) + x * 4;
+				lit += (px[0] + px[1] + px[2]) > 30;
+				red += px[0] > 80 && px[0] > 2 * px[1] && px[0] > 2 * px[2];
+			}
+
+		if (lit < 256 * 256 / 5 || red < 256 * 256 / 100)
+			throw Test::TestFailure("first thumbnail: " + std::to_string(100.0f * lit / (256 * 256)) + "% lit, " + std::to_string(100.0f * red / (256 * 256)) + "% red");
+	}
+
+	// Each preview shape loads and puts the material on screen: a bright red diffuse object
+	// must turn a good part of the frame red, and a different shape must look different.
+	TEST(MaterialX.GPU, PreviewShapes)
+	{
+		using namespace preview_detail;
+
+		SceneTextureRenderer renderer;
+		auto material = make_material(R"(<input name="base_color" type="color3" value="0.9, 0.05, 0.05" /><input name="specular_roughness" type="float" value="0.8" />)");
+
+		std::vector<std::vector<float>> images;
+
+		for (auto shape : { PreviewShape::Sphere, PreviewShape::RoundedCube, PreviewShape::Slab, PreviewShape::Cloth })
+		{
+			renderer.get_settings().shape = shape;
+			images.push_back(render(renderer, material));
+
+			// Something other than the background is drawn.
+			if (mean(images.back()) < 0.01f)
+				throw Test::TestFailure("shape " + std::to_string((int)shape) + " renders black");
+		}
+
+		for (size_t i = 1; i < images.size(); i++)
+			if (difference(images[0], images[i]) < 0.02f)
+				throw Test::TestFailure("shape " + std::to_string(i) + " looks like the sphere");
+	}
+
+	// The studio environment gives a metal something to reflect that the sky doesn't.
+	TEST(MaterialX.GPU, PreviewStudioEnvironment)
+	{
+		using namespace preview_detail;
+
+		SceneTextureRenderer renderer;
+		renderer.get_settings().shape = PreviewShape::Sphere;
+		auto chrome = make_material(R"(<input name="metalness" type="float" value="1.0" /><input name="specular_roughness" type="float" value="0.05" /><input name="base_color" type="color3" value="0.95, 0.95, 0.95" />)");
+
+		auto sky = render(renderer, chrome);
+		renderer.get_settings().environment = PreviewEnvironment::Studio;
+		auto studio = render(renderer, chrome);
+
+		const float changed = difference(sky, studio, 0.1f);
+
+		if (changed < 0.1f)
+			throw Test::TestFailure("only " + std::to_string(changed * 100) + "% of the preview changes in the studio");
+
+		// Fill light off leaves the key: the picture changes, but less than changing the environment.
+		renderer.get_settings().studio_fill = 0.0f;
+		auto no_fill = render(renderer, chrome);
+
+		if (difference(studio, no_fill, 0.02f) < 0.005f)
+			throw Test::TestFailure("the fill slider changes nothing");
+	}
+
+	// Sun direction moves the light; the lobe selector shows what the material's extra lobe does.
+	TEST(MaterialX.GPU, PreviewLightAndLobes)
+	{
+		using namespace preview_detail;
+
+		SceneTextureRenderer renderer;
+		renderer.get_settings().shape = PreviewShape::Sphere;
+		auto coated = make_material(R"(<input name="base_color" type="color3" value="0.6, 0.05, 0.05" /><input name="specular_roughness" type="float" value="0.6" /><input name="coat" type="float" value="1.0" /><input name="coat_roughness" type="float" value="0.02" />)");
+
+		auto noon = render(renderer, coated);
+		renderer.get_settings().sun_azimuth = 225.0f;
+		auto behind = render(renderer, coated);
+
+		if (difference(noon, behind) < 0.05f)
+			throw Test::TestFailure("moving the sun changes under 5% of the preview");
+
+		renderer.get_settings().sun_azimuth = 45.0f;
+		renderer.get_settings().lobes = PreviewLobes::WithoutLobe;
+		auto without = render(renderer, coated);
+
+		// The coat adds a sharp reflection: with and without differ on part of the ball.
+		if (difference(noon, without, 0.03f) < 0.005f)
+			throw Test::TestFailure("the coat changes nothing in the preview");
+
+		renderer.get_settings().lobes = PreviewLobes::LobeDifference;
+		auto difference_view = render(renderer, coated);
+
+		// The difference view is mostly black, with the coat's contribution lit.
+		if (mean(difference_view) > 0.2f || mean(difference_view) < 0.0005f)
+			throw Test::TestFailure("the lobe difference view averages " + std::to_string(mean(difference_view)));
+
+		// A material without an extra lobe is the same with it hidden.
+		renderer.get_settings().lobes = PreviewLobes::All;
+		auto plain = make_material(R"(<input name="base_color" type="color3" value="0.6, 0.05, 0.05" /><input name="specular_roughness" type="float" value="0.6" />)");
+		auto plain_all = render(renderer, plain);
+		renderer.get_settings().lobes = PreviewLobes::WithoutLobe;
+		auto plain_without = render(renderer, plain);
+
+		if (difference(plain_all, plain_without, 0.01f) > 0.001f)
+			throw Test::TestFailure("a plain material changes when its (absent) lobe is hidden");
 	}
 
 	// Thin film maps onto the graph's film outputs; it is the lowest-priority

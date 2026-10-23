@@ -1,5 +1,7 @@
 #include "../autogen/FrameGraph_Debug_Texture2DArray.h"
 #include "../autogen/FrameGraph_Debug_Common.h"
+#include "channels.hlsli"
+#include "stats.hlsli"
 
 
 [numthreads(8, 8, 1)]
@@ -8,18 +10,36 @@ void CS(uint2 dispatch_thread_id : SV_DispatchThreadID)
     if (any(dispatch_thread_id > GetFrameGraph_Debug_Common().GetTargetSize()))
         return;
 
-    int2 utc = (int2(dispatch_thread_id) - GetFrameGraph_Debug_Texture2DArray().GetOffset()) / GetFrameGraph_Debug_Texture2DArray().GetScale();
+    float2 scale = GetFrameGraph_Debug_Texture2DArray().GetScale();
+    int2 utc = (int2(dispatch_thread_id) - GetFrameGraph_Debug_Texture2DArray().GetOffset()) / scale;
+
+    float3 color;
 
     if (any(utc > GetFrameGraph_Debug_Texture2DArray().GetSourceSize()) || any(utc < 0))
     {
-        GetFrameGraph_Debug_Common().GetTarget()[dispatch_thread_id] = 0.2*(((dispatch_thread_id.x / 8) + (dispatch_thread_id.y / 8)) % 2 == 0);
-        return;
+        color = 0.2 * (((dispatch_thread_id.x / 8) + (dispatch_thread_id.y / 8)) % 2 == 0);
+        pick_store(dispatch_thread_id, 0, int2(0, 0), false);
+    }
+    else
+    {
+        uint mip        = GetFrameGraph_Debug_Common().GetSelectedMip();
+        uint arrayIndex = GetFrameGraph_Debug_Common().GetSelectedArrayIndex();
+        uint2 size = GetFrameGraph_Debug_Texture2DArray().GetSourceSize();
+        uint2 mipSize = max(size >> mip, 1);
+        float2 tc = float2(utc) / size;
+        int2 texel = min(int2(tc * mipSize), int2(mipSize) - 1);
+
+        float4 val = scale.x >= 2.0
+            ? GetFrameGraph_Debug_Texture2DArray().GetSource().Load(int4(texel, arrayIndex, mip))
+            : GetFrameGraph_Debug_Texture2DArray().GetSource().SampleLevel(linearSampler, float3(tc, arrayIndex), mip);
+
+        pick_store(dispatch_thread_id, val, texel, true);
+
+        const uint flags = GetFrameGraph_Debug_Common().GetFlags();
+        color = display_color(val, GetFrameGraph_Debug_Common().GetChannelMask(), flags, GetFrameGraph_Debug_Common().GetExposure());
+        if (flags & FLAG_CHECKER)
+            color = over_checker(color, val.a, dispatch_thread_id);
     }
 
-    uint mip        = GetFrameGraph_Debug_Common().GetSelectedMip();
-    uint arrayIndex = GetFrameGraph_Debug_Common().GetSelectedArrayIndex();
-    float2 tc = float2(utc) / GetFrameGraph_Debug_Texture2DArray().GetSourceSize();
-    float4 val = GetFrameGraph_Debug_Texture2DArray().GetSource().SampleLevel(linearSampler, float3(tc, arrayIndex), mip);
-
-    GetFrameGraph_Debug_Common().GetTarget()[dispatch_thread_id] = float4(pow(max(val.xyz, 0.0), 1.0 / 2.2), 1);
+    GetFrameGraph_Debug_Common().GetTarget()[dispatch_thread_id] = float4(color, 1);
 }
