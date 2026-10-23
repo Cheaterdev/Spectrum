@@ -1241,6 +1241,20 @@ public:
 
 		//scale = 1.25f;
 		Window::input_handler = this;
+
+		// The window draws its own title bar (Window::custom_frame): the ribbon's minimise,
+		// maximise and close buttons ask for these. Posted to the window thread.
+		window_command_handler = [this](window_command command)
+			{
+				switch (command)
+				{
+					case window_command::minimize:         Window::minimize(); break;
+					case window_command::maximize_restore: Window::toggle_maximize(); break;
+					case window_command::close:            Window::request_close(); break;
+				}
+			};
+		window_maximized = [this] { return Window::is_maximized(); };
+
 		HAL::swap_chain_desc desc;
 		// scRGB; the UI PSOs (ui.prism) are compiled for this format.
 		desc.format = HAL::Format::R16G16B16A16_FLOAT;
@@ -2439,6 +2453,14 @@ public:
 							};
 
 						auto rb = std::make_shared<ribbon>();
+
+						// With the system title bar gone the tab bar is the title bar.
+						if (Window::has_custom_frame())
+						{
+							rb->set_window_icon("app");
+							rb->set_window_controls(true);
+							rb->set_window_title("Spectrum");
+						}
 
 						auto file_tab = rb->add_tab("File");
 						auto scene_group = file_tab->add_group("Scene");

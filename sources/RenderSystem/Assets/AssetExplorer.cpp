@@ -144,6 +144,8 @@ namespace GUI
 					{
 
 						auto asset_storage = AssetManager::get().get_storage(ref);
+						if (!asset_storage)
+							continue;
 
 						dummy_node::ptr& node = ready_nodes[asset_storage];
 

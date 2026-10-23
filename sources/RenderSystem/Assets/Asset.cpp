@@ -665,34 +665,52 @@ std::future<Asset::ptr> AssetStorage::load_asset()
 		std::shared_ptr<std::promise<Asset::ptr>> p(new std::promise<Asset::ptr>);
 		when_all(begin(tasks), end(tasks)).then([this, p, archive](std::vector<bool> results)
 			{
-				std::lock_guard<std::mutex> g(archive_mutex);
-
-				try
+				bool refresh_header = false;
 				{
-					for (auto r : results)
-						if (!r)
-						{
-							p->set_value(nullptr);
-							return;
-						}
+					std::lock_guard<std::mutex> g(archive_mutex);
 
-					auto t = CounterManager::get().start_count<AssetStorage>(convert(header->name));
+					try
+					{
+						for (auto r : results)
+							if (!r)
+							{
+								p->set_value(nullptr);
+								return;
+							}
+
+						auto t = CounterManager::get().start_count<AssetStorage>(convert(header->name));
 
 
-					UniversalContext load_ctx;
-					if (RenderSystem::is_good())
-						load_ctx.get_context<HAL::Device*>() = &RenderSystem::get().device();
-					asset = archive->get<Asset::ptr>("asset", &load_ctx);
+						UniversalContext load_ctx;
+						if (RenderSystem::is_good())
+							load_ctx.get_context<HAL::Device*>() = &RenderSystem::get().device();
+						asset = archive->get<Asset::ptr>("asset", &load_ctx);
 
-					asset->holder = this;
+						asset->holder = this;
 
+						// Files saved before references were tracked, or edited since, carry a stale header.
+						refresh_header = asset->get_reference_ids() != header->references;
+					}
+					catch (const std::exception& e)
+					{
+						Log::get() << "asset loading fail" << e.what() << Log::endl;
+					}
+
+					p->set_value(asset);
 				}
-				catch (const std::exception& e)
+
+				// save() takes archive_mutex itself. Only when the header differs, so the next load is a no-op.
+				if (refresh_header)
 				{
-					Log::get() << "asset loading fail" << e.what() << Log::endl;
+					try
+					{
+						save();
+					}
+					catch (const std::exception& e)
+					{
+						Log::get() << "asset header refresh fail" << e.what() << Log::endl;
+					}
 				}
-
-				p->set_value(asset);
 			});
 		return p->get_future();
 	}
@@ -808,6 +826,10 @@ std::shared_ptr<FileDataStorage> AssetStorage::get_archive()
 
 std::set<Guid> AssetStorage::get_references()
 {
+	// The header's set is only refreshed by save(); a loaded asset knows its current references.
+	if (asset)
+		return asset->get_reference_ids();
+
 	return header->references;
 }
 

@@ -79,6 +79,25 @@ enum class mouse_wheel : int
 
 
 
+// For a window that draws its own title bar: what a point of the client area counts as
+// when the window frame asks (WM_NCHITTEST). client = the ordinary UI.
+enum class window_hit : int
+{
+    client,
+    caption,    // drags the window, a double click maximises it
+    minimize,
+    maximize,
+    close
+};
+
+// What the UI's own minimise / maximise / close buttons ask the window to do.
+enum class window_command : int
+{
+    minimize,
+    maximize_restore,
+    close
+};
+
 struct InputHandler
 {
 	virtual	void mouse_move_event(vec2 pos) = 0;
@@ -91,6 +110,10 @@ struct InputHandler
 	// Puts the hovered element's cursor on screen. Called from WM_SETCURSOR as well as after input,
 	// so the window's default arrow never gets a frame in between.
 	virtual	void apply_cursor() {}
+
+	// Called on the window thread, from WM_NCHITTEST, for a client-area point. Must not
+	// touch the UI tree: it answers from what the last drawn frame recorded.
+	virtual	window_hit hit_test_window(vec2 pos) { return window_hit::client; }
 };
 
 namespace GUI
@@ -612,6 +635,10 @@ namespace GUI
             bool can_multitouch = false;   // wants all of its fingers in one on_touch_move call
             int  touch_id = -1;            // the finger this element is currently pressed by
             bool clickable;
+            // What the window frame makes of a press on this element when the window draws
+            // its own title bar (user_interface::hit_test_window). The tab bar is `caption`,
+            // the window buttons are minimize / maximize / close.
+            window_hit window_region = window_hit::client;
             bool draw_helper = false;
             bool map_to_pixels = false;
             bool drag_listener = false;
@@ -959,6 +986,20 @@ namespace GUI
             // The same for group-opacity layers (one snapshot texture each).
             uint32_t layer_counter = 0;
 
+            // Where the window frame should treat clicks as title bar or window buttons.
+            // The tree walk records every visible element that has a window_region or is
+            // clickable, in draw order, into building_regions (UI thread); at the end of the
+            // walk the list is published to window_regions under the mutex, which the
+            // window thread reads. The last one under the point wins (it is on top).
+            struct frame_region
+            {
+                rect       bounds;
+                window_hit hit;
+            };
+            std::vector<frame_region> building_regions;
+            std::vector<frame_region> window_regions;
+            std::mutex                window_regions_mutex;
+
             using ptr = s_ptr<user_interface>;
             using wptr = w_ptr<user_interface>;
             std::mutex m;
@@ -989,6 +1030,15 @@ namespace GUI
             virtual void key_action_event(key_action action, long key, key_mods mods);
             virtual void char_event(char32_t ch);
             virtual void apply_cursor() override;
+
+            // The window frame's hit test, answered from window_regions (see below).
+            virtual window_hit hit_test_window(vec2 pos) override;
+
+            // Set by the application when the window draws its own title bar: the UI's
+            // minimise / maximise / close buttons call the handler; the query says
+            // whether the window is maximised (the maximise button shows "restore").
+            std::function<void(window_command)> window_command_handler;
+            std::function<bool()>               window_maximized;
 
          //   virtual void draw_ui(Context&);
 

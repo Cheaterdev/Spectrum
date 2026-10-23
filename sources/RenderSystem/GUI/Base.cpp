@@ -894,6 +894,11 @@ namespace GUI
 
         c.scale = result_scale;
 
+        // For the window frame's hit test: tagged elements, and clickable ones, which
+        // block what lies under them (a tab title on the caption area is a click).
+        if (visibility && (window_region != window_hit::client || clickable))
+            user_ui->building_regions.push_back({ r_bounds, window_region });
+
         sizer_long entry_scissors = c.scissors;
         if (self_scissor.has_value())
             entry_scissors = intersect(entry_scissors, math::convert(*self_scissor));
@@ -1572,10 +1577,26 @@ namespace GUI
 
         draw_infos.clear();
         pre_draw_infos.clear();
+        building_regions.clear();
         backdrop_counter = 0;
         layer_counter = 0;
         draw_recursive(c);
         drag.draw(c);
+
+        std::lock_guard<std::mutex> guard(window_regions_mutex);
+        window_regions.swap(building_regions);
+     }
+
+     window_hit user_interface::hit_test_window(vec2 pos)
+     {
+        std::lock_guard<std::mutex> guard(window_regions_mutex);
+
+        for (auto it = window_regions.rbegin(); it != window_regions.rend(); ++it)
+            if (pos.x >= it->bounds.x && pos.x < it->bounds.x + it->bounds.w
+                && pos.y >= it->bounds.y && pos.y < it->bounds.y + it->bounds.h)
+                return it->hit;
+
+        return window_hit::client;
      }
 
      void user_interface::create_graph(Graph& graph)

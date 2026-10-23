@@ -118,6 +118,28 @@ namespace Text
         {
             { IconBuilder i(icons, "chevron_right"); i.polygon({ {5.5f, 3}, {10.5f, 8}, {5.5f, 13}, {4, 11.5f}, {7.5f, 8}, {4, 4.5f} }); }
             { IconBuilder i(icons, "chevron_down");  i.polygon({ {3, 5.5f}, {4.5f, 4}, {8, 7.5f}, {11.5f, 4}, {13, 5.5f}, {8, 10.5f} }); }
+            {
+                // The title bar's application icon: a prism outline (outer contour clockwise,
+                // inner counter-clockwise).
+                IconBuilder i(icons, "app");
+                i.polygon({ {8, 1.5f}, {14.5f, 13.5f}, {1.5f, 13.5f} });
+                i.polygon({ {8, 5.0f}, {4.4f, 11.6f}, {11.6f, 11.6f} });
+            }
+            // The title bar's window buttons (thin line art on the 16x16 grid).
+            { IconBuilder i(icons, "minimize"); i.polygon({ {3, 7.5f}, {13, 7.5f}, {13, 8.5f}, {3, 8.5f} }); }
+            {
+                // A square outline: the outer contour clockwise, the inner one counter-clockwise (a hole).
+                IconBuilder i(icons, "maximize");
+                i.polygon({ {3, 3}, {13, 3}, {13, 13}, {3, 13} });
+                i.polygon({ {4, 4}, {4, 12}, {12, 12}, {12, 4} });
+            }
+            {
+                // Two overlapping outlines: the front square, and the visible part of the one behind it.
+                IconBuilder i(icons, "restore");
+                i.polygon({ {3, 5}, {11, 5}, {11, 13}, {3, 13} });
+                i.polygon({ {4, 6}, {4, 12}, {10, 12}, {10, 6} });
+                i.polygon({ {5, 3}, {13, 3}, {13, 11}, {11, 11}, {11, 10}, {12, 10}, {12, 4}, {6, 4}, {6, 5}, {5, 5} });
+            }
             // chevron_right turned a quarter the other way: the ribbon's collapse arrow.
             { IconBuilder i(icons, "chevron_up"); i.polygon({ {3, 10.5f}, {8, 5.5f}, {13, 10.5f}, {11.5f, 12}, {8, 8.5f}, {4.5f, 12} }); }
             {

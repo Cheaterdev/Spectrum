@@ -698,6 +698,89 @@ namespace GUI
             return true;
         }
 
+        // ---- ribbon_caption_button ----
+
+        ribbon_caption_button::ribbon_caption_button(window_command window_action, float width, float height)
+            : command(window_action)
+        {
+            clickable = true;
+
+            switch (command)
+            {
+                case window_command::minimize:         window_region = window_hit::minimize; break;
+                case window_command::maximize_restore: window_region = window_hit::maximize; break;
+                case window_command::close:            window_region = window_hit::close;    break;
+            }
+
+            const char* start_icon = command == window_command::minimize ? "minimize"
+                                   : command == window_command::close    ? "close" : "maximize";
+            shown_icon = start_icon;
+
+            icon = std::make_shared<vector_icon>(start_icon);
+            icon->docking     = dock::FILL;
+            icon->width_size  = size_type::FIXED;
+            icon->height_size = size_type::FIXED;
+            icon->size        = vec2(16, 16);
+            icon->x_type      = pos_x_type::CENTER;
+            icon->y_type      = pos_y_type::CENTER;
+            add_child(icon);
+
+            docking = dock::RIGHT;
+            set_button_size(width, height);
+        }
+
+        void ribbon_caption_button::set_button_size(float width, float height)
+        {
+            width_size  = size_type::FIXED;
+            height_size = size_type::FIXED;
+            size        = vec2(width, height);
+        }
+
+        void ribbon_caption_button::on_pre_render(Context& c)
+        {
+            base::on_pre_render(c);
+
+            // The maximise button turns into "restore" while the window is maximised.
+            if (command == window_command::maximize_restore)
+            {
+                const bool maximized = user_ui && user_ui->window_maximized && user_ui->window_maximized();
+                const char* wanted = maximized ? "restore" : "maximize";
+
+                if (shown_icon != wanted)
+                {
+                    shown_icon = wanted;
+                    icon->set_icon(shown_icon);
+                }
+            }
+        }
+
+        void ribbon_caption_button::draw(Context& c)
+        {
+            const rect b = get_render_bounds();
+
+            if (command == window_command::close)
+            {
+                if (is_pressed())
+                    c.renderer->draw_color(c, float4(0.78f, 0.06f, 0.12f, 1.0f), b);
+                else if (is_hovered())
+                    c.renderer->draw_color(c, float4(0.91f, 0.07f, 0.14f, 1.0f), b);
+            }
+            else if (is_pressed())
+                c.renderer->draw_color(c, float4(1, 1, 1, 0.18f), b);
+            else if (is_hovered())
+                c.renderer->draw_color(c, float4(1, 1, 1, 0.10f), b);
+        }
+
+        bool ribbon_caption_button::on_mouse_action(mouse_action action, mouse_button button, vec2 pos)
+        {
+            base::on_mouse_action(action, button, pos);
+
+            if (button == mouse_button::LEFT && action == mouse_action::UP && user_ui && user_ui->window_command_handler)
+                user_ui->window_command_handler(command);
+
+            return true;
+        }
+
         // ---- ribbon ----
 
         ribbon::ribbon()
@@ -907,6 +990,124 @@ namespace GUI
             collapse_button->tooltip = minimized ? "Expand the ribbon" : "Collapse the ribbon";
         }
 
+        void ribbon::set_window_controls(bool enable)
+        {
+            window_controls = enable;
+            rebuild_bar_right();
+        }
+
+        void ribbon::set_window_title(std::string title)
+        {
+            if (!title_label)
+            {
+                title_label = make_label(title, metrics.text_size, label_flags);
+                title_label->color = float4(1, 1, 1, 0.55f);
+
+                // Fills a holder as tall as the bar and centres its text vertically, like
+                // the button labels do, instead of positioning a text-sized box.
+                title_label->width_size  = size_type::NONE;
+                title_label->height_size = size_type::NONE;
+                title_label->docking     = dock::FILL;
+                title_label->magnet_text = FW1_LEFT | FW1_VCENTER | FW1_NOWORDWRAP;
+
+                title_holder = std::make_shared<base>();
+                title_holder->clickable   = false;
+                title_holder->docking     = dock::RIGHT;
+                title_holder->width_size  = size_type::FIXED;
+                title_holder->height_size = size_type::FIXED;
+                title_holder->add_child(title_label);
+            }
+            else
+                title_label->text = title;
+
+            fit_title();
+            rebuild_bar_right();
+        }
+
+        // The holder is as wide as the text plus a margin and as tall as the tab bar.
+        void ribbon::fit_title()
+        {
+            if (!title_holder)
+                return;
+
+            title_label->font_size = metrics.text_size;
+            title_holder->size = vec2(title_label->size.get().x + 14.0f, metrics.tab_height);
+        }
+
+        void ribbon::set_window_icon(std::string icon_name)
+        {
+            if (!window_icon)
+            {
+                window_icon = std::make_shared<vector_icon>(icon_name);
+                window_icon->docking     = dock::LEFT;
+                window_icon->width_size  = size_type::FIXED;
+                window_icon->height_size = size_type::FIXED;
+                window_icon->size        = vec2(16, 16);
+                window_icon->y_type      = pos_y_type::CENTER;
+                window_icon->margin      = { 10, 0, 10, 0 };   // room after the icon, before the first tab
+                window_icon->color       = float4(1, 1, 1, 0.85f);
+            }
+            else
+                window_icon->set_icon(icon_name);
+
+            rebuild_bar_left();
+        }
+
+        // The bar's left end, left to right: the icon, then the tab titles. LEFT-docked
+        // children stack rightwards in the order they were added, so the titles are added
+        // again after the icon.
+        void ribbon::rebuild_bar_left()
+        {
+            for (auto& t : tabs)
+                if (t.header->get_raw_parent())
+                    bar->remove_child(t.header);
+
+            if (window_icon && window_icon->get_raw_parent())
+                bar->remove_child(window_icon);
+
+            if (window_icon)
+                bar->add_child(window_icon);
+
+            for (auto& t : tabs)
+                bar->add_child(t.header);
+        }
+
+        // The bar's right end, right to left: the window buttons (close first, so it is
+        // outermost), the collapse button, the title. RIGHT-docked children stack leftwards
+        // in the order they were added, so the whole set is added again in that order.
+        void ribbon::rebuild_bar_right()
+        {
+            if (collapse_button->get_raw_parent())
+                bar->remove_child(collapse_button);
+
+            for (auto& b : caption_buttons)
+                if (b->get_raw_parent())
+                    bar->remove_child(b);
+
+            if (title_holder && title_holder->get_raw_parent())
+                bar->remove_child(title_holder);
+
+            if (window_controls)
+            {
+                if (caption_buttons.empty())
+                {
+                    const float w = 46.0f * metrics.tab_height / 28.0f;
+                    for (auto command : { window_command::close, window_command::maximize_restore, window_command::minimize })
+                        caption_buttons.push_back(std::make_shared<ribbon_caption_button>(command, w, metrics.tab_height));
+                }
+
+                for (auto& b : caption_buttons)
+                    bar->add_child(b);
+            }
+
+            bar->add_child(collapse_button);
+
+            if (title_holder)
+                bar->add_child(title_holder);
+
+            bar->window_region = window_controls ? window_hit::caption : window_hit::client;
+        }
+
         void ribbon::set_touch_mode(bool value)
         {
             touch_mode = value;
@@ -918,6 +1119,11 @@ namespace GUI
         {
             bar->size = vec2(bar->size->x, metrics.tab_height);
             collapse_button->size = vec2(metrics.tab_height, metrics.tab_height);
+
+            for (auto& b : caption_buttons)
+                b->set_button_size(46.0f * metrics.tab_height / 28.0f, metrics.tab_height);
+
+            fit_title();
 
             for (auto& t : tabs)
             {

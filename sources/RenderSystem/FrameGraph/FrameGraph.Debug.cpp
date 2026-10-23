@@ -867,8 +867,14 @@ void resource_preview::render(FrameGraph::FrameContext* context)
 		if (read_pixel && cursor_x >= 0 && cursor_y >= 0 && cursor_x < (int)SZ.x && cursor_y < (int)SZ.y)
 		{
 			PROFILE(L"preview_pixel_readback");
-			context->get_list()->get_copy().read<uint>(*m_stats, 0, 8, [this](std::span<uint> r)
+			// This runs when the GPU copy finishes, which can be after the preview window was closed: hold the
+			// widget weakly, and do nothing once it is gone or has left the UI (run_on_ui then runs its task
+			// right here, on the wrong thread, against labels that are being torn down).
+			context->get_list()->get_copy().read<uint>(*m_stats, 0, 8, [weak = std::weak_ptr<resource_preview>(get_ptr<resource_preview>())](std::span<uint> r)
 			{
+				auto self = weak.lock();
+				if (!self || !self->user_ui) return;
+
 				std::string pixel = "Pixel   -", value = "RGBA    -", hex = "Hex     -";
 				float v[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
 				if (r.size() >= 8 && r[6])
@@ -879,16 +885,16 @@ void resource_preview::render(FrameGraph::FrameContext* context)
 					value = std::format("RGBA    {:.4f}  {:.4f}  {:.4f}  {:.4f}", v[0], v[1], v[2], v[3]);
 					hex   = std::format("Hex     #{:02X}{:02X}{:02X}{:02X}", byte(v[0]), byte(v[1]), byte(v[2]), byte(v[3]));
 				}
-				run_on_ui([this, pixel, value, hex, v0 = v[0], v1 = v[1], v2 = v[2], v3 = v[3]]()
+				self->run_on_ui([self, pixel, value, hex, v0 = v[0], v1 = v[1], v2 = v[2], v3 = v[3]]()
 				{
-					m_pixel_lbl->text = pixel;
-					m_value_lbl->text = value;
-					m_hex_lbl->text   = hex;
+					self->m_pixel_lbl->text = pixel;
+					self->m_value_lbl->text = value;
+					self->m_hex_lbl->text   = hex;
 
 					// The swatch shows the texel the way the preview itself does (same display gamma).
 					auto shown = [](float f) { return std::pow(std::max(f, 0.0f), 1.0f / 2.2f); };
-					m_hud->color = { shown(v0), shown(v1), shown(v2), 1.0f };
-					m_hud->alpha = std::clamp(v3, 0.0f, 1.0f);
+					self->m_hud->color = { shown(v0), shown(v1), shown(v2), 1.0f };
+					self->m_hud->alpha = std::clamp(v3, 0.0f, 1.0f);
 				});
 			});
 		}
@@ -904,16 +910,22 @@ void resource_preview::render(FrameGraph::FrameContext* context)
 				size_t elem_size = src->get_element_size();
 				context->get_list()->get_copy().read_buffer(
 					src->resource.get(), 0, count * elem_size,
-					[this, src, count, elem_size](std::span<std::byte> memory)
+					// Runs when the GPU copy finishes: the widget may be closed and the source replaced by then, so
+					// hold the view itself and the widget weakly instead of `src` and `this`.
+					[weak = std::weak_ptr<resource_preview>(get_ptr<resource_preview>()), view = m_source, count, elem_size](std::span<std::byte> memory)
 					{
-						auto tree_data = src->describe(memory.data(), memory.size());
-						run_on_ui([this, tree_data, count, elem_size]()
+						auto self = weak.lock();
+						auto* sb  = dynamic_cast<HAL::StructuredBufferViewBase*>(view.get());
+						if (!self || !self->user_ui || !sb) return;
+
+						auto tree_data = sb->describe(memory.data(), memory.size());
+						self->run_on_ui([self, tree_data, count, elem_size]()
 						{
-							m_type_lbl->text = std::string("Type:     ") + resource_icons::buffer + " Buffer";
-							m_dim_lbl->text  = "Size:     "
+							self->m_type_lbl->text = std::string("Type:     ") + resource_icons::buffer + " Buffer";
+							self->m_dim_lbl->text  = "Size:     "
 								+ std::to_string(count) + " x "
 								+ std::to_string(elem_size) + "B";
-							auto bt = std::static_pointer_cast<GUI::Elements::tree<member_item, object_tree_creator>>(m_buffer_tree);
+							auto bt = std::static_pointer_cast<GUI::Elements::tree<member_item, object_tree_creator>>(self->m_buffer_tree);
 							bt->contents->remove_all();
 							bt->init(tree_data.get());
 						});

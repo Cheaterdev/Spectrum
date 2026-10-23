@@ -2224,7 +2224,8 @@ private:
                         {
                             // Throttled: a counter read is a GPU copy plus a stall-free readback per counted buffer.
                             cell.debug_handler = cell.alloc->process_debug_resource.register_handler(this,
-                                [this, call_id = cell.call_id, alloc = cell.alloc, target = counter_target,
+                                [weak_self = std::weak_ptr<FrameGraphTimelineCanvas>(get_ptr<FrameGraphTimelineCanvas>()),
+                                 call_id = cell.call_id, alloc = cell.alloc, target = counter_target,
                                  capacity = binfo.capacity, stride = binfo.stride, frame = 0u]
                                 (FrameGraph::Pass* pass, FrameGraph::FrameContext* context) mutable
                                 {
@@ -2237,11 +2238,15 @@ private:
                                     if (!counter_buffer) return;
 
                                     context->get_list()->get_copy().read_buffer(counter_buffer.get(), sb->get_counter_byte_offset(), sizeof(uint),
-                                        [this, target, capacity, stride](std::span<std::byte> memory)
+                                        [weak_self, target, capacity, stride](std::span<std::byte> memory)
                                         {
+                                            // Runs when the GPU copy finishes; the debugger may have been closed since.
+                                            auto self = weak_self.lock();
+                                            if (!self || !self->user_ui) return;
+
                                             uint value = 0;
                                             if (memory.size() >= sizeof(value)) std::memcpy(&value, memory.data(), sizeof(value));
-                                            run_on_ui([target, value, capacity, text = std::format("{} / {} x {}B", value, capacity, stride)]()
+                                            self->run_on_ui([self, target, value, capacity, text = std::format("{} / {} x {}B", value, capacity, stride)]()
                                             {
                                                 for (auto& cell : target->cells)
                                                 {

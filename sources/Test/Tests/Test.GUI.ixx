@@ -2684,6 +2684,69 @@ export namespace Test
 		ASSERT_TRUE(!rb->is_minimized());
 	}
 
+	// A window that draws its own title bar asks the UI what each point is (WM_NCHITTEST):
+	// the ribbon's tab bar is the caption, its window buttons report as minimise / maximise /
+	// close, and tab titles and the strip stay ordinary UI. A click on a window button runs
+	// the UI's window command handler.
+	TEST(Core.HAL, GUIRibbon_WindowControlsAndHitTest)
+	{
+		THREAD_SCOPE(GUI);
+
+		auto ui_owner = std::make_shared<GUI::user_interface>();
+		auto& ui = *ui_owner;
+		constexpr float W = 1000.0f;
+		ui.size = vec2(W, 500.0f);
+
+		std::vector<window_command> commands;
+		ui.window_command_handler = [&](window_command c) { commands.push_back(c); };
+		ui.window_maximized = [] { return false; };
+
+		auto rb = std::make_shared<GUI::Elements::ribbon>();
+		rb->set_window_icon("app");
+		rb->set_window_controls(true);
+		rb->set_window_title("Spectrum");
+		auto home = rb->add_tab("Home");
+		home->add_group("File")->add_large("A", "New");
+		ui.add_child(rb);
+
+		auto frame = [&](float dt)
+		{
+			ui.process_ui(dt);
+			FrameGraph::Graph graph;
+			ui.create_graph(graph);
+		};
+		for (int i = 0; i < 10; i++)
+			frame(0.03f);
+
+		// Buttons are 46 px wide at the default metrics; close is the outermost.
+		ASSERT_TRUE(ui.hit_test_window(vec2(W - 23.0f, 14.0f)) == window_hit::close);
+		ASSERT_TRUE(ui.hit_test_window(vec2(W - 46.0f - 23.0f, 14.0f)) == window_hit::maximize);
+		ASSERT_TRUE(ui.hit_test_window(vec2(W - 92.0f - 23.0f, 14.0f)) == window_hit::minimize);
+
+		ASSERT_TRUE(ui.hit_test_window(vec2(W * 0.5f, 14.0f)) == window_hit::caption);   // empty tab bar: drag the window
+		ASSERT_TRUE(ui.hit_test_window(vec2(18.0f, 14.0f)) == window_hit::caption);      // the app icon is part of the title bar
+		ASSERT_TRUE(ui.hit_test_window(vec2(70.0f, 14.0f)) == window_hit::client);       // a tab title is a click
+		ASSERT_TRUE(ui.hit_test_window(vec2(W - 138.0f - 14.0f, 14.0f)) == window_hit::client);   // the collapse button too
+		ASSERT_TRUE(ui.hit_test_window(vec2(300.0f, 28.0f + 40.0f)) == window_hit::client);       // the strip
+		ASSERT_TRUE(ui.hit_test_window(vec2(300.0f, 400.0f)) == window_hit::client);              // below the ribbon
+
+		// Clicking a window button runs the command; the same pointer events the window forwards.
+		const vec2 close_at(W - 23.0f, 14.0f);
+		ui.mouse_move_event_internal(close_at);
+		frame(0.016f);
+		ui.mouse_action_event_internal(mouse_action::DOWN, mouse_button::LEFT, close_at);
+		frame(0.016f);
+		ui.mouse_action_event_internal(mouse_action::UP, mouse_button::LEFT, close_at);
+		frame(0.016f);
+		ASSERT_TRUE(commands.size() == 1 && commands[0] == window_command::close);
+
+		// Without window controls the tab bar is plain UI again.
+		rb->set_window_controls(false);
+		for (int i = 0; i < 5; i++)
+			frame(0.03f);
+		ASSERT_TRUE(ui.hit_test_window(vec2(W * 0.5f, 14.0f)) == window_hit::client);
+	}
+
 	class gui_test_node : public ::tree<gui_test_node, my_unique_vector<std::shared_ptr<gui_test_node>>>
 	{
 		std::wstring name;

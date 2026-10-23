@@ -4,6 +4,7 @@ import :Label;
 import :MenuList;
 import :ColoredRect;
 import :Button;
+import :VectorIcon;
 
 export namespace GUI
 {
@@ -227,6 +228,27 @@ export namespace GUI
                 float      last_click = -10.0f;    // clock at the last click
         };
 
+        // One of the title bar's window buttons (minimise, maximise / restore, close): a
+        // vector icon on a hover colour. It tags itself for the window frame's hit test
+        // (window_region), and a click runs the UI's window_command_handler.
+        class ribbon_caption_button : public base
+        {
+            public:
+                using ptr = s_ptr<ribbon_caption_button>;
+
+                ribbon_caption_button(window_command command, float width, float height);
+                void set_button_size(float width, float height);
+
+                virtual void on_pre_render(Context& c) override;
+                virtual void draw(Context& c) override;
+                virtual bool on_mouse_action(mouse_action action, mouse_button button, vec2 pos) override;
+
+            private:
+                window_command   command;
+                vector_icon::ptr icon;
+                std::string      shown_icon;
+        };
+
         // Tab bar plus the strip of the selected tab. Switching tabs fades and slides
         // the new strip in; the strip can be minimised to just the bar.
         class ribbon : public base
@@ -263,6 +285,15 @@ export namespace GUI
                 void set_touch_mode(bool value);
                 bool is_touch_mode() const { return touch_mode; }
 
+                // For a window that draws its own title bar (the platform's custom frame):
+                // the tab bar becomes the caption (drag it, double click maximises) and gets
+                // minimise / maximise / close buttons at its right end, driven by the UI's
+                // window_command_handler. The title sits left of the collapse button.
+                void set_window_controls(bool enable);
+                void set_window_title(std::string title);
+                // A vector icon (by name) at the left end of the tab bar, before the tabs.
+                void set_window_icon(std::string icon_name);
+
                 virtual void think(float dt) override;
                 virtual void on_pre_render(Context& c) override;
                 virtual void draw_after(Context& c) override;
@@ -296,6 +327,15 @@ export namespace GUI
                 // The width and content the pages were last fitted for.
                 float              fitted_width = -1.0f;
                 int                fitted_signature = -1;
+
+                bool                                   window_controls = false;
+                std::vector<ribbon_caption_button::ptr> caption_buttons;   // close, maximise, minimise
+                label::ptr                             title_label;
+                base::ptr                              title_holder;   // the full height of the bar, so the text can centre in it
+                void fit_title();
+                vector_icon::ptr                       window_icon;
+                void rebuild_bar_right();
+                void rebuild_bar_left();
 
                 // While minimised the strip lives in this popup instead of the ribbon.
                 menu_list::ptr     strip_popup;
