@@ -27,6 +27,7 @@ export namespace Table
 			uint channelMask;
 			int2 cursor;
 			uint flags;
+			float exposure;
 			HLSL::RWTexture2D<float4> target;
 			HLSL::RWStructuredBuffer<uint> stats;
 			HLSL::RWTexture2D<float4>& GetTarget() { return target; }
@@ -38,6 +39,7 @@ export namespace Table
 			uint& GetChannelMask() { return channelMask; }
 			int2& GetCursor() { return cursor; }
 			uint& GetFlags() { return flags; }
+			float& GetExposure() { return exposure; }
 			HLSL::RWStructuredBuffer<uint>& GetStats() { return stats; }
 			static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 			template<class Compiler>
@@ -51,6 +53,7 @@ export namespace Table
 				compiler.compile(channelMask, "FrameGraph_Debug_Common::channelMask");
 				compiler.compile(cursor, "FrameGraph_Debug_Common::cursor");
 				compiler.compile(flags, "FrameGraph_Debug_Common::flags");
+				compiler.compile(exposure, "FrameGraph_Debug_Common::exposure");
 				compiler.compile(target, "FrameGraph_Debug_Common::target");
 				compiler.compile_auto(stats, "FrameGraph_Debug_Common::stats");
 			}
@@ -64,6 +67,7 @@ export namespace Table
 				uint channelMask; // uint
 				int2 cursor; // int2
 				uint flags; // uint
+				float exposure; // float
 				uint target; // RWTexture2D<float4>
 				uint stats; // RWStructuredBuffer<uint>
 
@@ -79,6 +83,7 @@ export namespace Table
 					ar& NVP(channelMask);
 					ar& NVP(cursor);
 					ar& NVP(flags);
+					ar& NVP(exposure);
 				}
 
 
@@ -99,6 +104,7 @@ export namespace Table
 				ar& NVP(channelMask);
 				ar& NVP(cursor);
 				ar& NVP(flags);
+				ar& NVP(exposure);
 			}
 
 		};

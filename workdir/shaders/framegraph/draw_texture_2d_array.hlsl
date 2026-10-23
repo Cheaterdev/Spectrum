@@ -34,8 +34,12 @@ void CS(uint2 dispatch_thread_id : SV_DispatchThreadID)
             : GetFrameGraph_Debug_Texture2DArray().GetSource().SampleLevel(linearSampler, float3(tc, arrayIndex), mip);
 
         pick_store(dispatch_thread_id, val, texel, true);
-        color = pow(apply_channels(val, GetFrameGraph_Debug_Common().GetChannelMask()), 1.0 / 2.2);
+
+        const uint flags = GetFrameGraph_Debug_Common().GetFlags();
+        color = display_color(val, GetFrameGraph_Debug_Common().GetChannelMask(), flags, GetFrameGraph_Debug_Common().GetExposure());
+        if (flags & FLAG_CHECKER)
+            color = over_checker(color, val.a, dispatch_thread_id);
     }
 
-    GetFrameGraph_Debug_Common().GetTarget()[dispatch_thread_id] = float4(draw_histogram_overlay(color, dispatch_thread_id), 1);
+    GetFrameGraph_Debug_Common().GetTarget()[dispatch_thread_id] = float4(color, 1);
 }

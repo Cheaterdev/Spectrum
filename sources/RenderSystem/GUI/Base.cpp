@@ -15,20 +15,6 @@ import TextEngine;
 
 using namespace FrameGraph;
 
-// TEMP-POPUPLOG: scratch logging for "popups don't close on an outside click".
-// Appends to popup_log.temp (gitignored) in the working directory; remove with the
-// other TEMP-POPUPLOG marks (Base.cpp, MenuList.cpp, Ribbon.cpp) once it is solved.
-namespace
-{
-    void popup_log(const std::string& line)
-    {
-        static std::mutex log_mutex;
-        std::lock_guard<std::mutex> guard(log_mutex);
-        std::ofstream out("popup_log.temp", std::ios::app);
-        out << line << "\n";
-    }
-}
-
 static const LPCTSTR cursors[] =
 {
     IDC_ARROW,
@@ -1931,12 +1917,16 @@ namespace GUI
             if (action == mouse_action::DOWN)
             {
                 if (press_interpret[i_button])
-                {
-                    popup_log("DOWN ignored: a press was already interpreted this frame");   // TEMP-POPUPLOG
                     return;
-                }
 
                 press_interpret[i_button] = true;
+
+                // A mouse press is a "key" of -1 to the key hooks (the ribbon leaves its Alt
+                // key tips on it); what they answer doesn't matter here.
+                const auto hooks = key_hooks;
+                for (auto& hook : hooks)
+                    if (hook.first.lock())
+                        hook.second(key_action::DOWN, -1, key_mods());
             }
 
             if (action == mouse_action::UP)
@@ -1975,22 +1965,11 @@ namespace GUI
             if (m_focus)
                 controls.push_back(m_focus);
 
-            if (action == mouse_action::DOWN)   // TEMP-POPUPLOG
-            {
-                std::string line = "DOWN at (" + std::to_string(int(pos.x)) + "," + std::to_string(int(pos.y)) + ") controls=" + std::to_string(controls.size()) + " [";
-                for (auto& c : controls)
-                    line += std::string(typeid(*c).name()) + (c->is_menu_component() ? "(menu) " : " ");
-                popup_log(line + "] ui children=" + std::to_string(childs.size()));
-            }
-
             if (controls.size() == 0)
             {
                 // A press on nothing clickable still dismisses open menus and popups.
                 if (action == mouse_action::DOWN)
-                {
-                    popup_log("  no controls: close_menus()");   // TEMP-POPUPLOG
                     close_menus();
-                }
 
                 return;
             }
@@ -2006,28 +1985,17 @@ namespace GUI
                     base::ptr control = controls[i];
                     pressed[i_button].push_back(control);
 
-                    const bool took_it = control->on_mouse_action(action, button, pos);
-                    popup_log("  " + std::string(typeid(*control).name()) + " on_mouse_action -> " + (took_it ? "handled" : "not handled"));   // TEMP-POPUPLOG
-
-                    if (!took_it)
+                    if (!control->on_mouse_action(action, button, pos))
                         continue;
 
                     if (!control->is_menu_component())
-                    {
-                        popup_log("  not a menu component: close_menus()");   // TEMP-POPUPLOG
-                        close_menus();
-                    }
-                    else
-                        popup_log("  menu component: menus stay");   // TEMP-POPUPLOG
+                         close_menus();
                     control->on_touch();
                     cursor = control->update_cursor();
                     drag.mouse_action_event(control, action, button, pos);
                     handled = control;
                     break;
                 }
-
-                if (!handled)
-                    popup_log("  nobody handled the press (no close)");   // TEMP-POPUPLOG
 
                 // A press anywhere else takes keyboard focus away: only fields
                 // call focus(), so clicking a button or empty space used to
@@ -2192,8 +2160,27 @@ namespace GUI
         if (frame_gen)
             frame_generators.insert(frame_gen);
     }
+	void user_interface::add_key_hook(base::ptr owner, key_hook_fn hook)
+	{
+		for (auto& existing : key_hooks)
+			if (existing.first.lock() == owner)
+			{
+				existing.second = std::move(hook);
+				return;
+			}
+
+		key_hooks.emplace_back(owner, std::move(hook));
+	}
+
 	void user_interface::key_action_event_internal(key_action action, long key, key_mods mods)
 	{
+		// A hook may change the list (a ribbon opening a menu...): walk a copy.
+		const auto hooks = key_hooks;
+
+		for (auto& hook : hooks)
+			if (hook.first.lock() && hook.second(action, key, mods))
+				return;
+
 		auto really_focused = focused.lock();
 
 		if (really_focused)
@@ -2202,6 +2189,9 @@ namespace GUI
 
 	void user_interface::char_event_internal(char32_t ch)
 	{
+		if (keys_captured)
+			return;
+
 		auto really_focused = focused.lock();
 
 		if (really_focused)

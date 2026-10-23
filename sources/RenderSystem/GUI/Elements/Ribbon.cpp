@@ -19,13 +19,40 @@ namespace
 
     constexpr int label_flags = FW1_LEFT | FW1_TOP | FW1_NOWORDWRAP;
 
-    // TEMP-POPUPLOG: see Base.cpp.
-    void popup_log(const std::string& line)
+    // One character per label for the Alt key tips: the first letter or digit of the label that
+    // nobody has taken, else any free one (so an icon-only button, with no text, still gets one).
+    std::vector<std::string> assign_tips(const std::vector<std::string>& labels)
     {
-        static std::mutex log_mutex;
-        std::lock_guard<std::mutex> guard(log_mutex);
-        std::ofstream out("popup_log.temp", std::ios::app);
-        out << line << "\n";
+        std::vector<std::string> result(labels.size());
+        std::string used;
+
+        for (size_t i = 0; i < labels.size(); i++)
+            for (char ch : labels[i])
+            {
+                if (!std::isalnum(static_cast<unsigned char>(ch)))
+                    continue;
+
+                const char upper = char(std::toupper(static_cast<unsigned char>(ch)));
+                if (used.find(upper) == std::string::npos)
+                {
+                    used += upper;
+                    result[i] = std::string(1, upper);
+                    break;
+                }
+            }
+
+        const std::string pool = "1234567890ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+        for (size_t i = 0; i < labels.size(); i++)
+            if (result[i].empty())
+                for (char ch : pool)
+                    if (used.find(ch) == std::string::npos)
+                    {
+                        used += ch;
+                        result[i] = std::string(1, ch);
+                        break;
+                    }
+
+        return result;
     }
 }
 
@@ -33,6 +60,38 @@ namespace GUI
 {
     namespace Elements
     {
+        // ---- ribbon_key_tip ----
+
+        ribbon_key_tip::ribbon_key_tip()
+        {
+            clickable = false;
+            docking   = dock::NONE;
+            width_size  = size_type::FIXED;
+            height_size = size_type::FIXED;
+
+            text_label = make_label("", 12.0f, label_flags);
+            text_label->color        = float4(0.08f, 0.08f, 0.08f, 1.0f);
+            text_label->width_size   = size_type::NONE;
+            text_label->height_size  = size_type::NONE;
+            text_label->docking      = dock::FILL;
+            text_label->magnet_text  = FW1_CENTER | FW1_VCENTER | FW1_NOWORDWRAP;
+            add_child(text_label);
+
+            size = vec2(18, 16);
+            visible = false;
+        }
+
+        void ribbon_key_tip::set_text(const std::string& text)
+        {
+            text_label->text = text;
+            size = vec2(std::max(18.0f, text_label->size.get().x + 8.0f), 16.0f);
+        }
+
+        void ribbon_key_tip::draw(Context& c)
+        {
+            c.renderer->draw_color(c, float4(0.98f, 0.80f, 0.22f, 1.0f), get_render_bounds());
+        }
+
         // ---- ribbon_button ----
 
         ribbon_button::ribbon_button(std::string icon_text, std::string label_text, size_style start_style)
@@ -105,7 +164,7 @@ namespace GUI
 
             const vec2 icon_size = icon_label->size.get();
             const vec2 text_size = text_label->size.get();
-            const float arrow    = dropdown ? 1.0f : 0.0f;
+            const float arrow    = dropdown ? (split ? 16.0f : 10.0f) : 0.0f;   // room for the arrow, UI px
 
             float height = metrics.small_button;
 
@@ -134,12 +193,12 @@ namespace GUI
             }
             else if (icon_only)
             {
-                width = std::max(metrics.small_button, icon_size.x + 12.0f + arrow * 10.0f);
+                width = std::max(metrics.small_button, icon_size.x + 12.0f + arrow);
 
                 icon_label->docking = dock::LEFT;
                 icon_label->x_type  = pos_x_type::LEFT;
                 icon_label->y_type  = pos_y_type::CENTER;
-                icon_label->margin  = { (width - icon_size.x - arrow * 10.0f) * 0.5f, 0, 0, 0 };
+                icon_label->margin  = { (width - icon_size.x - arrow) * 0.5f, 0, 0, 0 };
             }
             else
             {
@@ -154,7 +213,7 @@ namespace GUI
                 text_label->margin  = { 0, 0, 6, 0 };
 
                 width = 6.0f + (has_icon ? icon_size.x : 0.0f) + (has_icon && has_text ? 4.0f : 0.0f)
-                      + (has_text ? text_size.x + 6.0f : 6.0f) + arrow * 10.0f;
+                      + (has_text ? text_size.x + 6.0f : 6.0f) + arrow;
             }
 
             width_size  = size_type::FIXED;
@@ -162,23 +221,96 @@ namespace GUI
             size        = vec2(width, height);
         }
 
+        void ribbon_button::set_split(bool value)
+        {
+            split = value;
+            relayout();
+        }
+
+        void ribbon_button::show_key_tip(const std::string& new_tip)
+        {
+            tip_text = new_tip;
+
+            if (!tip && tip_text.empty())
+                return;
+
+            if (!tip)
+            {
+                tip = std::make_shared<ribbon_key_tip>();
+                add_child(tip);
+            }
+
+            tip->visible = !tip_text.empty();
+            tip->set_text(tip_text);
+
+            // Under the middle of the button (a little in from the bottom on a small one).
+            const vec2 tip_size = tip->size.get();
+            tip->pos = vec2((size->x - tip_size.x) * 0.5f, size->y - tip_size.y - 2.0f);
+        }
+
+        // The two parts of a split button: a large one has the icon area on top and the
+        // text-and-arrow area below it; a small one the label on the left and a strip on the right.
+        rect ribbon_button::arrow_zone()
+        {
+            const rect b = get_render_bounds();
+            const float s = result_scale;
+
+            if (style == size_style::large)
+            {
+                const rect icon_bounds = icon_label->get_render_bounds();
+                const float line = std::min(std::max(icon_bounds.y + icon_bounds.h + 2.0f * s, b.y + b.h * 0.4f), b.y + b.h * 0.8f);
+                return rect(b.x, line, b.w, b.y + b.h - line);
+            }
+
+            return rect(b.x + b.w - 16.0f * s, b.y, 16.0f * s, b.h);
+        }
+
+        rect ribbon_button::main_zone()
+        {
+            const rect b = get_render_bounds();
+            const rect a = arrow_zone();
+
+            if (style == size_style::large)
+                return rect(b.x, b.y, b.w, a.y - b.y);
+
+            return rect(b.x, b.y, a.x - b.x, b.h);
+        }
+
+        void ribbon_button::toggle_dropdown()
+        {
+            if (!dropdown)
+                return;
+
+            // The press that got here has already closed an open menu (it is
+            // fading out), so an open one means: this click closes it.
+            if (dropdown->is_self_open())
+            {
+                dropdown->self_close();
+                return;
+            }
+
+            const rect b = get_render_bounds();
+
+            // As wide as the button it drops from, like a combo box's list. (Not for a popup that
+            // holds a whole group: that one takes the width of what it holds.)
+            if (dropdown_matches_width)
+            {
+                dropdown->make_fixed_width();
+                dropdown->docking    = dock::NONE;
+                dropdown->width_size = size_type::FIXED;
+                dropdown->size       = vec2(b.w / std::max(result_scale, 0.001f), dropdown->size->y);
+            }
+
+            dropdown->pos = vec2(b.x, b.y + b.h);
+            dropdown->self_open(user_ui);
+        }
+
         void ribbon_button::activate()
         {
-            popup_log("ribbon_button::activate '" + text + "' dropdown=" + std::to_string(dropdown != nullptr) + (dropdown ? " open=" + std::to_string(dropdown->is_self_open()) : std::string()));   // TEMP-POPUPLOG
-
-            if (dropdown)
+            // A menu-only button: the click is the menu. A split button's click is the main action.
+            if (dropdown && !split)
             {
-                // The press that got here has already closed an open menu (it is
-                // fading out), so an open one means: this click closes it.
-                if (dropdown->is_self_open())
-                {
-                    dropdown->self_close();
-                    return;
-                }
-
-                const rect b = get_render_bounds();
-                dropdown->pos = vec2(b.x, b.y + b.h);
-                dropdown->self_open(user_ui);
+                toggle_dropdown();
                 return;
             }
 
@@ -211,12 +343,36 @@ namespace GUI
         {
             const rect b = get_render_bounds();
 
+            if (key_focused)
+            {
+                // A ring in the tip colour: four thin bars just inside the edge.
+                const float t = 2.0f * c.scale;
+                const float4 ring = float4(0.98f, 0.80f, 0.22f, 1.0f);
+                c.renderer->draw_color(c, ring, rect(b.x, b.y, b.w, t));
+                c.renderer->draw_color(c, ring, rect(b.x, b.y + b.h - t, b.w, t));
+                c.renderer->draw_color(c, ring, rect(b.x, b.y, t, b.h));
+                c.renderer->draw_color(c, ring, rect(b.x + b.w - t, b.y, t, b.h));
+            }
+
             if (enabled_now)
             {
                 if (checked_now)
                     c.renderer->draw_color(c, float4(0.21f, 0.45f, 0.79f, 0.45f), b);
 
-                if (is_pressed())
+                if (split && (is_pressed() || is_hovered()))
+                {
+                    // Only the part under the pointer lights up, with a hairline between the two.
+                    const bool on_arrow = is_pressed() ? arrow_pressed : arrow_hovered;
+                    const rect part = on_arrow ? arrow_zone() : main_zone();
+                    c.renderer->draw_color(c, float4(1, 1, 1, is_pressed() ? 0.14f : 0.07f), part);
+
+                    const rect a = arrow_zone();
+                    if (style == size_style::large)
+                        c.renderer->draw_color(c, float4(1, 1, 1, 0.18f), rect(a.x + 4.0f * c.scale, a.y, a.w - 8.0f * c.scale, c.scale));
+                    else
+                        c.renderer->draw_color(c, float4(1, 1, 1, 0.18f), rect(a.x, a.y + 4.0f * c.scale, c.scale, a.h - 8.0f * c.scale));
+                }
+                else if (is_pressed())
                     c.renderer->draw_color(c, float4(1, 1, 1, 0.14f), b);
                 else if (is_hovered())
                     c.renderer->draw_color(c, float4(1, 1, 1, 0.07f), b);
@@ -239,12 +395,38 @@ namespace GUI
             }
         }
 
+        bool ribbon_button::on_mouse_move(vec2 pos)
+        {
+            if (split)
+            {
+                const rect a = arrow_zone();
+                arrow_hovered = pos.x >= a.x && pos.x < a.x + a.w && pos.y >= a.y && pos.y < a.y + a.h;
+            }
+
+            return base::on_mouse_move(pos);
+        }
+
         bool ribbon_button::on_mouse_action(mouse_action action, mouse_button button, vec2 pos)
         {
             base::on_mouse_action(action, button, pos);
 
-            if (button == mouse_button::LEFT && action == mouse_action::UP && enabled_now)
-                activate();
+            if (button != mouse_button::LEFT)
+                return true;
+
+            if (split && action == mouse_action::DOWN)
+            {
+                const rect a = arrow_zone();
+                arrow_pressed = pos.x >= a.x && pos.x < a.x + a.w && pos.y >= a.y && pos.y < a.y + a.h;
+            }
+
+            if (action == mouse_action::UP && enabled_now)
+            {
+                // A split button: the arrow part opens the menu, the rest is the main action.
+                if (split && arrow_pressed)
+                    toggle_dropdown();
+                else
+                    activate();
+            }
 
             return true;
         }
@@ -252,9 +434,9 @@ namespace GUI
         bool ribbon_button::on_long_pressed(const touch&)
         {
             // No hover on a phone: a long press says what the button does.
-            const std::string tip = !tooltip.empty() ? tooltip : text;
-            if (!tip.empty())
-                toast_manager::show(tip, toast_kind::info, 2.0f);
+            const std::string to_show = !tooltip.empty() ? tooltip : text;
+            if (!to_show.empty())
+                toast_manager::show(to_show, toast_kind::info, 2.0f);
             return true;
         }
 
@@ -296,13 +478,15 @@ namespace GUI
             rebuild();
         }
 
-        ribbon_button::ptr ribbon_group::add_large(std::string icon, std::string text, std::function<void()> on_click, menu_list::ptr dropdown)
+        ribbon_button::ptr ribbon_group::add_large(std::string icon, std::string text, std::function<void()> on_click, menu_list::ptr dropdown, bool split)
         {
             auto b = std::make_shared<ribbon_button>(std::move(icon), std::move(text), ribbon_button::size_style::large);
             b->set_metrics(metrics);
             if (dropdown)
                 b->set_dropdown(std::move(dropdown));
             b->on_click = std::move(on_click);
+            if (split)
+                b->set_split(true);
 
             entry e;
             e.button   = b;
@@ -311,13 +495,15 @@ namespace GUI
             return b;
         }
 
-        ribbon_button::ptr ribbon_group::add_small(std::string icon, std::string text, std::function<void()> on_click, menu_list::ptr dropdown)
+        ribbon_button::ptr ribbon_group::add_small(std::string icon, std::string text, std::function<void()> on_click, menu_list::ptr dropdown, bool split)
         {
             auto b = std::make_shared<ribbon_button>(std::move(icon), std::move(text), ribbon_button::size_style::small);
             b->set_metrics(metrics);
             if (dropdown)
                 b->set_dropdown(std::move(dropdown));
             b->on_click = std::move(on_click);
+            if (split)
+                b->set_split(true);
 
             entry e;
             e.button   = b;
@@ -460,6 +646,23 @@ namespace GUI
             }
         }
 
+        std::vector<ribbon_button::ptr> ribbon_group::key_targets() const
+        {
+            std::vector<ribbon_button::ptr> result;
+
+            if (level >= max_level && collapsed_button)
+            {
+                result.push_back(collapsed_button);
+                return result;
+            }
+
+            for (auto& e : entries)
+                if (e.button)
+                    result.push_back(e.button);
+
+            return result;
+        }
+
         float ribbon_group::measure_width()
         {
             if (level >= max_level && collapsed_button)
@@ -506,6 +709,7 @@ namespace GUI
                     collapsed_button = std::make_shared<ribbon_button>(glyph, title, ribbon_button::size_style::large);
                     collapsed_button->set_metrics(metrics);
                     collapsed_button->set_dropdown(popup);
+                    collapsed_button->set_dropdown_matches_width(false);   // it holds the group at its own width
                     collapsed_button->docking = dock::LEFT;
                     add_child(collapsed_button);
                 }
@@ -556,7 +760,9 @@ namespace GUI
         ribbon_page::ribbon_page(const ribbon_metrics& start_metrics)
             : metrics(start_metrics)
         {
-            clickable = false;
+            // Clickable so the strip gets the mouse wheel (it scrolls when it overflows) and a
+            // press on an empty part of it counts as a click (which closes open menus).
+            clickable = true;
             docking   = dock::FILL;
             padding   = { 4, 0, 4, 0 };
         }
@@ -580,7 +786,69 @@ namespace GUI
             auto group = std::make_shared<ribbon_group>(std::move(title), metrics);
             add_child(group);
             groups.push_back(group);
+
+            // The touch layer stays the last child, so it is the first to see a finger.
+            if (!touch_layer)
+            {
+                touch_layer = std::make_shared<ribbon_touch_scroll>(this);
+                touch_layer->docking     = dock::PARENT;
+                touch_layer->width_size  = size_type::MATCH_PARENT;
+                touch_layer->height_size = size_type::MATCH_PARENT;
+            }
+            else
+                remove_child(touch_layer);
+
+            add_child(touch_layer);
             return group;
+        }
+
+        // ---- ribbon_touch_scroll ----
+
+        ribbon_touch_scroll::ribbon_touch_scroll(ribbon_page* page)
+            : owner(page)
+        {
+            clickable = true;
+        }
+
+        bool ribbon_touch_scroll::on_touch_action(mouse_action action, touch& t)
+        {
+            if (action == mouse_action::DOWN)
+                poses[t.id] = t.pos;
+            else
+                poses.erase(t.id);
+
+            if (action != mouse_action::DOWN)
+                dragging = false;
+
+            return false;   // the buttons below still get their tap
+        }
+
+        void ribbon_touch_scroll::on_touch_move(std::vector<touch*>& fingers)
+        {
+            if (fingers.empty() || owner->get_max_scroll() <= 0.0f)
+                return;
+
+            touch* finger = fingers[0];
+            const float scale = std::max(result_scale, 0.001f);
+
+            if (!dragging)
+            {
+                // Past the slop radius it is a drag, and the finger is ours.
+                if ((finger->pos - poses[finger->id]).length() > 8.0f * scale)
+                {
+                    dragging = true;
+                    poses[finger->id] = finger->pos;
+                    finger->catched = true;
+                }
+                return;
+            }
+
+            const vec2 delta = (finger->pos - poses[finger->id]) / scale;
+            poses[finger->id] = finger->pos;
+            finger->catched = true;
+
+            // Dragging the strip to the left shows what is to the right.
+            owner->scroll_to(owner->get_scroll() - delta.x);
         }
 
         void ribbon_page::set_metrics(const ribbon_metrics& new_metrics)
@@ -613,12 +881,100 @@ namespace GUI
                 for (auto& g : groups)
                     g->set_level(0);
 
-            // Round by round: first every group that has to goes one level down, right to
-            // left, stopping as soon as it fits; then another level, and so on.
+            // Lowest priority first; among equals the right-most.
+            std::vector<int> order(groups.size());
+            for (size_t i = 0; i < order.size(); i++)
+                order[i] = int(i);
+
+            std::stable_sort(order.begin(), order.end(), [&](int a, int b)
+            {
+                if (groups[a]->get_priority() != groups[b]->get_priority())
+                    return groups[a]->get_priority() < groups[b]->get_priority();
+                return a > b;
+            });
+
+            // Round by round: first every group that has to goes one level down, in that
+            // order, stopping as soon as it fits; then another level, and so on.
             for (int target = 1; target <= ribbon_group::max_level && measure_total() > available; target++)
-                for (int i = int(groups.size()) - 1; i >= 0 && measure_total() > available; i--)
+                for (int i : order)
+                {
+                    if (measure_total() <= available)
+                        break;
+
                     if (groups[i]->get_level() < target)
                         groups[i]->set_level(target);
+                }
+
+            // What still doesn't fit scrolls.
+            max_scroll = std::max(0.0f, measure_total() - available);
+            scroll_to(scroll);
+        }
+
+        void ribbon_page::scroll_to(float value)
+        {
+            scroll = std::clamp(value, 0.0f, max_scroll);
+
+            // The first group's left margin carries the scroll: everything after it follows,
+            // and the page clips what is pushed out of view.
+            if (!groups.empty())
+                groups[0]->margin = { 2.0f - scroll, 3, 2, 3 };
+        }
+
+        bool ribbon_page::on_wheel(mouse_wheel type, float value, vec2 pos)
+        {
+            if (max_scroll <= 0.0f)
+                return false;
+
+            scroll_to(scroll - value * 48.0f);
+            return true;
+        }
+
+        bool ribbon_page::on_mouse_action(mouse_action action, mouse_button button, vec2 pos)
+        {
+            base::on_mouse_action(action, button, pos);
+
+            // A click on the faded edge scrolls a step that way.
+            if (button == mouse_button::LEFT && action == mouse_action::UP && max_scroll > 0.0f)
+            {
+                const rect b = get_render_bounds();
+                const float edge = 28.0f * result_scale;
+
+                if (scroll > 0.0f && pos.x < b.x + edge)
+                    scroll_to(scroll - 160.0f);
+                else if (scroll < max_scroll && pos.x > b.x + b.w - edge)
+                    scroll_to(scroll + 160.0f);
+            }
+
+            return true;
+        }
+
+        void ribbon_page::draw_after(Context& c)
+        {
+            if (max_scroll <= 0.0f)
+                return;
+
+            // A fade at the edge where more is hidden, in the ribbon's colour.
+            const rect b = get_render_bounds();
+            const float edge = 28.0f * c.scale;
+            const float4 solid = float4(0.10f, 0.11f, 0.15f, 0.95f);
+            const float4 clear = float4(0.10f, 0.11f, 0.15f, 0.0f);
+
+            if (scroll > 0.0f)
+                c.renderer->draw_color(c, solid, clear, rect(b.x, b.y, edge, b.h));
+
+            if (scroll < max_scroll)
+                c.renderer->draw_color(c, clear, solid, rect(b.x + b.w - edge, b.y, edge, b.h));
+        }
+
+        std::vector<ribbon_button::ptr> ribbon_page::key_targets() const
+        {
+            std::vector<ribbon_button::ptr> result;
+
+            for (auto& g : groups)
+                for (auto& b : g->key_targets())
+                    result.push_back(b);
+
+            return result;
         }
 
         int ribbon_page::content_signature() const
@@ -662,6 +1018,27 @@ namespace GUI
             base::on_pre_render(c);
             clock += c.delta_time;
             text_label->color = selected ? float4(1, 1, 1, 1) : float4(1, 1, 1, 0.72f);
+        }
+
+        void ribbon_tab_header::show_key_tip(const std::string& new_tip)
+        {
+            tip_text = new_tip;
+
+            if (!tip && tip_text.empty())
+                return;
+
+            if (!tip)
+            {
+                tip = std::make_shared<ribbon_key_tip>();
+                add_child(tip);
+            }
+
+            tip->visible = !tip_text.empty();
+            tip->set_text(tip_text);
+
+            // Under the middle of the title, in the lower half of the bar.
+            const vec2 tip_size = tip->size.get();
+            tip->pos = vec2((size->x - tip_size.x) * 0.5f, size->y - tip_size.y - 1.0f);
         }
 
         void ribbon_tab_header::draw(Context& c)
@@ -834,6 +1211,7 @@ namespace GUI
         ribbon_page::ptr ribbon::add_tab(std::string title, bool contextual, float4 accent)
         {
             tab_info t;
+            t.title = title;
             t.header = std::make_shared<ribbon_tab_header>(title, metrics);
             if (contextual)
                 t.header->accent = accent;
@@ -1161,6 +1539,240 @@ namespace GUI
 
             for (auto& t : tabs)
                 t.page->fit(available, reset);
+        }
+
+        void ribbon::on_add(base* parent)
+        {
+            base::on_add(parent);
+
+            // The keyboard reaches the ribbon through the UI's key hooks, focus or not.
+            if (parent && user_ui)
+                user_ui->add_key_hook(get_ptr(), [this](key_action action, long key, key_mods mods) { return on_key(action, key, mods); });
+        }
+
+        // Windows virtual-key codes: letters and digits are their ASCII codes.
+        bool ribbon::on_key(key_action action, long key, key_mods mods)
+        {
+            constexpr long vk_return = 0x0D, vk_menu = 0x12, vk_escape = 0x1B, vk_space = 0x20,
+                           vk_left = 0x25, vk_up = 0x26, vk_right = 0x27, vk_down = 0x28;
+
+            // A mouse press: the keyboard is not in charge any more.
+            if (key == -1)
+            {
+                if (key_level > 0)
+                    leave_key_mode();
+                return false;
+            }
+
+            if (key == vk_menu)
+            {
+                if (action == key_action::DOWN)
+                {
+                    if (!alt_down)
+                    {
+                        alt_down = true;
+                        alt_used = false;
+                    }
+                    return true;
+                }
+
+                // Alt let go without another key in between: a tap.
+                const bool tap = alt_down && !alt_used;
+                alt_down = false;
+
+                if (tap)
+                {
+                    if (key_level > 0)
+                        leave_key_mode();
+                    else
+                        enter_key_mode();
+                }
+                return true;
+            }
+
+            if (action == key_action::DOWN && alt_down)
+                alt_used = true;
+
+            if (key_level == 0)
+                return false;
+
+            if (action != key_action::DOWN)
+                return true;
+
+            if (key == vk_escape)
+            {
+                if (key_level == 2)
+                {
+                    key_level = 1;
+                    show_tab_tips();
+                }
+                else
+                {
+                    // Out; a strip that was peeking out of a minimised ribbon goes with it.
+                    if (minimized && strip_popup && strip_popup->is_self_open())
+                        strip_popup->self_close();
+                    leave_key_mode();
+                }
+                return true;
+            }
+
+            // Over the tab titles: Left / Right change tab, Down or Enter go into the strip.
+            if (key_level == 1)
+            {
+                if (key == vk_left || key == vk_right)
+                {
+                    const int step = key == vk_right ? 1 : -1;
+                    for (int i = current + step; i >= 0 && i < int(tabs.size()); i += step)
+                        if (tabs[i].visible)
+                        {
+                            select(i);
+                            if (minimized)
+                                open_strip();
+                            break;
+                        }
+                    return true;
+                }
+
+                if ((key == vk_down || key == vk_return) && current >= 0)
+                {
+                    if (minimized)
+                        open_strip();
+                    key_level = 2;
+                    key_focus = 0;
+                    show_button_tips();
+                    return true;
+                }
+            }
+
+            // In the strip: the arrows move a focus ring over the buttons in order (a column
+            // top to bottom, then the next one), Enter or Space runs the focused one.
+            if (key_level == 2 && current >= 0)
+            {
+                const auto targets = tabs[current].page->key_targets();
+
+                if (key == vk_left || key == vk_right || key == vk_up || key == vk_down)
+                {
+                    const int step = (key == vk_right || key == vk_down) ? 1 : -1;
+                    key_focus = std::clamp(key_focus + step, 0, std::max(0, int(targets.size()) - 1));
+                    for (int i = 0; i < int(targets.size()); i++)
+                        targets[i]->set_key_focus(i == key_focus);
+                    return true;
+                }
+
+                if ((key == vk_return || key == vk_space) && key_focus >= 0 && key_focus < int(targets.size()))
+                {
+                    auto focused_button = targets[key_focus];
+                    leave_key_mode();
+                    focused_button->activate();
+                    return true;
+                }
+            }
+
+            const bool typable = (key >= '0' && key <= '9') || (key >= 'A' && key <= 'Z');
+            if (typable)
+            {
+                const std::string typed(1, char(key));
+
+                if (key_level == 1)
+                {
+                    for (int i = 0; i < int(tabs.size()); i++)
+                        if (tabs[i].visible && tabs[i].header->get_key_tip() == typed)
+                        {
+                            select(i);
+                            if (minimized)
+                                open_strip();
+                            key_level = 2;
+                            show_button_tips();
+                            return true;
+                        }
+                }
+                else if (current >= 0)
+                {
+                    for (auto& b : tabs[current].page->key_targets())
+                        if (b->get_key_tip() == typed)
+                        {
+                            leave_key_mode();
+                            b->activate();
+                            return true;
+                        }
+                }
+            }
+
+            // Anything else ends it.
+            leave_key_mode();
+            return true;
+        }
+
+        void ribbon::enter_key_mode()
+        {
+            key_level = 1;
+
+            if (user_ui)
+                user_ui->keys_captured = true;
+
+            show_tab_tips();
+        }
+
+        void ribbon::leave_key_mode()
+        {
+            key_level = 0;
+            key_focus = -1;
+
+            if (user_ui)
+                user_ui->keys_captured = false;
+
+            hide_all_tips();
+        }
+
+        void ribbon::show_tab_tips()
+        {
+            hide_all_tips();
+
+            std::vector<std::string> titles;
+            std::vector<int> indices;
+            for (int i = 0; i < int(tabs.size()); i++)
+                if (tabs[i].visible)
+                {
+                    titles.push_back(tabs[i].title);
+                    indices.push_back(i);
+                }
+
+            const auto tips = assign_tips(titles);
+            for (size_t k = 0; k < indices.size(); k++)
+                tabs[indices[k]].header->show_key_tip(tips[k]);
+        }
+
+        void ribbon::show_button_tips()
+        {
+            hide_all_tips();
+
+            if (current < 0)
+                return;
+
+            const auto targets = tabs[current].page->key_targets();
+            std::vector<std::string> labels;
+            for (auto& b : targets)
+                labels.push_back(b->get_text());
+
+            const auto tips = assign_tips(labels);
+            for (size_t k = 0; k < targets.size(); k++)
+            {
+                targets[k]->show_key_tip(tips[k]);
+                targets[k]->set_key_focus(int(k) == key_focus);
+            }
+        }
+
+        void ribbon::hide_all_tips()
+        {
+            for (auto& t : tabs)
+            {
+                t.header->show_key_tip("");
+                for (auto& b : t.page->key_targets())
+                {
+                    b->show_key_tip("");
+                    b->set_key_focus(false);
+                }
+            }
         }
 
         void ribbon::think(float dt)

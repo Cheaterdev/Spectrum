@@ -46,6 +46,20 @@ public:
 	virtual void draw(Context& c) override;
 };
 
+// Log-scaled histogram of the previewed texture, one set of bars per enabled channel. Fed from the GPU histogram
+// pass (bins in stats.hlsli order: 4 channels x 256), drawn in the preview's Stats tab.
+export class histogram_view : public GUI::base
+{
+public:
+	using ptr = std::shared_ptr<histogram_view>;
+
+	std::vector<uint> bins = std::vector<uint>(4 * 256, 0u);
+	uint total        = 0;     // samples that went into the bins
+	uint channel_mask = 0xF;   // bit 0..3 = R,G,B,A, same as the preview's channel tick boxes
+
+	virtual void draw(Context& c) override;
+};
+
 export class resource_preview : public GUI::base
 {
 	GUI::Elements::image::ptr                                       m_img;
@@ -91,18 +105,44 @@ export class resource_preview : public GUI::base
 	// Pixel under the cursor, in preview-image pixels (-1 = cursor is elsewhere): UI thread writes, render thread reads.
 	volatile int m_cursor_x = -1;
 	volatile int m_cursor_y = -1;
-	volatile int m_show_histogram = 0;
 
 	// Which toolbar tools apply depends on the resource: R/G/B/A need a shader that honours the channel mask
-	// (2D, 2D-array, cube); Reset, the histogram and the pixel readout need the flat pan/zoom view (2D, 2D-array).
+	// (2D, 2D-array, cube); Reset, the pixel readout and the stats need the flat pan/zoom view (2D, 2D-array).
 	// Buffers and 3D volumes have neither. The tools that don't apply are hidden.
 	volatile bool m_pixel_tools = true;
-	GUI::Elements::check_box::ptr m_hist_check;
-	GUI::Elements::label::ptr     m_hist_label;
+	bool          m_pick_valid  = false;   // UI thread: the texel under the cursor is inside the texture, not the margin around it
 	GUI::Elements::check_box::ptr m_channel_check[4];
 	GUI::Elements::label::ptr     m_channel_label[4];
 	GUI::Elements::button::ptr    m_reset_btn;
+
+	// A tick box with its letters: how a tool of the second toolbar row is held so it can be hidden.
+	struct tick_tool
+	{
+		GUI::Elements::check_box::ptr box;
+		GUI::Elements::label::ptr     text;
+		void show(bool v) const { if (box) box->visible = v; if (text) text->visible = v; }
+	};
+
+	// Second toolbar row. Exposure and the linear view work for 2D, 2D-array and cube; the alpha checkerboard and
+	// the normal-map view only for 2D / 2D-array. UI thread writes, render thread reads.
+	GUI::base::ptr                 m_bar;
+	GUI::Elements::label::ptr      m_ev_label;
+	GUI::Elements::float_slider::ptr m_ev_slider;
+	tick_tool                      m_linear_tool, m_checker_tool, m_normal_tool;
+	volatile float m_exposure = 0.0f;   // stops (EV)
+	volatile int   m_linear   = 0;      // 1 = show linear values, no display gamma
+	volatile int   m_checker  = 0;      // 1 = composite over a checkerboard by alpha
+	volatile int   m_normal   = 0;      // 1 = normal-map view
+
+	// Info tab (type, size, format, ...) and Stats tab (min / max / average, from the histogram pass).
+	GUI::Elements::label::ptr m_format_lbl, m_mips_lbl, m_memory_lbl, m_flags_lbl;
+	GUI::Elements::label::ptr m_min_lbl, m_max_lbl, m_avg_lbl;
+	histogram_view::ptr       m_histogram;
+
 	void set_tools(bool channels, bool flat_view);
+
+	// The Reset button: re-fit the view and put every display setting back (exposure, linear, checker, normal view, channels).
+	void reset_view();
 
 	// Floating readout next to the cursor: texel position, values, hex and a colour swatch.
 	preview_hud::ptr          m_hud;

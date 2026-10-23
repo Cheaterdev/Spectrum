@@ -1847,7 +1847,8 @@ public:
 							auto fx = tools->add_large(emoji(u8"✨"), "Effects", [state] { state->effects = !state->effects; });
 							fx->is_checked = [state] { return state->effects; };
 							fx->tooltip = "Toggle the demo effect";
-							tools->add_large(emoji(u8"\U0001F3A8"), "Add", {}, add_menu);
+							// A split button: the icon runs the action, the arrow opens the menu.
+							tools->add_large(emoji(u8"\U0001F3A8"), "Add", say("Add"), add_menu, true);
 
 							auto view = rb->add_tab("View");
 							auto show = view->add_group("Show");
@@ -2468,14 +2469,23 @@ public:
 						scene_group->add_menu_item(find(file, "Open"), emoji(u8"\U0001F4C2"));
 						scene_group->add_menu_item(find(file, "Save"), emoji(u8"\U0001F4BE"));
 						file_tab->add_group("Import")->add_menu_item(find(file, "Import MaterialX..."), emoji(u8"\U0001F4E5"));
-						file_tab->add_group("Application")->add_menu_item(find(file, "Quit"), emoji(u8"\U0001F6AA"));
+						auto application_group = file_tab->add_group("Application");
+						application_group->add_menu_item(find(file, "Quit"), emoji(u8"\U0001F6AA"));
+
+						// When the window gets narrow the groups with the lowest priority shrink
+						// first: the scene commands stay large longest, import goes first.
+						scene_group->set_priority(3);
+						application_group->set_priority(1);
 
 						auto edit_tab = rb->add_tab("Edit");
 						edit_tab->add_group("Debug")->add_menu_item(find(edit, "Debug Graph"), emoji(u8"\U0001F41E"));
-						edit_tab->add_group("Create")->add_menu_item(find(edit, "Add smth"), emoji(u8"➕"));
+						auto create_group = edit_tab->add_group("Create");
+						create_group->add_menu_item(find(edit, "Add smth"), emoji(u8"➕"));
+						create_group->set_priority(2);
 
 						auto test_tab = rb->add_tab("Test");
 						auto editors = test_tab->add_group("Editors");
+						editors->set_priority(2);
 						editors->add_menu_item(find(test, "Editor"), emoji(u8"✏"));
 						editors->add_menu_item(find(test, "Code editor"), emoji(u8"\U0001F4BB"));
 						auto demos = test_tab->add_group("Demos");

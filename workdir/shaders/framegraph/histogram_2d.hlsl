@@ -3,15 +3,13 @@
 #include "stats.hlsli"
 
 // One thread per sample of a grid of at most HIST_MAX_GRID^2 points spread over the selected mip, so the cost
-// stays flat for big textures. resource_preview clears the stats buffer before this runs.
+// stays flat for big textures. resource_preview runs it twice: first with FLAG_CLEAR (zero the stats words), then to accumulate.
 [numthreads(8, 8, 1)]
 void CS(uint2 g : SV_DispatchThreadID)
 {
     if (GetFrameGraph_Debug_Common().GetFlags() & FLAG_CLEAR)
     {
-        uint word = g.y * 128 + g.x;
-        if (word < STATS_WORDS)
-            GetFrameGraph_Debug_Common().GetStats()[word] = 0;
+        stats_clear(g);
         return;
     }
 
@@ -26,10 +24,5 @@ void CS(uint2 g : SV_DispatchThreadID)
         GetFrameGraph_Debug_Common().GetStats()[STATS_TOTAL] = grid.x * grid.y;
 
     int2 texel = int2(g * mipSize / grid);
-    float4 v = GetFrameGraph_Debug_Texture2D().GetSource().Load(int3(texel, mip));
-
-    uint ignored;
-    [unroll]
-    for (uint c = 0; c < 4; ++c)
-        InterlockedAdd(GetFrameGraph_Debug_Common().GetStats()[STATS_HIST + c * 256 + hist_bin(v[c])], 1, ignored);
+    stats_accumulate(GetFrameGraph_Debug_Texture2D().GetSource().Load(int3(texel, mip)));
 }

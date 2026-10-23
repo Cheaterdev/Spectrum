@@ -370,6 +370,7 @@ namespace Dev
 		uint channelMask;
 		int2 cursor;
 		uint flags;
+		float exposure;   # stops (EV); 0 = unchanged, so a table that never sets it still displays correctly
 
 		# [Auto]: only resource_preview binds it (pixel pick + histogram); the timeline thumbnails never touch it.
 		[Auto = Texture_Null]

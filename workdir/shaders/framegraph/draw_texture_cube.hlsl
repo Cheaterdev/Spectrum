@@ -39,5 +39,7 @@ void CS(uint2 tid : SV_DispatchThreadID)
     float3 dir = cube_dir(face, uv);
     float4 color = GetFrameGraph_Debug_TextureCube().GetSource().SampleLevel(linearSampler, dir, GetFrameGraph_Debug_Common().GetSelectedMip());
 
-    GetFrameGraph_Debug_Common().GetTarget()[tid] = float4(pow(apply_channels(color, GetFrameGraph_Debug_Common().GetChannelMask()), 1.0 / 2.2), 1.0);
+    // Exposure and the linear view apply to cubes too; the checker and normal-map views are 2D-only tools.
+    const uint flags = GetFrameGraph_Debug_Common().GetFlags() & FLAG_LINEAR;
+    GetFrameGraph_Debug_Common().GetTarget()[tid] = float4(display_color(color, GetFrameGraph_Debug_Common().GetChannelMask(), flags, GetFrameGraph_Debug_Common().GetExposure()), 1.0);
 }

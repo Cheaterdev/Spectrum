@@ -40,11 +40,29 @@ export namespace GUI
             }
         };
 
+        // The small badge with a letter that the ribbon shows over a tab or a button while
+        // the keyboard is in charge (Alt). Positioned by the element that owns it.
+        class ribbon_key_tip : public base
+        {
+            public:
+                using ptr = s_ptr<ribbon_key_tip>;
+
+                ribbon_key_tip();
+                void set_text(const std::string& text);
+
+                virtual void draw(Context& c) override;
+
+            private:
+                label::ptr text_label;
+        };
+
         // A command in a group: an icon (a glyph or an emoji, drawn as text) and a
         // label. Large (icon over text), small (icon beside text) or icon only. Plain
         // callbacks, no registry: a button that toggles gives is_checked, one that
         // can be unavailable gives is_enabled, both asked once per frame. A drop-down
-        // makes it a menu button; the menu opens under it.
+        // makes it a menu button; the menu opens under it. A split button has both: the
+        // main part (the icon, or the left of a small one) calls on_click, the arrow part
+        // (under the icon, or the right edge) opens the menu.
         class ribbon_button : public base
         {
             public:
@@ -65,6 +83,19 @@ export namespace GUI
                 void set_style(size_style new_style);
                 size_style get_style() const { return style; }
                 void set_dropdown(menu_list::ptr menu);
+                // The drop-down is as wide as the button by default; a popup that holds
+                // something of its own width (a collapsed group) turns that off.
+                void set_dropdown_matches_width(bool value) { dropdown_matches_width = value; }
+                // Needs a drop-down and an on_click; the two halves then act separately.
+                void set_split(bool value);
+                bool is_split() const { return split; }
+
+                // The Alt key tip over the button; empty hides it.
+                void show_key_tip(const std::string& text);
+                std::string get_key_tip() const { return tip_text; }
+                // The ring drawn around the button the keyboard is on.
+                void set_key_focus(bool value) { key_focused = value; }
+                bool has_key_focus() const { return key_focused; }
                 void set_text(std::string text);
                 std::string get_text() const { return text; }
                 std::string get_icon() const { return icon_label->text.get(); }
@@ -74,10 +105,14 @@ export namespace GUI
                 float natural_width() const { return width; }
                 void  set_width(float w);
 
+                // The main action: on_click, or the menu for a button that has only a menu.
                 void activate();
+                // Opens the menu under the button, or closes it if it is open.
+                void toggle_dropdown();
 
                 virtual void on_pre_render(Context& c) override;
                 virtual void draw(Context& c) override;
+                virtual bool on_mouse_move(vec2 pos) override;
                 virtual bool on_mouse_action(mouse_action action, mouse_button button, vec2 pos) override;
                 virtual bool on_long_pressed(const touch& t) override;
 
@@ -90,7 +125,18 @@ export namespace GUI
                 bool           enabled_now = true;
                 bool           checked_now = false;
 
+                bool           split = false;
+                bool           arrow_hovered = false;   // the pointer is over the arrow part
+                bool           arrow_pressed = false;   // the press began on the arrow part
+                bool           key_focused = false;
+                bool           dropdown_matches_width = true;
+                ribbon_key_tip::ptr tip;
+                std::string    tip_text;
+
                 void relayout();
+                // The two parts of a split button, in render px.
+                rect main_zone();
+                rect arrow_zone();
         };
 
         // A captioned set of buttons laid out as columns: large buttons alone, small
@@ -108,10 +154,11 @@ export namespace GUI
 
                 ribbon_group(std::string title, const ribbon_metrics& metrics);
 
-                // With a drop-down the button opens that menu instead of calling on_click.
-                ribbon_button::ptr add_large(std::string icon, std::string text, std::function<void()> on_click = {}, menu_list::ptr dropdown = {});
+                // With a drop-down the button opens that menu instead of calling on_click,
+                // unless `split`: then on_click is the main action and the menu the arrow part.
+                ribbon_button::ptr add_large(std::string icon, std::string text, std::function<void()> on_click = {}, menu_list::ptr dropdown = {}, bool split = false);
                 // Fills the open stack; a fourth one starts the next column.
-                ribbon_button::ptr add_small(std::string icon, std::string text, std::function<void()> on_click = {}, menu_list::ptr dropdown = {});
+                ribbon_button::ptr add_small(std::string icon, std::string text, std::function<void()> on_click = {}, menu_list::ptr dropdown = {}, bool split = false);
                 ribbon_button::ptr add_icon(std::string icon, std::function<void()> on_click = {}, menu_list::ptr dropdown = {});
                 // A button for an existing menu item: it calls the item's on_click, or, when
                 // the item has a submenu, opens that as its drop-down. Lets the old menus
@@ -127,6 +174,15 @@ export namespace GUI
                 static constexpr int max_level = 3;
                 void set_level(int new_level);
                 int  get_level() const { return level; }
+
+                // When the ribbon is too narrow, the groups with the lowest priority shrink
+                // first (equal priorities: right to left). Default 0.
+                void set_priority(int value) { priority = value; }
+                int  get_priority() const { return priority; }
+
+                // What a key tip can point at: the group's buttons, or the one popup button
+                // while the group is collapsed.
+                std::vector<ribbon_button::ptr> key_targets() const;
 
                 // Width the group takes at its current level, in UI px, margins included.
                 float measure_width();
@@ -157,6 +213,7 @@ export namespace GUI
                 std::vector<entry> entries;
                 bool           break_next = false;
                 int            level = 0;
+                int            priority = 0;
                 float          columns_width = 0.0f;
 
                 // The collapsed form: a button that opens `popup`, which then holds `body`.
@@ -171,6 +228,28 @@ export namespace GUI
                 void fit_stack(base::ptr column);
                 void host_body_in_popup(bool in_popup);
                 void add_entry(entry e);
+        };
+
+        class ribbon_page;
+
+        // A transparent layer on top of a strip that lets a finger drag it sideways when it
+        // overflows. A finger that stays within a few pixels is still a tap for the buttons
+        // below: mouse input and touch downs pass through, only a drag claims the finger.
+        class ribbon_touch_scroll : public base
+        {
+            public:
+                ribbon_touch_scroll(ribbon_page* owner);
+
+                virtual bool on_mouse_action(mouse_action, mouse_button, vec2) override { return false; }
+                virtual bool on_mouse_move(vec2) override { return false; }
+                virtual bool on_wheel(mouse_wheel, float, vec2) override { return false; }
+                virtual bool on_touch_action(mouse_action action, touch& t) override;
+                virtual void on_touch_move(std::vector<touch*>& fingers) override;
+
+            private:
+                ribbon_page*        owner;
+                std::map<int, vec2> poses;       // where each finger was last seen, render px
+                bool                dragging = false;
         };
 
         // The strip under one tab: groups left to right, thin separators between.
@@ -189,18 +268,34 @@ export namespace GUI
                 ribbon_group::ptr group(int index) const { return index >= 0 && index < int(groups.size()) ? groups[index] : nullptr; }
 
                 // Chooses the compact level of every group so the page fits `available`
-                // UI px: groups shrink one level at a time, right to left, as many rounds
-                // as it takes.
+                // UI px: groups shrink one level at a time, lowest priority first (right to
+                // left among equals), as many rounds as it takes. When even the smallest
+                // forms don't fit, the strip scrolls (wheel, or a click on the faded edge).
                 // `reset` starts from the roomiest form (the page grew or changed); without
                 // it the groups only shrink further from where they are.
                 void fit(float available, bool reset);
                 float measure_total();
                 int  content_signature() const;
 
+                // How far the strip can scroll, in UI px, and where it is now.
+                float get_max_scroll() const { return max_scroll; }
+                float get_scroll() const { return scroll; }
+                void  scroll_to(float value);
+
+                // Every button a key tip can point at on this page.
+                std::vector<ribbon_button::ptr> key_targets() const;
+
+                virtual bool on_wheel(mouse_wheel type, float value, vec2 pos) override;
+                virtual bool on_mouse_action(mouse_action action, mouse_button button, vec2 pos) override;
+                virtual void draw_after(Context& c) override;
+
             private:
                 ribbon_metrics metrics;
                 std::vector<ribbon_group::ptr> groups;
                 std::vector<base::ptr>         separators;
+                s_ptr<ribbon_touch_scroll>     touch_layer;   // kept on top of the groups
+                float scroll = 0.0f;
+                float max_scroll = 0.0f;
         };
 
         // A tab title in the ribbon's bar.
@@ -218,6 +313,10 @@ export namespace GUI
                 ribbon_tab_header(const std::string& title, const ribbon_metrics& metrics);
                 void set_metrics(const ribbon_metrics& new_metrics);
 
+                // The Alt key tip over the title; empty hides it.
+                void show_key_tip(const std::string& text);
+                std::string get_key_tip() const { return tip_text; }
+
                 virtual void on_pre_render(Context& c) override;
                 virtual void draw(Context& c) override;
                 virtual bool on_mouse_action(mouse_action action, mouse_button button, vec2 pos) override;
@@ -226,6 +325,8 @@ export namespace GUI
                 label::ptr text_label;
                 float      clock = 0.0f;           // accumulated frame time
                 float      last_click = -10.0f;    // clock at the last click
+                ribbon_key_tip::ptr tip;
+                std::string tip_text;
         };
 
         // One of the title bar's window buttons (minimise, maximise / restore, close): a
@@ -294,15 +395,41 @@ export namespace GUI
                 // A vector icon (by name) at the left end of the tab bar, before the tabs.
                 void set_window_icon(std::string icon_name);
 
+                // Keyboard access. Alt, pressed and released on its own, shows a letter over
+                // every tab; a letter opens that tab and shows letters over its buttons; a
+                // letter there runs the button. Left / Right change tab, Down or Enter go into
+                // the strip, Escape goes back a step and out, and so do a mouse press or any
+                // other key. Typed characters are held back meanwhile (keys_captured).
+                bool is_key_mode() const { return key_level > 0; }
+                // 0 = off, 1 = tab letters, 2 = button letters.
+                int  get_key_level() const { return key_level; }
+                // The reaction to a key (the UI's key hook); true = consumed.
+                bool on_key(key_action action, long key, key_mods mods);
+
                 virtual void think(float dt) override;
                 virtual void on_pre_render(Context& c) override;
                 virtual void draw_after(Context& c) override;
 
+            protected:
+                virtual void on_add(base* parent) override;
+
             private:
+                int  key_level = 0;
+                int  key_focus = -1;         // the button with the focus ring in the strip (level 2)
+                bool alt_down = false;
+                bool alt_used = false;       // another key came while Alt was down: not a tap
+
+                void enter_key_mode();
+                void leave_key_mode();
+                void show_tab_tips();
+                void show_button_tips();
+                void hide_all_tips();
+
                 struct tab_info
                 {
                     ribbon_tab_header::ptr header;
                     ribbon_page::ptr       page;
+                    std::string            title;
                     bool                   visible = true;
                 };
 

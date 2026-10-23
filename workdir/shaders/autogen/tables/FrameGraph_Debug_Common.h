@@ -19,6 +19,7 @@ namespace Dev
 		uint channelMask; // uint
 		int2 cursor; // int2
 		uint flags; // uint
+		float exposure; // float
 		uint target; // RWTexture2D<float4>
 		uint stats; // RWStructuredBuffer<uint>
 		uint2 GetTargetSize() { return targetSize; }
@@ -29,6 +30,7 @@ namespace Dev
 		uint GetChannelMask() { return channelMask; }
 		int2 GetCursor() { return cursor; }
 		uint GetFlags() { return flags; }
+		float GetExposure() { return exposure; }
 		RWTexture2D<float4> GetTarget() { return ResourceDescriptorHeap[target]; }
 		RWStructuredBuffer<uint> GetStats() { return ResourceDescriptorHeap[stats]; }
 	};

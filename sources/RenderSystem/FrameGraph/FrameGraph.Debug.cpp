@@ -12,11 +12,16 @@ import Graphics;
 
 using namespace GUI::Elements;
 
-// Mirrors framegraph/stats.hlsli: 8 words for the picked texel, then 4 channels x 256 histogram bins.
+// Mirrors framegraph/stats.hlsli: the picked texel (8 words), min / max / sum per channel (16 words), then
+// 4 channels x 256 histogram bins. resource_preview reads all of it back every frame (4 KB); the bins start at
+// `readback_words` (the header: pick, min / max / sum).
 namespace preview_stats
 {
-	constexpr uint max_grid = 512;
-	constexpr uint words    = 8 + 4 * 256;
+	constexpr uint max_grid       = 512;
+	constexpr uint minmax_at      = 8;
+	constexpr uint readback_words = 24;
+	constexpr uint words          = readback_words + 4 * 256;
+	constexpr float sum_fraction  = 4096.0f;
 }
 /*
 
@@ -358,9 +363,10 @@ resource_preview::resource_preview()
 		auto bar         = std::make_shared<GUI::base>();
 		bar->docking     = GUI::dock::TOP;
 		bar->height_size = GUI::size_type::FIXED;
-		bar->size        = { 0.0f, 26.0f };
+		bar->size        = { 0.0f, 56.0f };   // two rows; set_tools drops to one when the second row has nothing to show
+		m_bar            = bar;
 
-		auto add_label = [&](const char* text, float x, float w) -> label::ptr
+		auto add_label = [&](const char* text, float x, float w, float y = 4.0f) -> label::ptr
 		{
 			auto lbl         = std::make_shared<label>();
 			lbl->text        = text;
@@ -369,7 +375,7 @@ resource_preview::resource_preview()
 			lbl->width_size  = GUI::size_type::FIXED;
 			lbl->height_size = GUI::size_type::FIXED;
 			lbl->size        = { w, 18.0f };
-			lbl->pos         = { x, 4.0f };
+			lbl->pos         = { x, y };
 			bar->add_child(lbl);
 			return lbl;
 		};
@@ -388,33 +394,33 @@ resource_preview::resource_preview()
 		};
 
 		// A tick box with its letter beside it.
-		auto add_check = [&](const char* text, float x, bool checked, std::function<void(bool)> on_check)
-			-> std::pair<check_box::ptr, label::ptr>
+		auto add_check = [&](const char* text, float x, bool checked, std::function<void(bool)> on_check,
+		                     float y = 4.0f, float label_w = 12.0f) -> std::pair<check_box::ptr, label::ptr>
 		{
 			auto chk         = std::make_shared<check_box>();
 			chk->docking     = GUI::dock::NONE;
 			chk->width_size  = GUI::size_type::FIXED;
 			chk->height_size = GUI::size_type::FIXED;
 			chk->size        = { 18.0f, 18.0f };
-			chk->pos         = { x, 4.0f };
+			chk->pos         = { x, y };
 			bar->add_child(chk);
 			chk->set_checked(checked);
 			chk->on_check = on_check;
-			return { chk, add_label(text, x + 21.0f, 12.0f) };
+			return { chk, add_label(text, x + 21.0f, label_w, y) };
 		};
 
 		// [Reset] [x]R [x]G [x]B [x]A [ ]H   [<] [Mip n] [>]   [<] [Array n] [>]
 		// The selectors stay hidden (all of them) until set_source sees more than one entry.
 		m_reset_btn = add_button("Reset", 4.0f, 48.0f);
-		m_reset_btn->on_click = [this](button::ptr) { m_user_view = false; m_refit = 1; };
+		m_reset_btn->on_click = [this](button::ptr) { reset_view(); };
 
 		static const char* channel_names[4] = { "R", "G", "B", "A" };
 		for (int c = 0; c < 4; ++c)
 			std::tie(m_channel_check[c], m_channel_label[c]) = add_check(channel_names[c], 58.0f + c * 36.0f, true, [this, c](bool on)
 			{
 				m_channel_mask = on ? (m_channel_mask | (1 << c)) : (m_channel_mask & ~(1 << c));
+				m_histogram->channel_mask = (uint)m_channel_mask;
 			});
-		std::tie(m_hist_check, m_hist_label) = add_check("H", 202.0f, false, [this](bool on) { m_show_histogram = on ? 1 : 0; });
 
 		m_prev_mip  = add_button("<", 246.0f, 20.0f);
 		m_prev_mip->on_click = [this](button::ptr) { select_mip(m_sel_mip - 1); };
@@ -446,6 +452,35 @@ resource_preview::resource_preview()
 
 		set_selectors_visible(false, false);
 
+		// Second row: [EV -0.0 ======o======] [ ]Lin [ ]Chk [ ]Nrm
+		constexpr float row2 = 30.0f;
+		m_ev_label = add_label("EV 0.0", 4.0f, 58.0f, row2);
+
+		m_ev_slider              = std::make_shared<float_slider>();
+		m_ev_slider->min         = -8.0f;
+		m_ev_slider->max         = 8.0f;
+		m_ev_slider->value       = 0.0f;
+		m_ev_slider->docking     = GUI::dock::NONE;
+		m_ev_slider->width_size  = GUI::size_type::FIXED;
+		m_ev_slider->height_size = GUI::size_type::FIXED;
+		m_ev_slider->size        = { 150.0f, 14.0f };
+		m_ev_slider->pos         = { 66.0f, row2 + 3.0f };
+		m_ev_slider->on_change   = [this](float ev)
+		{
+			ev = std::round(ev * 4.0f) / 4.0f;   // quarter-stop steps
+			m_exposure = ev;
+			m_ev_label->text = std::format("EV {:+.2f}", ev);
+		};
+		bar->add_child(m_ev_slider);
+
+		auto make_tool = [&](tick_tool& tool, const char* text, float x, std::function<void(bool)> on_check)
+		{
+			std::tie(tool.box, tool.text) = add_check(text, x, false, on_check, row2, 30.0f);
+		};
+		make_tool(m_linear_tool,  "Lin", 230.0f, [this](bool on) { m_linear  = on ? 1 : 0; });
+		make_tool(m_checker_tool, "Chk", 288.0f, [this](bool on) { m_checker = on ? 1 : 0; });
+		make_tool(m_normal_tool,  "Nrm", 346.0f, [this](bool on) { m_normal  = on ? 1 : 0; });
+
 		docker->add_child(bar);
 	}
 
@@ -464,32 +499,61 @@ resource_preview::resource_preview()
 
 	// Bottom dock — resource information.
 	auto bottom_dock  = docker->get_dock(GUI::dock::BOTTOM);
-	bottom_dock->size = { 0.0f, 90.0f };
+	bottom_dock->size = { 0.0f, 210.0f };
+
+	// Rows of a tab's panel, top to bottom.
+	auto add_rows = [](std::shared_ptr<GUI::base> panel)
+	{
+		return [panel, y = 4.0f](const std::string& text) mutable -> label::ptr
+		{
+			auto lbl         = std::make_shared<label>();
+			lbl->text        = text;
+			lbl->font_size   = 13.0f;
+			lbl->docking     = GUI::dock::NONE;
+			lbl->width_size  = GUI::size_type::MATCH_PARENT;
+			lbl->height_size = GUI::size_type::FIXED;
+			lbl->size        = { 0.0f, 20.0f };
+			lbl->pos         = { 6.0f, y };
+			panel->add_child(lbl);
+			y += 20.0f;
+			return lbl;
+		};
+	};
 
 	auto info_panel     = std::make_shared<GUI::base>();
 	info_panel->docking = GUI::dock::FILL;
+	auto add_row        = add_rows(info_panel);
 
-	float info_y   = 4.0f;
-	auto  add_row  = [&](const std::string& text) -> label::ptr
-	{
-		auto lbl         = std::make_shared<label>();
-		lbl->text        = text;
-		lbl->font_size   = 13.0f;
-		lbl->docking     = GUI::dock::NONE;
-		lbl->width_size  = GUI::size_type::MATCH_PARENT;
-		lbl->height_size = GUI::size_type::FIXED;
-		lbl->size        = { 0.0f, 20.0f };
-		lbl->pos         = { 6.0f, info_y };
-		info_panel->add_child(lbl);
-		info_y += 20.0f;
-		return lbl;
-	};
-
-	m_name_lbl = add_row("Resource: -");
-	m_type_lbl = add_row("Type:     ...");
-	m_dim_lbl  = add_row("Size:     ...");
+	m_name_lbl   = add_row("Resource: -");
+	m_type_lbl   = add_row("Type:     ...");
+	m_dim_lbl    = add_row("Size:     ...");
+	m_format_lbl = add_row("Format:   ...");
+	m_mips_lbl   = add_row("Mips:     ...");
+	m_memory_lbl = add_row("Memory:   ...");
+	m_flags_lbl  = add_row("Flags:    ...");
 
 	bottom_dock->get_tabs()->add_page("Info", info_panel);
+
+	// Min / max / average of the selected mip and slice per channel, and their histogram, from a GPU pass that
+	// runs every frame for 2D / 2D-array textures.
+	auto stats_panel     = std::make_shared<GUI::base>();
+	stats_panel->docking = GUI::dock::FILL;
+	auto add_stat        = add_rows(stats_panel);
+
+	m_min_lbl = add_stat("Min:  -");
+	m_max_lbl = add_stat("Max:  -");
+	m_avg_lbl = add_stat("Avg:  -");
+
+	m_histogram              = std::make_shared<histogram_view>();
+	m_histogram->docking     = GUI::dock::NONE;
+	m_histogram->width_size  = GUI::size_type::FIXED;
+	m_histogram->height_size = GUI::size_type::FIXED;
+	m_histogram->size        = { 512.0f, 100.0f };
+	m_histogram->pos         = { 6.0f, 68.0f };
+	m_histogram->clickable   = false;
+	stats_panel->add_child(m_histogram);
+
+	bottom_dock->get_tabs()->add_page("Stats", stats_panel);
 
 	// Added last so it draws over the image. Not clickable: the mouse events must reach this widget underneath it.
 	m_hud              = std::make_shared<preview_hud>();
@@ -571,13 +635,80 @@ void resource_preview::set_tools(bool channels, bool flat_view)
 
 	m_pixel_tools         = flat_view;
 	m_reset_btn->visible  = flat_view;
-	m_hist_check->visible = flat_view;
-	m_hist_label->visible = flat_view;
+
+	if (!flat_view)
+	{
+		// No stats pass runs for this resource: don't leave the last texture's numbers in the tab.
+		m_min_lbl->text = "Min:  not available for this resource";
+		m_max_lbl->text = "Max:";
+		m_avg_lbl->text = "Avg:";
+		std::fill(m_histogram->bins.begin(), m_histogram->bins.end(), 0u);
+		m_histogram->total = 0;
+	}
+
+	// Second row: exposure and the linear view for anything the channel mask reaches; the checkerboard and the
+	// normal-map view only where alpha and a flat texel exist.
+	m_ev_label->visible  = channels;
+	m_ev_slider->visible = channels;
+	m_linear_tool.show(channels);
+	m_checker_tool.show(flat_view);
+	m_normal_tool.show(flat_view);
+	m_bar->size = { 0.0f, channels ? 56.0f : 28.0f };
+
 	if (!flat_view)
 	{
 		m_cursor_x     = -1;
 		m_cursor_y     = -1;
 		m_hud->visible = false;
+	}
+}
+
+void resource_preview::reset_view()
+{
+	// The view: refit on the next render.
+	m_user_view = false;
+	m_refit     = 1;
+
+	// The display settings. Setting the tick boxes / slider fires their handlers, which write the values the
+	// render thread reads, so the controls and the values can't disagree.
+	m_ev_slider->value = 0.0f;
+	m_exposure         = 0.0f;
+	m_ev_label->text   = "EV 0.0";
+
+	for (auto* tool : { &m_linear_tool, &m_checker_tool, &m_normal_tool })
+		tool->box->set_checked(false);
+	m_linear = m_checker = m_normal = 0;
+
+	for (int c = 0; c < 4; ++c)
+		m_channel_check[c]->set_checked(true);
+	m_channel_mask = 0xF;
+	m_histogram->channel_mask = 0xF;
+}
+
+void histogram_view::draw(Context& c)
+{
+	const rect b = get_render_bounds();
+	c.renderer->draw_color(c, float4(0.05f, 0.06f, 0.08f, 0.95f), b);
+
+	if (total == 0)
+		return;
+
+	// Log scale against the sample count, like a luminance histogram: a texture that is mostly one value
+	// doesn't flatten everything else. One column per bin, the bars of the enabled channels overlapping.
+	const float denom = std::log(1.0f + float(total));
+	const float col_w = b.w / 256.0f;
+	static const float4 colors[4] = { { 1.0f, 0.25f, 0.25f, 0.55f }, { 0.25f, 1.0f, 0.25f, 0.55f },
+	                                  { 0.35f, 0.55f, 1.0f, 0.55f }, { 0.75f, 0.75f, 0.75f, 0.40f } };
+	for (int ch = 0; ch < 4; ++ch)
+	{
+		if (!(channel_mask & (1u << ch))) continue;
+
+		for (int bin = 0; bin < 256; ++bin)
+		{
+			const float h = std::log(1.0f + float(bins[ch * 256 + bin])) / denom * (b.h - 2.0f);
+			if (h < 0.5f) continue;
+			c.renderer->draw_color(c, colors[ch], rect{ b.pos.x + bin * col_w, b.pos.y + b.h - 1.0f - h, std::max(col_w, 1.0f), h });
+		}
 	}
 }
 
@@ -674,6 +805,66 @@ void resource_preview::render(FrameGraph::FrameContext* context)
 					set_tools(channels, flat_view);
 				});
 
+				// Info tab: the TextureDesc as stored, the format, and what the texture costs in memory.
+				{
+					const HAL::TextureDesc& td = res_desc.as_texture();
+					HAL::Format format = td.Format;
+
+					auto bytes_text = [](uint64 n) -> std::string
+					{
+						if (n >= (1ull << 30)) return std::format("{:.2f} GB", double(n) / double(1ull << 30));
+						if (n >= (1ull << 20)) return std::format("{:.2f} MB", double(n) / double(1ull << 20));
+						if (n >= (1ull << 10)) return std::format("{:.1f} KB", double(n) / double(1ull << 10));
+						return std::format("{} B", n);
+					};
+
+					// The data itself: every mip of every slice at the format's size, depth slices included.
+					uint64 data_bytes = 0;
+					for (uint mip = 0; mip < td.MipLevels; ++mip)
+					{
+						const uint3 mip_size = td.get_size(mip);
+						data_bytes += format.surface_info(uint2(mip_size.x, mip_size.y)).numBytes * std::max(mip_size.z, 1u);
+					}
+					data_bytes *= td.ArraySize;
+
+					// What the device actually reserves for it (alignment and padding included).
+					std::string memory = bytes_text(data_bytes) + " data";
+					if (!res_desc.is_virtual())
+						memory += ", " + bytes_text(RenderSystem::get().device().get_alloc_info(res_desc).size) + " allocated";
+
+					std::string format_text = format.to_string();
+					if (format.is_srgb())        format_text += ", sRGB";
+					if (format.is_compressed())  format_text += ", block-compressed";
+					else                         format_text += std::format(", {} B/texel", format.size());
+
+					std::string desc_text = std::format("{} x {} x {}, array {}, {} mips", td.Dimensions.x, td.Dimensions.y, td.Dimensions.z, td.ArraySize, td.MipLevels);
+
+					std::string flags_text;
+					auto add_flag = [&](HAL::ResFlags f, const char* name)
+					{
+						if (!check(res_desc.Flags & f)) return;
+						if (!flags_text.empty()) flags_text += " | ";
+						flags_text += name;
+					};
+					add_flag(HAL::ResFlags::ShaderResource,  "SRV");
+					add_flag(HAL::ResFlags::UnorderedAccess, "UAV");
+					add_flag(HAL::ResFlags::RenderTarget,    "RT");
+					add_flag(HAL::ResFlags::DepthStencil,    "DS");
+					add_flag(HAL::ResFlags::Virtual,         "Virtual");
+					add_flag(HAL::ResFlags::Raytracing,      "RT-AS");
+					add_flag(HAL::ResFlags::Swapchain,       "Swapchain");
+					add_flag(HAL::ResFlags::Immutable,       "Immutable");
+					if (flags_text.empty()) flags_text = "-";
+
+					run_on_ui([this, format_text, desc_text, memory, flags_text]()
+					{
+						m_format_lbl->text = "Format:   " + format_text;
+						m_mips_lbl->text   = "Desc:     " + desc_text;
+						m_memory_lbl->text = "Memory:   " + memory;
+						m_flags_lbl->text  = "Flags:    " + flags_text;
+					});
+				}
+
 				UINT mip_count   = res_desc.as_texture().MipLevels;
 				UINT array_count = res_desc.as_texture().ArraySize;
 				run_on_ui([this, mip_count, array_count]()
@@ -736,7 +927,8 @@ void resource_preview::render(FrameGraph::FrameContext* context)
 			common.GetSelectedArrayIndex() = (UINT)m_sel_array;
 			common.GetChannelMask()        = (UINT)m_channel_mask;
 			common.GetCursor()             = int2(cursor_x, cursor_y);
-			common.GetFlags()              = (m_show_histogram ? 1u : 0u) | extra_flags;
+			common.GetFlags()              = (m_linear ? 4u : 0u) | (m_checker ? 8u : 0u) | (m_normal ? 16u : 0u) | extra_flags;
+			common.GetExposure()           = m_exposure;
 			common.GetStats()              = m_stats->rwStructuredBuffer;
 			compute.set(common);
 		};
@@ -789,7 +981,7 @@ void resource_preview::render(FrameGraph::FrameContext* context)
 				}
 			};
 
-			if (m_show_histogram)
+			// Always computed for 2D / 2D-array textures: the Stats tab shows the histogram and min / max / average.
 			{
 				PROFILE(L"preview_histogram");
 				// Same grid as the histogram shaders: at most preview_stats::max_grid samples per axis of the selected mip.
@@ -864,20 +1056,57 @@ void resource_preview::render(FrameGraph::FrameContext* context)
 		}
 		compute.dispatch(uint3(SZ, 1));
 
-		if (read_pixel && cursor_x >= 0 && cursor_y >= 0 && cursor_x < (int)SZ.x && cursor_y < (int)SZ.y)
+		const bool cursor_inside = cursor_x >= 0 && cursor_y >= 0 && cursor_x < (int)SZ.x && cursor_y < (int)SZ.y;
+
+		// Every frame for 2D / 2D-array textures: the stats words (min / max / average, histogram bins) always, and
+		// the pixel under the cursor when it is over the image.
+		if (read_pixel)
 		{
 			PROFILE(L"preview_pixel_readback");
 			// This runs when the GPU copy finishes, which can be after the preview window was closed: hold the
 			// widget weakly, and do nothing once it is gone or has left the UI (run_on_ui then runs its task
 			// right here, on the wrong thread, against labels that are being torn down).
-			context->get_list()->get_copy().read<uint>(*m_stats, 0, 8, [weak = std::weak_ptr<resource_preview>(get_ptr<resource_preview>())](std::span<uint> r)
+			context->get_list()->get_copy().read<uint>(*m_stats, 0, preview_stats::words,
+				[weak = std::weak_ptr<resource_preview>(get_ptr<resource_preview>()), cursor_inside](std::span<uint> r)
 			{
 				auto self = weak.lock();
-				if (!self || !self->user_ui) return;
+				if (!self || !self->user_ui || r.size() < preview_stats::words) return;
+
+				// Min / max / average per channel; min and max are stored as order-preserving float bits, the sum as
+				// whole part + 12-bit fraction of each sample clamped to 0..255 (see stats.hlsli).
+				std::string min_text, max_text, avg_text;
+				{
+					auto from_ordered = [](uint u)
+					{
+						const uint bits = (u & 0x80000000u) ? (u & 0x7FFFFFFFu) : ~u;
+						float f;
+						std::memcpy(&f, &bits, sizeof(f));
+						return f;
+					};
+					const double samples = std::max<double>(r[7], 1.0);
+					float lo[4], hi[4], avg[4];
+					for (int c = 0; c < 4; ++c)
+					{
+						const uint at = preview_stats::minmax_at + c * 4;
+						lo[c]  = from_ordered(r[at]);
+						hi[c]  = from_ordered(r[at + 1]);
+						avg[c] = float((double(r[at + 2]) + double(r[at + 3]) / preview_stats::sum_fraction) / samples);
+					}
+					min_text = std::format("Min:  {:.4f}  {:.4f}  {:.4f}  {:.4f}", lo[0], lo[1], lo[2], lo[3]);
+					max_text = std::format("Max:  {:.4f}  {:.4f}  {:.4f}  {:.4f}", hi[0], hi[1], hi[2], hi[3]);
+					avg_text = std::format("Avg:  {:.4f}  {:.4f}  {:.4f}  {:.4f}    (R G B A, {} samples)", avg[0], avg[1], avg[2], avg[3], uint(samples));
+				}
+
+				// The histogram bins follow the first 24 words.
+				std::vector<uint> bins(r.begin() + preview_stats::readback_words, r.begin() + preview_stats::words);
+				const uint total = r[7];
+
+				// Over the image widget but outside the texture (the checker margin) the pick is not valid.
+				const bool pick_valid = cursor_inside && r[6] != 0;
 
 				std::string pixel = "Pixel   -", value = "RGBA    -", hex = "Hex     -";
 				float v[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
-				if (r.size() >= 8 && r[6])
+				if (pick_valid)
 				{
 					std::memcpy(v, r.data(), sizeof(v));
 					auto byte = [](float f) { return (unsigned)(std::clamp(f, 0.0f, 1.0f) * 255.0f + 0.5f); };
@@ -885,14 +1114,30 @@ void resource_preview::render(FrameGraph::FrameContext* context)
 					value = std::format("RGBA    {:.4f}  {:.4f}  {:.4f}  {:.4f}", v[0], v[1], v[2], v[3]);
 					hex   = std::format("Hex     #{:02X}{:02X}{:02X}{:02X}", byte(v[0]), byte(v[1]), byte(v[2]), byte(v[3]));
 				}
-				self->run_on_ui([self, pixel, value, hex, v0 = v[0], v1 = v[1], v2 = v[2], v3 = v[3]]()
+				self->run_on_ui([self, cursor_inside, pick_valid, pixel, value, hex, min_text, max_text, avg_text,
+				                 bins = std::move(bins), total, v0 = v[0], v1 = v[1], v2 = v[2], v3 = v[3]]() mutable
 				{
+					self->m_min_lbl->text = min_text;
+					self->m_max_lbl->text = max_text;
+					self->m_avg_lbl->text = avg_text;
+					self->m_histogram->bins  = std::move(bins);
+					self->m_histogram->total = total;
+
+					if (!cursor_inside) return;
+
+					// The panel follows the pick: gone over the margin around the texture, back over the texture.
+					self->m_pick_valid = pick_valid;
+					self->m_hud->visible = pick_valid && self->m_pixel_tools && self->m_cursor_x >= 0;
+					if (!pick_valid) return;
+
 					self->m_pixel_lbl->text = pixel;
 					self->m_value_lbl->text = value;
 					self->m_hex_lbl->text   = hex;
 
-					// The swatch shows the texel the way the preview itself does (same display gamma).
-					auto shown = [](float f) { return std::pow(std::max(f, 0.0f), 1.0f / 2.2f); };
+					// The swatch shows the texel the way the preview itself does: same exposure and display gamma.
+					const float gain  = std::exp2(float(self->m_exposure));
+					const float gamma = self->m_linear ? 1.0f : 1.0f / 2.2f;
+					auto shown = [gain, gamma](float f) { return std::pow(std::max(f * gain, 0.0f), gamma); };
 					self->m_hud->color = { shown(v0), shown(v1), shown(v2), 1.0f };
 					self->m_hud->alpha = std::clamp(v3, 0.0f, 1.0f);
 				});
@@ -978,7 +1223,7 @@ bool resource_preview::on_mouse_move(vec2 pos)
 		m_cursor_y = inside && m_pixel_tools ? (int)local.y : -1;
 
 		// Hover panel: beside the cursor, flipped to the other side when it would leave the image.
-		m_hud->visible = inside && m_pixel_tools && m_img->visible && !m_dragging;
+		m_hud->visible = inside && m_pixel_tools && m_pick_valid && m_img->visible && !m_dragging;
 		if (inside && m_pixel_tools)
 		{
 			const float w = m_hud->size.get().x, h = m_hud->size.get().y;

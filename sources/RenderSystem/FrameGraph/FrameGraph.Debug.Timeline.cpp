@@ -2362,6 +2362,7 @@ private:
                             common.GetChannelMask() = 0xF;
                             common.GetCursor()      = int2(-1, -1);
                             common.GetFlags()       = 0;
+                            common.GetExposure()    = 0.0f;
                             compute.set(common);
                         }
 

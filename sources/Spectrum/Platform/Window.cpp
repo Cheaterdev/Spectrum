@@ -54,6 +54,55 @@ namespace
         return get_dpi ? get_dpi(hwnd) : 96;
     }
 
+    // The application icon, drawn in code at the size asked for (a prism outline in the UI's
+    // accent colour), so no resource file is needed. Straight alpha, three by three samples
+    // per pixel for smooth edges. It lives as long as the process.
+    HICON make_app_icon(int size)
+    {
+        std::vector<uint32_t> pixels(size_t(size) * size, 0);
+
+        struct point { float x, y; };
+        const point a = { 0.50f, 0.08f }, b = { 0.93f, 0.90f }, c = { 0.07f, 0.90f };
+        const point centre = { (a.x + b.x + c.x) / 3.0f, (a.y + b.y + c.y) / 3.0f };
+
+        // Inside the triangle scaled about its centre by k (1 = the outline's outer edge).
+        auto inside = [&](float px, float py, float k)
+        {
+            auto scaled = [&](point p) { return point{ centre.x + (p.x - centre.x) * k, centre.y + (p.y - centre.y) * k }; };
+            const point s0 = scaled(a), s1 = scaled(b), s2 = scaled(c);
+            auto side = [](point p, point q, float x, float y) { return (q.x - p.x) * (y - p.y) - (q.y - p.y) * (x - p.x); };
+            const float d0 = side(s0, s1, px, py), d1 = side(s1, s2, px, py), d2 = side(s2, s0, px, py);
+            return (d0 >= 0 && d1 >= 0 && d2 >= 0) || (d0 <= 0 && d1 <= 0 && d2 <= 0);
+        };
+
+        for (int y = 0; y < size; y++)
+            for (int x = 0; x < size; x++)
+            {
+                int covered = 0;
+                for (int sy = 0; sy < 3; sy++)
+                    for (int sx = 0; sx < 3; sx++)
+                    {
+                        const float px = (x + (sx + 0.5f) / 3.0f) / size;
+                        const float py = (y + (sy + 0.5f) / 3.0f) / size;
+                        if (inside(px, py, 1.0f) && !inside(px, py, 0.55f))
+                            covered++;
+                    }
+
+                const uint32_t alpha = uint32_t(covered * 255 / 9);
+                pixels[size_t(y) * size + x] = (alpha << 24) | (53u << 16) | (114u << 8) | 202u;   // BGRA: accent blue
+            }
+
+        std::vector<uint8_t> mask((size_t(size + 31) / 32 * 4) * size, 0);   // ignored: the colour bitmap has alpha
+        ICONINFO info = {};
+        info.fIcon    = TRUE;
+        info.hbmMask  = CreateBitmap(size, size, 1, 1, mask.data());
+        info.hbmColor = CreateBitmap(size, size, 1, 32, pixels.data());
+        HICON icon = CreateIconIndirect(&info);
+        DeleteObject(info.hbmMask);
+        DeleteObject(info.hbmColor);
+        return icon;
+    }
+
     bool is_window_button_hit(WPARAM hit)
     {
         return hit == HTMINBUTTON || hit == HTMAXBUTTON || hit == HTCLOSE;
@@ -101,9 +150,30 @@ void Window::InitWindow(int width, int height, LPCTSTR name)
     wc.lpszClassName = wname.c_str();
     wc.hIconSm = NULL;
     RegisterClassExW(&wc);
-    HWND hWindow = CreateWindowExW((WS_EX_WINDOWEDGE) , wname.c_str(), wname.c_str(), WS_OVERLAPPEDWINDOW, -1, -1, width, height, NULL, NULL, GetModuleHandle(NULL), NULL);
+    // Opens in the middle of the work area (the screen without the taskbar) of the monitor the
+    // mouse is on, never partly off its top left corner; a window larger than the area is
+    // shrunk to fit.
+    POINT cursor = { 0, 0 };
+    GetCursorPos(&cursor);
+    MONITORINFO monitor = { sizeof(MONITORINFO) };
+    int x = CW_USEDEFAULT, y = CW_USEDEFAULT;
+    if (GetMonitorInfoW(MonitorFromPoint(cursor, MONITOR_DEFAULTTOPRIMARY), &monitor))
+    {
+        const int area_width  = monitor.rcWork.right - monitor.rcWork.left;
+        const int area_height = monitor.rcWork.bottom - monitor.rcWork.top;
+        width  = std::min(width, area_width);
+        height = std::min(height, area_height);
+        x = monitor.rcWork.left + (area_width - width) / 2;
+        y = monitor.rcWork.top + (area_height - height) / 2;
+    }
+
+    HWND hWindow = CreateWindowExW((WS_EX_WINDOWEDGE) , wname.c_str(), wname.c_str(), WS_OVERLAPPEDWINDOW, x, y, width, height, NULL, NULL, GetModuleHandle(NULL), NULL);
     SetWindowLongPtrW(hWindow, GWLP_USERDATA, (LONG_PTR)this);
     hwnd = hWindow;
+
+    // The taskbar and Alt+Tab icon.
+    SendMessageW(hWindow, WM_SETICON, ICON_BIG, (LPARAM)make_app_icon(GetSystemMetrics(SM_CXICON)));
+    SendMessageW(hWindow, WM_SETICON, ICON_SMALL, (LPARAM)make_app_icon(GetSystemMetrics(SM_CXSMICON)));
 
     if (custom_frame)
     {
@@ -306,6 +376,31 @@ LRESULT Window::MsgProc(MSG msg)
                 return TRUE;
             }
             return DefWindowProcW(msg.hwnd, msg.message, msg.wParam, msg.lParam);
+
+        // Alt on its own arrives as a system key. It is the UI's (the ribbon's key tips), and
+        // swallowing it also keeps Windows from opening the system menu on release. Alt with
+        // another key (Alt+F4, Alt+Space) is left to the default handling.
+        case WM_SYSKEYDOWN:
+        case WM_SYSKEYUP:
+            if (msg.wParam == VK_MENU && input_handler)
+            {
+                const bool repeat = msg.message == WM_SYSKEYDOWN && (msg.lParam & (1 << 30)) != 0;
+                if (!repeat)
+                    input_handler->key_action_event(msg.message == WM_SYSKEYDOWN ? key_action::DOWN : key_action::UP, (long)msg.wParam, current_key_mods());
+                return 0;
+            }
+            break;
+
+        // Moved to a monitor with another scale: Windows suggests the window rectangle that
+        // keeps it the same physical size; without taking it the window would jump in size.
+        case WM_DPICHANGED:
+        {
+            const RECT* suggested = reinterpret_cast<const RECT*>(msg.lParam);
+            SetWindowPos(hwnd, nullptr, suggested->left, suggested->top,
+                         suggested->right - suggested->left, suggested->bottom - suggested->top,
+                         SWP_NOZORDER | SWP_NOACTIVATE);
+            return 0;
+        }
 
         case WM_NCCALCSIZE:
             if (custom_frame && msg.wParam)

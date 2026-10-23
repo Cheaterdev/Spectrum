@@ -1040,6 +1040,17 @@ namespace GUI
             std::function<void(window_command)> window_command_handler;
             std::function<bool()>               window_maximized;
 
+            // Key hooks see every key event before the focused element does, and a mouse
+            // press as a key of -1 (the result of that one is ignored): for things that
+            // listen to the keyboard without focus, such as the ribbon's Alt key tips. A
+            // hook that returns true consumes the key. The owner is held weakly; a hook
+            // whose owner is gone is skipped. While keys_captured is set, typed characters
+            // go nowhere (they would otherwise land in the focused text field).
+            using key_hook_fn = std::function<bool(key_action, long, key_mods)>;
+            void add_key_hook(base::ptr owner, key_hook_fn hook);
+            bool keys_captured = false;
+            std::vector<std::pair<base::wptr, key_hook_fn>> key_hooks;
+
          //   virtual void draw_ui(Context&);
 
 			virtual void process_ui(float dt);

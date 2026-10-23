@@ -1,17 +1,6 @@
 module GUI:MenuList;
 import :Renderer;
 
-// TEMP-POPUPLOG: see Base.cpp.
-namespace
-{
-    void popup_log(const std::string& line)
-    {
-        static std::mutex log_mutex;
-        std::lock_guard<std::mutex> guard(log_mutex);
-        std::ofstream out("popup_log.temp", std::ios::app);
-        out << line << "\n";
-    }
-}
 
 
 void GUI::Elements::menu_list::draw(Context& c)
@@ -76,7 +65,6 @@ GUI::Elements::menu_list::menu_list(bool vertical)
 
 void GUI::Elements::menu_list::close_menus()
 {
-    popup_log("  menu_list::close_menus vertical=" + std::to_string(vertical) + " in tree=" + std::to_string(get_parent() != nullptr) + " fading_out=" + std::to_string(fading_out));   // TEMP-POPUPLOG
     if (vertical)self_close();
 }
 
@@ -125,7 +113,6 @@ bool GUI::Elements::menu_list::is_self_open()
 
 void GUI::Elements::menu_list::self_open(user_interface* ui)
 {
-    popup_log("    menu_list::self_open in tree=" + std::to_string(get_parent() != nullptr));   // TEMP-POPUPLOG
     // Closed a moment ago and still fading out: bring the same popup back
     // instead of adding it a second time.
     if (get_parent())
@@ -144,8 +131,6 @@ void GUI::Elements::menu_list::self_open(user_interface* ui)
 
 void GUI::Elements::menu_list::self_close()
 {
-    popup_log("    menu_list::self_close user_ui=" + std::to_string(user_ui != nullptr) + " fades=" + std::to_string(user_ui && user_ui->fade_enabled) + " in tree=" + std::to_string(get_parent() != nullptr) + " fading_out=" + std::to_string(fading_out));   // TEMP-POPUPLOG
-
     // Without fades (or a tree to draw it in) the popup just goes.
     if (!user_ui || !user_ui->fade_enabled || !get_parent())
     {
@@ -162,7 +147,6 @@ void GUI::Elements::menu_list::self_close()
     // fade_to dropped any earlier callback; set ours after it.
     on_fade_end = [self = get_ptr<menu_list>()]()
     {
-        popup_log("    menu_list fade ended: removing from the UI");   // TEMP-POPUPLOG
         self->fading_out = false;
         self->remove_from_parent();
         self->layer_opacity = 1.0f;
