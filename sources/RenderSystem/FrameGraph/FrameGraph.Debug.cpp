@@ -619,9 +619,9 @@ void resource_preview::set_source(std::shared_ptr<HAL::ResourceView> source, con
 
 void resource_preview::set_selectors_visible(bool mips, bool arrays)
 {
-	for (auto* w : { (GUI::base*)m_prev_mip.get(), (GUI::base*)m_mip_combo.get(), (GUI::base*)m_next_mip.get() })
+	for (auto* w : { static_cast<GUI::base*>(m_prev_mip.get()), static_cast<GUI::base*>(m_mip_combo.get()), static_cast<GUI::base*>(m_next_mip.get()) })
 		w->visible = mips;
-	for (auto* w : { (GUI::base*)m_prev_array.get(), (GUI::base*)m_array_combo.get(), (GUI::base*)m_next_array.get() })
+	for (auto* w : { static_cast<GUI::base*>(m_prev_array.get()), static_cast<GUI::base*>(m_array_combo.get()), static_cast<GUI::base*>(m_next_array.get()) })
 		w->visible = arrays;
 }
 
@@ -695,7 +695,7 @@ void histogram_view::draw(Context& c)
 
 	// Log scale against the sample count, like a luminance histogram: a texture that is mostly one value
 	// doesn't flatten everything else. One column per bin, the bars of the enabled channels overlapping.
-	const float denom = std::log(1.0f + float(total));
+	const float denom = std::log1p(float(total));
 	const float col_w = b.w / 256.0f;
 	static const float4 colors[4] = { { 1.0f, 0.25f, 0.25f, 0.55f }, { 0.25f, 1.0f, 0.25f, 0.55f },
 	                                  { 0.35f, 0.55f, 1.0f, 0.55f }, { 0.75f, 0.75f, 0.75f, 0.40f } };
@@ -705,7 +705,7 @@ void histogram_view::draw(Context& c)
 
 		for (int bin = 0; bin < 256; ++bin)
 		{
-			const float h = std::log(1.0f + float(bins[ch * 256 + bin])) / denom * (b.h - 2.0f);
+			const float h = std::log1p(float(bins[ch * 256 + bin])) / denom * (b.h - 2.0f);
 			if (h < 0.5f) continue;
 			c.renderer->draw_color(c, colors[ch], rect{ b.pos.x + bin * col_w, b.pos.y + b.h - 1.0f - h, std::max(col_w, 1.0f), h });
 		}

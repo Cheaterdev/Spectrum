@@ -6,7 +6,7 @@ import :Utils;
 
 unsigned int crc32(const binary& s)
 {
-	return crc32c::Crc32c((const uint8_t*)s.data(), s.size());
+	return crc32c::Crc32c(reinterpret_cast<const uint8_t*>(s.data()), s.size());
 }
 
 unsigned int crc32(std::string_view s)

@@ -97,7 +97,7 @@ void mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, Scene::pt
 		// wired to this transient (main.cpp). Worth resolving separately.
 
 		// Stage 1 walks the full scene list: CPU-known count, direct dispatch.
-		generate_boxes(mesh_render_context, scene, scene->compiledGather[(int)mesh_render_context->render_mesh], nullptr, meshes_count);
+		generate_boxes(mesh_render_context, scene->compiledGather[(int)mesh_render_context->render_mesh], nullptr, meshes_count);
 
 		draw_boxes(mesh_render_context, scene);
 		gather_rendered_boxes(mesh_render_context, scene, true);
@@ -119,7 +119,7 @@ void mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, Scene::pt
 	//		list.add_resource_usage(gbuffer->HalfBuffer.hiZ_depth_uav.resource, HAL::ResourceStates::SHADER_RESOURCE);
 		// Stage 2 retests the invisible list: sized by retest_args, written by
 		// stage 1's GatherMeshes.
-		generate_boxes(mesh_render_context, scene, gather_invisible, &retest_args, 0);
+		generate_boxes(mesh_render_context, gather_invisible, &retest_args, 0);
 
 		draw_boxes(mesh_render_context, scene);
 		gather_rendered_boxes(mesh_render_context, scene, false);
@@ -144,10 +144,6 @@ void  mesh_renderer::gather_rendered_boxes(MeshRenderContext::ptr mesh_render_co
 
 	auto& graphics = mesh_render_context->list->get_graphics();
 	auto& compute = mesh_render_context->list->get_compute();
-	auto& copy = mesh_render_context->list->get_copy();
-	auto& list = *mesh_render_context->list;
-	UINT meshes_count = (UINT)scene->command_ids[(int)mesh_render_context->render_mesh].size();
-	Slots::Frame::SceneData::Compiled& compiledScene = scene->compiledScene;
 
 	if (invisibleToo)
 	{
@@ -178,15 +174,12 @@ void  mesh_renderer::gather_rendered_boxes(MeshRenderContext::ptr mesh_render_co
 }
 
 
-void  mesh_renderer::generate_boxes(MeshRenderContext::ptr mesh_render_context, Scene::ptr scene, Slots::Meshes::GatherPipelineGlobal::Compiled& gatherData, HAL::StructuredBufferView<DispatchArguments>* dispatch_args, UINT direct_count)
+void  mesh_renderer::generate_boxes(MeshRenderContext::ptr mesh_render_context, Slots::Meshes::GatherPipelineGlobal::Compiled& gatherData, HAL::StructuredBufferView<DispatchArguments>* dispatch_args, UINT direct_count)
 {
 	PROFILE_GPU(L"generate_boxes");
 
 	auto& graphics = mesh_render_context->list->get_graphics();
 	auto& compute = mesh_render_context->list->get_compute();
-	auto& copy = mesh_render_context->list->get_copy();
-	auto& list = *mesh_render_context->list;
-	Slots::Frame::SceneData::Compiled& compiledScene = scene->compiledScene;
 
 
 	{
@@ -228,12 +221,7 @@ void  mesh_renderer::draw_boxes(MeshRenderContext::ptr mesh_render_context, Scen
 	PROFILE_GPU(L"draw_boxes");
 
 	auto& graphics = mesh_render_context->list->get_graphics();
-	auto& compute = mesh_render_context->list->get_compute();
-	auto& copy = mesh_render_context->list->get_copy();
-	auto& list = *mesh_render_context->list;
-
 	GBuffer* gbuffer = mesh_render_context->g_buffer;
-	UINT meshes_count = (UINT)scene->command_ids[(int)mesh_render_context->render_mesh].size();
 
 	graphics.set_rtv(gbuffer->HalfBuffer.compiled);
 
@@ -257,8 +245,6 @@ void  mesh_renderer::render_meshes(MeshRenderContext::ptr mesh_render_context, S
 
 	auto& graphics = mesh_render_context->list->get_graphics();
 	auto& compute = mesh_render_context->list->get_compute();
-	auto& copy = mesh_render_context->list->get_copy();
-	auto& list = *mesh_render_context->list;
 
 	UINT meshes_count = (UINT)scene->command_ids[(int)mesh_render_context->render_mesh].size();
 
@@ -280,7 +266,7 @@ void  mesh_renderer::render_meshes(MeshRenderContext::ptr mesh_render_context, S
 			PROFILE_GPU(L"first 8");
 			for (int i = 0; i < total; i++)
 			{
-				((UINT*)gather.GetPip_ids())[i] = batch_pipelines[batch_start + i]->get_id();
+				reinterpret_cast<UINT*>(gather.GetPip_ids())[i] = batch_pipelines[batch_start + i]->get_id();
 				gather.GetCommands()[i] = commands_buffer[i]->buffer;
 			}
 		}
@@ -289,7 +275,7 @@ void  mesh_renderer::render_meshes(MeshRenderContext::ptr mesh_render_context, S
 			PROFILE_GPU(L"last 8");
 		for (int i = total; i < 8; i++)
 		{
-			((UINT*)gather.GetPip_ids())[i] = std::numeric_limits<uint>::max();
+			reinterpret_cast<UINT*>(gather.GetPip_ids())[i] = std::numeric_limits<uint>::max();
 			gather.GetCommands()[i] = commands_buffer[i]->buffer;
 		}
 
@@ -538,7 +524,6 @@ void main_renderer::iterate(MESH_TYPE mesh_type, std::function<void(scene_object
 
 bool mesh_renderer::add_object(Graphics::renderable* obj)
 {
-    auto instance = dynamic_cast<MeshAssetInstance*>(obj);
     return true;
 }
 

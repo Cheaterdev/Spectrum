@@ -578,7 +578,6 @@ std::string MaterialFunction::generate_output(std::vector<FlowGraph::output::ptr
 
 void MaterialFunction::operator()(MaterialContext* mat_context)
 {
-	this->context = context;
 	text = "";
 	func_name = mat_context->get_new_param();
 	auto delim = (input_parametres.size() && output_parametres.size()) ? " , " : "";
@@ -1242,7 +1241,6 @@ ScalarNode::ScalarNode(float value)
 
 void ScalarNode::operator()(MaterialContext* c)
 {
-	auto mat_graph = static_cast<MaterialFunction*>(owner);
 	auto res = c->create_value(uniform);
 	o_value->put(res);
 	//	mat_graph

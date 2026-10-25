@@ -206,7 +206,7 @@ raw4_block_values* Raw4Loader::get_values(Raw4Context &context, const uint8_t* p
 	else return nullptr;
 }
 //-----------------------------------------------------------------------------
-bool Raw4Loader::Load(Assimp::IOSystem &io, std::string name , Raw4SceneAdaptor &adaptor)
+bool Raw4Loader::Load(Assimp::IOSystem &io, const std::string& name , Raw4SceneAdaptor &adaptor)
 {
 
 	auto str = io.Open(name.c_str());

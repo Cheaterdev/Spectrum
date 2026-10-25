@@ -43,7 +43,7 @@ namespace GUI
             {
                 //if (on_click)
                 //	on_click();
-                if (allow_uncheck || (!allow_uncheck && !checked.get()))
+                if (allow_uncheck || !checked.get())
                     checked = !checked.get();
             }
 

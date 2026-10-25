@@ -13,10 +13,10 @@ namespace DataPacker
 		constexpr size_t header = sizeof(uint32_t);
 		packed.resize(int(1.01 * unpacked.size()) + 12 + header);
 		unsigned long T = (unsigned long)(packed.size() - header);
-		compress((unsigned char *)packed.data() + header, &T, (unsigned char *)unpacked.data(), (unsigned long)unpacked.size());
+		compress(reinterpret_cast<unsigned char*>(packed.data()) + header, &T, reinterpret_cast<const unsigned char*>(unpacked.data()), (unsigned long)unpacked.size());
 		packed.resize(T + header);
 		const uint32_t unpacked_size = (uint32_t)unpacked.size();
-		std::memcpy((void*)packed.data(), &unpacked_size, sizeof(unpacked_size));
+		std::memcpy(packed.data(), &unpacked_size, sizeof(unpacked_size));
 		return std::move(packed);
 	}
 
@@ -26,7 +26,7 @@ namespace DataPacker
 		std::string result;
 		unsigned long T = *reinterpret_cast<uint32_t*>(const_cast<char*>(str.data()));
 		result.resize(T);
-		uncompress((unsigned char *)result.data(), &T, (unsigned char *)str.data() + header, (unsigned long)(str.size() - header));
+		uncompress(reinterpret_cast<unsigned char*>(result.data()), &T, reinterpret_cast<const unsigned char*>(str.data()) + header, (unsigned long)(str.size() - header));
 		return std::move(result);
 	}
 

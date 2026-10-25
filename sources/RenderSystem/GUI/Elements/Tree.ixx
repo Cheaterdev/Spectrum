@@ -155,7 +155,7 @@ export namespace GUI
 
                 base::ptr space(new base);
 
-                space->size = { elem->calculate_depth() * 25,0 };
+                space->size = { elem->calculate_depth() * 10,0 };
                 space->docking = dock::LEFT;
                 l->add_child(space);
 

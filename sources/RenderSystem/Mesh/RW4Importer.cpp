@@ -188,7 +188,6 @@ namespace Assimp
 		//		for (int j = 0; j < 4; j++)
 		//		(child->mTransformation[i][j])=obj.lparent.rows[j][i];
 			aiMatrix4x4 & local= matrix_stack.back().local;
-			aiMatrix4x4  & offset = matrix_stack.back().offset;
 
 			aiMatrix4x4 mpos, rotx,roty,rotz;
 		
@@ -264,6 +263,7 @@ namespace Assimp
 			//	child->mName = "offset";
 
 			//	aiMatrix4x4 mpos;
+				aiMatrix4x4  & offset = matrix_stack.back().offset;
 				aiMatrix4x4::RotationX(obj.offset_rot.x, rotx);
 				aiMatrix4x4::RotationY(obj.offset_rot.y, roty);
 				aiMatrix4x4::RotationZ(obj.offset_rot.z, rotz);
@@ -472,7 +472,6 @@ namespace Assimp
 						new_mesh.index_data.emplace_back(((uint32_t*)ics)[i]);
 
 				bool has_normal = false;
-				bool has_tc = false;
 
 				for (uint32_t i = 0; i < arrays->attributes_count; i++)
 				{

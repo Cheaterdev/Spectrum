@@ -100,7 +100,6 @@ void MipMapGenerator::generate(HAL::ComputeContext& compute_context, HAL::Textur
 	compute_context.set_signature(Layouts::DefaultLayout);
 	uint32_t maps = view.get_mip_count() - 1;
 	auto size = view.get_size();
-	uint32_t prev = 0;
 
 	for (uint32_t TopMip = 0; TopMip < maps;)
 	{
@@ -155,7 +154,6 @@ void MipMapGenerator::generate(HAL::ComputeContext& compute_context, HAL::Textur
 		compute_context.dispatch(ivec2(DstWidth, DstHeight), ivec2(8, 8));
 
 		//compute_context.get_base().transition_uav(view.resource.get());
-		prev = TopMip;
 		TopMip += NumMips;
 
 	}

@@ -183,7 +183,7 @@ namespace HAL
 
             ComPtr<ID3DBlob> blob;
             THIS->tracked_info->m_pipelineState->GetCachedBlob(&blob);
-            std::string str((char*)blob->GetBufferPointer(), blob->GetBufferSize());
+            std::string str(static_cast<const char*>(blob->GetBufferPointer()), blob->GetBufferSize());
 
             return str;
         }
@@ -208,7 +208,7 @@ namespace HAL
         {
             auto lib = raytracingPipeline.CreateSubobject<CD3DX12_DXIL_LIBRARY_SUBOBJECT>();
 
-            D3D12_SHADER_BYTECODE libdxil = CD3DX12_SHADER_BYTECODE((void*)l.library->get_blob().data(),
+            D3D12_SHADER_BYTECODE libdxil = CD3DX12_SHADER_BYTECODE(static_cast<const void*>(l.library->get_blob().data()),
                 l.library->get_blob().size());
             lib->SetDXILLibrary(&libdxil);
 

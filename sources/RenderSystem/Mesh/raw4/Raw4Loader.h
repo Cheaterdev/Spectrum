@@ -39,7 +39,7 @@ private:
 	static raw4_block_values* get_values(Raw4Context &context, const uint8_t* p, uint32_t size);
 
 public:
-	static bool Load(Assimp::IOSystem &io, std::string name , Raw4SceneAdaptor &adaptor);
+	static bool Load(Assimp::IOSystem &io, const std::string& name , Raw4SceneAdaptor &adaptor);
 };
 //-----------------------------------------------------------------------------
 #endif

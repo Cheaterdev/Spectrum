@@ -601,7 +601,6 @@ VSM::VSM() : VariableContext(L"VSM")
 	// shadow that should exist vanishing. The extra 3 mips are tiny
 	// (4x4+2x2+1x1 per slot) so the old VRAM/dispatch-count worry doesn't
 	// really apply at this depth.
-	const int physical_slots = page_table.physical_page_count;
 	int pyramid_mip_count = 1;
 	for (int s = page_table.page_size; s > 1; s >>= 1)
 		pyramid_mip_count++;
@@ -1027,7 +1026,7 @@ VSM::VSM() : VariableContext(L"VSM")
 						gatherData.GetLevel_count() = (uint)m_level_dispatch_info.size();
 						gatherData.GetLight_view()  = light_view;
 
-						UINT* ids = (UINT*)gatherData.GetMaterial_pip_ids();
+						UINT* ids = reinterpret_cast<UINT*>(gatherData.GetMaterial_pip_ids());
 						for (int i = 0; i < 8; i++)
 							ids[i] = (i < total) ? (UINT)batch[i]->get_id() : ~0u;
 

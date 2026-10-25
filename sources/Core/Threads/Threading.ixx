@@ -23,7 +23,7 @@ export
 
 
 void SetThreadName(DWORD dwThreadID, const char* threadName);
-void SetThreadName(std::string threadName);
+void SetThreadName(const std::string& threadName);
 void SetThreadName(std::thread* thread, const char* threadName);
 
 

@@ -15,7 +15,7 @@ struct my_stream
 	std::stringstream stream;
 	std::string path;
 
-	my_stream(std::string dir, std::string filename);
+	my_stream(std::string dir, const std::string& filename);
 	~my_stream();
 
 	template <class T>
@@ -213,7 +213,7 @@ public:
 	}
 
 
-	T* find(std::string s) requires (std::is_base_of_v<have_name, T>)
+	T* find(std::string_view s) requires (std::is_base_of_v<have_name, T>)
 	{
 		for (auto& d : container)
 		{
@@ -223,7 +223,7 @@ public:
 		return nullptr;
 	}
 
-	const T* find(std::string s) const requires (std::is_base_of_v<have_name, T>)
+	const T* find(std::string_view s) const requires (std::is_base_of_v<have_name, T>)
 	{
 		for (auto& d : container)
 		{
@@ -233,7 +233,7 @@ public:
 		return nullptr;
 	}
 
-	T* find(std::string s) requires (!std::is_base_of_v<have_name, T> && std::is_base_of_v<have_type, T>)
+	T* find(std::string_view s) requires (!std::is_base_of_v<have_name, T> && std::is_base_of_v<have_type, T>)
 	{
 		for (auto& d : container)
 		{
@@ -243,7 +243,7 @@ public:
 		return nullptr;
 	}
 
-	const T* find(std::string s) const requires (!std::is_base_of_v<have_name, T> && std::is_base_of_v<have_type, T>)
+	const T* find(std::string_view s) const requires (!std::is_base_of_v<have_name, T> && std::is_base_of_v<have_type, T>)
 	{
 		for (auto& d : container)
 		{
@@ -520,7 +520,7 @@ struct Sampler : public have_name, have_expr
 
 std::string get_name_for(ValueType type);
 
-std::string get_cpp_for(Value v);
+std::string get_cpp_for(const Value& v);
 class Slot;
 
 struct Layout : public inherited, have_options, have_name
@@ -532,7 +532,7 @@ struct Layout : public inherited, have_options, have_name
 
 
 	int types_counts;
-	Slot* find_slot(std::string name);
+	Slot* find_slot(std::string_view name);
 
 	void set_slots(int offset = 0);
 
@@ -560,7 +560,7 @@ struct Layout : public inherited, have_options, have_name
 struct Slot : public have_options, have_name
 {
 	Layout* layout = nullptr;
-	int id;
+	int id = 0;
 	table_offsets max_counts;
 	table_offsets ids;
 
@@ -1055,10 +1055,10 @@ struct Parsed : public parsed_type
 	// raw forms a bind_option's value already does.
 	my_container<option> consts;
 
-	Layout* find_layout(std::string name);
-	Table* find_table(std::string name);
-	RaytracePSO* find_rtx(std::string name);
-	Enum* find_enum(std::string name);
+	Layout* find_layout(std::string_view name);
+	Table* find_table(std::string_view name);
+	RaytracePSO* find_rtx(std::string_view name);
+	Enum* find_enum(std::string_view name);
 
 	void setup();
 

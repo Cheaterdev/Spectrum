@@ -637,8 +637,6 @@ void ddgi_probe_convolve_render(Passes::GI::DDGI::DDGIProbeConvolve::Context& da
 	if (g_ddgi_freeze_probes)
 		return;
 
-	uint32_t cascade = data.pass_index;
-
 	// No more cascade-level skip here (see g_ddgi_stagger_k's own comment)
 	// -- the dispatch always runs at full size, and each thread's own
 	// per-probe due-check (ddgi_probe_convolve.hlsl, alongside its existing
@@ -649,6 +647,7 @@ void ddgi_probe_convolve_render(Passes::GI::DDGI::DDGIProbeConvolve::Context& da
 	context.graph->set_slot(SlotID::FrameInfo, compute);
 
 	{
+		uint32_t cascade = data.pass_index;
 		Slots::GI::DDGI::DDGIProbeConvolveData params;
 		params.GetInfo() = ddgi_make_info(ddgi_camera_pos(context), cascade);
 		params.GetProbe_ray_radiance() = data.DDGI_ProbeRayRadiance->structuredBuffer;

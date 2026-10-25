@@ -411,13 +411,12 @@ void materials::universal_material::compile()
 	for (int i = 0; i < textures.size(); i++)
 	{
 			TextureAsset::ptr tex = *textures[i];
+		if (tex && tex->get_texture()->texture_2d())
+		{
 			// texture_to_linear may be shorter than textures for a material
 			// serialized before this field existed -- default to false (the
 			// plain linear view) rather than indexing out of bounds.
 			bool to_linear = i < (int)texture_to_linear.size() && texture_to_linear[i];
-
-		if (tex && tex->get_texture()->texture_2d())
-		{
 			texture_srvs[i] = to_linear ? tex->get_texture()->texture_2d_srgb().texture2D : tex->get_texture()->texture_2d().texture2D;
 		texture_feedbacks[i] = tex->get_texture()->texture_2d().feedback;
 		}

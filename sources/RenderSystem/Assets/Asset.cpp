@@ -47,7 +47,7 @@ AssetManager::AssetManager()
 		auto t = CounterManager::get().start_count<folder_item>();
 		iter(std::wstring(L"assets"), tree_folders);
 	}
-	msg_box_func = [](std::string str)
+	msg_box_func = [](const std::string& str)
 	{
 		return MessageBoxA(0, str.c_str(), "message", Windows::MB_YESNO) == Windows::IDOK;
 	};

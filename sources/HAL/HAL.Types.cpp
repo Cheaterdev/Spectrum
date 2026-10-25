@@ -93,7 +93,7 @@ namespace HAL
 			return CommandListType::COPY;
 
 
-		static const BarrierAccess ACCESS_DIRECT = BarrierAccess::RENDER_TARGET | BarrierAccess::DEPTH_STENCIL_WRITE | BarrierAccess::RENDER_TARGET;//| BarrierAccess::UNORDERED_ACCESS| BarrierAccess::RAYTRACING_ACCELERATION_STRUCTURE_WRITE;
+		static const BarrierAccess ACCESS_DIRECT = BarrierAccess::RENDER_TARGET | BarrierAccess::DEPTH_STENCIL_WRITE;//| BarrierAccess::UNORDERED_ACCESS| BarrierAccess::RAYTRACING_ACCELERATION_STRUCTURE_WRITE;
 		if (check(access & ACCESS_DIRECT))
 			return CommandListType::DIRECT;
 

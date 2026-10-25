@@ -1787,7 +1787,7 @@ public:
 											auto f = FileSystem::get().get_file(to_path(L"scene.dat"))->load_all();
 											Serializer::deserialize(f, *drawer->scene);
 										}
-										catch (std::exception e)
+										catch (const std::exception&)
 										{
 											message_box("error", "cant open", [](bool)
 												{

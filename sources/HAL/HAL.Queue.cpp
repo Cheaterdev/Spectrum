@@ -114,42 +114,19 @@ namespace HAL
 		{
 			PROFILE(L"update_tile_mappings");
 
-			bool has_updates = false;
-
 			/// In packed lists make with 1 go
 			for (auto& list : lists)
 			{
-				auto& updates = (list)->tile_updates;
 				{
+					auto& updates = (list)->tile_updates;
 					for (auto& u : updates)
 					{
-						has_updates = true;
 						update_tile_mappings(u);
 					}
 				}
 			}
 			
 
-		/*	if (has_updates)
-			{
-
-				API::Queue::signal(commandListCounter, fence_value);
-
-				FenceWaiter execution_fence{ &commandListCounter, fence_value, type};
-
-
-	//			FenceWaiter execution_fence = signal_internal();
-
-				gpu_wait_thread.enqueue([lists, this, execution_fence]()
-					{
-						PROFILE(L"update_tile_mappings result");
-						execution_fence.wait();
-						for (auto& list : lists)
-						{
-						
-						}
-					});
-			}		   */
 		}
 		 	
 		for (auto& list : lists)

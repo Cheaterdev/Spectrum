@@ -21,6 +21,15 @@ import java.nio.file.Files;
 
 public class MainActivity extends Activity implements SurfaceHolder.Callback
 {
+    private SurfaceView view;
+    private final Object lock = new Object();
+    private Surface surface;
+    private boolean surfaceReady;
+    private boolean renderActive;   // the render thread is inside nativeRenderSurface
+    private boolean running = true;
+    private int generation;         // bumped on every surface change; the native loop ends when it moves
+    private volatile boolean testsRunning;
+
     // Loading the library runs JNI_OnLoad (android_entry.cpp): it creates the Application
     // singleton and starts logging. Watch it with: adb logcat -s Spectrum
     static { System.loadLibrary("spectrum"); }
@@ -38,15 +47,6 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback
     // MOVE (1), DOWN (2) or UP (4) - the shape of GUI::touch_event, so native builds one message.
     private static native void nativeTouchPoint(int id, float x, float y);
     private static native void nativeTouchFlush(int flags);
-
-    private SurfaceView view;
-    private final Object lock = new Object();
-    private Surface surface;
-    private boolean surfaceReady;
-    private boolean renderActive;   // the render thread is inside nativeRenderSurface
-    private boolean running = true;
-    private int generation;         // bumped on every surface change; the native loop ends when it moves
-    private volatile boolean testsRunning;
 
     @Override
     protected void onCreate(Bundle savedInstanceState)
@@ -124,7 +124,8 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback
         final long start = System.currentTimeMillis();
         while (testsRunning)
         {
-            int done = 0, total = 0;
+            int done = 0;
+            int total = 0;
             String current = "starting up";
             String[] failedTests = new String[0];
             try
@@ -144,7 +145,10 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback
             {
                 try
                 {
-                    final float w = canvas.getWidth(), h = canvas.getHeight(), margin = w * 0.08f, bar = h * 0.025f;
+                    final float w = canvas.getWidth();
+                    final float h = canvas.getHeight();
+                    final float margin = w * 0.08f;
+                    final float bar = h * 0.025f;
                     final float y = h * 0.22f;
                     final int failed = failedTests.length;
                     canvas.drawColor(Color.rgb(16, 18, 26));
@@ -338,7 +342,11 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback
         return count;
     }
 
-    @Override public void surfaceCreated(SurfaceHolder holder) {}
+    @Override
+    public void surfaceCreated(SurfaceHolder holder)
+    {
+        // intentionally empty
+    }
 
     @Override
     public void surfaceChanged(SurfaceHolder holder, int format, int width, int height)

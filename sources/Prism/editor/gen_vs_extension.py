@@ -179,8 +179,11 @@ def strip_peg_comments(text):
 
 
 def split_rules(text):
-    """Returns {name: body} for every `name <- body` rule. A rule starts with a
-    name in column 0 (the `<-` may be on the next line) and runs to the next one."""
+    """
+    Returns {name: body} for every `name <- body` rule.
+
+    A rule starts with a name in column 0 (the `<-` may be on the next line) and runs to the next one.
+    """
     text = strip_peg_comments(text)
     starts = list(re.finditer(r"^(%?[A-Za-z_]\w*)[ \t]*(?:\r?\n[ \t]+)?<-", text, re.M))
     rules = {}
@@ -236,8 +239,11 @@ def tokenize(body):
 
 
 def lexer_ast(name, rules, depth=0):
-    """Parses a token rule into a tiny AST: ('alt', [seq...]) of ('seq', [atoms]).
-    The `< >` token boundary is transparent; `!x` is ('not', x)."""
+    """
+    Parses a token rule into a tiny AST: ('alt', [seq...]) of ('seq', [atoms]).
+
+    The `< >` token boundary is transparent; `!x` is ('not', x).
+    """
     if depth > 20:
         raise ValueError("lexer rule recursion: " + name)
     toks = tokenize(rules[name])
@@ -252,7 +258,6 @@ def lexer_ast(name, rules, depth=0):
         return ("alt", seqs)
 
     def parse_seq():
-        nonlocal pos
         atoms = []
         while pos < len(toks) and toks[pos] not in (("op", "/"), ("op", ")"), ("op", ">")):
             atoms.append(parse_prefixed())
@@ -343,8 +348,9 @@ def is_lexer(name):
 
 
 def literal_rules(rules):
-    """Token rules whose whole body is one literal (a trailing `!x` guard such as
-    `!IDCHAR` does not count): {NAME: text}."""
+    """
+    Token rules whose whole body is one literal (a trailing `!x` guard such as `!IDCHAR` does not count): {NAME: text}.
+    """
     out = {}
     for name in rules:
         if not is_lexer(name):
@@ -634,8 +640,11 @@ PACKAGE_GUID = "{40863436-2fa7-4ea3-9809-55aa6ce8b482}"
 
 
 def compile_commands(out_dir):
-    """PrismCommands.vsct -> .cto, the binary menu resource VS loads. Needs the
-    VS Installer's "Visual Studio extension development" workload."""
+    """
+    PrismCommands.vsct -> .cto, the binary menu resource VS loads.
+
+    Needs the VS Installer's "Visual Studio extension development" workload.
+    """
     vsct = os.path.join(VSSDK, r"Tools\Bin\VSCT.exe")
     if not os.path.exists(vsct):
         sys.exit(f"missing {vsct}: install the 'Visual Studio extension development' workload")
@@ -686,8 +695,9 @@ def compile_client(out_dir):
 
 
 def dll_closure(exe):
-    """The exe plus every DLL it (transitively) imports that sits next to it --
-    i.e. the vcpkg runtime DLLs, not system ones."""
+    """
+    The exe plus every DLL it (transitively) imports that sits next to it -- i.e. the vcpkg runtime DLLs, not system ones.
+    """
     dumpbin = sorted(glob.glob(os.path.join(VS_ROOT, r"VC\Tools\MSVC\*\bin\Hostx64\x64\dumpbin.exe")))[-1]
     folder = os.path.dirname(exe)
     result, pending = [], [exe]

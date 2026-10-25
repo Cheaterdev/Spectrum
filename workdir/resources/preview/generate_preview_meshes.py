@@ -1,4 +1,5 @@
-"""Generates the material preview shapes (OBJ, one material slot each).
+"""
+Generates the material preview shapes (OBJ, one material slot each).
 
 Run from this folder:  python generate_preview_meshes.py
 

@@ -20,7 +20,7 @@ static std::wstring normalized(const std::filesystem::path& p)
 	return s;
 }
 
-my_stream::my_stream(std::string dir, std::string filename)
+my_stream::my_stream(std::string dir, const std::string& filename)
 {
 	path = dir + "/" + filename;
 	std::filesystem::create_directories(dir);
@@ -259,9 +259,8 @@ std::string get_name_for(ValueType type)
 	return "";
 }
 
-std::string get_cpp_for(Value v)
+std::string get_cpp_for(const Value& v)
 {
-	bool noarg = v.template_arg.empty();
 	std::string arg = v.get_type();
 	switch (v.value_type)
 	{
@@ -363,7 +362,7 @@ Slot::Slot()
 	ids[ValueType::STRUCT] = -1;
 }
 
-Slot* Layout::find_slot(std::string name)
+Slot* Layout::find_slot(std::string_view name)
 {
 	return slots.find(name);
 }
@@ -541,11 +540,7 @@ void Table::setup(Parsed* all)
 
 	for (auto& v : values)
 	{
-		if (v.value_type == ValueType::CB)
-			need_compiled = need_compiled;
-		else if (v.value_type == ValueType::STRUCT)
-			need_compiled = need_compiled;
-		else
+		if (v.value_type != ValueType::CB && v.value_type != ValueType::STRUCT)
 			need_compiled = true;
 		v.detect_type(&v);
 	}
@@ -559,22 +554,22 @@ void Table::setup(Parsed* all)
 	reclassify_enum_fields();
 }
 
-RaytracePSO* Parsed::find_rtx(std::string name)
+RaytracePSO* Parsed::find_rtx(std::string_view name)
 {
 	return raytrace_pso.find(name);
 }
 
-Layout* Parsed::find_layout(std::string name)
+Layout* Parsed::find_layout(std::string_view name)
 {
 	return layouts.find(name);
 }
 
-Table* Parsed::find_table(std::string name)
+Table* Parsed::find_table(std::string_view name)
 {
 	return tables.find(name);
 }
 
-Enum* Parsed::find_enum(std::string name)
+Enum* Parsed::find_enum(std::string_view name)
 {
 	return enums.find(name);
 }

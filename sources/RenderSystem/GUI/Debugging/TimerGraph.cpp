@@ -444,8 +444,6 @@ namespace GUI
 					// cover every value -- gpu_lanes is subscripted by queue_type below.
 					constexpr int QUEUE_COUNT = int(magic_enum::enum_count<HAL::CommandListType>());
 
-					const wchar_t* queue_names[QUEUE_COUNT]      = {L"GPU · Direct", L"GPU · Compute", L"GPU · Copy", L"GPU · Compute2", L"GPU · Compute3"};
-					const wchar_t* queue_lane_names[QUEUE_COUNT] = {L"Direct",       L"Compute",       L"Copy",       L"Compute2",       L"Compute3"};
 					float4         queue_colors[QUEUE_COUNT]     = {
 						{0.18f, 0.10f, 0.32f, 1.0f},
 						{0.08f, 0.22f, 0.16f, 1.0f},
@@ -459,6 +457,8 @@ namespace GUI
 					bool any_gpu = gpu_blocks_size > 0;
 					if (any_gpu)
 					{
+						const wchar_t* queue_names[QUEUE_COUNT]      = {L"GPU · Direct", L"GPU · Compute", L"GPU · Copy", L"GPU · Compute2", L"GPU · Compute3"};
+						const wchar_t* queue_lane_names[QUEUE_COUNT] = {L"Direct",       L"Compute",       L"Copy",       L"Compute2",       L"Compute3"};
 						add_separator();
 						for (int q = 0; q < QUEUE_COUNT; q++)
 						{

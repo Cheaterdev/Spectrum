@@ -438,7 +438,6 @@ VoxelGI::VoxelGI(Scene::ptr& scene, VSM& vsm) :scene(scene), vsm(vsm), VariableC
 		mesh_ctx->list         = command_list;
 		mesh_ctx->cam          = cam.cam;
 
-		auto& list    = *mesh_ctx->list;
 		auto& compute = mesh_ctx->list->get_compute();
 
 		compute.set_pipeline<PSOS::GI::Voxel::Lighting>(
@@ -446,6 +445,7 @@ VoxelGI::VoxelGI(Scene::ptr& scene, VSM& vsm) :scene(scene), vsm(vsm), VariableC
 
 		Slots::GI::Voxel::VoxelLighting ligthing;
 		{
+			auto& list = *mesh_ctx->list;
 			ligthing.GetAlbedo()  = albedo.tex_result->texture_3d().texture3D;
 			ligthing.GetNormals() = normal.tex_result->texture_3d().texture3D;
 			ligthing.GetOutput()  = tex_lighting.tex_result->texture_3d().mips[0].rwTexture3D;

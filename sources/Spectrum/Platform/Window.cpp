@@ -112,7 +112,7 @@ namespace
 LRESULT CALLBACK MyWndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
     // Recover the pointer to our class, don't forget to type cast it back
-    Window* winptr = (Window*)GetWindowLongPtrW(hwnd, GWLP_USERDATA);
+    Window* winptr = reinterpret_cast<Window*>(GetWindowLongPtrW(hwnd, GWLP_USERDATA));
 
     // Check if the pointer is NULL and call the Default WndProc
     if (winptr == NULL)
@@ -189,7 +189,7 @@ void Window::InitWindow(int width, int height, LPCTSTR name)
     UpdateWindow(hWindow);
 }
 
-Window::Window(ivec2 size, std::string name)
+Window::Window(ivec2 size, const std::string& name)
 {
     sizing = false;
     MinWindowSize = { 200, 100 };

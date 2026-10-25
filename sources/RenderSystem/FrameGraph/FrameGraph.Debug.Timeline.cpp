@@ -966,7 +966,6 @@ class FrameGraphTimelineCanvas : public dock_base
             // barriers, sub=N). So ALL_SUBRESOURCES must reconcile with the
             // per-subres slots rather than be treated as its own separate lane.
             {
-                const bool is_persistent = track.is_static || track.is_passed;
 
                 std::unordered_map<uint, HAL::ResourceState> sub_state; // per-subres current
                 std::optional<HAL::ResourceState>            state_all; // last ALL barrier's after (default for untracked subres)
@@ -1940,7 +1939,6 @@ private:
                 };
                 std::unordered_map<uint64, InstState> insts;
 
-                const bool is_persistent = tr.is_static || tr.is_passed;
 
                 for (auto* pass : sorted)
                 {
@@ -2631,7 +2629,6 @@ private:
         {
             float2 p1 = from / screen_sz;
             float2 p4 = to   / screen_sz;
-            float  mx = (p1.x + p4.x) * 0.5f;
             float2 p2 = { p1.x+50.0f/ screen_sz.x, p1.y };
             float2 p3 = {  p4.x-50.0f/ screen_sz.x, p4.y };
 

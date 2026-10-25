@@ -952,10 +952,8 @@ namespace FrameGraph
 
 		}
 
-		int i = 1;
-
-
 		{
+			int i = 1;
 
 			PROFILE(L"sync_state");
 
@@ -1956,7 +1954,6 @@ namespace FrameGraph
 			if (info->is_history_current) continue;
 
 
-			bool alias_ended = false;
 		/*	if (delete_resources)
 			for (auto pass : info->states.back().passes)
 			{
@@ -1971,7 +1968,7 @@ namespace FrameGraph
 			// if no pass found - find any pass that is synced to the usage
 			if (!best_deletion_pass)
 			{
-				  if(delete_resources)
+								  if(delete_resources)
 				for (auto pass : enabled_passes)
 				{
 					if (info->used_end.is_in_sync(pass->sync_state, false))
@@ -1979,8 +1976,7 @@ namespace FrameGraph
 						best_deletion_pass = pass;
 						events[best_deletion_pass->call_id].free_before.insert(info);
 
-						if (!alias_ended)
-							UsedResources::add_unique(best_deletion_pass->used.resource_deletions_before, version_of(*info));
+													UsedResources::add_unique(best_deletion_pass->used.resource_deletions_before, version_of(*info));
 
 						//	events[best_deletion_pass->call_id].free_after.insert(info);
 						//best_deletion_pass->used.resource_deletions_after.insert(info);

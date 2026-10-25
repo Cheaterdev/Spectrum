@@ -15,7 +15,6 @@ namespace HAL {
 
 	void TiledResourceManager::load_tile(update_tiling_info& target, uint3 pos, uint storage_index, bool recursive)
 	{
-		auto& alloc_info = (resource)->alloc_info;
 		auto& tile = tiles[storage_index][pos];
 
 		if (!tile.heap_position.heap)

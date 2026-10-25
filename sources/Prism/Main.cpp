@@ -73,7 +73,7 @@ class TemplatesLibrary
 	std::map<std::wstring, jinja2::Template> templates;
 
 public:
-	TemplatesLibrary(std::string dir)
+	TemplatesLibrary(const std::string& dir)
 	{
 		iterate_files("templates/" + dir + "/", [this](std::filesystem::path path)
 		{
@@ -92,7 +92,7 @@ public:
 		});
 	}
 
-	auto generate(std::wstring filename, const ValuesMap& params)
+	auto generate(const std::wstring& filename, const ValuesMap& params)
 	{
 		jinja2::Template& tpl = templates[filename];
 		auto res = tpl.RenderAsString(params);
@@ -103,12 +103,12 @@ public:
 		std::cout << res.error().ToString() << std::endl;
 	}
 
-	auto generate(std::wstring filename)
+	auto generate(const std::wstring& filename)
 	{
 		return generate(filename, ValuesMap{});
 	}
 
-	auto generate2(std::wstring filename, std::string name, auto& p)
+	auto generate2(const std::wstring& filename, std::string name, auto& p)
 	{
 		auto dp = make_map(p);
 

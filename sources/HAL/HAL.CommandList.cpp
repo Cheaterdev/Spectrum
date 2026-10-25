@@ -525,10 +525,10 @@ namespace HAL
 
 					// Once per pipeline: this runs per draw.
 					static std::mutex reported_mutex;
-					static std::set<std::string> reported;
 					if (pipeline_formats != rtv_formats)
 					{
 						std::lock_guard g(reported_mutex);
+						static std::set<std::string> reported;
 						if (reported.insert(std::string(graphics->name)).second)
 							Log::get() << "Wrong rendertarget format for pipeline " << graphics->name << Log::endl;
 					}
@@ -540,10 +540,10 @@ namespace HAL
 					HAL::Format ds_format = compiled_rt.get_depth_format();
 
 					static std::mutex reported_mutex;
-					static std::set<std::string> reported;
 					if (pipeline_format != ds_format)
 					{
 						std::lock_guard g(reported_mutex);
+						static std::set<std::string> reported;
 						if (reported.insert(std::string(graphics->name)).second)
 							Log::get() << "Wrong depthstencil format for pipeline " << graphics->name << Log::endl;
 					}
@@ -2185,8 +2185,6 @@ namespace HAL
 		for (auto& table : tables)
 			table.bound = false;
 
-		auto& desc = signature->get_desc();
-
 		on_set_signature(signature);
 	}
 
@@ -2821,7 +2819,7 @@ namespace HAL
 		for (auto& list : lists)
 			tasks.emplace_back(thread_pool::get().enqueue([list]()
 			{
-					PROFILE(((CommandListBase*)list.get())->get_name());
+					PROFILE(static_cast<CommandListBase*>(list.get())->get_name());
 				auto ca = list->frame_resources->get_ca(list->get_type());
 
 				list->compiler.compile(*ca);

@@ -1,0 +1,5 @@
+---
+exclude_paths:
+  - "Sharpmake/**"
+  - "**/*.sharpmake.cs"
+  - "sources/Prism/editor/**/*.cs"

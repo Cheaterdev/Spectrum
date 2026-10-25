@@ -393,7 +393,7 @@ namespace GUI
 
 					when_all(begin(tasks), end(tasks)).then([mat_info, this]() {
 
-						bool any = !!mat_info->albedo | !!mat_info->metallic | !!mat_info->roughness | !!mat_info->height | !!mat_info->normals;
+						bool any = !!mat_info->albedo || !!mat_info->metallic || !!mat_info->roughness || !!mat_info->height || !!mat_info->normals;
 						if (any)
 							user_ui->message_box("Import", "Create a material from the imported textures?",[mat_info](bool v) {
 							if (v)
@@ -406,8 +406,6 @@ namespace GUI
 				menu->add_item("Compress All")->on_click = [this](menu_list_element::ptr e)
 				{
 					//    auto first_task = create_task([]() {});
-					int i = 0;
-
 					for (auto& a : AssetManager::get().get_assets())
 					{
 						if (a.second->get_type() == Asset_Type::TEXTURE)
@@ -447,7 +445,7 @@ namespace GUI
 			stat_bar->add_child(filter_combo);
 
 			auto folders = std::make_shared<GUI::Elements::tree<folder_item>>();
-			folders->size = { 200, 150 };
+			folders->size = { 128, 150 };
 			folders->docking = GUI::dock::LEFT;
 			add_child(folders);
 

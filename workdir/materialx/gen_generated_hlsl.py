@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Generates workdir/shaders/materialx/mx_generated.hlsl.
+"""
+Generates workdir/shaders/materialx/mx_generated.hlsl.
 
 Every MaterialX stdlib nodedef that is not hand-written in mx_stdlib.hlsl is
 defined in MaterialX either by an inline expression ("sourcecode" in
@@ -59,6 +60,7 @@ def literal(mx_type, value):
 
 class NodeDef:
     def __init__(self, el):
+        """Store a MaterialX nodedef's name, category, inputs, outputs and derived function names."""
         self.name = el.get("name")
         self.category = el.get("node")
         self.inputs = [(i.get("name"), i.get("type"), i.get("value"), i.get("defaultgeomprop"))
@@ -144,7 +146,6 @@ def main():
 
     def resolve_node(el, ng_nodes):
         """Pick the nodedef an internal nodegraph node instantiates."""
-        outs = [o.get("type") for o in el.findall("output")]
         node_type = el.get("type")
         provided = {i.get("name"): i.get("type") for i in el.findall("input")}
         for nd in by_category.get(el.tag, []):

@@ -86,7 +86,7 @@ class mesh_renderer : public renderer, public Events::prop_handler, VariableCont
 		// one draw each, no GPU culling) through its material's vertex-stage pipeline.
 		void  render_vertex_front_end(MeshRenderContext::ptr mesh_render_context, Scene::ptr scene);
 		void  draw_boxes(MeshRenderContext::ptr mesh_render_context, Scene::ptr scene);
-		void  generate_boxes(MeshRenderContext::ptr mesh_render_context, Scene::ptr scene, Slots::Meshes::GatherPipelineGlobal::Compiled& gatherData, HAL::StructuredBufferView<DispatchArguments>* dispatch_args, UINT direct_count);
+		void  generate_boxes(MeshRenderContext::ptr mesh_render_context, Slots::Meshes::GatherPipelineGlobal::Compiled& gatherData, HAL::StructuredBufferView<DispatchArguments>* dispatch_args, UINT direct_count);
 		void  gather_rendered_boxes(MeshRenderContext::ptr mesh_render_context, Scene::ptr scene, bool invisibleToo);
 
 

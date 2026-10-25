@@ -16,15 +16,10 @@ namespace GUI
 	NinePatch::NinePatch()
 	{
 		static std::mutex m;
-		static void* owner_device = nullptr;
-
-		//void* cur = &RenderSystem::get().device();
-		//if (owner_device == cur && index_buffer) return;  // fast path — no lock after first init
 
 		std::lock_guard<std::mutex> g(m);
 		if (index_buffer)
 			return;
-		//if (owner_device == cur && index_buffer) return;  // re-check under lock
 
 	//	index_buffer = {};  // release buffer from old device
 
@@ -37,7 +32,6 @@ namespace GUI
 				*data++ = i*4+j+4; *data++ = i*4+j+1; *data++ = i*4+j+5;
 			}
 		index_buffer = Helpers::make_buffer<unsigned int>(RenderSystem::get().device(), index_data);
-		//owner_device = cur;
 	}
 
 	void NinePatch::draw(base::Context& c, GUI::Texture& item, rect r, HAL::PipelineState::ptr pipeline_state, bool solid)
