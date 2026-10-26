@@ -91,10 +91,7 @@ void HAL::RaytracingAccelerationStructure::update(CommandList::ptr list, UINT si
 	//	return;
 	//	if (resource) return;
 
-	RaytracingBuildFlags buildFlags = RaytracingBuildFlags::ALLOW_UPDATE;
 	need_rebuild = true;
-	if (!need_rebuild)
-		buildFlags |= RaytracingBuildFlags::PERFORM_UPDATE;
 
 
 	const int prev = current ^ 1;

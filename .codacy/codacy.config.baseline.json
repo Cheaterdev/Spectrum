@@ -1,0 +1,2568 @@
+{
+  "version": 1,
+  "metadata": {
+    "source": "remote",
+    "provider": "gh",
+    "organization": "Cheaterdev",
+    "repositoryId": "384087",
+    "repositoryName": "Spectrum",
+    "createdAt": "2026-10-26T11:01:41.175Z",
+    "updatedAt": "2026-10-26T11:44:37.525Z",
+    "languages": [
+      "C",
+      "CPP",
+      "CSharp",
+      "Java",
+      "JSON",
+      "Markdown",
+      "Python",
+      "XML",
+      "YAML"
+    ]
+  },
+  "tools": [
+    {
+      "toolId": "Prospector",
+      "patterns": [
+        {
+          "patternId": "Prospector_mccabe"
+        },
+        {
+          "patternId": "Prospector_pyflakes"
+        },
+        {
+          "patternId": "Prospector_pydocstyle"
+        },
+        {
+          "patternId": "Prospector_dodgy"
+        }
+      ]
+    },
+    {
+      "toolId": "Agentlinter",
+      "patterns": []
+    },
+    {
+      "toolId": "PyLintPython3",
+      "patterns": [
+        {
+          "patternId": "PyLintPython3_E0203"
+        },
+        {
+          "patternId": "PyLintPython3_E0102"
+        },
+        {
+          "patternId": "PyLintPython3_E1102"
+        },
+        {
+          "patternId": "PyLintPython3_E1121"
+        },
+        {
+          "patternId": "PyLintPython3_W1301"
+        },
+        {
+          "patternId": "PyLintPython3_C0200"
+        },
+        {
+          "patternId": "PyLintPython3_E0241"
+        },
+        {
+          "patternId": "PyLintPython3_C0123"
+        },
+        {
+          "patternId": "PyLintPython3_W0101"
+        },
+        {
+          "patternId": "PyLintPython3_W0604"
+        },
+        {
+          "patternId": "PyLintPython3_E0107"
+        },
+        {
+          "patternId": "PyLintPython3_E0202"
+        },
+        {
+          "patternId": "PyLintPython3_E1003"
+        },
+        {
+          "patternId": "PyLintPython3_E0302"
+        },
+        {
+          "patternId": "PyLintPython3_E1306"
+        },
+        {
+          "patternId": "PyLintPython3_E0113"
+        },
+        {
+          "patternId": "PyLintPython3_E0301"
+        },
+        {
+          "patternId": "PyLintPython3_W0711"
+        },
+        {
+          "patternId": "PyLintPython3_E0108"
+        },
+        {
+          "patternId": "PyLintPython3_E0604"
+        },
+        {
+          "patternId": "PyLintPython3_W0102"
+        },
+        {
+          "patternId": "PyLintPython3_E0603"
+        },
+        {
+          "patternId": "PyLintPython3_W0150"
+        },
+        {
+          "patternId": "PyLintPython3_E0240"
+        },
+        {
+          "patternId": "PyLintPython3_E0101"
+        },
+        {
+          "patternId": "PyLintPython3_E0110"
+        },
+        {
+          "patternId": "PyLintPython3_E0112"
+        },
+        {
+          "patternId": "PyLintPython3_E0117"
+        },
+        {
+          "patternId": "PyLintPython3_E0211"
+        },
+        {
+          "patternId": "PyLintPython3_R0203"
+        },
+        {
+          "patternId": "PyLintPython3_E1303"
+        },
+        {
+          "patternId": "PyLintPython3_E0106"
+        },
+        {
+          "patternId": "PyLintPython3_E1300"
+        },
+        {
+          "patternId": "PyLintPython3_W1305"
+        },
+        {
+          "patternId": "PyLintPython3_E0105"
+        },
+        {
+          "patternId": "PyLintPython3_E1200"
+        },
+        {
+          "patternId": "PyLintPython3_W0107"
+        },
+        {
+          "patternId": "PyLintPython3_W0109"
+        },
+        {
+          "patternId": "PyLintPython3_W1306"
+        },
+        {
+          "patternId": "PyLintPython3_E0236"
+        },
+        {
+          "patternId": "PyLintPython3_E0712"
+        },
+        {
+          "patternId": "PyLintPython3_E0710"
+        },
+        {
+          "patternId": "PyLintPython3_E1301"
+        },
+        {
+          "patternId": "PyLintPython3_W0105"
+        },
+        {
+          "patternId": "PyLintPython3_E0104"
+        },
+        {
+          "patternId": "PyLintPython3_E0702"
+        },
+        {
+          "patternId": "PyLintPython3_E1132"
+        },
+        {
+          "patternId": "PyLintPython3_W0221"
+        },
+        {
+          "patternId": "PyLintPython3_E0701"
+        },
+        {
+          "patternId": "PyLintPython3_E1206"
+        },
+        {
+          "patternId": "PyLintPython3_W0104"
+        },
+        {
+          "patternId": "PyLintPython3_E0238"
+        },
+        {
+          "patternId": "PyLintPython3_E1126"
+        },
+        {
+          "patternId": "PyLintPython3_E0114"
+        },
+        {
+          "patternId": "PyLintPython3_W0702"
+        },
+        {
+          "patternId": "PyLintPython3_E0100"
+        },
+        {
+          "patternId": "PyLintPython3_W0106"
+        },
+        {
+          "patternId": "PyLintPython3_E0601"
+        },
+        {
+          "patternId": "PyLintPython3_W1307"
+        },
+        {
+          "patternId": "PyLintPython3_E1302"
+        },
+        {
+          "patternId": "PyLintPython3_C0303"
+        },
+        {
+          "patternId": "PyLintPython3_W0120"
+        },
+        {
+          "patternId": "PyLintPython3_W0612"
+        },
+        {
+          "patternId": "PyLintPython3_E1125"
+        },
+        {
+          "patternId": "PyLintPython3_W0622"
+        },
+        {
+          "patternId": "PyLintPython3_E1111"
+        },
+        {
+          "patternId": "PyLintPython3_E1305"
+        },
+        {
+          "patternId": "PyLintPython3_R0202"
+        },
+        {
+          "patternId": "PyLintPython3_E0103"
+        },
+        {
+          "patternId": "PyLintPython3_W0124"
+        },
+        {
+          "patternId": "PyLintPython3_W0404"
+        },
+        {
+          "patternId": "PyLintPython3_W0410"
+        },
+        {
+          "patternId": "PyLintPython3_E0115"
+        },
+        {
+          "patternId": "PyLintPython3_W0611"
+        },
+        {
+          "patternId": "PyLintPython3_E1304"
+        },
+        {
+          "patternId": "PyLintPython3_E1123"
+        },
+        {
+          "patternId": "PyLintPython3_W0108"
+        },
+        {
+          "patternId": "PyLintPython3_W0233"
+        },
+        {
+          "patternId": "PyLintPython3_W1303"
+        },
+        {
+          "patternId": "PyLintPython3_W0199"
+        },
+        {
+          "patternId": "PyLintPython3_W0705"
+        },
+        {
+          "patternId": "PyLintPython3_E1124"
+        },
+        {
+          "patternId": "PyLintPython3_E0704"
+        },
+        {
+          "patternId": "PyLintPython3_W0601"
+        },
+        {
+          "patternId": "PyLintPython3_E0239"
+        },
+        {
+          "patternId": "PyLintPython3_E1120"
+        },
+        {
+          "patternId": "PyLintPython3_W1302"
+        },
+        {
+          "patternId": "PyLintPython3_W0222"
+        },
+        {
+          "patternId": "PyLintPython3_E0711"
+        },
+        {
+          "patternId": "PyLintPython3_W1300"
+        },
+        {
+          "patternId": "PyLintPython3_E1205"
+        },
+        {
+          "patternId": "PyLintPython3_E1201"
+        },
+        {
+          "patternId": "PyLintPython3_W0602"
+        },
+        {
+          "patternId": "PyLintPython3_W0122"
+        },
+        {
+          "patternId": "PyLintPython3_E1127"
+        }
+      ]
+    },
+    {
+      "toolId": "PMD",
+      "patterns": [
+        {
+          "patternId": "PMD_category_java_bestpractices_JUnitTestsShouldIncludeAssert"
+        },
+        {
+          "patternId": "PMD_category_vm_errorprone_EmptyForeachStmt"
+        },
+        {
+          "patternId": "PMD_category_apex_security_ApexBadCrypto"
+        },
+        {
+          "patternId": "PMD_category_java_errorprone_EmptyFinalizer"
+        },
+        {
+          "patternId": "PMD_category_java_design_AvoidThrowingRawExceptionTypes"
+        },
+        {
+          "patternId": "PMD_category_java_errorprone_UselessOperationOnImmutable"
+        },
+        {
+          "patternId": "PMD_category_plsql_bestpractices_TomKytesDespair"
+        },
+        {
+          "patternId": "PMD_category_java_design_NPathComplexity"
+        },
+        {
+          "patternId": "PMD_category_jsp_design_NoInlineStyleInformation"
+        },
+        {
+          "patternId": "PMD_category_vm_design_NoInlineStyles"
+        },
+        {
+          "patternId": "PMD_category_java_codestyle_UnnecessaryFullyQualifiedName"
+        },
+        {
+          "patternId": "PMD_category_xsl_codestyle_UseConcatOnce"
+        },
+        {
+          "patternId": "PMD_category_jsp_design_NoInlineScript"
+        },
+        {
+          "patternId": "PMD_category_java_errorprone_MethodWithSameNameAsEnclosingClass"
+        },
+        {
+          "patternId": "PMD_category_apex_design_ExcessiveParameterList"
+        },
+        {
+          "patternId": "PMD_category_vm_design_CollapsibleIfStatements"
+        },
+        {
+          "patternId": "PMD_category_java_bestpractices_UnusedFormalParameter"
+        },
+        {
+          "patternId": "PMD_category_apex_security_ApexXSSFromURLParam"
+        },
+        {
+          "patternId": "PMD_category_java_errorprone_EqualsNull"
+        },
+        {
+          "patternId": "PMD_category_java_codestyle_NoPackage"
+        },
+        {
+          "patternId": "PMD_category_apex_security_ApexSOQLInjection"
+        },
+        {
+          "patternId": "PMD_category_apex_design_ExcessivePublicCount"
+        },
+        {
+          "patternId": "PMD_category_java_codestyle_MethodNamingConventions"
+        },
+        {
+          "patternId": "PMD_category_java_errorprone_JumbledIncrementer"
+        },
+        {
+          "patternId": "PMD_category_apex_security_ApexXSSFromEscapeFalse"
+        },
+        {
+          "patternId": "PMD_category_java_errorprone_UnnecessaryBooleanAssertion"
+        },
+        {
+          "patternId": "PMD_category_apex_security_ApexDangerousMethods"
+        },
+        {
+          "patternId": "PMD_category_ecmascript_errorprone_InnaccurateNumericLiteral"
+        },
+        {
+          "patternId": "PMD_category_java_errorprone_AvoidDecimalLiteralsInBigDecimalConstructor"
+        },
+        {
+          "patternId": "PMD_category_java_errorprone_AvoidCallingFinalize"
+        },
+        {
+          "patternId": "PMD_category_jsp_bestpractices_DontNestJsfInJstlIteration"
+        },
+        {
+          "patternId": "PMD_category_java_errorprone_UnconditionalIfStatement"
+        },
+        {
+          "patternId": "PMD_category_java_errorprone_DontUseFloatTypeForLoopIndices"
+        },
+        {
+          "patternId": "PMD_category_java_errorprone_NonStaticInitializer"
+        },
+        {
+          "patternId": "PMD_category_apex_security_ApexOpenRedirect"
+        },
+        {
+          "patternId": "PMD_category_jsp_bestpractices_NoJspForward"
+        },
+        {
+          "patternId": "PMD_category_java_errorprone_JUnitSpelling"
+        },
+        {
+          "patternId": "PMD_category_java_codestyle_GenericsNaming"
+        },
+        {
+          "patternId": "PMD_category_java_errorprone_AvoidInstanceofChecksInCatchClause"
+        },
+        {
+          "patternId": "PMD_category_vm_errorprone_EmptyIfStmt"
+        },
+        {
+          "patternId": "PMD_category_java_bestpractices_OneDeclarationPerLine"
+        },
+        {
+          "patternId": "PMD_category_java_errorprone_JUnitStaticSuite"
+        },
+        {
+          "patternId": "PMD_category_java_multithreading_AvoidThreadGroup"
+        },
+        {
+          "patternId": "PMD_category_java_codestyle_UnnecessaryConstructor"
+        },
+        {
+          "patternId": "PMD_category_plsql_design_ExcessivePackageBodyLength"
+        },
+        {
+          "patternId": "PMD_category_java_errorprone_AvoidBranchingStatementAsLastInLoop"
+        },
+        {
+          "patternId": "PMD_category_java_errorprone_ReturnFromFinallyBlock"
+        },
+        {
+          "patternId": "PMD_category_java_codestyle_UnnecessaryReturn"
+        },
+        {
+          "patternId": "PMD_category_java_errorprone_AssignmentToNonFinalStatic"
+        },
+        {
+          "patternId": "PMD_category_plsql_design_TooManyMethods"
+        },
+        {
+          "patternId": "PMD_category_jsp_codestyle_DuplicateJspImports"
+        },
+        {
+          "patternId": "PMD_category_plsql_errorprone_TO_TIMESTAMPWithoutDateFormat"
+        },
+        {
+          "patternId": "PMD_category_jsp_security_IframeMissingSrcAttribute"
+        },
+        {
+          "patternId": "PMD_category_apex_design_AvoidDeeplyNestedIfStmts"
+        },
+        {
+          "patternId": "PMD_category_java_errorprone_AvoidMultipleUnaryOperators"
+        },
+        {
+          "patternId": "PMD_category_vm_design_AvoidDeeplyNestedIfStmts"
+        },
+        {
+          "patternId": "PMD_category_apex_security_ApexSuggestUsingNamedCred"
+        },
+        {
+          "patternId": "PMD_category_apex_security_ApexInsecureEndpoint"
+        },
+        {
+          "patternId": "PMD_category_java_bestpractices_CheckResultSet"
+        },
+        {
+          "patternId": "PMD_category_java_errorprone_UnnecessaryCaseChange"
+        },
+        {
+          "patternId": "PMD_category_apex_security_ApexSharingViolations"
+        },
+        {
+          "patternId": "PMD_category_java_bestpractices_UnusedPrivateMethod"
+        },
+        {
+          "patternId": "PMD_category_ecmascript_codestyle_AssignmentInOperand"
+        },
+        {
+          "patternId": "PMD_category_vm_design_NoInlineJavaScript"
+        },
+        {
+          "patternId": "PMD_category_java_design_AvoidThrowingNullPointerException"
+        },
+        {
+          "patternId": "PMD_category_vm_bestpractices_UnusedMacroParameter"
+        },
+        {
+          "patternId": "PMD_category_java_design_SimplifyBooleanReturns"
+        },
+        {
+          "patternId": "PMD_category_java_codestyle_ExtendsObject"
+        },
+        {
+          "patternId": "PMD_category_ecmascript_bestpractices_ConsistentReturn"
+        },
+        {
+          "patternId": "PMD_category_jsp_errorprone_JspEncoding"
+        },
+        {
+          "patternId": "PMD_category_plsql_design_ExcessivePackageSpecificationLength"
+        },
+        {
+          "patternId": "PMD_category_pom_errorprone_InvalidDependencyTypes"
+        },
+        {
+          "patternId": "PMD_category_ecmascript_errorprone_EqualComparison"
+        },
+        {
+          "patternId": "PMD_category_java_performance_UseStringBufferLength"
+        },
+        {
+          "patternId": "PMD_category_java_design_SingularField"
+        },
+        {
+          "patternId": "PMD_category_java_design_CollapsibleIfStatements"
+        },
+        {
+          "patternId": "PMD_category_java_bestpractices_AvoidReassigningParameters"
+        },
+        {
+          "patternId": "PMD_category_java_errorprone_NonCaseLabelInSwitchStatement"
+        },
+        {
+          "patternId": "PMD_category_jsp_bestpractices_NoClassAttribute"
+        },
+        {
+          "patternId": "PMD_category_xml_errorprone_MistypedCDATASection"
+        },
+        {
+          "patternId": "PMD_category_java_bestpractices_UnusedPrivateField"
+        },
+        {
+          "patternId": "PMD_category_jsp_bestpractices_NoHtmlComments"
+        },
+        {
+          "patternId": "PMD_category_vf_security_VfUnescapeEl"
+        },
+        {
+          "patternId": "PMD_category_java_errorprone_CheckSkipResult"
+        },
+        {
+          "patternId": "PMD_category_jsp_design_NoLongScripts"
+        },
+        {
+          "patternId": "PMD_category_vm_bestpractices_AvoidReassigningParameters"
+        },
+        {
+          "patternId": "PMD_category_jsp_security_NoUnsanitizedJSPExpression"
+        },
+        {
+          "patternId": "PMD_category_java_performance_StringInstantiation"
+        },
+        {
+          "patternId": "PMD_category_java_design_SimplifyBooleanExpressions"
+        },
+        {
+          "patternId": "PMD_category_apex_security_ApexCRUDViolation"
+        },
+        {
+          "patternId": "PMD_category_java_codestyle_PackageCase"
+        },
+        {
+          "patternId": "PMD_category_plsql_design_ExcessiveParameterList"
+        },
+        {
+          "patternId": "PMD_category_java_multithreading_DontCallThreadRun"
+        },
+        {
+          "patternId": "PMD_category_java_errorprone_MisplacedNullCheck"
+        },
+        {
+          "patternId": "PMD_category_vf_security_VfCsrf"
+        },
+        {
+          "patternId": "PMD_category_java_codestyle_FieldDeclarationsShouldBeAtStartOfClass"
+        },
+        {
+          "patternId": "PMD_category_ecmascript_codestyle_UnnecessaryBlock"
+        },
+        {
+          "patternId": "PMD_category_plsql_errorprone_TO_DATE_TO_CHAR"
+        },
+        {
+          "patternId": "PMD_category_ecmascript_bestpractices_AvoidWithStatement"
+        },
+        {
+          "patternId": "PMD_category_java_bestpractices_SwitchStmtsShouldHaveDefault"
+        },
+        {
+          "patternId": "PMD_category_ecmascript_bestpractices_UseBaseWithParseInt"
+        },
+        {
+          "patternId": "PMD_category_plsql_design_ExcessiveObjectLength"
+        },
+        {
+          "patternId": "PMD_category_java_design_ExcessiveParameterList"
+        },
+        {
+          "patternId": "PMD_category_java_design_LogicInversion"
+        },
+        {
+          "patternId": "PMD_category_java_errorprone_DoNotHardCodeSDCard"
+        },
+        {
+          "patternId": "PMD_category_jsp_design_NoScriptlets"
+        },
+        {
+          "patternId": "PMD_category_java_codestyle_ClassNamingConventions"
+        },
+        {
+          "patternId": "PMD_category_vm_design_ExcessiveTemplateLength"
+        },
+        {
+          "patternId": "PMD_category_java_errorprone_AvoidAccessibilityAlteration"
+        },
+        {
+          "patternId": "PMD_category_java_errorprone_BrokenNullCheck"
+        },
+        {
+          "patternId": "PMD_category_java_bestpractices_UnusedLocalVariable"
+        },
+        {
+          "patternId": "PMD_category_plsql_design_ExcessiveMethodLength"
+        },
+        {
+          "patternId": "PMD_category_xsl_performance_AvoidAxisNavigation"
+        },
+        {
+          "patternId": "PMD_category_java_errorprone_CompareObjectsWithEquals"
+        },
+        {
+          "patternId": "PMD_category_java_errorprone_MissingStaticMethodInNonInstantiatableClass"
+        },
+        {
+          "patternId": "PMD_category_java_errorprone_UseEqualsToCompareStrings"
+        },
+        {
+          "patternId": "PMD_category_pom_errorprone_ProjectVersionAsDependencyVersion"
+        },
+        {
+          "patternId": "PMD_category_java_documentation_UncommentedEmptyMethodBody"
+        },
+        {
+          "patternId": "PMD_category_plsql_errorprone_TO_DATEWithoutDateFormat"
+        },
+        {
+          "patternId": "PMD_category_plsql_codestyle_MisplacedPragma"
+        },
+        {
+          "patternId": "PMD_category_plsql_design_ExcessiveTypeLength"
+        },
+        {
+          "patternId": "PMD_category_java_performance_StringToString"
+        },
+        {
+          "patternId": "PMD_category_apex_design_ExcessiveClassLength"
+        }
+      ]
+    },
+    {
+      "toolId": "cppcheck",
+      "patterns": [
+        {
+          "patternId": "cppcheck_stlSize"
+        },
+        {
+          "patternId": "cppcheck_useClosedFile"
+        },
+        {
+          "patternId": "cppcheck_writeReadOnlyFile"
+        },
+        {
+          "patternId": "cppcheck_memsetFloat"
+        },
+        {
+          "patternId": "cppcheck_invalidPrintfArgType_p"
+        },
+        {
+          "patternId": "cppcheck_unusedStructMember"
+        },
+        {
+          "patternId": "cppcheck_invalidPointerCast"
+        },
+        {
+          "patternId": "cppcheck_thisSubtraction"
+        },
+        {
+          "patternId": "cppcheck_invalidScanfArgType_s"
+        },
+        {
+          "patternId": "cppcheck_doubleFree"
+        },
+        {
+          "patternId": "cppcheck_unpreciseMathCall"
+        },
+        {
+          "patternId": "cppcheck_unusedAllocatedMemory"
+        },
+        {
+          "patternId": "cppcheck_unassignedVariable"
+        },
+        {
+          "patternId": "cppcheck_IOWithoutPositioning"
+        },
+        {
+          "patternId": "cppcheck_memleak"
+        },
+        {
+          "patternId": "cppcheck_wrongPrintfScanfParameterPositionError"
+        },
+        {
+          "patternId": "cppcheck_noConstructor"
+        },
+        {
+          "patternId": "cppcheck_sizeofDivisionMemfunc"
+        },
+        {
+          "patternId": "cppcheck_sizeofsizeof"
+        },
+        {
+          "patternId": "cppcheck_arrayIndexThenCheck"
+        },
+        {
+          "patternId": "cppcheck_varFuncNullUB"
+        },
+        {
+          "patternId": "cppcheck_throwInNoexceptFunction"
+        },
+        {
+          "patternId": "cppcheck_assignBoolToPointer"
+        },
+        {
+          "patternId": "cppcheck_comparisonOfBoolWithBoolError"
+        },
+        {
+          "patternId": "cppcheck_truncLongCastAssignment"
+        },
+        {
+          "patternId": "cppcheck_clarifyStatement"
+        },
+        {
+          "patternId": "cppcheck_nanInArithmeticExpression"
+        },
+        {
+          "patternId": "cppcheck_va_start_referencePassed"
+        },
+        {
+          "patternId": "cppcheck_selfInitialization"
+        },
+        {
+          "patternId": "cppcheck_commaSeparatedReturn"
+        },
+        {
+          "patternId": "cppcheck_compareBoolExpressionWithInt"
+        },
+        {
+          "patternId": "cppcheck_uselessCallsEmpty"
+        },
+        {
+          "patternId": "cppcheck_signConversion"
+        },
+        {
+          "patternId": "cppcheck_multiCondition"
+        },
+        {
+          "patternId": "cppcheck_va_end_missing"
+        },
+        {
+          "patternId": "cppcheck_mismatchingBitAnd"
+        },
+        {
+          "patternId": "cppcheck_zerodivcond"
+        },
+        {
+          "patternId": "cppcheck_arrayIndexOutOfBoundsCond"
+        },
+        {
+          "patternId": "cppcheck_postfixOperator"
+        },
+        {
+          "patternId": "cppcheck_invalidLengthModifierError"
+        },
+        {
+          "patternId": "cppcheck_stlcstrParam"
+        },
+        {
+          "patternId": "cppcheck_sizeofwithsilentarraypointer"
+        },
+        {
+          "patternId": "cppcheck_operatorEqMissingReturnStatement"
+        },
+        {
+          "patternId": "cppcheck_comparisonFunctionIsAlwaysTrueOrFalse"
+        },
+        {
+          "patternId": "cppcheck_operatorEqToSelf"
+        },
+        {
+          "patternId": "cppcheck_uselessCallsCompare"
+        },
+        {
+          "patternId": "cppcheck_uselessAssignmentArg"
+        },
+        {
+          "patternId": "cppcheck_mallocOnClassError"
+        },
+        {
+          "patternId": "cppcheck_stlIfFind"
+        },
+        {
+          "patternId": "cppcheck_strPlusChar"
+        },
+        {
+          "patternId": "cppcheck_missingIncludeSystem"
+        },
+        {
+          "patternId": "cppcheck_pointerLessThanZero"
+        },
+        {
+          "patternId": "cppcheck_mismatchAllocDealloc"
+        },
+        {
+          "patternId": "cppcheck_checkCastIntToCharAndBack"
+        },
+        {
+          "patternId": "cppcheck_invalidPrintfArgType_n"
+        },
+        {
+          "patternId": "cppcheck_va_start_wrongParameter"
+        },
+        {
+          "patternId": "cppcheck_derefInvalidIterator"
+        },
+        {
+          "patternId": "cppcheck_passedByValue"
+        },
+        {
+          "patternId": "cppcheck_stlcstr"
+        },
+        {
+          "patternId": "cppcheck_operatorEqRetRefThis"
+        },
+        {
+          "patternId": "cppcheck_copyCtorPointerCopying"
+        },
+        {
+          "patternId": "cppcheck_memsetZeroBytes"
+        },
+        {
+          "patternId": "cppcheck_shiftNegative"
+        },
+        {
+          "patternId": "cppcheck_sizeofwithnumericparameter"
+        },
+        {
+          "patternId": "cppcheck_redundantCondition"
+        },
+        {
+          "patternId": "cppcheck_sizeofVoid"
+        },
+        {
+          "patternId": "cppcheck_returnReference"
+        },
+        {
+          "patternId": "cppcheck_stlcstrReturn"
+        },
+        {
+          "patternId": "cppcheck_uselessCallsSubstr"
+        },
+        {
+          "patternId": "cppcheck_nullPointer"
+        },
+        {
+          "patternId": "cppcheck_ignoredReturnValue"
+        },
+        {
+          "patternId": "cppcheck_redundantAssignment"
+        },
+        {
+          "patternId": "cppcheck_oppositeInnerCondition"
+        },
+        {
+          "patternId": "cppcheck_unusedScopedObject"
+        },
+        {
+          "patternId": "cppcheck_toomanyconfigs"
+        },
+        {
+          "patternId": "cppcheck_duplicateBreak"
+        },
+        {
+          "patternId": "cppcheck_zerodiv"
+        },
+        {
+          "patternId": "cppcheck_arrayIndexOutOfBounds"
+        },
+        {
+          "patternId": "cppcheck_leakNoVarFunctionCall"
+        },
+        {
+          "patternId": "cppcheck_comparisonError"
+        },
+        {
+          "patternId": "cppcheck_literalWithCharPtrCompare"
+        },
+        {
+          "patternId": "cppcheck_leakReturnValNotUsed"
+        },
+        {
+          "patternId": "cppcheck_operatorEqShouldBeLeftUnimplemented"
+        },
+        {
+          "patternId": "cppcheck_invalidScanfArgType_float"
+        },
+        {
+          "patternId": "cppcheck_mismatchingContainers"
+        },
+        {
+          "patternId": "cppcheck_uselessCallsRemove"
+        },
+        {
+          "patternId": "cppcheck_noExplicitConstructor"
+        },
+        {
+          "patternId": "cppcheck_sizeofCalculation"
+        },
+        {
+          "patternId": "cppcheck_redundantPointerOp"
+        },
+        {
+          "patternId": "cppcheck_noCopyConstructor"
+        },
+        {
+          "patternId": "cppcheck_sprintfOverlappingData"
+        },
+        {
+          "patternId": "cppcheck_invalidIterator1"
+        },
+        {
+          "patternId": "cppcheck_invalidscanf"
+        },
+        {
+          "patternId": "cppcheck_invalidScanfArgType_int"
+        },
+        {
+          "patternId": "cppcheck_comparisonOfFuncReturningBoolError"
+        },
+        {
+          "patternId": "cppcheck_knownConditionTrueFalse"
+        },
+        {
+          "patternId": "cppcheck_shiftTooManyBits"
+        },
+        {
+          "patternId": "cppcheck_missingInclude"
+        },
+        {
+          "patternId": "cppcheck_stlBoundaries"
+        },
+        {
+          "patternId": "cppcheck_exceptThrowInDestructor"
+        },
+        {
+          "patternId": "cppcheck_comparisonOfTwoFuncsReturningBoolError"
+        },
+        {
+          "patternId": "cppcheck_incorrectStringBooleanError"
+        },
+        {
+          "patternId": "cppcheck_truncLongCastReturn"
+        },
+        {
+          "patternId": "cppcheck_pointerSize"
+        },
+        {
+          "patternId": "cppcheck_assignIfError"
+        },
+        {
+          "patternId": "cppcheck_unusedLabel"
+        },
+        {
+          "patternId": "cppcheck_deallocuse"
+        },
+        {
+          "patternId": "cppcheck_AssignmentIntegerToAddress"
+        },
+        {
+          "patternId": "cppcheck_preprocessorErrorDirective"
+        },
+        {
+          "patternId": "cppcheck_StlMissingComparison"
+        },
+        {
+          "patternId": "cppcheck_returnTempReference"
+        },
+        {
+          "patternId": "cppcheck_deallocret"
+        },
+        {
+          "patternId": "cppcheck_stringLiteralWrite"
+        },
+        {
+          "patternId": "cppcheck_memleakOnRealloc"
+        },
+        {
+          "patternId": "cppcheck_mallocOnClassWarning"
+        },
+        {
+          "patternId": "cppcheck_clarifyCalculation"
+        },
+        {
+          "patternId": "cppcheck_readWriteOnlyFile"
+        },
+        {
+          "patternId": "cppcheck_wrongmathcall"
+        },
+        {
+          "patternId": "cppcheck_unsignedLessThanZero"
+        },
+        {
+          "patternId": "cppcheck_CastAddressToIntegerAtReturn"
+        },
+        {
+          "patternId": "cppcheck_invalidPrintfArgType_s"
+        },
+        {
+          "patternId": "cppcheck_charLiteralWithCharPtrCompare"
+        },
+        {
+          "patternId": "cppcheck_assertWithSideEffect"
+        },
+        {
+          "patternId": "cppcheck_redundantIfRemove"
+        },
+        {
+          "patternId": "cppcheck_stlOutOfBounds"
+        },
+        {
+          "patternId": "cppcheck_exceptDeallocThrow"
+        },
+        {
+          "patternId": "cppcheck_incorrectLogicOperator"
+        },
+        {
+          "patternId": "cppcheck_variableScope"
+        },
+        {
+          "patternId": "cppcheck_negativeIndex"
+        },
+        {
+          "patternId": "cppcheck_virtualDestructor"
+        },
+        {
+          "patternId": "cppcheck_AssignmentAddressToInteger"
+        },
+        {
+          "patternId": "cppcheck_autoVariables"
+        },
+        {
+          "patternId": "cppcheck_moduloAlwaysTrueFalse"
+        },
+        {
+          "patternId": "cppcheck_invalidPrintfArgType_sint"
+        },
+        {
+          "patternId": "cppcheck_uninitStructMember"
+        },
+        {
+          "patternId": "cppcheck_autovarInvalidDeallocation"
+        },
+        {
+          "patternId": "cppcheck_duplicateExpression"
+        },
+        {
+          "patternId": "cppcheck_va_list_usedBeforeStarted"
+        },
+        {
+          "patternId": "cppcheck_unsignedPositive"
+        },
+        {
+          "patternId": "cppcheck_nullPointerDefaultArg"
+        },
+        {
+          "patternId": "cppcheck_badBitmaskCheck"
+        },
+        {
+          "patternId": "cppcheck_invalidFunctionArgBool"
+        },
+        {
+          "patternId": "cppcheck_coutCerrMisusage"
+        },
+        {
+          "patternId": "cppcheck_incrementboolean"
+        },
+        {
+          "patternId": "cppcheck_uselessCallsSwap"
+        },
+        {
+          "patternId": "cppcheck_pointerPositive"
+        },
+        {
+          "patternId": "cppcheck_sizeofDereferencedVoidPointer"
+        },
+        {
+          "patternId": "cppcheck_stringCompare"
+        },
+        {
+          "patternId": "cppcheck_invalidPrintfArgType_uint"
+        },
+        {
+          "patternId": "cppcheck_memsetValueOutOfRange"
+        },
+        {
+          "patternId": "cppcheck_eraseDereference"
+        },
+        {
+          "patternId": "cppcheck_constStatement"
+        },
+        {
+          "patternId": "cppcheck_uselessAssignmentPtrArg"
+        },
+        {
+          "patternId": "cppcheck_uninitdata"
+        },
+        {
+          "patternId": "cppcheck_stlIfStrFind"
+        },
+        {
+          "patternId": "cppcheck_charBitOp"
+        },
+        {
+          "patternId": "cppcheck_bufferAccessOutOfBounds"
+        },
+        {
+          "patternId": "cppcheck_catchExceptionByValue"
+        },
+        {
+          "patternId": "cppcheck_nullPointerRedundantCheck"
+        },
+        {
+          "patternId": "cppcheck_staticStringCompare"
+        },
+        {
+          "patternId": "cppcheck_duplicateExpressionTernary"
+        },
+        {
+          "patternId": "cppcheck_seekOnAppendedFile"
+        },
+        {
+          "patternId": "cppcheck_cstyleCast"
+        },
+        {
+          "patternId": "cppcheck_CastIntegerToAddressAtReturn"
+        },
+        {
+          "patternId": "cppcheck_unreadVariable"
+        },
+        {
+          "patternId": "cppcheck_publicAllocationError"
+        },
+        {
+          "patternId": "cppcheck_duplInheritedMember"
+        },
+        {
+          "patternId": "cppcheck_unsafeClassCanLeak"
+        },
+        {
+          "patternId": "cppcheck_resourceLeak"
+        },
+        {
+          "patternId": "cppcheck_uninitMemberVar"
+        },
+        {
+          "patternId": "cppcheck_useInitializationList"
+        },
+        {
+          "patternId": "cppcheck_unreachableCode"
+        },
+        {
+          "patternId": "cppcheck_integerOverflow"
+        },
+        {
+          "patternId": "cppcheck_invalidPrintfArgType_float"
+        },
+        {
+          "patternId": "cppcheck_uninitvar"
+        },
+        {
+          "patternId": "cppcheck_exceptRethrowCopy"
+        },
+        {
+          "patternId": "cppcheck_pointerArithBool"
+        },
+        {
+          "patternId": "cppcheck_pointerOutOfBounds"
+        },
+        {
+          "patternId": "cppcheck_invalidFunctionArg"
+        },
+        {
+          "patternId": "cppcheck_arithOperationsOnVoidPointer"
+        },
+        {
+          "patternId": "cppcheck_invalidScanfFormatWidth"
+        },
+        {
+          "patternId": "cppcheck_clarifyCondition"
+        },
+        {
+          "patternId": "cppcheck_memsetClassReference"
+        },
+        {
+          "patternId": "cppcheck_incorrectStringCompare"
+        },
+        {
+          "patternId": "cppcheck_redundantAssignInSwitch"
+        },
+        {
+          "patternId": "cppcheck_redundantCopy"
+        },
+        {
+          "patternId": "cppcheck_fflushOnInputStream"
+        },
+        {
+          "patternId": "cppcheck_raceAfterInterlockedDecrement"
+        },
+        {
+          "patternId": "cppcheck_memsetClassFloat"
+        },
+        {
+          "patternId": "cppcheck_selfAssignment"
+        },
+        {
+          "patternId": "cppcheck_memsetClass"
+        },
+        {
+          "patternId": "cppcheck_assignmentInAssert"
+        },
+        {
+          "patternId": "cppcheck_wrongPrintfScanfArgNum"
+        },
+        {
+          "patternId": "cppcheck_va_start_subsequentCalls"
+        },
+        {
+          "patternId": "cppcheck_operatorEqVarError"
+        }
+      ]
+    },
+    {
+      "toolId": "jackson",
+      "patterns": [
+        {
+          "patternId": "jackson_duplicate-keys"
+        },
+        {
+          "patternId": "jackson_parse-error"
+        }
+      ]
+    },
+    {
+      "toolId": "Semgrep",
+      "patterns": []
+    },
+    {
+      "toolId": "Bandit",
+      "patterns": [
+        {
+          "patternId": "Bandit_B311"
+        },
+        {
+          "patternId": "Bandit_B301"
+        },
+        {
+          "patternId": "Bandit_B609"
+        },
+        {
+          "patternId": "Bandit_B506"
+        },
+        {
+          "patternId": "Bandit_B407"
+        },
+        {
+          "patternId": "Bandit_B317"
+        },
+        {
+          "patternId": "Bandit_B102"
+        },
+        {
+          "patternId": "Bandit_B505"
+        },
+        {
+          "patternId": "Bandit_B108"
+        },
+        {
+          "patternId": "Bandit_B608"
+        },
+        {
+          "patternId": "Bandit_B702"
+        },
+        {
+          "patternId": "Bandit_B401"
+        },
+        {
+          "patternId": "Bandit_B406"
+        },
+        {
+          "patternId": "Bandit_B315"
+        },
+        {
+          "patternId": "Bandit_B501"
+        },
+        {
+          "patternId": "Bandit_B107"
+        },
+        {
+          "patternId": "Bandit_B110"
+        },
+        {
+          "patternId": "Bandit_B603"
+        },
+        {
+          "patternId": "Bandit_B201"
+        },
+        {
+          "patternId": "Bandit_B104"
+        },
+        {
+          "patternId": "Bandit_B304"
+        },
+        {
+          "patternId": "Bandit_B601"
+        },
+        {
+          "patternId": "Bandit_B321"
+        },
+        {
+          "patternId": "Bandit_B309"
+        },
+        {
+          "patternId": "Bandit_B606"
+        },
+        {
+          "patternId": "Bandit_B310"
+        },
+        {
+          "patternId": "Bandit_B316"
+        },
+        {
+          "patternId": "Bandit_B105"
+        },
+        {
+          "patternId": "Bandit_B318"
+        },
+        {
+          "patternId": "Bandit_B112"
+        },
+        {
+          "patternId": "Bandit_B405"
+        },
+        {
+          "patternId": "Bandit_B402"
+        },
+        {
+          "patternId": "Bandit_B313"
+        },
+        {
+          "patternId": "Bandit_B320"
+        },
+        {
+          "patternId": "Bandit_B409"
+        },
+        {
+          "patternId": "Bandit_B602"
+        },
+        {
+          "patternId": "Bandit_B307"
+        },
+        {
+          "patternId": "Bandit_B303"
+        },
+        {
+          "patternId": "Bandit_B701"
+        },
+        {
+          "patternId": "Bandit_B403"
+        },
+        {
+          "patternId": "Bandit_B604"
+        },
+        {
+          "patternId": "Bandit_B312"
+        },
+        {
+          "patternId": "Bandit_B502"
+        },
+        {
+          "patternId": "Bandit_B411"
+        },
+        {
+          "patternId": "Bandit_B408"
+        },
+        {
+          "patternId": "Bandit_B308"
+        },
+        {
+          "patternId": "Bandit_B306"
+        },
+        {
+          "patternId": "Bandit_B410"
+        },
+        {
+          "patternId": "Bandit_B314"
+        },
+        {
+          "patternId": "Bandit_B302"
+        },
+        {
+          "patternId": "Bandit_B103"
+        },
+        {
+          "patternId": "Bandit_B319"
+        },
+        {
+          "patternId": "Bandit_B503"
+        },
+        {
+          "patternId": "Bandit_B504"
+        },
+        {
+          "patternId": "Bandit_B305"
+        },
+        {
+          "patternId": "Bandit_B404"
+        }
+      ],
+      "exclude": [
+        "sources/Prism/editor/gen_vs_extension.py",
+        "workdir/materialx/gen_generated_hlsl.py",
+        ".claude/skills/codacy-export/export.py"
+      ]
+    },
+    {
+      "toolId": "Checkov",
+      "patterns": []
+    },
+    {
+      "toolId": "Lizard",
+      "patterns": []
+    },
+    {
+      "toolId": "flawfinder",
+      "patterns": [
+        {
+          "patternId": "flawfinder_ulimit"
+        },
+        {
+          "patternId": "flawfinder__gettc"
+        },
+        {
+          "patternId": "flawfinder_wcslen"
+        },
+        {
+          "patternId": "flawfinder__mbsnbcpy"
+        },
+        {
+          "patternId": "flawfinder__tcslen"
+        },
+        {
+          "patternId": "flawfinder__tcsncat"
+        },
+        {
+          "patternId": "flawfinder_getchar"
+        },
+        {
+          "patternId": "flawfinder__tcsncpy"
+        },
+        {
+          "patternId": "flawfinder__mbsnbcat"
+        },
+        {
+          "patternId": "flawfinder_lstrcpyn"
+        },
+        {
+          "patternId": "flawfinder_strlen"
+        },
+        {
+          "patternId": "flawfinder_getc"
+        },
+        {
+          "patternId": "flawfinder_wcsncpy"
+        },
+        {
+          "patternId": "flawfinder_memalign"
+        },
+        {
+          "patternId": "flawfinder__mbslen"
+        },
+        {
+          "patternId": "flawfinder_strccpy"
+        },
+        {
+          "patternId": "flawfinder_strncpy"
+        },
+        {
+          "patternId": "flawfinder_usleep"
+        },
+        {
+          "patternId": "flawfinder_strcadd"
+        },
+        {
+          "patternId": "flawfinder_umask"
+        },
+        {
+          "patternId": "flawfinder_wcsncat"
+        },
+        {
+          "patternId": "flawfinder_lstrcatn"
+        },
+        {
+          "patternId": "flawfinder_fgetc"
+        },
+        {
+          "patternId": "flawfinder_read"
+        },
+        {
+          "patternId": "flawfinder_strncat"
+        }
+      ]
+    },
+    {
+      "toolId": "Trivy",
+      "patterns": []
+    },
+    {
+      "toolId": "SonarCSharp",
+      "patterns": [
+        {
+          "patternId": "SonarCSharp_S927"
+        },
+        {
+          "patternId": "SonarCSharp_S1215"
+        },
+        {
+          "patternId": "SonarCSharp_S3610"
+        },
+        {
+          "patternId": "SonarCSharp_S1450"
+        },
+        {
+          "patternId": "SonarCSharp_S1764"
+        },
+        {
+          "patternId": "SonarCSharp_S2437"
+        },
+        {
+          "patternId": "SonarCSharp_S3459"
+        },
+        {
+          "patternId": "SonarCSharp_S2934"
+        },
+        {
+          "patternId": "SonarCSharp_S3254"
+        },
+        {
+          "patternId": "SonarCSharp_S1905"
+        },
+        {
+          "patternId": "SonarCSharp_S131"
+        },
+        {
+          "patternId": "SonarCSharp_S1186"
+        },
+        {
+          "patternId": "SonarCSharp_S3217"
+        },
+        {
+          "patternId": "SonarCSharp_S3005"
+        },
+        {
+          "patternId": "SonarCSharp_S3218"
+        },
+        {
+          "patternId": "SonarCSharp_S2368"
+        },
+        {
+          "patternId": "SonarCSharp_S1226"
+        },
+        {
+          "patternId": "SonarCSharp_S112"
+        },
+        {
+          "patternId": "SonarCSharp_S2688"
+        },
+        {
+          "patternId": "SonarCSharp_S3532"
+        },
+        {
+          "patternId": "SonarCSharp_S3450"
+        },
+        {
+          "patternId": "SonarCSharp_S1117"
+        },
+        {
+          "patternId": "SonarCSharp_S2743"
+        },
+        {
+          "patternId": "SonarCSharp_S3447"
+        },
+        {
+          "patternId": "SonarCSharp_S3052"
+        },
+        {
+          "patternId": "SonarCSharp_S2551"
+        },
+        {
+          "patternId": "SonarCSharp_S3440"
+        },
+        {
+          "patternId": "SonarCSharp_S3876"
+        },
+        {
+          "patternId": "SonarCSharp_S3235"
+        },
+        {
+          "patternId": "SonarCSharp_S1481"
+        },
+        {
+          "patternId": "SonarCSharp_S1699"
+        },
+        {
+          "patternId": "SonarCSharp_S2692"
+        },
+        {
+          "patternId": "SonarCSharp_S2674"
+        },
+        {
+          "patternId": "SonarCSharp_S3598"
+        },
+        {
+          "patternId": "SonarCSharp_S2995"
+        },
+        {
+          "patternId": "SonarCSharp_S2190"
+        },
+        {
+          "patternId": "SonarCSharp_S3880"
+        },
+        {
+          "patternId": "SonarCSharp_S121"
+        },
+        {
+          "patternId": "SonarCSharp_S2386"
+        },
+        {
+          "patternId": "SonarCSharp_S3600"
+        },
+        {
+          "patternId": "SonarCSharp_S3897"
+        },
+        {
+          "patternId": "SonarCSharp_S2933"
+        },
+        {
+          "patternId": "SonarCSharp_S3626"
+        },
+        {
+          "patternId": "SonarCSharp_S3253"
+        },
+        {
+          "patternId": "SonarCSharp_S1116"
+        },
+        {
+          "patternId": "SonarCSharp_S3397"
+        },
+        {
+          "patternId": "SonarCSharp_S3251"
+        },
+        {
+          "patternId": "SonarCSharp_S1185"
+        },
+        {
+          "patternId": "SonarCSharp_S3877"
+        },
+        {
+          "patternId": "SonarCSharp_S3466"
+        },
+        {
+          "patternId": "SonarCSharp_S2955"
+        },
+        {
+          "patternId": "SonarCSharp_S127"
+        },
+        {
+          "patternId": "SonarCSharp_S1210"
+        },
+        {
+          "patternId": "SonarCSharp_S3246"
+        },
+        {
+          "patternId": "SonarCSharp_S3443"
+        },
+        {
+          "patternId": "SonarCSharp_S3216"
+        },
+        {
+          "patternId": "SonarCSharp_S1871"
+        },
+        {
+          "patternId": "SonarCSharp_S3236"
+        },
+        {
+          "patternId": "SonarCSharp_S2996"
+        },
+        {
+          "patternId": "SonarCSharp_S1121"
+        },
+        {
+          "patternId": "SonarCSharp_S1994"
+        },
+        {
+          "patternId": "SonarCSharp_S3263"
+        },
+        {
+          "patternId": "SonarCSharp_S3264"
+        },
+        {
+          "patternId": "SonarCSharp_S2333"
+        },
+        {
+          "patternId": "SonarCSharp_S3456"
+        },
+        {
+          "patternId": "SonarCSharp_S3449"
+        },
+        {
+          "patternId": "SonarCSharp_S2583"
+        },
+        {
+          "patternId": "SonarCSharp_S110"
+        },
+        {
+          "patternId": "SonarCSharp_S3898"
+        },
+        {
+          "patternId": "SonarCSharp_S3215"
+        },
+        {
+          "patternId": "SonarCSharp_S2123"
+        },
+        {
+          "patternId": "SonarCSharp_S2372"
+        },
+        {
+          "patternId": "SonarCSharp_S3441"
+        },
+        {
+          "patternId": "SonarCSharp_S3872"
+        },
+        {
+          "patternId": "SonarCSharp_S2156"
+        },
+        {
+          "patternId": "SonarCSharp_S2681"
+        },
+        {
+          "patternId": "SonarCSharp_S3442"
+        },
+        {
+          "patternId": "SonarCSharp_S1858"
+        },
+        {
+          "patternId": "SonarCSharp_S3453"
+        },
+        {
+          "patternId": "SonarCSharp_S3220"
+        },
+        {
+          "patternId": "SonarCSharp_S1163"
+        },
+        {
+          "patternId": "SonarCSharp_S2953"
+        },
+        {
+          "patternId": "SonarCSharp_S2997"
+        },
+        {
+          "patternId": "SonarCSharp_S2757"
+        },
+        {
+          "patternId": "SonarCSharp_S2184"
+        },
+        {
+          "patternId": "SonarCSharp_S2930"
+        },
+        {
+          "patternId": "SonarCSharp_S2275"
+        },
+        {
+          "patternId": "SonarCSharp_S2234"
+        },
+        {
+          "patternId": "SonarCSharp_S2345"
+        },
+        {
+          "patternId": "SonarCSharp_S2178"
+        },
+        {
+          "patternId": "SonarCSharp_S108"
+        },
+        {
+          "patternId": "SonarCSharp_S3457"
+        },
+        {
+          "patternId": "SonarCSharp_S2328"
+        },
+        {
+          "patternId": "SonarCSharp_S3926"
+        },
+        {
+          "patternId": "SonarCSharp_S3168"
+        },
+        {
+          "patternId": "SonarCSharp_S3451"
+        },
+        {
+          "patternId": "SonarCSharp_S1104"
+        },
+        {
+          "patternId": "SonarCSharp_S1643"
+        },
+        {
+          "patternId": "SonarCSharp_S1944"
+        },
+        {
+          "patternId": "SonarCSharp_S3871"
+        },
+        {
+          "patternId": "SonarCSharp_S3869"
+        },
+        {
+          "patternId": "SonarCSharp_S3874"
+        },
+        {
+          "patternId": "SonarCSharp_S1698"
+        },
+        {
+          "patternId": "SonarCSharp_S2339"
+        },
+        {
+          "patternId": "SonarCSharp_S3257"
+        },
+        {
+          "patternId": "SonarCSharp_S2223"
+        },
+        {
+          "patternId": "SonarCSharp_S3244"
+        },
+        {
+          "patternId": "SonarCSharp_S3458"
+        },
+        {
+          "patternId": "SonarCSharp_S1940"
+        },
+        {
+          "patternId": "SonarCSharp_S2387"
+        },
+        {
+          "patternId": "SonarCSharp_S2357"
+        },
+        {
+          "patternId": "SonarCSharp_S1313"
+        },
+        {
+          "patternId": "SonarCSharp_S1006"
+        },
+        {
+          "patternId": "SonarCSharp_S1206"
+        },
+        {
+          "patternId": "SonarCSharp_S3249"
+        },
+        {
+          "patternId": "SonarCSharp_S3237"
+        },
+        {
+          "patternId": "SonarCSharp_S3172"
+        },
+        {
+          "patternId": "SonarCSharp_S1854"
+        },
+        {
+          "patternId": "SonarCSharp_S3261"
+        },
+        {
+          "patternId": "SonarCSharp_S1118"
+        },
+        {
+          "patternId": "SonarCSharp_S2696"
+        },
+        {
+          "patternId": "SonarCSharp_S1172"
+        },
+        {
+          "patternId": "SonarCSharp_S1301"
+        },
+        {
+          "patternId": "SonarCSharp_S2760"
+        },
+        {
+          "patternId": "SonarCSharp_S2737"
+        },
+        {
+          "patternId": "SonarCSharp_S2291"
+        },
+        {
+          "patternId": "SonarCSharp_S2201"
+        },
+        {
+          "patternId": "SonarCSharp_S3427"
+        },
+        {
+          "patternId": "SonarCSharp_S1449"
+        },
+        {
+          "patternId": "SonarCSharp_S2306"
+        },
+        {
+          "patternId": "SonarCSharp_S2761"
+        },
+        {
+          "patternId": "SonarCSharp_S3603"
+        },
+        {
+          "patternId": "SonarCSharp_S2376"
+        },
+        {
+          "patternId": "SonarCSharp_S3241"
+        },
+        {
+          "patternId": "SonarCSharp_S1862"
+        },
+        {
+          "patternId": "SonarCSharp_S3010"
+        },
+        {
+          "patternId": "SonarCSharp_S3234"
+        },
+        {
+          "patternId": "SonarCSharp_S2326"
+        },
+        {
+          "patternId": "SonarCSharp_S3444"
+        },
+        {
+          "patternId": "SonarCSharp_S125"
+        },
+        {
+          "patternId": "SonarCSharp_S3655"
+        },
+        {
+          "patternId": "SonarCSharp_S1656"
+        },
+        {
+          "patternId": "SonarCSharp_S3247"
+        },
+        {
+          "patternId": "SonarCSharp_S3597"
+        },
+        {
+          "patternId": "SonarCSharp_S3445"
+        },
+        {
+          "patternId": "SonarCSharp_S1244"
+        },
+        {
+          "patternId": "SonarCSharp_S2197"
+        },
+        {
+          "patternId": "SonarCSharp_S2330"
+        },
+        {
+          "patternId": "SonarCSharp_S3875"
+        },
+        {
+          "patternId": "SonarCSharp_S2259"
+        },
+        {
+          "patternId": "SonarCSharp_S3169"
+        },
+        {
+          "patternId": "SonarCSharp_S3889"
+        },
+        {
+          "patternId": "SonarCSharp_S2931"
+        },
+        {
+          "patternId": "SonarCSharp_S2486"
+        },
+        {
+          "patternId": "SonarCSharp_S2225"
+        },
+        {
+          "patternId": "SonarCSharp_S3262"
+        },
+        {
+          "patternId": "SonarCSharp_S2360"
+        }
+      ]
+    },
+    {
+      "toolId": "markdownlint",
+      "patterns": []
+    }
+  ],
+  "exclude": [
+    "build/clang_modules.py",
+    "build/driver.py",
+    "build/platforms/android/build.py",
+    "build/platforms/android/debug.py",
+    "build/platforms/android/device.py",
+    "build/platforms/android/lldb_android.py",
+    "build/platforms/android/package.py",
+    "build/platforms/android/prepare.py",
+    "build/platforms/android/run.py",
+    "build/platforms/android/test.py",
+    "sources/3rdparty/Aftermath/include/GFSDK_Aftermath_Defines.h",
+    "sources/3rdparty/Aftermath/include/GFSDK_Aftermath_GpuCrashDumpDecoding.h",
+    "sources/3rdparty/Aftermath/include/GFSDK_Aftermath_GpuCrashDump.h",
+    "sources/3rdparty/Aftermath/include/GFSDK_Aftermath.h",
+    "sources/3rdparty/Aftermath/NsightAftermathGpuCrashTracker.cpp",
+    "sources/3rdparty/Aftermath/NsightAftermathGpuCrashTracker.h",
+    "sources/3rdparty/Aftermath/NsightAftermathHelpers.h",
+    "sources/3rdparty/Aftermath/NsightAftermathShaderDatabase.cpp",
+    "sources/3rdparty/Aftermath/NsightAftermathShaderDatabase.h",
+    "sources/3rdparty/Aftermath/Readme.md",
+    "sources/3rdparty/Aftermath/stdafx.h",
+    "sources/Modules/assimp/assimp.cpp",
+    "sources/Modules/cereal/_cereal.cpp",
+    "sources/Modules/cereal/cereal.cpp",
+    "sources/Modules/cereal/_cereal.h",
+    "sources/Modules/crc32/crc32.h",
+    "sources/Modules/crossguid/crossguid.h",
+    "sources/Modules/d3d12/d3d12.cpp",
+    "sources/Modules/d3d12/d3d12_includes.h",
+    "sources/Modules/d3d12/d3d12_macros.h",
+    "sources/Modules/d3d12/d3dx12.h",
+    "sources/Modules/Defines.h",
+    "sources/Modules/dxc/dxcapi.use.h",
+    "sources/Modules/dxc/dxc.h",
+    "sources/Modules/jinja2cpp/jinja2cpp.h",
+    "sources/Modules/magic_enum/magic_enum.h",
+    "sources/Modules/nrd/_nrd.h",
+    "sources/Modules/ppl/ppl.h",
+    "sources/Modules/skribidi/_skribidi.h",
+    "sources/Modules/stl/core.h",
+    "sources/Modules/stl/filesystem.h",
+    "sources/Modules/stl/memory.h",
+    "sources/Modules/stl/threading.h",
+    "sources/Modules/streamline/_streamline.h",
+    "sources/Modules/vulkan/gen_exports.py",
+    "sources/Modules/vulkan/vulkan.cpp",
+    "sources/Modules/vulkan/vulkan_includes.h",
+    "sources/Modules/windows/windows.h",
+    "sources/Modules/WRL/wrl.h",
+    "sources/RenderSystem/Effects/FSR/ffx_fsr1.h",
+    "sources/RenderSystem/Mesh/raw4/raw4.h",
+    "sources/RenderSystem/Mesh/raw4/raw4_history.h",
+    "workdir/shaders/2D_screen_simple.h",
+    "workdir/shaders/autogen/BackdropBlur.h",
+    "workdir/shaders/autogen/BackdropDraw.h",
+    "workdir/shaders/autogen/BloomComposite.h",
+    "workdir/shaders/autogen/BloomCopy.h",
+    "workdir/shaders/autogen/BloomDownsample.h",
+    "workdir/shaders/autogen/BloomTemporal.h",
+    "workdir/shaders/autogen/BloomUpsample.h",
+    "workdir/shaders/autogen/BlueNoise.h",
+    "workdir/shaders/autogen/BRDF.h",
+    "workdir/shaders/autogen/Clear_Constants.h",
+    "workdir/shaders/autogen/Clear_UInt4Resources.h",
+    "workdir/shaders/autogen/Color.h",
+    "workdir/shaders/autogen/ColorRect.h",
+    "workdir/shaders/autogen/ColorRTXOutput.h",
+    "workdir/shaders/autogen/CopyTexture.h",
+    "workdir/shaders/autogen/CullCaptureWrite.h",
+    "workdir/shaders/autogen/DDGIDebugData.h",
+    "workdir/shaders/autogen/DDGIIndirectDebugData.h",
+    "workdir/shaders/autogen/DDGIInfo.h",
+    "workdir/shaders/autogen/DDGIProbeConvolveData.h",
+    "workdir/shaders/autogen/DDGIProbeResidencyMarkData.h",
+    "workdir/shaders/autogen/DDGIProbeSelectData.h",
+    "workdir/shaders/autogen/DDGIProbeTraceData.h",
+    "workdir/shaders/autogen/DebugInfo.h",
+    "workdir/shaders/autogen/DebugLines.h",
+    "workdir/shaders/autogen/DebugViewDraw.h",
+    "workdir/shaders/autogen/DebugViewFrustum.h",
+    "workdir/shaders/autogen/DebugViewGather.h",
+    "workdir/shaders/autogen/DenoiserShadow_Fileter.h",
+    "workdir/shaders/autogen/DenoiserShadow_Filter.h",
+    "workdir/shaders/autogen/DenoiserShadow_FilterLast.h",
+    "workdir/shaders/autogen/DenoiserShadow_FilterLocal.h",
+    "workdir/shaders/autogen/DenoiserShadow_Prepare.h",
+    "workdir/shaders/autogen/DenoiserShadow_TileClassification.h",
+    "workdir/shaders/autogen/DispatchParameters.h",
+    "workdir/shaders/autogen/DispatchRaysArgsBuildData.h",
+    "workdir/shaders/autogen/DisplayOutput.h",
+    "workdir/shaders/autogen/DownsampleDepth.h",
+    "workdir/shaders/autogen/DownsampleDepthMip.h",
+    "workdir/shaders/autogen/DrawBoxes.h",
+    "workdir/shaders/autogen/DrawStencil.h",
+    "workdir/shaders/autogen/EnvFilter.h",
+    "workdir/shaders/autogen/EnvSource.h",
+    "workdir/shaders/autogen/FGTAppendTiles.h",
+    "workdir/shaders/autogen/FGTRayQuery.h",
+    "workdir/shaders/autogen/FGTSamplerProbe.h",
+    "workdir/shaders/autogen/FlowGraph.h",
+    "workdir/shaders/autogen/FrameGraph_Debug_Common.h",
+    "workdir/shaders/autogen/FrameGraph_Debug_Texture2DArray.h",
+    "workdir/shaders/autogen/FrameGraph_Debug_Texture2D.h",
+    "workdir/shaders/autogen/FrameGraph_Debug_Texture3D.h",
+    "workdir/shaders/autogen/FrameGraph_Debug_TextureCube.h",
+    "workdir/shaders/autogen/FrameInfo.h",
+    "workdir/shaders/autogen/FSR.h",
+    "workdir/shaders/autogen/GatherBoxes.h",
+    "workdir/shaders/autogen/GatherMeshesBoxes.h",
+    "workdir/shaders/autogen/GatherPipelineGlobal.h",
+    "workdir/shaders/autogen/GatherPipeline.h",
+    "workdir/shaders/autogen/GBuffer.h",
+    "workdir/shaders/autogen/GBufferQuality.h",
+    "workdir/shaders/autogen/GizmoResolveData.h",
+    "workdir/shaders/autogen/GlyphRender.h",
+    "workdir/shaders/autogen/IndirectDraw.h",
+    "workdir/shaders/autogen/IndirectRTXHalfGBuffer.h",
+    "workdir/shaders/autogen/IndirectRTXUpscale.h",
+    "workdir/shaders/autogen/InitDispatch.h",
+    "workdir/shaders/autogen/Instance.h",
+    "workdir/shaders/autogen/layout/DefaultLayout.h",
+    "workdir/shaders/autogen/layout/FrameLayout.h",
+    "workdir/shaders/autogen/layout/None.h",
+    "workdir/shaders/autogen/layout/NoneLayout.h",
+    "workdir/shaders/autogen/LensFlareGhosts.h",
+    "workdir/shaders/autogen/LensFlareStreak.h",
+    "workdir/shaders/autogen/LineRender.h",
+    "workdir/shaders/autogen/MaskDepth.h",
+    "workdir/shaders/autogen/MaterialInfo.h",
+    "workdir/shaders/autogen/MaterialPreviewInfo.h",
+    "workdir/shaders/autogen/MeshInfo.h",
+    "workdir/shaders/autogen/MeshInstanceInfo.h",
+    "workdir/shaders/autogen/MeshletCaptureWrite.h",
+    "workdir/shaders/autogen/MipMapping.h",
+    "workdir/shaders/autogen/NinePatch.h",
+    "workdir/shaders/autogen/NormalRoughnessRepackParams.h",
+    "workdir/shaders/autogen/NRD_GBufferPackParams.h",
+    "workdir/shaders/autogen/NRD_IndirectCombineParams.h",
+    "workdir/shaders/autogen/NRD_ShadowCombineParams.h",
+    "workdir/shaders/autogen/NRD_UnpackDebugParams.h",
+    "workdir/shaders/autogen/OutlineCopy.h",
+    "workdir/shaders/autogen/OutlineData.h",
+    "workdir/shaders/autogen/PickerBuffer.h",
+    "workdir/shaders/autogen/PreviewDiffParams.h",
+    "workdir/shaders/autogen/PSSMConstants.h",
+    "workdir/shaders/autogen/PSSMDataGlobal.h",
+    "workdir/shaders/autogen/PSSMData.h",
+    "workdir/shaders/autogen/PSSMLighting.h",
+    "workdir/shaders/autogen/Raytracing.h",
+    "workdir/shaders/autogen/RaytracingRays.h",
+    "workdir/shaders/autogen/REBLUR_BlurResources.h",
+    "workdir/shaders/autogen/REBLUR_BlurSpecularResources.h",
+    "workdir/shaders/autogen/REBLUR_ClassifyTilesResources.h",
+    "workdir/shaders/autogen/REBLUR_HistoryFixResources.h",
+    "workdir/shaders/autogen/REBLUR_HistoryFixSpecularResources.h",
+    "workdir/shaders/autogen/REBLUR_HitDistReconstructionResources.h",
+    "workdir/shaders/autogen/REBLUR_HitDistReconstructionSpecularResources.h",
+    "workdir/shaders/autogen/REBLUR_PostBlurTS0Resources.h",
+    "workdir/shaders/autogen/REBLUR_PostBlurTS0SpecularResources.h",
+    "workdir/shaders/autogen/REBLUR_PostBlurTS1Resources.h",
+    "workdir/shaders/autogen/REBLUR_PostBlurTS1SpecularResources.h",
+    "workdir/shaders/autogen/REBLUR_PrePassResources.h",
+    "workdir/shaders/autogen/REBLUR_PrePassSpecularResources.h",
+    "workdir/shaders/autogen/REBLUR_SplitScreenResources.h",
+    "workdir/shaders/autogen/REBLUR_TemporalAccumulationResources.h",
+    "workdir/shaders/autogen/REBLUR_TemporalAccumulationSpecularResources.h",
+    "workdir/shaders/autogen/REBLUR_TemporalStabilizationResources.h",
+    "workdir/shaders/autogen/REBLUR_TemporalStabilizationSpecularResources.h",
+    "workdir/shaders/autogen/REBLUR_ValidationResources.h",
+    "workdir/shaders/autogen/ReflectionCombine.h",
+    "workdir/shaders/autogen/ReflectionRTXUpscale.h",
+    "workdir/shaders/autogen/rt/DepthOnly.h",
+    "workdir/shaders/autogen/rt/GBuffer.h",
+    "workdir/shaders/autogen/rt/NoOutput.h",
+    "workdir/shaders/autogen/rt/SingleColorDepth.h",
+    "workdir/shaders/autogen/rt/SingleColor.h",
+    "workdir/shaders/autogen/rtx/ColorPass.h",
+    "workdir/shaders/autogen/rtx/ColorShadowPass.h",
+    "workdir/shaders/autogen/RTXCombine.h",
+    "workdir/shaders/autogen/rtx/ShadowPass.h",
+    "workdir/shaders/autogen/RTXShadowReference.h",
+    "workdir/shaders/autogen/rtx/TranslucentPass.h",
+    "workdir/shaders/autogen/SceneData.h",
+    "workdir/shaders/autogen/SIGMA_BlurFirstPass0Resources.h",
+    "workdir/shaders/autogen/SIGMA_BlurFirstPass1Resources.h",
+    "workdir/shaders/autogen/SIGMA_ClassifyTilesResources.h",
+    "workdir/shaders/autogen/SIGMA_CopyResources.h",
+    "workdir/shaders/autogen/SIGMA_SmoothTilesResources.h",
+    "workdir/shaders/autogen/SIGMA_SplitScreenResources.h",
+    "workdir/shaders/autogen/SIGMA_TemporalStabilizationResources.h",
+    "workdir/shaders/autogen/SkyAmbientData.h",
+    "workdir/shaders/autogen/SkyData.h",
+    "workdir/shaders/autogen/SkyFace.h",
+    "workdir/shaders/autogen/SMAA_Blend.h",
+    "workdir/shaders/autogen/SMAA_Global.h",
+    "workdir/shaders/autogen/SMAA_Weights.h",
+    "workdir/shaders/autogen/SSSBlurParams.h",
+    "workdir/shaders/autogen/SSSClassifyParams.h",
+    "workdir/shaders/autogen/SSSTilesAppend.h",
+    "workdir/shaders/autogen/SSSTilesRead.h",
+    "workdir/shaders/autogen/StatGraph.h",
+    "workdir/shaders/autogen/StatGraphLine.h",
+    "workdir/shaders/autogen/tables/AABB.h",
+    "workdir/shaders/autogen/tables/BackdropBlur.h",
+    "workdir/shaders/autogen/tables/BackdropDraw.h",
+    "workdir/shaders/autogen/tables/BloomComposite.h",
+    "workdir/shaders/autogen/tables/BloomCopy.h",
+    "workdir/shaders/autogen/tables/BloomDownsample.h",
+    "workdir/shaders/autogen/tables/BloomSelectors.h",
+    "workdir/shaders/autogen/tables/BloomTemporal.h",
+    "workdir/shaders/autogen/tables/BloomUpsample.h",
+    "workdir/shaders/autogen/tables/BlueNoise.h",
+    "workdir/shaders/autogen/tables/BoxInfo.h",
+    "workdir/shaders/autogen/tables/BRDF.h",
+    "workdir/shaders/autogen/tables/Camera.h",
+    "workdir/shaders/autogen/tables/Clear_Constants.h",
+    "workdir/shaders/autogen/tables/Clear_UInt4Resources.h",
+    "workdir/shaders/autogen/tables/Color.h",
+    "workdir/shaders/autogen/tables/ColorRect.h",
+    "workdir/shaders/autogen/tables/ColorRTXOutput.h",
+    "workdir/shaders/autogen/tables/ColorShadowPayload.h",
+    "workdir/shaders/autogen/tables/CopyTexture.h",
+    "workdir/shaders/autogen/tables/CullCaptureWrite.h",
+    "workdir/shaders/autogen/tables/DDGIDebugData.h",
+    "workdir/shaders/autogen/tables/DDGIIndirectDebugData.h",
+    "workdir/shaders/autogen/tables/DDGIInfo.h",
+    "workdir/shaders/autogen/tables/DDGIProbeConvolveData.h",
+    "workdir/shaders/autogen/tables/DDGIProbeMetadata.h",
+    "workdir/shaders/autogen/tables/DDGIProbeResidencyMarkData.h",
+    "workdir/shaders/autogen/tables/DDGIProbeSelectData.h",
+    "workdir/shaders/autogen/tables/DDGIProbes.h",
+    "workdir/shaders/autogen/tables/DDGIProbeTraceData.h",
+    "workdir/shaders/autogen/tables/DDGISelectors.h",
+    "workdir/shaders/autogen/tables/DebugInfo.h",
+    "workdir/shaders/autogen/tables/DebugLineSegment.h",
+    "workdir/shaders/autogen/tables/DebugLines.h",
+    "workdir/shaders/autogen/tables/DebugStruct.h",
+    "workdir/shaders/autogen/tables/DebugViewDraw.h",
+    "workdir/shaders/autogen/tables/DebugViewFrustum.h",
+    "workdir/shaders/autogen/tables/DebugViewGather.h",
+    "workdir/shaders/autogen/tables/DebugViewState.h",
+    "workdir/shaders/autogen/tables/DenoiserShadow_Fileter.h",
+    "workdir/shaders/autogen/tables/DenoiserShadow_Filter.h",
+    "workdir/shaders/autogen/tables/DenoiserShadow_FilterLast.h",
+    "workdir/shaders/autogen/tables/DenoiserShadow_FilterLocal.h",
+    "workdir/shaders/autogen/tables/DenoiserShadow_Prepare.h",
+    "workdir/shaders/autogen/tables/DenoiserShadow_TileClassification.h",
+    "workdir/shaders/autogen/tables/DepthOnly.h",
+    "workdir/shaders/autogen/tables/DispatchArguments.h",
+    "workdir/shaders/autogen/tables/DispatchMeshArguments.h",
+    "workdir/shaders/autogen/tables/DispatchParameters.h",
+    "workdir/shaders/autogen/tables/DispatchRaysArgsBuildData.h",
+    "workdir/shaders/autogen/tables/DispatchRaysArguments.h",
+    "workdir/shaders/autogen/tables/DisplayOutput.h",
+    "workdir/shaders/autogen/tables/DisplayState.h",
+    "workdir/shaders/autogen/tables/DownsampleDepth.h",
+    "workdir/shaders/autogen/tables/DownsampleDepthMip.h",
+    "workdir/shaders/autogen/tables/DrawBoxes.h",
+    "workdir/shaders/autogen/tables/DrawIndexedArguments.h",
+    "workdir/shaders/autogen/tables/DrawMeshCommand.h",
+    "workdir/shaders/autogen/tables/DrawStencil.h",
+    "workdir/shaders/autogen/tables/EnvFilter.h",
+    "workdir/shaders/autogen/tables/EnvSource.h",
+    "workdir/shaders/autogen/tables/FGTAppendTiles.h",
+    "workdir/shaders/autogen/tables/FGTestState.h",
+    "workdir/shaders/autogen/tables/FGTRayQuery.h",
+    "workdir/shaders/autogen/tables/FGTSamplerProbe.h",
+    "workdir/shaders/autogen/tables/FlowGraph.h",
+    "workdir/shaders/autogen/tables/FrameGraph_Debug_Common.h",
+    "workdir/shaders/autogen/tables/FrameGraph_Debug_Texture2DArray.h",
+    "workdir/shaders/autogen/tables/FrameGraph_Debug_Texture2D.h",
+    "workdir/shaders/autogen/tables/FrameGraph_Debug_Texture3D.h",
+    "workdir/shaders/autogen/tables/FrameGraph_Debug_TextureCube.h",
+    "workdir/shaders/autogen/tables/FrameInfo.h",
+    "workdir/shaders/autogen/tables/Frustum.h",
+    "workdir/shaders/autogen/tables/FSRConstants.h",
+    "workdir/shaders/autogen/tables/FSR.h",
+    "workdir/shaders/autogen/tables/GatherBoxes.h",
+    "workdir/shaders/autogen/tables/GatherMeshesBoxes.h",
+    "workdir/shaders/autogen/tables/GatherPipelineGlobal.h",
+    "workdir/shaders/autogen/tables/GatherPipeline.h",
+    "workdir/shaders/autogen/tables/GBuffer.h",
+    "workdir/shaders/autogen/tables/GBufferQuality.h",
+    "workdir/shaders/autogen/tables/GizmoResolveData.h",
+    "workdir/shaders/autogen/tables/GlyphQuad.h",
+    "workdir/shaders/autogen/tables/GlyphRender.h",
+    "workdir/shaders/autogen/tables/GPUAddress.h",
+    "workdir/shaders/autogen/tables/GraphInput.h",
+    "workdir/shaders/autogen/tables/IndirectDraw.h",
+    "workdir/shaders/autogen/tables/IndirectGISelectors.h",
+    "workdir/shaders/autogen/tables/IndirectRTXHalfGBuffer.h",
+    "workdir/shaders/autogen/tables/IndirectRTXUpscale.h",
+    "workdir/shaders/autogen/tables/InitDispatch.h",
+    "workdir/shaders/autogen/tables/Instance.h",
+    "workdir/shaders/autogen/tables/LensFlareGhosts.h",
+    "workdir/shaders/autogen/tables/LensFlareStreak.h",
+    "workdir/shaders/autogen/tables/LineRender.h",
+    "workdir/shaders/autogen/tables/MaskDepth.h",
+    "workdir/shaders/autogen/tables/MaterialCommandData.h",
+    "workdir/shaders/autogen/tables/MaterialInfo.h",
+    "workdir/shaders/autogen/tables/MaterialPreviewInfo.h",
+    "workdir/shaders/autogen/tables/MeshCommandData.h",
+    "workdir/shaders/autogen/tables/MeshInfo.h",
+    "workdir/shaders/autogen/tables/MeshInstance.h",
+    "workdir/shaders/autogen/tables/MeshInstanceInfo.h",
+    "workdir/shaders/autogen/tables/MeshletCaptureWrite.h",
+    "workdir/shaders/autogen/tables/MeshletCullData.h",
+    "workdir/shaders/autogen/tables/MeshletGroup.h",
+    "workdir/shaders/autogen/tables/Meshlet.h",
+    "workdir/shaders/autogen/tables/mesh_vertex_input.h",
+    "workdir/shaders/autogen/tables/MipMapping.h",
+    "workdir/shaders/autogen/tables/NinePatch.h",
+    "workdir/shaders/autogen/tables/node_data.h",
+    "workdir/shaders/autogen/tables/NoOutput.h",
+    "workdir/shaders/autogen/tables/NormalRoughnessRepackParams.h",
+    "workdir/shaders/autogen/tables/NRD_GBufferPackParams.h",
+    "workdir/shaders/autogen/tables/NRD_IndirectCombineParams.h",
+    "workdir/shaders/autogen/tables/NRD_ShadowCombineParams.h",
+    "workdir/shaders/autogen/tables/NRD_UnpackDebugParams.h",
+    "workdir/shaders/autogen/tables/OutlineCopy.h",
+    "workdir/shaders/autogen/tables/OutlineData.h",
+    "workdir/shaders/autogen/tables/PickerBuffer.h",
+    "workdir/shaders/autogen/tables/PreviewDiffParams.h",
+    "workdir/shaders/autogen/tables/PSSMConstants.h",
+    "workdir/shaders/autogen/tables/PSSMDataGlobal.h",
+    "workdir/shaders/autogen/tables/PSSMData.h",
+    "workdir/shaders/autogen/tables/PSSMGlobal.h",
+    "workdir/shaders/autogen/tables/PSSMLighting.h",
+    "workdir/shaders/autogen/tables/RayCone.h",
+    "workdir/shaders/autogen/tables/RayPayload.h",
+    "workdir/shaders/autogen/tables/RaytraceInstanceInfo.h",
+    "workdir/shaders/autogen/tables/Raytracing.h",
+    "workdir/shaders/autogen/tables/RaytracingRays.h",
+    "workdir/shaders/autogen/tables/REBLUR_BlurResources.h",
+    "workdir/shaders/autogen/tables/REBLUR_BlurSpecularResources.h",
+    "workdir/shaders/autogen/tables/REBLUR_ClassifyTilesResources.h",
+    "workdir/shaders/autogen/tables/REBLUR_HistoryFixResources.h",
+    "workdir/shaders/autogen/tables/REBLUR_HistoryFixSpecularResources.h",
+    "workdir/shaders/autogen/tables/REBLUR_HitDistReconstructionResources.h",
+    "workdir/shaders/autogen/tables/REBLUR_HitDistReconstructionSpecularResources.h",
+    "workdir/shaders/autogen/tables/REBLUR_PostBlurTS0Resources.h",
+    "workdir/shaders/autogen/tables/REBLUR_PostBlurTS0SpecularResources.h",
+    "workdir/shaders/autogen/tables/REBLUR_PostBlurTS1Resources.h",
+    "workdir/shaders/autogen/tables/REBLUR_PostBlurTS1SpecularResources.h",
+    "workdir/shaders/autogen/tables/REBLUR_PrePassResources.h",
+    "workdir/shaders/autogen/tables/REBLUR_PrePassSpecularResources.h",
+    "workdir/shaders/autogen/tables/REBLURSharedConstants.h",
+    "workdir/shaders/autogen/tables/REBLUR_SplitScreenResources.h",
+    "workdir/shaders/autogen/tables/REBLUR_TemporalAccumulationResources.h",
+    "workdir/shaders/autogen/tables/REBLUR_TemporalAccumulationSpecularResources.h",
+    "workdir/shaders/autogen/tables/REBLUR_TemporalStabilizationResources.h",
+    "workdir/shaders/autogen/tables/REBLUR_TemporalStabilizationSpecularResources.h",
+    "workdir/shaders/autogen/tables/REBLUR_ValidationResources.h",
+    "workdir/shaders/autogen/tables/ReflectionCombine.h",
+    "workdir/shaders/autogen/tables/ReflectionRTXUpscale.h",
+    "workdir/shaders/autogen/tables/RenderDeviceCapabilities.h",
+    "workdir/shaders/autogen/tables/RTXCombine.h",
+    "workdir/shaders/autogen/tables/RTXShadowReference.h",
+    "workdir/shaders/autogen/tables/SceneData.h",
+    "workdir/shaders/autogen/tables/ShadowPayload.h",
+    "workdir/shaders/autogen/tables/SIGMA_BlurFirstPass0Resources.h",
+    "workdir/shaders/autogen/tables/SIGMA_BlurFirstPass1Resources.h",
+    "workdir/shaders/autogen/tables/SIGMA_ClassifyTilesResources.h",
+    "workdir/shaders/autogen/tables/SIGMA_CopyResources.h",
+    "workdir/shaders/autogen/tables/SIGMASharedConstants.h",
+    "workdir/shaders/autogen/tables/SIGMA_SmoothTilesResources.h",
+    "workdir/shaders/autogen/tables/SIGMA_SplitScreenResources.h",
+    "workdir/shaders/autogen/tables/SIGMA_TemporalStabilizationResources.h",
+    "workdir/shaders/autogen/tables/SingleColorDepth.h",
+    "workdir/shaders/autogen/tables/SingleColor.h",
+    "workdir/shaders/autogen/tables/SkyAmbientData.h",
+    "workdir/shaders/autogen/tables/SkyData.h",
+    "workdir/shaders/autogen/tables/SkyFace.h",
+    "workdir/shaders/autogen/tables/SkyState.h",
+    "workdir/shaders/autogen/tables/SMAA_Blend.h",
+    "workdir/shaders/autogen/tables/SMAA_Global.h",
+    "workdir/shaders/autogen/tables/SMAA_Weights.h",
+    "workdir/shaders/autogen/tables/SSSBlurParams.h",
+    "workdir/shaders/autogen/tables/SSSClassifyParams.h",
+    "workdir/shaders/autogen/tables/SSSTilesAppend.h",
+    "workdir/shaders/autogen/tables/SSSTilesRead.h",
+    "workdir/shaders/autogen/tables/StatGraph.h",
+    "workdir/shaders/autogen/tables/StatGraphLine.h",
+    "workdir/shaders/autogen/tables/TestAppendData.h",
+    "workdir/shaders/autogen/tables/Test.h",
+    "workdir/shaders/autogen/tables/TextureRenderer.h",
+    "workdir/shaders/autogen/tables/TileClassifyData.h",
+    "workdir/shaders/autogen/tables/TileRecord.h",
+    "workdir/shaders/autogen/tables/TonemapData.h",
+    "workdir/shaders/autogen/tables/TonemapSelectors.h",
+    "workdir/shaders/autogen/tables/TranslucentPayload.h",
+    "workdir/shaders/autogen/tables/TranslucentRTXData.h",
+    "workdir/shaders/autogen/tables/Triangle.h",
+    "workdir/shaders/autogen/tables/UIFx.h",
+    "workdir/shaders/autogen/tables/UILayerRestore.h",
+    "workdir/shaders/autogen/tables/UIRenderState.h",
+    "workdir/shaders/autogen/tables/UIShadow.h",
+    "workdir/shaders/autogen/tables/UIState.h",
+    "workdir/shaders/autogen/tables/UpscalerSelectors.h",
+    "workdir/shaders/autogen/tables/vertex_input.h",
+    "workdir/shaders/autogen/tables/ViewportContext.h",
+    "workdir/shaders/autogen/tables/VoxelCopy.h",
+    "workdir/shaders/autogen/tables/VoxelDebug.h",
+    "workdir/shaders/autogen/tables/VoxelGISelectors.h",
+    "workdir/shaders/autogen/tables/VoxelInfo.h",
+    "workdir/shaders/autogen/tables/Voxelization.h",
+    "workdir/shaders/autogen/tables/VoxelLighting.h",
+    "workdir/shaders/autogen/tables/VoxelMipMap.h",
+    "workdir/shaders/autogen/tables/VoxelOutput.h",
+    "workdir/shaders/autogen/tables/VoxelScreen.h",
+    "workdir/shaders/autogen/tables/VoxelTilingParams.h",
+    "workdir/shaders/autogen/tables/VoxelUpscale.h",
+    "workdir/shaders/autogen/tables/VoxelVisibility.h",
+    "workdir/shaders/autogen/tables/VoxelZero.h",
+    "workdir/shaders/autogen/tables/VSLine.h",
+    "workdir/shaders/autogen/tables/VSMBlockerSearchOutput.h",
+    "workdir/shaders/autogen/tables/VSMBlockerTilesAppend.h",
+    "workdir/shaders/autogen/tables/VSMConstants.h",
+    "workdir/shaders/autogen/tables/VSMCopyPageDepthBatch.h",
+    "workdir/shaders/autogen/tables/VSMCopyPageDepth.h",
+    "workdir/shaders/autogen/tables/VSMDepthAnalysis.h",
+    "workdir/shaders/autogen/tables/VSMDownsampleHiZBatch.h",
+    "workdir/shaders/autogen/tables/VSMGatherDispatchData.h",
+    "workdir/shaders/autogen/tables/VSMGatherDispatchMaterialData.h",
+    "workdir/shaders/autogen/tables/VSMLevelDispatchInfo.h",
+    "workdir/shaders/autogen/tables/VSMLighting.h",
+    "workdir/shaders/autogen/tables/VSMPageBatch.h",
+    "workdir/shaders/autogen/tables/VSMPageHiZ.h",
+    "workdir/shaders/autogen/tables/VSMPageTableData.h",
+    "workdir/shaders/autogen/tables/VSMScreenSpaceShadowParams.h",
+    "workdir/shaders/autogen/tables/VSMSearchVerdictAppend.h",
+    "workdir/shaders/autogen/tables/VSMSelectors.h",
+    "workdir/shaders/autogen/tables/VSMShadowLookupData.h",
+    "workdir/shaders/autogen/tables/VSMShadowLookup.h",
+    "workdir/shaders/autogen/tables/VSMShadowResolveIO.h",
+    "workdir/shaders/autogen/tables/VSMTileListRead.h",
+    "workdir/shaders/autogen/tables/WorkGraphTest.h",
+    "workdir/shaders/autogen/tables/WorkGR_ClassifyPixels_NodeEmulation.h",
+    "workdir/shaders/autogen/tables/WorkGR_Shadows_NodeEmulation.h",
+    "workdir/shaders/autogen/TestAppendData.h",
+    "workdir/shaders/autogen/Test.h",
+    "workdir/shaders/autogen/TextureRenderer.h",
+    "workdir/shaders/autogen/TileClassifyData.h",
+    "workdir/shaders/autogen/TonemapData.h",
+    "workdir/shaders/autogen/TranslucentRTXData.h",
+    "workdir/shaders/autogen/UIFx.h",
+    "workdir/shaders/autogen/UILayerRestore.h",
+    "workdir/shaders/autogen/UIShadow.h",
+    "workdir/shaders/autogen/VoxelCopy.h",
+    "workdir/shaders/autogen/VoxelDebug.h",
+    "workdir/shaders/autogen/VoxelInfo.h",
+    "workdir/shaders/autogen/Voxelization.h",
+    "workdir/shaders/autogen/VoxelLighting.h",
+    "workdir/shaders/autogen/VoxelMipMap.h",
+    "workdir/shaders/autogen/VoxelOutput.h",
+    "workdir/shaders/autogen/VoxelScreen.h",
+    "workdir/shaders/autogen/VoxelUpscale.h",
+    "workdir/shaders/autogen/VoxelVisibility.h",
+    "workdir/shaders/autogen/VoxelZero.h",
+    "workdir/shaders/autogen/VSMBlockerSearchOutput.h",
+    "workdir/shaders/autogen/VSMBlockerTilesAppend.h",
+    "workdir/shaders/autogen/VSMConstants.h",
+    "workdir/shaders/autogen/VSMCopyPageDepthBatch.h",
+    "workdir/shaders/autogen/VSMCopyPageDepth.h",
+    "workdir/shaders/autogen/VSMDepthAnalysis.h",
+    "workdir/shaders/autogen/VSMDownsampleHiZBatch.h",
+    "workdir/shaders/autogen/VSMGatherDispatchData.h",
+    "workdir/shaders/autogen/VSMGatherDispatchMaterialData.h",
+    "workdir/shaders/autogen/VSMLighting.h",
+    "workdir/shaders/autogen/VSMPageBatch.h",
+    "workdir/shaders/autogen/VSMPageHiZ.h",
+    "workdir/shaders/autogen/VSMPageTableData.h",
+    "workdir/shaders/autogen/VSMScreenSpaceShadowParams.h",
+    "workdir/shaders/autogen/VSMSearchVerdictAppend.h",
+    "workdir/shaders/autogen/VSMShadowLookupData.h",
+    "workdir/shaders/autogen/VSMShadowResolveIO.h",
+    "workdir/shaders/autogen/VSMTileListRead.h",
+    "workdir/shaders/autogen/WorkGraphTest.h",
+    "workdir/shaders/autogen/workgraph/WorkGR.h",
+    "workdir/shaders/autogen/WorkGR_ClassifyPixels_NodeEmulation.h",
+    "workdir/shaders/autogen/WorkGR_Shadows_NodeEmulation.h",
+    "workdir/shaders/denoiser/ffx-reflection-dnsr/ffx_denoiser_reflections_common.h",
+    "workdir/shaders/denoiser/ffx-reflection-dnsr/ffx_denoiser_reflections_config.h",
+    "workdir/shaders/denoiser/ffx-reflection-dnsr/ffx_denoiser_reflections_prefilter.h",
+    "workdir/shaders/denoiser/ffx-reflection-dnsr/ffx_denoiser_reflections_reproject.h",
+    "workdir/shaders/denoiser/ffx-reflection-dnsr/ffx_denoiser_reflections_resolve_temporal.h",
+    "workdir/shaders/denoiser/ffx-shadows-dnsr/ffx_denoiser_shadows_filter.h",
+    "workdir/shaders/denoiser/ffx-shadows-dnsr/ffx_denoiser_shadows_prepare.h",
+    "workdir/shaders/denoiser/ffx-shadows-dnsr/ffx_denoiser_shadows_tileclassification.h",
+    "workdir/shaders/denoiser/ffx-shadows-dnsr/ffx_denoiser_shadows_util.h",
+    "workdir/shaders/enums.h",
+    "workdir/shaders/fsr/ffx_fsr1.h",
+    "Sharpmake/**",
+    "**/*.sharpmake.cs",
+    "sources/Prism/editor/**/*.cs",
+    "sources/3rdparty/**",
+    "sources/Modules/**",
+    "workdir/shaders/**",
+    "**/ffx_*.h",
+    "**/autogen/**",
+    "sources/RenderSystem/Mesh/raw4/Raw4Context.h"
+  ]
+}

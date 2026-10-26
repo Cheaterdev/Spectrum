@@ -7,5 +7,14 @@ exclude_paths:
   - "sources/Modules/**"
   - "workdir/shaders/**"
   - "**/ffx_*.h"
+  - "**/autogen/**"
   - "sources/RenderSystem/Mesh/raw4/raw4.h"
   - "sources/RenderSystem/Mesh/raw4/raw4_history.h"
+  - "sources/RenderSystem/Mesh/raw4/Raw4Context.h"
+
+engines:
+  bandit:
+    exclude_paths:
+      - "sources/Prism/editor/gen_vs_extension.py"
+      - "workdir/materialx/gen_generated_hlsl.py"
+      - ".claude/skills/codacy-export/export.py"

@@ -30,9 +30,8 @@ class tick_timer
 	std::chrono::time_point<std::chrono::system_clock> last_tick;
 
 public:
-	tick_timer()
+	tick_timer() : last_tick(std::chrono::system_clock::now())
 	{
-		last_tick = std::chrono::system_clock::now();
 	}
 
 	double tick()
@@ -89,7 +88,7 @@ class triangle_drawer : public GUI::Elements::image, public GraphGenerator, Vari
 		first_person_camera cam;
 
 
-		EyeData(HAL::RootSignature::ptr sig)
+		explicit EyeData(HAL::RootSignature::ptr sig)
 		{}
 	};
 
@@ -433,16 +432,15 @@ class material_settings_panel : public GUI::base
 
 public:
 	material_settings_panel(materials::universal_material* material, ::FlowGraph::graph* graph)
-		: m_material(material), m_graph(graph)
+		: m_material(material), m_graph(graph),
+		  m_mesh_renderer(std::make_shared<SceneTextureRenderer>()),
+		  m_mesh_img(std::make_shared<GUI::Elements::image>())
 	{
 		// Lives inside a dock tab page (see canvas::on_open below) -- the
 		// tab control handles sizing/placement, so just fill it.
 		docking     = GUI::dock::FILL;
 		thinkable   = true;
 
-		m_mesh_renderer = std::make_shared<SceneTextureRenderer>();
-
-		m_mesh_img           = std::make_shared<GUI::Elements::image>();
 		m_mesh_img->docking   = GUI::dock::TOP;
 		m_mesh_img->width_size  = GUI::size_type::MATCH_PARENT;
 		m_mesh_img->height_size = GUI::size_type::FIXED;
@@ -624,7 +622,7 @@ class asset_preview_content : public GUI::base, public FrameGraph::GraphGenerato
 public:
 	using ptr = std::shared_ptr<asset_preview_content>;
 
-	asset_preview_content(std::shared_ptr<Asset> asset)
+	explicit asset_preview_content(std::shared_ptr<Asset> asset)
 	{
 		docking     = GUI::dock::FILL;
 		width_size  = GUI::size_type::MATCH_PARENT;

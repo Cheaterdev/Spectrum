@@ -32,8 +32,8 @@ namespace Assimp
 	class RAW4Importer : public BaseImporter, public Raw4SceneAdaptor
 	{
 
-		aiScene* pScene;
-		aiNode* mCurNode;
+		aiScene* pScene = nullptr;
+		aiNode* mCurNode = nullptr;
 	//	aiNode* lastCreated;
 	//	aiNode* lastCreatedOffsetNode;
 

@@ -1616,11 +1616,8 @@ namespace HAL
 		start_event(timer->get_block().get_name());
 
 		auto b = static_cast<GPUBlock*>(&timer->get_block());
-		if (b)
-		{
-			gpu_timers.emplace_back(b->get_ptr<GPUBlock>());
-			b->start(this);
-		}
+		gpu_timers.emplace_back(b->get_ptr<GPUBlock>());
+		b->start(this);
 
 		current = &timer->get_block();
 	}
@@ -1628,10 +1625,7 @@ namespace HAL
 	void Eventer::on_end(Timer* timer)
 	{
 		auto b = static_cast<GPUBlock*>(&timer->get_block());
-		if (b)
-		{
-			b->end(this);
-		}
+		b->end(this);
 
 		current = timer->get_block().parent;
 		end_event();

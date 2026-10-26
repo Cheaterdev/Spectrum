@@ -1229,14 +1229,13 @@ class FrameGraphTimelineCanvas : public dock_base
 
         ResourcePreviewContent(FrameGraph::ResourceAllocInfo* alloc, UINT call_id,
                                const std::string& pass_name)
-            : m_alloc(alloc), m_call_id(call_id)
+            : m_alloc(alloc), m_call_id(call_id), m_preview(std::make_shared<resource_preview>())
         {
             docking     = GUI::dock::FILL;
             width_size  = GUI::size_type::MATCH_PARENT;
             height_size = GUI::size_type::MATCH_PARENT;
             clickable   = false; // mouse falls through to the preview widget
 
-            m_preview = std::make_shared<resource_preview>();
             add_child(m_preview);
 
             std::string title = (alloc ? alloc->name() : std::string("?"))
@@ -1555,7 +1554,11 @@ class FrameGraphTimelineCanvas : public dock_base
         }
 
         constexpr size_t max_chars = 20;   // what fits a cell at the title's font size
-        if (type.size() > max_chars) type = type.substr(0, max_chars - 1) + "\xE2\x80\xA6";
+        if (type.size() > max_chars)
+        {
+            type.resize(max_chars - 1);
+            type += "\xE2\x80\xA6";
+        }
         return type;
     }
 

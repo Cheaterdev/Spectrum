@@ -93,7 +93,7 @@ namespace HAL
 		private:
 			DXC_MICROCOM_REF_FIELD(m_dwRef)
 		public:
-			shader_include_dxil(HAL::shader_include* includer) : includer(includer)
+			explicit shader_include_dxil(HAL::shader_include* includer) : includer(includer)
 			{
 
 			}

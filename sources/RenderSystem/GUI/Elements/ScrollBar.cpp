@@ -67,7 +67,7 @@ namespace GUI
 		{
 			scroll_bar* owner;
 		public:
-			self_dragger(scroll_bar* owner)
+			explicit self_dragger(scroll_bar* owner)
 			{
 				this->owner = owner;
 			}

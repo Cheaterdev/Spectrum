@@ -17,7 +17,7 @@ class Window : public HAL::window_provider
 	bool custom_frame = true;
 	static key_mods current_key_mods();
 protected:
-	Window(ivec2 size = { 1024, 768 }, const std::string& name = "Spectrum");
+	explicit Window(ivec2 size = { 1024, 768 }, const std::string& name = "Spectrum");
 	~Window();
 	/** Window events */
 

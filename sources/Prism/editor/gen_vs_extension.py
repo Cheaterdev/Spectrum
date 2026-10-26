@@ -348,9 +348,7 @@ def is_lexer(name):
 
 
 def literal_rules(rules):
-    """
-    Token rules whose whole body is one literal (a trailing `!x` guard such as `!IDCHAR` does not count): {NAME: text}.
-    """
+    """Token rules whose whole body is one literal (a trailing `!x` guard such as `!IDCHAR` does not count): {NAME: text}."""
     out = {}
     for name in rules:
         if not is_lexer(name):
@@ -695,9 +693,7 @@ def compile_client(out_dir):
 
 
 def dll_closure(exe):
-    """
-    The exe plus every DLL it (transitively) imports that sits next to it -- i.e. the vcpkg runtime DLLs, not system ones.
-    """
+    """The exe plus every DLL it (transitively) imports that sits next to it -- i.e. the vcpkg runtime DLLs, not system ones."""
     dumpbin = sorted(glob.glob(os.path.join(VS_ROOT, r"VC\Tools\MSVC\*\bin\Hostx64\x64\dumpbin.exe")))[-1]
     folder = os.path.dirname(exe)
     result, pending = [], [exe]

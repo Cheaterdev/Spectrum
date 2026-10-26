@@ -495,7 +495,6 @@ VoxelGI::VoxelGI(Scene::ptr& scene, VSM& vsm) :scene(scene), vsm(vsm), VariableC
 		mesh_ctx->list         = command_list;
 		mesh_ctx->cam          = cam.cam;
 
-		auto& list    = *mesh_ctx->list;
 		auto& compute = mesh_ctx->list->get_compute();
 
 		compute.set_signature(Layouts::DefaultLayout);
@@ -504,6 +503,7 @@ VoxelGI::VoxelGI(Scene::ptr& scene, VSM& vsm) :scene(scene), vsm(vsm), VariableC
 		const uint mip_levels = tex_lighting.tex_result->get_desc().as_texture().MipLevels;
 
 		{
+			auto& list = *mesh_ctx->list;
 			// Only the tail mips without a tile list (packed) still need a
 			// clear — they are never downsampled and the cone trace samples
 			// them at high LODs. Tiny textures, cost is negligible.

@@ -306,7 +306,6 @@ namespace HAL {
 		{
 			update_tiling_info info;
 			info.resource = resource;
-			auto& alloc_info = (resource)->alloc_info;
 
 			if (!packed_tiles.heap_position.heap)
 				packed_tiles.heap_position = resource->get_device().get_static_gpu_data().create_tile( HeapType::DEFAULT, packed_mip_count);
@@ -322,8 +321,6 @@ namespace HAL {
 
 		if (packed_mip_count)
 		{
-			auto& alloc_info = (resource)->alloc_info;
-
 			if (!packed_tiles.heap_position.heap)
 				packed_tiles.heap_position = resource->get_device().get_static_gpu_data().create_tile( HeapType::DEFAULT, packed_mip_count);
 

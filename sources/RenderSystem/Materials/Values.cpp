@@ -1353,7 +1353,6 @@ TiledTextureNode::~TiledTextureNode()
 
 void TiledTextureNode::operator()(MaterialContext* context)
 {
-	auto mat_graph = static_cast<MaterialFunction*>(owner);
 	//  auto val = mat_graph->add_value(ShaderParams::get().FLOAT4, "float4(1,0,0,1)");
 
 

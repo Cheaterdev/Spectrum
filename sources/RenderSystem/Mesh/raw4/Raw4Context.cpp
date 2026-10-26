@@ -8,8 +8,6 @@
 Raw4Context::Raw4Context()
 {
 	revision = 0;
-	file_id = 0;
-	base = nullptr;
 	strs = nullptr;
 	texs = nullptr;
 	mats = nullptr;

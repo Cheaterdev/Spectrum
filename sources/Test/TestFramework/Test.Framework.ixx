@@ -302,6 +302,18 @@ export namespace Test
 				Log::get() << Log::LEVEL_ERROR << "Failed: " << failed << Log::endl;
 			else
 				Log::get() << Log::LEVEL_INFO << "Failed: " << failed << Log::endl;
+			if (failed > 0)
+			{
+				Log::get() << Log::LEVEL_ERROR << "Failed tests:" << Log::endl;
+
+				for (const auto& result : results)
+					if (!result.passed && !result.skipped)
+					{
+						std::string fullName = result.category.empty() ? result.name : result.category + "::" + result.name;
+						Log::get() << Log::LEVEL_ERROR << "  " << fullName << Log::endl;
+					}
+			}
+
 			Log::get() << Log::LEVEL_INFO << "==================================" << Log::endl;
 		}
 

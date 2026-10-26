@@ -9,7 +9,7 @@ namespace GUI
 		{
 			base* owner;
 		public:
-			clickable_label(base* owner) : owner(owner)
+			explicit clickable_label(base* owner) : owner(owner)
 			{
 				clickable = true;
 			}

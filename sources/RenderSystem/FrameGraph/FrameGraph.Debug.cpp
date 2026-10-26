@@ -95,7 +95,7 @@ public:
 
 	bool passes_inited =false;
 public:
-	ResourceDebugger(FrameGraph::Graph& _graph) :graph(_graph)
+	explicit ResourceDebugger(FrameGraph::Graph& _graph) :graph(_graph)
 	{
 
 		width_size = GUI::size_type::MATCH_PARENT;

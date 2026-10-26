@@ -6,7 +6,7 @@ class c_contents : public GUI::base
 {
         GUI::Elements::scroll_container* owner;
     public:
-        c_contents(GUI::Elements::scroll_container* owner)
+        explicit c_contents(GUI::Elements::scroll_container* owner)
         {
             this->owner = owner;
             clickable = false;
@@ -43,7 +43,7 @@ class mover : public GUI::base
         vec2 speed;
 //	float inertion;
     public:
-        mover(GUI::Elements::scroll_container* owner)
+        explicit mover(GUI::Elements::scroll_container* owner)
         {
             this->owner = owner;
           //  thinkable = true;

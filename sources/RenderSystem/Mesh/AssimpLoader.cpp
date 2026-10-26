@@ -308,7 +308,7 @@ class MyIOStream : public Assimp::IOStream
         size_t pos;
     protected:
         // Constructor protected for private usage by MyIOSystem
-        MyIOStream(std::string filename)
+        explicit MyIOStream(std::string filename)
         {
             pos = 0;
             auto file = FileSystem::get().get_file(to_path(filename));
@@ -394,7 +394,7 @@ class MyProgressHandler :public Assimp::ProgressHandler
 {
 	Task::ptr loading_task;
 public:
-	MyProgressHandler(AssetLoadingContext::ptr & context):loading_task(context->loading_task)
+	explicit MyProgressHandler(AssetLoadingContext::ptr & context):loading_task(context->loading_task)
 	{
 
 	}

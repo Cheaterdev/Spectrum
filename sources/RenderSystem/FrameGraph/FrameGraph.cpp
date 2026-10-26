@@ -1966,9 +1966,7 @@ namespace FrameGraph
 			}*/
 
 			// if no pass found - find any pass that is synced to the usage
-			if (!best_deletion_pass)
-			{
-								  if(delete_resources)
+			if(delete_resources)
 				for (auto pass : enabled_passes)
 				{
 					if (info->used_end.is_in_sync(pass->sync_state, false))
@@ -1984,12 +1982,10 @@ namespace FrameGraph
 					}
 				}
 
-				if (!best_deletion_pass)
-				{
-					info->non_deleted = true;
-					non_deleted.insert(info);
-				}
-
+			if (!best_deletion_pass)
+			{
+				info->non_deleted = true;
+				non_deleted.insert(info);
 			}
 		}
 

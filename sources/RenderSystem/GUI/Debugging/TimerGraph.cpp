@@ -235,7 +235,7 @@ namespace GUI
 				float sel_x0    = 0;
 				float sel_x1    = 0;
 			public:
-				zoom_overlay(TimeGraph* o) : owner(o)
+				explicit zoom_overlay(TimeGraph* o) : owner(o)
 				{
 					docking   = dock::FILL;
 					clickable = true;

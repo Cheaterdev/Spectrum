@@ -2090,8 +2090,7 @@ namespace GUI
                 if (hover)
                     hover->on_mouse_leave(pos);
 
-                if (control)
-                    control->on_mouse_enter(pos);
+                control->on_mouse_enter(pos);
             }
 
             hovered = control;

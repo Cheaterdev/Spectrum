@@ -73,7 +73,7 @@ class TemplatesLibrary
 	std::map<std::wstring, jinja2::Template> templates;
 
 public:
-	TemplatesLibrary(const std::string& dir)
+	explicit TemplatesLibrary(const std::string& dir)
 	{
 		iterate_files("templates/" + dir + "/", [this](std::filesystem::path path)
 		{

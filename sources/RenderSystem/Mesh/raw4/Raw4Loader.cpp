@@ -217,7 +217,6 @@ bool Raw4Loader::Load(Assimp::IOSystem &io, const std::string& name , Raw4SceneA
 
 //	auto data = f->load_all();
 	const uint8_t* p = reinterpret_cast<const uint8_t*>(data.data());// f->load_all();
-	auto p_copy = p;
 	// check magic number
 	if(data.size() < sizeof(raw4_block_header)) return false;
 	if(*((uint32_t*)p) != RAW4_MAGIC_NUMBER) return false;
@@ -228,8 +227,6 @@ bool Raw4Loader::Load(Assimp::IOSystem &io, const std::string& name , Raw4SceneA
 
 	Raw4Context context;
 	context.revision = header->revision;
-	context.file_id = 0;// f->uid;
-	context.base = p_copy;// f->data;
 
 	// read blocks
 	parse_block(context, adaptor, p, header->data_size);

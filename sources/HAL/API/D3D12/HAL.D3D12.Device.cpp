@@ -167,7 +167,6 @@ namespace HAL
         {
             if (FAILED(hr))
             {
-                std::string message = std::system_category().message(hr);
                 Log::get().crash_error(hr, line);
 
                 // A failed call after the device is actually gone (TDR/hang,

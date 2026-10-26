@@ -8,8 +8,6 @@
 struct Raw4Context
 {
 	uint32_t revision;
-	uint32_t file_id;
-	const uint8_t* base;
 	raw4_block_strings* strs;
 	raw4_block_textures* texs;
 	raw4_block_materials* mats;

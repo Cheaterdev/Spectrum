@@ -134,6 +134,11 @@ jobs:
         configuration: [Debug-D3D12, Debug-Vulkan]
 
     steps:
+    # The tests read shaders, MaterialX libraries and golden images by paths
+    # relative to the working directory, so they run from the repo's workdir/.
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
     - name: Download build output
       uses: actions/download-artifact@v4
       with:
@@ -142,9 +147,9 @@ jobs:
 
     - name: Run tests
       shell: powershell
-      working-directory: ./bin/Debug
+      working-directory: ./workdir
       run: |
-        $exe = if ("${{ matrix.configuration }}" -like "*-Vulkan") { ".\test_vulkan.exe" } else { ".\test.exe" }
+        $exe = if ("${{ matrix.configuration }}" -like "*-Vulkan") { "..\bin\Debug\test_vulkan.exe" } else { "..\bin\Debug\test.exe" }
         & $exe
         if ($LASTEXITCODE -ne 0) {
           Write-Error "Tests failed with exit code $LASTEXITCODE"

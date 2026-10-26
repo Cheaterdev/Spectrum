@@ -73,7 +73,6 @@ namespace
 
 		HAL::Texture2DView& level0 = *data.BloomTAA;
 		HAL::Texture2DView& down   = *data.BloomDown;
-		HAL::Texture2DView& up     = *data.BloomUp;
 		const uint levels = used_levels(down);
 
 		auto level_size = [&](uint level)
@@ -107,6 +106,7 @@ namespace
 		{
 			PROFILE(L"bloom_upsample");
 			compute.set_pipeline<PSOS::Post::BloomUpsample>();
+			HAL::Texture2DView& up = *data.BloomUp;
 
 			// up[k] = level[k] + tent(up[k + 1]), starting from the smallest
 			// level itself; up's mip at the last level is never written or read.

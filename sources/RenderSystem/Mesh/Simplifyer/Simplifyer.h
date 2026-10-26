@@ -23,7 +23,7 @@ class mesh_simplifyer
         std::vector<vertex> vertexes;
         std::vector<face> faces;
 
-        unsigned int faces_count;
+        unsigned int faces_count = 0;
 
         vertex* find_best_vertex(vertex* a, vertex* b)
         {

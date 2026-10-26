@@ -21,8 +21,8 @@ static std::wstring normalized(const std::filesystem::path& p)
 }
 
 my_stream::my_stream(std::string dir, const std::string& filename)
+	: path(dir + "/" + filename)
 {
-	path = dir + "/" + filename;
 	std::filesystem::create_directories(dir);
 	written_paths().insert(normalized(path));
 }
