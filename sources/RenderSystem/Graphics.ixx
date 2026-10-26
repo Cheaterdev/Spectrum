@@ -17,6 +17,7 @@ export import :FontAsset;
 export import :TextureAsset;
 export import :MaterialAsset;
 export import :MeshAsset;
+export import :Quanta;
 export import :EngineAssets;
 export import :AssetRenderer;
 
