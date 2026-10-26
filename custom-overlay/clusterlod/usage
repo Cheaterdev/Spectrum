@@ -1,0 +1,3 @@
+clusterlod provides a single header, <clusterlod.h>. Exactly one source file defines
+CLUSTERLOD_IMPLEMENTATION and includes <meshoptimizer.h> before it; every other file only
+includes the declarations.

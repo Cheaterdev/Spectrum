@@ -1,0 +1,10 @@
+{
+  "name": "clusterlod",
+  "version-date": "2026-04-01",
+  "description": "Cluster LOD hierarchy generation on top of meshoptimizer (single header from the meshoptimizer repository's demo folder).",
+  "homepage": "https://github.com/zeux/meshoptimizer",
+  "license": "MIT",
+  "dependencies": [
+    "meshoptimizer"
+  ]
+}

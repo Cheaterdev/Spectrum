@@ -19,6 +19,7 @@
      {"name" :"directx-headers", "version>=":"1.619.1"},
      "bshoshany-thread-pool",
      "meshoptimizer",
+     "clusterlod",
      "streamline",
      "nrd",
      "vulkan-headers",

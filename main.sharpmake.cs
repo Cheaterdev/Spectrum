@@ -75,7 +75,7 @@ namespace Spectrum
         static readonly string[] VcpkgPorts =
         {
             "zlib", "magic-enum", "crossguid", "crc32c", "cereal", "bshoshany-thread-pool",
-            "vulkan-headers", "vulkan-memory-allocator", "meshoptimizer", "skribidi"
+            "vulkan-headers", "vulkan-memory-allocator", "meshoptimizer", "clusterlod", "skribidi"
         };
 
         // Ports only the Android build links directly (Windows has WIC/DirectXTex for these jobs).

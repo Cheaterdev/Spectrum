@@ -9,4 +9,3 @@ exclude_paths:
   - "**/ffx_*.h"
   - "sources/RenderSystem/Mesh/raw4/raw4.h"
   - "sources/RenderSystem/Mesh/raw4/raw4_history.h"
-  - "sources/RenderSystem/Mesh/clusterlod.h"
