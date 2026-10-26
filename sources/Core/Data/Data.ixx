@@ -15,9 +15,9 @@ export
 	namespace DataPacker
 	{
 
-		std::string pack(std::string unpacked);
+		std::string pack(std::string_view unpacked);
 
-		std::string unpack(std::string str);
+		std::string unpack(std::string_view str);
 
 		
 

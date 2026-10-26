@@ -667,7 +667,7 @@ std::future<Asset::ptr> AssetStorage::load_asset()
 		}
 
 		std::shared_ptr<std::promise<Asset::ptr>> p(new std::promise<Asset::ptr>);
-		when_all(begin(tasks), end(tasks)).then([this, p, archive](std::vector<bool> results)
+		when_all(begin(tasks), end(tasks)).then([this, p, archive](const std::vector<bool>& results)
 			{
 				bool refresh_header = false;
 				{

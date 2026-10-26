@@ -5,7 +5,7 @@ import zlib;
 namespace DataPacker
 {
 
-	std::string pack(std::string unpacked)
+	std::string pack(std::string_view unpacked)
 	{
 		std::string packed;
 		// The length header is a fixed 32 bits (see Serializer::get_stream); zlib's own lengths
@@ -20,7 +20,7 @@ namespace DataPacker
 		return std::move(packed);
 	}
 
-	std::string unpack(std::string str)
+	std::string unpack(std::string_view str)
 	{
 		constexpr size_t header = sizeof(uint32_t);
 		std::string result;
