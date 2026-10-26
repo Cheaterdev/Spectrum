@@ -277,6 +277,13 @@ public:
 		virtual void save() override;
 
 		virtual void reload_resource();
+
+		// Extra named entries in the asset's file, next to "header", "editor" and "asset". An entry an older
+		// file lacks is simply absent (FileDataStorage::has), so adding one never breaks saved assets.
+		// Called by AssetStorage right after the asset itself is written / read.
+		virtual void save_partitions(FileDataStorage& storage) {}
+		virtual void load_partitions(FileDataStorage& storage, UniversalContext* context) {}
+
 		virtual void load(std::istream&& s);
 
 		virtual void save(std::ostream&& s);

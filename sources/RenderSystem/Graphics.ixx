@@ -18,6 +18,7 @@ export import :TextureAsset;
 export import :MaterialAsset;
 export import :MeshAsset;
 export import :Quanta;
+export import :QuantaAsset;
 export import :EngineAssets;
 export import :AssetRenderer;
 

@@ -7,6 +7,7 @@ import assimp;
 
 #include "Simplifyer/Simplifyer.h"
 #include "Mesh/MeshletGeneration.h"
+#include "Quanta/QuantaBuilder.h"
 
 // BC5/R8G8 are the standard 2-channel encodings for a tangent-space normal
 // map (X/Y only -- Z is always the larger, positive, reconstructible
@@ -1102,6 +1103,7 @@ std::shared_ptr<MeshData> MeshData::load_assimp(const std::string& file_name, re
 
 		tasks.clear();
         result->meshes.resize(scene->mNumMeshes);
+        result->quanta.resize(scene->mNumMeshes);
 
         for (unsigned int i = 0; i < scene->mNumMeshes; i++)
         {
@@ -1191,6 +1193,12 @@ std::shared_ptr<MeshData> MeshData::load_assimp(const std::string& file_name, re
                 );
                
                 result->meshes[i] = (mesh);
+
+                static_assert(sizeof(Quanta::Vertex) == sizeof(Table::Meshes::mesh_vertex_input::Compiled));
+                result->quanta[i] = std::make_shared<Quanta::Mesh>(BuildQuanta(
+                    indices.data() + mesh.index_offset, mesh.index_count,
+                    reinterpret_cast<const Quanta::Vertex*>(vertices.data() + mesh.vertex_offset), mesh.vertex_count
+                ));
 
                 return true;
             }));

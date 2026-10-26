@@ -56,6 +56,7 @@ export namespace Quanta
 	};
 	static_assert(sizeof(ClusterHeader) == 64);
 	static_assert(std::is_trivially_copyable_v<GroupHeader> && std::is_trivially_copyable_v<ClusterHeader>);
+	static_assert(std::is_trivially_copyable_v<Vertex>);
 
 	// Resident record of one group (the LOD test needs it while the blob is paged out).
 	struct Group
@@ -72,6 +73,8 @@ export namespace Quanta
 		uint32_t reserved;
 	};
 
+	static_assert(std::is_trivially_copyable_v<Group>);
+
 	// NodeMaxGroups consecutive groups. Enclosing sphere / max error / min refined error, so a node is only
 	// skipped when every group under it would fail its own test.
 	struct Node
@@ -84,11 +87,18 @@ export namespace Quanta
 		uint32_t group_count;
 	};
 
+	static_assert(std::is_trivially_copyable_v<Node>);
+
 	struct Page
 	{
 		std::vector<uint8_t>  data;     // <= PageBytes; the runtime pads to PageBytes
 		std::vector<uint32_t> groups;
 		bool                  root = false;  // holds a root group: pinned, never evicted
+
+		// Where these bytes sit in the asset file they were loaded from (Mesh::file), so a DirectStorage
+		// request can read the page straight into the page pool. 0 / 0 for a mesh that was never loaded.
+		uint64_t file_offset = 0;
+		uint32_t file_size   = 0;
 	};
 
 	struct Mesh
@@ -101,6 +111,8 @@ export namespace Quanta
 		uint32_t original_triangle_count = 0;
 		uint32_t max_depth               = 0;
 		uint32_t root_page_count         = 0;
+
+		std::filesystem::path file;      // the asset file the pages came from, empty if built in memory
 	};
 
 	struct ClusterInput
@@ -146,4 +158,12 @@ export namespace Quanta
 	};
 
 	GroupView read_group(const Mesh& mesh, uint32_t group);
+
+	// The on-disk form: header, the resident tables (groups, nodes, page directory), then the pages, each
+	// 16-byte aligned at an offset the directory gives, so a streamer can read one page without the rest.
+	// deserialize checks every size and offset and returns false on anything inconsistent.
+	// base_file_offset is where `data` starts in the file it was read from: pages get their absolute
+	// position from it.
+	std::vector<uint8_t> serialize(const Mesh& mesh);
+	bool deserialize(const uint8_t* data, size_t size, Mesh& out, uint64_t base_file_offset = 0);
 }

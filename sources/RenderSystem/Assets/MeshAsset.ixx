@@ -8,6 +8,8 @@ import GUI;
 
 import HAL;
 import :Texture;
+import :Quanta;
+import :QuantaAsset;
 
 import stl.core;
 export{
@@ -156,6 +158,9 @@ export{
 		std::vector<UINT32> index_buffer;
 
 		std::vector<MeshInfo> meshes;
+		// Quanta (paged cluster geometry) for each of `meshes`, built at import. Separate from the
+		// meshlets above, which the current renderer keeps using.
+		std::vector<std::shared_ptr<Quanta::Mesh>> quanta;
 		std::vector<MaterialAsset::ptr> materials;
 		MeshNode root_node;
 		std::shared_ptr<Primitive> primitive;
@@ -192,6 +197,9 @@ export{
 		HAL::StructuredBufferView<Table::Meshes::MeshletGroup>		meshlet_groups;
 
 		std::vector<CompiledMeshInfo>	meshes;
+		// Quanta data per entry of `meshes`. Lives in its own "quanta" entry of the asset file (not in the
+		// cereal stream of the asset itself), so assets saved before it existed still load, with this empty.
+		std::vector<std::shared_ptr<Quanta::Mesh>> quanta;
 		std::vector<MaterialAsset::ref> materials;
 
 		std::shared_ptr<Primitive> primitive;
@@ -200,6 +208,8 @@ export{
 		std::vector<MeshNode*> nodes;
 
 		virtual void shutdown() override;
+		virtual void save_partitions(FileDataStorage& storage) override;
+		virtual void load_partitions(FileDataStorage& storage, UniversalContext* context) override;
 		MeshAsset(std::wstring, AssetLoadingContext::ptr = nullptr);
 		virtual ~MeshAsset();
 		std::shared_ptr<MeshAssetInstance> create_instance();

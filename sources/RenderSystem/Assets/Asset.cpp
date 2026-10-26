@@ -689,6 +689,7 @@ std::future<Asset::ptr> AssetStorage::load_asset()
 						if (RenderSystem::is_good())
 							load_ctx.get_context<HAL::Device*>() = &RenderSystem::get().device();
 						asset = archive->get<Asset::ptr>("asset", &load_ctx);
+						asset->load_partitions(*archive, &load_ctx);
 
 						asset->holder = this;
 
@@ -750,6 +751,7 @@ void AssetStorage::save()
 		storage.put("header", *header.get());
 		storage.put("editor", *editor.get());
 		storage.put("asset", asset);
+		asset->save_partitions(storage);
 
 		storage.save();
 		//auto archive = ZipArchive::Create();

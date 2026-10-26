@@ -165,6 +165,163 @@ namespace Quanta
 		return view;
 	}
 
+	namespace
+	{
+		constexpr uint32_t FileMagic = 0x41544E51;   // "QNTA"
+		constexpr uint32_t FileVersion = 1;
+
+		struct FileHeader
+		{
+			uint32_t magic;
+			uint32_t version;
+			uint32_t page_bytes;
+			uint32_t group_count;
+			uint32_t node_count;
+			uint32_t page_count;
+			uint32_t page_group_ids;       // length of the flattened page -> group list
+			uint32_t original_cluster_count;
+			uint32_t original_triangle_count;
+			uint32_t max_depth;
+			uint32_t root_page_count;
+			uint32_t reserved;
+		};
+
+		struct PageEntry
+		{
+			uint64_t offset;
+			uint32_t size;
+			uint32_t root;
+			uint32_t group_count;
+			uint32_t first_group_id;       // into the flattened list
+		};
+		static_assert(std::is_trivially_copyable_v<FileHeader> && std::is_trivially_copyable_v<PageEntry>);
+
+		template<class T>
+		void append(std::vector<uint8_t>& out, const T* items, size_t count)
+		{
+			const uint8_t* bytes = reinterpret_cast<const uint8_t*>(items);
+			out.insert(out.end(), bytes, bytes + count * sizeof(T));
+		}
+	}
+
+	std::vector<uint8_t> serialize(const Mesh& mesh)
+	{
+		FileHeader header{};
+		header.magic = FileMagic;
+		header.version = FileVersion;
+		header.page_bytes = PageBytes;
+		header.group_count = static_cast<uint32_t>(mesh.groups.size());
+		header.node_count = static_cast<uint32_t>(mesh.nodes.size());
+		header.page_count = static_cast<uint32_t>(mesh.pages.size());
+		header.original_cluster_count = mesh.original_cluster_count;
+		header.original_triangle_count = mesh.original_triangle_count;
+		header.max_depth = mesh.max_depth;
+		header.root_page_count = mesh.root_page_count;
+
+		std::vector<uint32_t> group_ids;
+		std::vector<PageEntry> entries(mesh.pages.size());
+		for (size_t p = 0; p < mesh.pages.size(); p++)
+		{
+			entries[p].size = static_cast<uint32_t>(mesh.pages[p].data.size());
+			entries[p].root = mesh.pages[p].root ? 1 : 0;
+			entries[p].group_count = static_cast<uint32_t>(mesh.pages[p].groups.size());
+			entries[p].first_group_id = static_cast<uint32_t>(group_ids.size());
+			group_ids.insert(group_ids.end(), mesh.pages[p].groups.begin(), mesh.pages[p].groups.end());
+		}
+		header.page_group_ids = static_cast<uint32_t>(group_ids.size());
+
+		uint64_t cursor = sizeof(FileHeader) + mesh.groups.size() * sizeof(Group) + mesh.nodes.size() * sizeof(Node)
+			+ entries.size() * sizeof(PageEntry) + group_ids.size() * sizeof(uint32_t);
+		for (size_t p = 0; p < entries.size(); p++)
+		{
+			cursor = align_up(static_cast<uint32_t>(cursor), BlobAlignment);
+			entries[p].offset = cursor;
+			cursor += entries[p].size;
+		}
+
+		std::vector<uint8_t> out;
+		out.reserve(cursor);
+		append(out, &header, 1);
+		append(out, mesh.groups.data(), mesh.groups.size());
+		append(out, mesh.nodes.data(), mesh.nodes.size());
+		append(out, entries.data(), entries.size());
+		append(out, group_ids.data(), group_ids.size());
+		for (size_t p = 0; p < entries.size(); p++)
+		{
+			out.resize(entries[p].offset, 0);
+			out.insert(out.end(), mesh.pages[p].data.begin(), mesh.pages[p].data.end());
+		}
+		return out;
+	}
+
+	bool deserialize(const uint8_t* data, size_t size, Mesh& out, uint64_t base_file_offset)
+	{
+		if (size < sizeof(FileHeader))
+			return false;
+
+		FileHeader header;
+		std::memcpy(&header, data, sizeof(header));
+		if (header.magic != FileMagic || header.version != FileVersion || header.page_bytes != PageBytes)
+			return false;
+
+		uint64_t cursor = sizeof(FileHeader);
+		const uint64_t groups_at = cursor;
+		cursor += uint64_t(header.group_count) * sizeof(Group);
+		const uint64_t nodes_at = cursor;
+		cursor += uint64_t(header.node_count) * sizeof(Node);
+		const uint64_t entries_at = cursor;
+		cursor += uint64_t(header.page_count) * sizeof(PageEntry);
+		const uint64_t ids_at = cursor;
+		cursor += uint64_t(header.page_group_ids) * sizeof(uint32_t);
+		if (cursor > size)
+			return false;
+
+		Mesh mesh;
+		mesh.groups.resize(header.group_count);
+		mesh.nodes.resize(header.node_count);
+		if (header.group_count)
+			std::memcpy(mesh.groups.data(), data + groups_at, header.group_count * sizeof(Group));
+		if (header.node_count)
+			std::memcpy(mesh.nodes.data(), data + nodes_at, header.node_count * sizeof(Node));
+		mesh.original_cluster_count = header.original_cluster_count;
+		mesh.original_triangle_count = header.original_triangle_count;
+		mesh.max_depth = header.max_depth;
+		mesh.root_page_count = header.root_page_count;
+
+		std::vector<PageEntry> entries(header.page_count);
+		if (header.page_count)
+			std::memcpy(entries.data(), data + entries_at, header.page_count * sizeof(PageEntry));
+		std::vector<uint32_t> group_ids(header.page_group_ids);
+		if (header.page_group_ids)
+			std::memcpy(group_ids.data(), data + ids_at, header.page_group_ids * sizeof(uint32_t));
+
+		mesh.pages.resize(header.page_count);
+		for (uint32_t p = 0; p < header.page_count; p++)
+		{
+			const PageEntry& e = entries[p];
+			if (e.size > PageBytes || e.offset + e.size > size)
+				return false;
+			if (uint64_t(e.first_group_id) + e.group_count > group_ids.size())
+				return false;
+
+			Page& page = mesh.pages[p];
+			page.data.assign(data + e.offset, data + e.offset + e.size);
+			page.root = e.root != 0;
+			page.file_offset = base_file_offset + e.offset;
+			page.file_size = e.size;
+			for (uint32_t i = 0; i < e.group_count; i++)
+			{
+				uint32_t g = group_ids[e.first_group_id + i];
+				if (g >= header.group_count)
+					return false;
+				page.groups.push_back(g);
+			}
+		}
+
+		out = std::move(mesh);
+		return true;
+	}
+
 	std::string validate(const Mesh& mesh)
 	{
 		constexpr float Infinity = std::numeric_limits<float>::max();

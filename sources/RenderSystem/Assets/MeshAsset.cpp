@@ -134,6 +134,8 @@ MeshAsset::MeshAsset(std::wstring file_name, AssetLoadingContext::ptr c)
 	for (auto& m : data->materials)
 		materials.emplace_back(register_asset(m));
 
+	quanta = data->quanta;
+
 	primitive = data->primitive->clone();
 	/*(AABB*)primitive.get())->min = { -5, -5, -5 };
 	((AABB*)primitive.get())->max = { 5, 5, 5 };*/
@@ -363,6 +365,34 @@ AssetStorage::ptr  MeshAsset::register_new(std::wstring name, Guid g)
 
 MeshAsset::MeshAsset()
 {
+}
+
+void MeshAsset::save_partitions(FileDataStorage& storage)
+{
+	if (quanta.empty())
+		return;
+
+	Quanta::AssetPartition partition;
+	partition.meshes = quanta;
+	storage.put("quanta", partition);
+}
+
+void MeshAsset::load_partitions(FileDataStorage& storage, UniversalContext* context)
+{
+	if (!storage.has("quanta"))
+		return;
+
+	// The mesh still renders from its meshlets without Quanta, so a damaged entry is not worth failing the load.
+	try
+	{
+		Quanta::AssetPartition partition;
+		storage.get("quanta", partition, context);
+		quanta = std::move(partition.meshes);
+	}
+	catch (const std::exception& e)
+	{
+		Log::get() << "quanta data not loaded: " << e.what() << Log::endl;
+	}
 }
 
 std::shared_ptr<MeshAssetInstance> MeshAsset::create_instance()
