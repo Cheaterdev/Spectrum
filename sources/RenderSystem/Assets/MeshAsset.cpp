@@ -784,6 +784,7 @@ void MeshAssetInstance::update_nodes()
 	instance_info.GetQuanta_pages() = quanta_residency.pages.buffer.structuredBuffer;
 	instance_info.GetQuanta_groups() = quanta_residency.groups.buffer.structuredBuffer;
 	instance_info.GetQuanta_nodes() = quanta_residency.nodes.buffer.structuredBuffer;
+	instance_info.GetQuanta_page_slots() = quanta_residency.page_slots.buffer.structuredBuffer;
 
 	quanta_residents.assign(mesh_asset->quanta.size(), nullptr);
 	for (size_t q = 0; q < mesh_asset->quanta.size(); q++)
@@ -826,6 +827,7 @@ void MeshAssetInstance::update_nodes()
 			{
 				info.mesh_info.GetQuanta_node_offset() = static_cast<uint>(quanta_residents[m]->node_offset());
 				info.mesh_info.GetQuanta_node_count() = static_cast<uint>(quanta_residents[m]->mesh->nodes.size());
+				info.mesh_info.GetQuanta_group_offset() = static_cast<uint>(quanta_residents[m]->group_offset());
 				info.quanta_dispatch_mesh_arguments.ThreadGroupCountX = info.mesh_info.GetQuanta_node_count();
 			}
 

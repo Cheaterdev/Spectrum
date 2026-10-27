@@ -33,6 +33,7 @@ export namespace Table
 			HLSL::StructuredBuffer<uint> quanta_pages;
 			HLSL::StructuredBuffer<uint> quanta_groups;
 			HLSL::StructuredBuffer<uint> quanta_nodes;
+			HLSL::StructuredBuffer<uint> quanta_page_slots;
 			HLSL::StructuredBuffer<Table::Meshes::mesh_vertex_input>& GetVertexes() { return vertexes; }
 			HLSL::StructuredBuffer<uint>& GetIndices() { return indices; }
 			HLSL::StructuredBuffer<Table::Meshes::Meshlet>& GetMeshlets() { return meshlets; }
@@ -43,6 +44,7 @@ export namespace Table
 			HLSL::StructuredBuffer<uint>& GetQuanta_pages() { return quanta_pages; }
 			HLSL::StructuredBuffer<uint>& GetQuanta_groups() { return quanta_groups; }
 			HLSL::StructuredBuffer<uint>& GetQuanta_nodes() { return quanta_nodes; }
+			HLSL::StructuredBuffer<uint>& GetQuanta_page_slots() { return quanta_page_slots; }
 			static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 			template<class Compiler>
 			void compile(Compiler& compiler) const
@@ -57,6 +59,7 @@ export namespace Table
 				compiler.compile(quanta_pages, "MeshInstanceInfo::quanta_pages");
 				compiler.compile(quanta_groups, "MeshInstanceInfo::quanta_groups");
 				compiler.compile(quanta_nodes, "MeshInstanceInfo::quanta_nodes");
+				compiler.compile(quanta_page_slots, "MeshInstanceInfo::quanta_page_slots");
 			}
 			struct Compiled
 			{
@@ -70,6 +73,7 @@ export namespace Table
 				uint quanta_pages; // StructuredBuffer<uint>
 				uint quanta_groups; // StructuredBuffer<uint>
 				uint quanta_nodes; // StructuredBuffer<uint>
+				uint quanta_page_slots; // StructuredBuffer<uint>
 
 			
 				private:

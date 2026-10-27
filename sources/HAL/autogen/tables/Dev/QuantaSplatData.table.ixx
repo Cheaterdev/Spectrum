@@ -22,19 +22,23 @@ export namespace Table
 			float4x4 world;
 			uint node_offset;
 			uint node_count;
+			uint group_offset;
 			HLSL::StructuredBuffer<uint> pages;
 			HLSL::StructuredBuffer<uint> groups;
 			HLSL::StructuredBuffer<uint> nodes;
+			HLSL::StructuredBuffer<uint> page_slots;
 			HLSL::Texture2D<float> depth;
 			HLSL::RWTexture2D<float4> target;
 			HLSL::StructuredBuffer<uint>& GetPages() { return pages; }
 			HLSL::StructuredBuffer<uint>& GetGroups() { return groups; }
 			HLSL::StructuredBuffer<uint>& GetNodes() { return nodes; }
+			HLSL::StructuredBuffer<uint>& GetPage_slots() { return page_slots; }
 			HLSL::Texture2D<float>& GetDepth() { return depth; }
 			HLSL::RWTexture2D<float4>& GetTarget() { return target; }
 			float4x4& GetWorld() { return world; }
 			uint& GetNode_offset() { return node_offset; }
 			uint& GetNode_count() { return node_count; }
+			uint& GetGroup_offset() { return group_offset; }
 			static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 			template<class Compiler>
 			void compile(Compiler& compiler) const
@@ -42,9 +46,11 @@ export namespace Table
 				compiler.compile(world, "QuantaSplatData::world");
 				compiler.compile(node_offset, "QuantaSplatData::node_offset");
 				compiler.compile(node_count, "QuantaSplatData::node_count");
+				compiler.compile(group_offset, "QuantaSplatData::group_offset");
 				compiler.compile(pages, "QuantaSplatData::pages");
 				compiler.compile(groups, "QuantaSplatData::groups");
 				compiler.compile(nodes, "QuantaSplatData::nodes");
+				compiler.compile(page_slots, "QuantaSplatData::page_slots");
 				compiler.compile(depth, "QuantaSplatData::depth");
 				compiler.compile(target, "QuantaSplatData::target");
 			}
@@ -53,9 +59,11 @@ export namespace Table
 				float4x4 world; // float4x4
 				uint node_offset; // uint
 				uint node_count; // uint
+				uint group_offset; // uint
 				uint pages; // StructuredBuffer<uint>
 				uint groups; // StructuredBuffer<uint>
 				uint nodes; // StructuredBuffer<uint>
+				uint page_slots; // StructuredBuffer<uint>
 				uint depth; // Texture2D<float>
 				uint target; // RWTexture2D<float4>
 
@@ -66,6 +74,7 @@ export namespace Table
 					ar& NVP(world);
 					ar& NVP(node_offset);
 					ar& NVP(node_count);
+					ar& NVP(group_offset);
 				}
 
 
@@ -81,6 +90,7 @@ export namespace Table
 				ar& NVP(world);
 				ar& NVP(node_offset);
 				ar& NVP(node_count);
+				ar& NVP(group_offset);
 			}
 
 		};

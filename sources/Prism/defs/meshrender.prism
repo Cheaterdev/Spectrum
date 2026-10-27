@@ -43,6 +43,8 @@ namespace Meshes
 		StructuredBuffer<uint> quanta_pages;
 		StructuredBuffer<uint> quanta_groups;
 		StructuredBuffer<uint> quanta_nodes;
+		# Page id -> dword offset of the page in quanta_pages, 0xFFFFFFFF while it is not resident.
+		StructuredBuffer<uint> quanta_page_slots;
 	}
 
 
@@ -78,6 +80,8 @@ namespace Meshes
 		# data and a Quanta draw skips it).
 		uint quanta_node_offset;
 		uint quanta_node_count;
+		# Global index of this part's first group (cluster headers name refined groups mesh-locally).
+		uint quanta_group_offset;
 	}
 
 	# Debug view meshlet capture: the GBuffer AS (CaptureMeshlets permutation)
@@ -94,6 +98,17 @@ namespace Meshes
 		uint frame;
 	}
 
+
+	# What the Quanta draw reports to the streamer (Graphics:QuantaResidency), two dwords per page id:
+	# [2p]   max over the frame's requests of (epoch << 16 | half-float error): a page the cut wanted but
+	#        lacked, valid for the frame whose epoch is in the high half;
+	# [2p+1] the last epoch a resident page was drawn from. No clearing: stale epochs are ignored.
+	[Bind = DefaultLayout::Instance4]
+	struct QuantaFeedback
+	{
+		RWStructuredBuffer<uint> pages;
+		uint epoch;
+	}
 
 	struct RaytraceInstanceInfo
 	{

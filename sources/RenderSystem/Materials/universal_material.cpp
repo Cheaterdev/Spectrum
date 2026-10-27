@@ -182,7 +182,8 @@ void materials::PipelinePasses::set(RENDER_TYPE render_type, MESH_TYPE type, HAL
 		if (render_type == RENDER_TYPE::PIXEL)
 		{
 			// Must agree with mesh_renderer::render_meshes, whose gather hands out the matching arguments.
-			const bool quanta = cluster_lod && Quanta::draw_enabled();
+			// Not while capturing: the capture records the mesh's own meshlets, which a Quanta draw does not use.
+			const bool quanta = cluster_lod && !capture_meshlets && Quanta::draw_enabled();
 			graphics.set_pipeline(gbuffer->GetPSO(
 				PSOS::Meshes::GBufferDraw::HiZOcclusion.Use(hiz_occlusion) |
 				PSOS::Meshes::GBufferDraw::CaptureMeshlets.Use(capture_meshlets) |

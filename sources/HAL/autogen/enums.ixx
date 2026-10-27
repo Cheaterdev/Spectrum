@@ -265,6 +265,7 @@ export
 		MeshInstanceInfo = "MeshInstanceInfo"_crc32,
 		MeshInfo = "MeshInfo"_crc32,
 		MeshletCaptureWrite = "MeshletCaptureWrite"_crc32,
+		QuantaFeedback = "QuantaFeedback"_crc32,
 		RaytraceInstanceInfo = "RaytraceInstanceInfo"_crc32,
 		Meshlet = "Meshlet"_crc32,
 		MeshletCullData = "MeshletCullData"_crc32,

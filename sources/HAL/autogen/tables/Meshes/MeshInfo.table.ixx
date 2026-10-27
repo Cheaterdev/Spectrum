@@ -31,6 +31,7 @@ export namespace Table
 			uint meshlet_mask_offset;
 			uint quanta_node_offset;
 			uint quanta_node_count;
+			uint quanta_group_offset;
 			uint& GetVertex_offset_local() { return vertex_offset_local; }
 			uint& GetMeshlet_offset_local() { return meshlet_offset_local; }
 			uint& GetNode_offset() { return node_offset; }
@@ -43,6 +44,7 @@ export namespace Table
 			uint& GetMeshlet_mask_offset() { return meshlet_mask_offset; }
 			uint& GetQuanta_node_offset() { return quanta_node_offset; }
 			uint& GetQuanta_node_count() { return quanta_node_count; }
+			uint& GetQuanta_group_offset() { return quanta_group_offset; }
 			static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 			template<class Compiler>
 			void compile(Compiler& compiler) const
@@ -59,6 +61,7 @@ export namespace Table
 				compiler.compile(meshlet_mask_offset, "MeshInfo::meshlet_mask_offset");
 				compiler.compile(quanta_node_offset, "MeshInfo::quanta_node_offset");
 				compiler.compile(quanta_node_count, "MeshInfo::quanta_node_count");
+				compiler.compile(quanta_group_offset, "MeshInfo::quanta_group_offset");
 			}
 			using Compiled = MeshInfo;
 
@@ -81,6 +84,7 @@ export namespace Table
 				ar& NVP(meshlet_mask_offset);
 				ar& NVP(quanta_node_offset);
 				ar& NVP(quanta_node_count);
+				ar& NVP(quanta_group_offset);
 			}
 
 		};

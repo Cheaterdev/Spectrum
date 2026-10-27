@@ -16,6 +16,8 @@ namespace Dev
 		StructuredBuffer<uint> pages;
 		StructuredBuffer<uint> groups;
 		StructuredBuffer<uint> nodes;
+		# Page id -> dword offset of the page in `pages`, or 0xFFFFFFFF while it is not resident.
+		StructuredBuffer<uint> page_slots;
 
 		Texture2D<float> depth;
 		RWTexture2D<float4> target;
@@ -26,6 +28,8 @@ namespace Dev
 		# This mesh part's nodes: a range of the shared node table.
 		uint node_offset;
 		uint node_count;
+		# Global index of the mesh's first group: cluster headers name the family they refine mesh-locally.
+		uint group_offset;
 	}
 
 	ComputePSO QuantaSplat

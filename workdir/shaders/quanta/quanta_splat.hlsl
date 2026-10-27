@@ -6,10 +6,11 @@
 // (gbuffer/mesh_shader.hlsl: LodCanSkip / LodGroupPasses / LodClusterPasses), and splats the vertices of
 // the clusters that are in the cut.
 
-// Record layouts in dwords; must match Quanta.ixx (static_asserts there fix the sizes).
+// Record layouts in dwords; must match Quanta.ixx (static_asserts there fix the sizes). group.page is a page
+// id; page_slots maps it to the page's dword offset in `pages`, or 0xFFFFFFFF while it is not resident.
 static const uint NODE_DWORDS = 12;      // lod_sphere[4] refined_sphere[4] lod_error refined_error first_group group_count
-static const uint GROUP_DWORDS = 16;     // lod_sphere[4] refined_sphere[4] lod_error refined_error cluster_count depth page offset_in_page(bytes) size reserved
-static const uint CLUSTER_DWORDS = 16;   // vertex_offset triangle_offset vertex_count triangle_count bounding_sphere[4] cone lod_level refined_error reserved refined_sphere[4]
+static const uint GROUP_DWORDS = 16;     // lod_sphere[4] refined_sphere[4] lod_error refined_error cluster_count depth page offset_in_page(bytes) size family
+static const uint CLUSTER_DWORDS = 16;   // vertex_offset triangle_offset vertex_count triangle_count bounding_sphere[4] cone lod_level refined_error refined_family refined_sphere[4]
 static const uint GROUP_HEADER_DWORDS = 4;
 static const uint VERTEX_DWORDS = 12;    // position[3] normal[3] uv[2] tangent[4]
 
@@ -83,13 +84,16 @@ void CS(uint gtid : SV_GroupThreadID, uint gid : SV_GroupID)
     if (!passes)
         return;
 
-    // Nothing under it can be in the cut: every cluster needs its finer children.
-    if (refined_error >= 0 && threshold > 0
-        && LodProjectedErrorFar(refined_sphere, refined_error, world, scale, camera) * 0.99 > threshold)
-        return;
+
+    // A family is used all-or-nothing, as the mesh shader's walk does (gbuffer/mesh_shader.hlsl).
+    StructuredBuffer<uint> slots = data.GetPage_slots();
+    uint family = groups[g + 15];
+    for (uint f = 0; f < (family >> 24) + 1; f++)
+        if (slots[groups[((family & 0xFFFFFF) + f) * GROUP_DWORDS + 12]] == 0xFFFFFFFF)
+            return;
 
     uint cluster_count = groups[g + 10];
-    uint blob = groups[g + 12] + groups[g + 13] / 4;
+    uint blob = slots[groups[g + 12]] + groups[g + 13] / 4;
 
     uint width, height;
     data.GetTarget().GetDimensions(width, height);
@@ -103,6 +107,16 @@ void CS(uint gtid : SV_GroupThreadID, uint gid : SV_GroupID)
         float cluster_error = asfloat(pages[h + 10]);
         bool in_cut = cluster_error < 0
             || (threshold > 0 && LodProjectedError(Load4(pages, h + 12), cluster_error, world, scale, camera) <= threshold);
+        if (!in_cut)
+        {
+            // The finer family it was simplified from is not there yet: the cluster stays.
+            uint refined = pages[h + 11];
+            uint refined_first = data.GetGroup_offset() + (refined & 0xFFFFFF);
+            bool finer_resident = true;
+            for (uint r = 0; r < (refined >> 24) + 1; r++)
+                finer_resident = finer_resident && slots[groups[(refined_first + r) * GROUP_DWORDS + 12]] != 0xFFFFFFFF;
+            in_cut = !finer_resident;
+        }
         if (!in_cut)
             continue;
 

@@ -127,6 +127,8 @@ export import :Autogen.Slots.Meshes.MeshInfo;
 export import :Autogen.Tables.Meshes.MeshInfo;
 export import :Autogen.Slots.Meshes.MeshletCaptureWrite;
 export import :Autogen.Tables.Meshes.MeshletCaptureWrite;
+export import :Autogen.Slots.Meshes.QuantaFeedback;
+export import :Autogen.Tables.Meshes.QuantaFeedback;
 export import :Autogen.Tables.Meshes.RaytraceInstanceInfo;
 export import :Autogen.Tables.Meshes.Meshlet;
 export import :Autogen.Tables.Meshes.MeshletCullData;

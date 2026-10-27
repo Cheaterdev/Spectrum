@@ -14,17 +14,21 @@ namespace Dev
 		float4x4 world; // float4x4
 		uint node_offset; // uint
 		uint node_count; // uint
+		uint group_offset; // uint
 		uint pages; // StructuredBuffer<uint>
 		uint groups; // StructuredBuffer<uint>
 		uint nodes; // StructuredBuffer<uint>
+		uint page_slots; // StructuredBuffer<uint>
 		uint depth; // Texture2D<float>
 		uint target; // RWTexture2D<float4>
 		float4x4 GetWorld() { return world; }
 		uint GetNode_offset() { return node_offset; }
 		uint GetNode_count() { return node_count; }
+		uint GetGroup_offset() { return group_offset; }
 		StructuredBuffer<uint> GetPages() { return ResourceDescriptorHeap[pages]; }
 		StructuredBuffer<uint> GetGroups() { return ResourceDescriptorHeap[groups]; }
 		StructuredBuffer<uint> GetNodes() { return ResourceDescriptorHeap[nodes]; }
+		StructuredBuffer<uint> GetPage_slots() { return ResourceDescriptorHeap[page_slots]; }
 		Texture2D<float> GetDepth() { return ResourceDescriptorHeap[depth]; }
 		RWTexture2D<float4> GetTarget() { return ResourceDescriptorHeap[target]; }
 	};

@@ -75,6 +75,10 @@ static const uint MESHLET_NOT_CAPTURED    = 15;
 #include "../autogen/MeshletCaptureWrite.h"
 #endif
 
+#if defined(QUANTA) && defined(BUILD_FUNC_AS)
+#include "../autogen/QuantaFeedback.h"
+#endif
+
 #ifdef DEBUG_VIEW
 #include "../autogen/DebugViewDraw.h"
 
@@ -358,6 +362,25 @@ bool IsOccludedHiZ(MeshletCullData c, float4x4 world, Camera camera)
     return near_clip.z < sampled;
 }
 
+#ifdef QUANTA
+// Quanta's shared buffers (MeshInstanceInfo::quanta_*), laid out as in Quanta.ixx / QuantaResidency.ixx: dword
+// records, group.page a page id that quanta_page_slots maps to the page's dword offset in quanta_pages.
+// Shared by the amplification and the mesh stage.
+static const uint Q_NODE_DWORDS = 12;     // lod_sphere[4] refined_sphere[4] lod_error refined_error first_group group_count
+static const uint Q_GROUP_DWORDS = 16;    // same, then cluster_count depth page offset_in_page(bytes) size family
+static const uint Q_CLUSTER_DWORDS = 16;  // vertex_offset triangle_offset vertex_count triangle_count bounding_sphere[4] cone lod_level refined_error refined_family refined_sphere[4]
+static const uint Q_GROUP_HEADER_DWORDS = 4;
+static const uint Q_INVALID = 0xFFFFFFFF;
+
+// Dword offset of a group's blob in the pages buffer, Q_INVALID while its page is not resident.
+uint QuantaBlob(StructuredBuffer<uint> slots, StructuredBuffer<uint> groups, uint group)
+{
+    uint g = group * Q_GROUP_DWORDS;
+    uint slot = slots[groups[g + 12]];
+    return slot == Q_INVALID ? Q_INVALID : slot + groups[g + 13] / 4;
+}
+#endif
+
 #ifdef BUILD_FUNC_AS
 groupshared Payload s_Payload;
 
@@ -412,11 +435,6 @@ uint CapturedStatus(uint cluster)
 // Quanta's clusters instead of the mesh's own meshlets. The same LOD walk as the ClusterLod AS below, but
 // the hierarchy and the clusters come from Quanta's shared buffers (MeshInstanceInfo::quanta_*), laid out as
 // in Quanta.ixx / QuantaResidency.ixx: dword records, group.page already a dword offset into the pages.
-static const uint Q_NODE_DWORDS = 12;     // lod_sphere[4] refined_sphere[4] lod_error refined_error first_group group_count
-static const uint Q_GROUP_DWORDS = 16;    // same, then cluster_count depth page offset_in_page(bytes) size reserved
-static const uint Q_CLUSTER_DWORDS = 16;  // vertex_offset triangle_offset vertex_count triangle_count bounding_sphere[4] cone lod_level refined_error reserved refined_sphere[4]
-static const uint Q_GROUP_HEADER_DWORDS = 4;
-
 float4 QuantaLoad4(StructuredBuffer<uint> b, uint i)
 {
     return float4(asfloat(b[i]), asfloat(b[i + 1]), asfloat(b[i + 2]), asfloat(b[i + 3]));
@@ -436,11 +454,28 @@ MeshletGroup QuantaRecord(StructuredBuffer<uint> b, uint dword)
     return r;
 }
 
-// Dword offset of a group's blob in the pages buffer.
-uint QuantaBlob(StructuredBuffer<uint> groups, uint group)
+// A family (Quanta::pack_family, global group indices) is drawn and refined all-or-nothing, so the cut
+// uses it only when every group's page is resident.
+bool QuantaFamilyResident(StructuredBuffer<uint> slots, StructuredBuffer<uint> groups, uint first, uint count)
 {
-    uint g = group * Q_GROUP_DWORDS;
-    return groups[g + 12] + groups[g + 13] / 4;
+    bool resident = true;
+    for (uint i = 0; i < count; i++)
+        resident = resident && slots[groups[(first + i) * Q_GROUP_DWORDS + 12]] != Q_INVALID;
+    return resident;
+}
+
+// The streamer's input (QuantaFeedback in meshrender.prism): a page the cut wanted but lacked, with the
+// projected error that wanted it as the priority; and the last epoch a resident page was reached.
+void QuantaWantFamily(QuantaFeedback feedback, StructuredBuffer<uint> groups, uint first, uint count, float error)
+{
+    uint stamp = ((feedback.GetEpoch() & 0xFFFF) << 16) | f32tof16(clamp(error, 0.0, 60000.0));
+    for (uint i = 0; i < count; i++)
+        InterlockedMax(feedback.GetPages()[groups[(first + i) * Q_GROUP_DWORDS + 12] * 2], stamp);
+}
+
+void QuantaTouch(QuantaFeedback feedback, StructuredBuffer<uint> groups, uint group)
+{
+    InterlockedMax(feedback.GetPages()[groups[group * Q_GROUP_DWORDS + 12] * 2 + 1], feedback.GetEpoch());
 }
 
 MeshletCullData QuantaClusterCull(StructuredBuffer<uint> pages, uint header)
@@ -456,6 +491,34 @@ MeshletCullData QuantaClusterCull(StructuredBuffer<uint> pages, uint header)
 
 groupshared uint s_GroupFirst[LOD_NODE_GROUPS];
 groupshared uint s_GroupEnd[LOD_NODE_GROUPS];
+
+// Nothing under a node can be in the cut when every group is too fine. LodCanSkip's second test (every cluster
+// needs its finer children) is not used: those children may be paged out, and then the cluster is drawn instead.
+bool QuantaNodeSkip(MeshletGroup node, float4x4 world, float scale, Camera camera, float threshold)
+{
+    return threshold > 0 && LodProjectedError(node.GetLodSphere(), node.GetLodError(), world, scale, camera) * 1.01 <= threshold;
+}
+
+// LodClusterPasses with streaming: a cluster whose finer family is needed but not resident stays in the cut
+// (and asks for the family), so the surface is never left empty.
+bool QuantaClusterPasses(MeshletCullData c, uint refined_family, uint group_base, StructuredBuffer<uint> slots,
+    StructuredBuffer<uint> groups, QuantaFeedback feedback, float4x4 world, float scale, Camera camera, float threshold)
+{
+    if (c.GetRefinedError() < 0)
+        return true;
+
+    float error = LodProjectedError(c.GetRefinedSphere(), c.GetRefinedError(), world, scale, camera);
+    if (threshold > 0 && error <= threshold)
+        return true;
+
+    uint first = group_base + (refined_family & 0xFFFFFF);
+    uint count = (refined_family >> 24) + 1;
+    if (QuantaFamilyResident(slots, groups, first, count))
+        return false;
+
+    QuantaWantFamily(feedback, groups, first, count, error);
+    return true;
+}
 
 // One Quanta hierarchy node per AS group (MeshCommandData::quanta_draw_commands). The payload entry of a
 // cluster is (group << 4) | cluster-in-group: a group holds at most 16 clusters.
@@ -473,13 +536,16 @@ void AS(uint gtid : SV_GroupThreadID, uint gid : SV_GroupID)
     StructuredBuffer<uint> pages = meshInstanceInfo.GetQuanta_pages();
     StructuredBuffer<uint> groups = meshInstanceInfo.GetQuanta_groups();
     StructuredBuffer<uint> nodes = meshInstanceInfo.GetQuanta_nodes();
+    StructuredBuffer<uint> slots = meshInstanceInfo.GetQuanta_page_slots();
+    QuantaFeedback feedback = GetQuantaFeedback();
+    uint group_base = meshInfo.GetQuanta_group_offset();
 
     bool node_live = gid < meshInfo.GetQuanta_node_count();
     MeshletGroup quanta_node = (MeshletGroup)0;
     if (node_live)
     {
         quanta_node = QuantaRecord(nodes, (meshInfo.GetQuanta_node_offset() + gid) * Q_NODE_DWORDS);
-        node_live = !LodCanSkip(quanta_node, m, scale, camera, lod_threshold);
+        node_live = !QuantaNodeSkip(quanta_node, m, scale, camera, lod_threshold);
     }
 
     uint visible_count = 0;
@@ -491,10 +557,22 @@ void AS(uint gtid : SV_GroupThreadID, uint gid : SV_GroupID)
         {
             uint group = quanta_node.FirstCluster + gtid;
             MeshletGroup record = QuantaRecord(groups, group * Q_GROUP_DWORDS);
-            if (LodGroupPasses(record, m, scale, camera, lod_threshold) && !LodCanSkip(record, m, scale, camera, lod_threshold))
+            if (LodGroupPasses(record, m, scale, camera, lod_threshold))
             {
-                first = group;
-                count = groups[group * Q_GROUP_DWORDS + 10];
+                uint family = groups[group * Q_GROUP_DWORDS + 15];
+                uint family_first = family & 0xFFFFFF;
+                uint family_count = (family >> 24) + 1;
+                if (QuantaFamilyResident(slots, groups, family_first, family_count))
+                {
+                    first = group;
+                    count = groups[group * Q_GROUP_DWORDS + 10];
+                    QuantaTouch(feedback, groups, group);
+                }
+                else
+                {
+                    QuantaWantFamily(feedback, groups, family_first, family_count,
+                        LodProjectedError(record.GetLodSphere(), record.GetLodError(), m, scale, camera));
+                }
             }
         }
 
@@ -520,10 +598,10 @@ void AS(uint gtid : SV_GroupThreadID, uint gid : SV_GroupID)
                 uint start = lane > 0 ? s_GroupEnd[lane - 1] : 0;
                 uint group = s_GroupFirst[lane];
                 uint cluster = item - start;
-                uint header = QuantaBlob(groups, group) + Q_GROUP_HEADER_DWORDS + cluster * Q_CLUSTER_DWORDS;
+                uint header = QuantaBlob(slots, groups, group) + Q_GROUP_HEADER_DWORDS + cluster * Q_CLUSTER_DWORDS;
                 MeshletCullData cull_data = QuantaClusterCull(pages, header);
 
-                uint cull = LodClusterPasses(cull_data, m, scale, camera, lod_threshold)
+                uint cull = QuantaClusterPasses(cull_data, pages[header + 11], group_base, slots, groups, feedback, m, scale, camera, lod_threshold)
                     ? CameraCull(cull_data, m) : MESHLET_LOD_REJECTED;
                 visible = cull == MESHLET_DRAWN;
                 entry = (group << 4) | cluster;
@@ -718,10 +796,17 @@ void VS(
     StructuredBuffer<uint> pages = meshInstanceInfo.GetQuanta_pages();
     StructuredBuffer<uint> groups = meshInstanceInfo.GetQuanta_groups();
     uint entry = payload.MeshletIndices[gid2.x];
-    uint blob = groups[(entry >> 4) * 16 + 12] + groups[(entry >> 4) * 16 + 13] / 4;
-    uint header = blob + 4 + (entry & 15) * 16;
-    uint vertex_count = pages[header + 2];
-    uint triangle_count = pages[header + 3];
+    uint blob = QuantaBlob(meshInstanceInfo.GetQuanta_page_slots(), groups, entry >> 4);
+    uint header = 0;
+    uint vertex_count = 0;
+    uint triangle_count = 0;
+    // The page table is fixed for the frame, so the AS only hands out resident groups; this guards a bad entry.
+    if (blob != Q_INVALID)
+    {
+        header = blob + 4 + (entry & 15) * 16;
+        vertex_count = pages[header + 2];
+        triangle_count = pages[header + 3];
+    }
     SetMeshOutputCounts(vertex_count, triangle_count);
 
     if (gtid < triangle_count)

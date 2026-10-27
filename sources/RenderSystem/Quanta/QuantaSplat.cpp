@@ -99,6 +99,8 @@ void PassDefault<Passes::Dev::QuantaSplat>::render(
 				params.GetPages() = residency.pages.buffer.structuredBuffer;
 				params.GetGroups() = residency.groups.buffer.structuredBuffer;
 				params.GetNodes() = residency.nodes.buffer.structuredBuffer;
+				params.GetPage_slots() = residency.page_slots.buffer.structuredBuffer;
+				params.GetGroup_offset() = static_cast<uint>(resident->group_offset());
 				params.GetDepth() = data.GBuffer_DepthMips->texture2D;
 				params.GetTarget() = data.ResultTexture->rwTexture2D;
 				params.GetWorld() = instance->rendering[i].global_mat;

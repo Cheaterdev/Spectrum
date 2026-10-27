@@ -6,6 +6,7 @@ import :EngineAssets;
 import :Materials.UniversalMaterial;
 import :MipMapGenerator;
 import :QuantaSplat;
+import :QuantaResidency;
 
 import HAL;
 
@@ -249,6 +250,9 @@ void  mesh_renderer::render_meshes(MeshRenderContext::ptr mesh_render_context, S
 
 	UINT meshes_count = (UINT)scene->command_ids[(int)mesh_render_context->render_mesh].size();
 
+	// Must agree with materials::PipelinePasses::set: the draws and the gather both need the Quanta permutation.
+	const bool quanta_draw = walk_lod && !capture_stage.has_value() && Quanta::draw_enabled();
+
 	Slots::Meshes::GatherPipeline gather;
 
 	// Translucent pipelines are left out of every raster pass (GBuffer, depth,
@@ -298,7 +302,7 @@ void  mesh_renderer::render_meshes(MeshRenderContext::ptr mesh_render_context, S
 				PSOS::Meshes::GatherPipeline::CheckFrustum.Use(needCulling) |
 				PSOS::Meshes::GatherPipeline::CaptureVisibility.Use(capture_stage.has_value()) |
 				PSOS::Meshes::GatherPipeline::ClusterLod.Use(walk_lod) |
-				PSOS::Meshes::GatherPipeline::Quanta.Use(walk_lod && Quanta::draw_enabled()));
+				PSOS::Meshes::GatherPipeline::Quanta.Use(quanta_draw));
 			compute.set(gatherData);
 			compute.set(gather);
 			if (capture_stage)
@@ -337,6 +341,14 @@ void  mesh_renderer::render_meshes(MeshRenderContext::ptr mesh_render_context, S
 						write.GetMasks() = universal_meshlet_mask_manager::get().buffer;
 						write.GetFrame()  = capture->frame;
 						graphics.set(write);
+					}
+
+					if (quanta_draw)
+					{
+						Slots::Meshes::QuantaFeedback feedback;
+						feedback.GetPages() = Quanta::Residency::get().feedback;
+						feedback.GetEpoch() = Quanta::Residency::get().epoch();
+						graphics.set(feedback);
 					}
 				}
 

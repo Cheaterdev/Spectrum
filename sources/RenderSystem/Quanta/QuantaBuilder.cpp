@@ -93,6 +93,7 @@ Quanta::Mesh BuildQuanta(
 
     std::vector<Quanta::GroupInput> groups;
     std::vector<clodBounds> clod_groups;
+    std::vector<uint32_t> clod_families;   // per clusterlod group: the packed family of its Quanta groups
 
     std::vector<unsigned int> local_vertices(Quanta::MaxClusterVertices);
     std::vector<unsigned char> local_triangles(Quanta::MaxClusterTriangles * 3);
@@ -101,6 +102,11 @@ Quanta::Mesh BuildQuanta(
     clodBuild(config, mesh, [&](clodGroup group, const clodCluster* clusters, size_t cluster_count) -> int
     {
         // Groups of at most GroupMaxClusters, sharing this group's LOD data.
+        const uint32_t family_first = static_cast<uint32_t>(groups.size());
+        const uint32_t family_count = static_cast<uint32_t>((cluster_count + Quanta::GroupMaxClusters - 1) / Quanta::GroupMaxClusters);
+        ASSERT(family_count >= 1 && family_count <= 256 && family_first < (1u << Quanta::FamilyCountShift));
+        const uint32_t family = Quanta::pack_family(family_first, family_count);
+
         for (size_t chunk = 0; chunk < cluster_count; chunk += Quanta::GroupMaxClusters)
         {
             size_t chunk_count = std::min<size_t>(Quanta::GroupMaxClusters, cluster_count - chunk);
@@ -109,6 +115,7 @@ Quanta::Mesh BuildQuanta(
             out.lod_sphere = to_sphere(group.simplified);
             out.lod_error = group.simplified.error;
             out.depth = static_cast<uint32_t>(group.depth);
+            out.family = family;
 
             bool has_original = false;
             float min_refined = std::numeric_limits<float>::max();
@@ -135,6 +142,7 @@ Quanta::Mesh BuildQuanta(
                 {
                     c.refined_error = clod_groups[cluster.refined].error;
                     c.refined_sphere = to_sphere(clod_groups[cluster.refined]);
+                    c.refined_family = clod_families[cluster.refined];
                     min_refined = std::min(min_refined, c.refined_error);
                     refined_spheres.push_back(c.refined_sphere);
                 }
@@ -160,6 +168,7 @@ Quanta::Mesh BuildQuanta(
         }
 
         clod_groups.push_back(group.simplified);
+        clod_families.push_back(family);
         return static_cast<int>(clod_groups.size() - 1);
     });
 

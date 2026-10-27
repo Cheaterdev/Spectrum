@@ -259,9 +259,16 @@ export namespace Test
 			[&](std::span<uint> r) { group_dwords.assign(r.begin(), r.end()); }));
 		pending.push_back(list->get_copy().read<uint>(residency.nodes.buffer, resident->node_offset() * Quanta::NodeDwords, mesh->nodes.size() * Quanta::NodeDwords,
 			[&](std::span<uint> r) { node_dwords.assign(r.begin(), r.end()); }));
+		std::vector<uint> slot_dwords;
+		pending.push_back(list->get_copy().read<uint>(residency.page_slots.buffer, resident->page_id_base(), mesh->pages.size(),
+			[&](std::span<uint> r) { slot_dwords.assign(r.begin(), r.end()); }));
 		list->execute_and_wait();
 		for (auto& p : pending)
 			p.wait();
+
+		ASSERT_EQ(mesh->pages.size(), slot_dwords.size());
+		for (size_t p = 0; p < mesh->pages.size(); p++)
+			ASSERT_EQ(uint32_t(resident->page_offset() + p * Quanta::PageDwords), slot_dwords[p]);
 
 		ASSERT_EQ(mesh->pages.size() * Quanta::PageDwords, page_dwords.size());
 		for (size_t p = 0; p < mesh->pages.size(); p++)
@@ -276,7 +283,9 @@ export namespace Test
 		{
 			Quanta::Group gpu;
 			std::memcpy(&gpu, &group_dwords[g * Quanta::GroupDwords], sizeof(gpu));
-			ASSERT_EQ(uint32_t(resident->page_offset() + uint64_t(mesh->groups[g].page) * Quanta::PageDwords), gpu.page);
+			ASSERT_EQ(uint32_t(resident->page_id_base() + mesh->groups[g].page), gpu.page);
+			ASSERT_EQ(uint32_t(resident->group_offset() + Quanta::family_first(mesh->groups[g].family)), Quanta::family_first(gpu.family));
+			ASSERT_EQ(Quanta::family_count(mesh->groups[g].family), Quanta::family_count(gpu.family));
 			ASSERT_EQ(mesh->groups[g].offset_in_page, gpu.offset_in_page);
 			ASSERT_EQ(mesh->groups[g].lod_error, gpu.lod_error);
 		}

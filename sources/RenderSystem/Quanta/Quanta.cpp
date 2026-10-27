@@ -54,7 +54,7 @@ namespace Quanta
 				h.normal_cone = cl.normal_cone;
 				h.lod_level = cl.lod_level;
 				h.refined_error = cl.refined_error;
-				h.reserved = 0;
+				h.refined_family = cl.refined_family;
 				h.refined_sphere = cl.refined_sphere;
 
 				ASSERT(h.vertex_count <= MaxClusterVertices && h.triangle_count <= MaxClusterTriangles);
@@ -90,6 +90,7 @@ namespace Quanta
 			rec.depth = in.depth;
 			rec.page = InvalidIndex;
 			rec.size_bytes = cursor;
+			rec.family = in.family;
 			mesh.groups.push_back(rec);
 			mesh.max_depth = std::max(mesh.max_depth, in.depth);
 		}
@@ -168,7 +169,7 @@ namespace Quanta
 	namespace
 	{
 		constexpr uint32_t FileMagic = 0x41544E51;   // "QNTA"
-		constexpr uint32_t FileVersion = 1;
+		constexpr uint32_t FileVersion = 2;   // 2: groups and cluster headers carry their family links
 
 		struct FileHeader
 		{
@@ -362,6 +363,16 @@ namespace Quanta
 				return name + " has a bad cluster count";
 			has_root |= rec.lod_error == Infinity;
 
+			{
+				const uint32_t first = family_first(rec.family);
+				const uint32_t count = family_count(rec.family);
+				if (uint64_t(first) + count > mesh.groups.size() || g < first || g >= first + count)
+					return name + " is not inside its own family";
+				for (uint32_t m = first; m < first + count; m++)
+					if (mesh.groups[m].lod_error != rec.lod_error || mesh.groups[m].family != rec.family)
+						return name + " disagrees with its family";
+			}
+
 			GroupView view = read_group(mesh, g);
 			if (view.header->cluster_count != rec.cluster_count || view.header->size_bytes != rec.size_bytes)
 				return name + " header disagrees with its record";
@@ -393,8 +404,19 @@ namespace Quanta
 
 				if (h.refined_error < 0)
 					original_triangles += h.triangle_count;
-				else if (rec.lod_error != Infinity && h.refined_error > rec.lod_error)
-					return cname + " has a refined error above its group's (LOD error not monotonic)";
+				else
+				{
+					if (rec.lod_error != Infinity && h.refined_error > rec.lod_error)
+						return cname + " has a refined error above its group's (LOD error not monotonic)";
+
+					const uint32_t first = family_first(h.refined_family);
+					const uint32_t count = family_count(h.refined_family);
+					if (uint64_t(first) + count > mesh.groups.size())
+						return cname + " refines a family outside the mesh";
+					for (uint32_t m = first; m < first + count; m++)
+						if (mesh.groups[m].family != h.refined_family || mesh.groups[m].lod_error != h.refined_error)
+							return cname + " refines a family whose LOD error is not its refined error";
+				}
 			}
 		}
 

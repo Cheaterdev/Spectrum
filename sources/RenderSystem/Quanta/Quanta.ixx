@@ -22,6 +22,14 @@ export namespace Quanta
 	constexpr uint32_t BlobAlignment       = 16;
 	constexpr uint32_t InvalidIndex        = 0xFFFFFFFFu;
 
+	// A "family" is the chunks one clusterlod group was split into: consecutive groups that share their LOD
+	// data and are refined, drawn and paged in all-or-nothing, so the cut stays crack-free while pages stream.
+	// Packed as first group | (count - 1) << 24 into one dword.
+	constexpr uint32_t FamilyCountShift    = 24;
+	constexpr uint32_t pack_family(uint32_t first, uint32_t count) { return first | ((count - 1) << FamilyCountShift); }
+	constexpr uint32_t family_first(uint32_t family) { return family & ((1u << FamilyCountShift) - 1); }
+	constexpr uint32_t family_count(uint32_t family) { return (family >> FamilyCountShift) + 1; }
+
 	// What the vertex shaders read today (mesh_vertex_input): pos, normal, uv, tangent.
 	struct Vertex
 	{
@@ -51,7 +59,7 @@ export namespace Quanta
 		uint32_t normal_cone;      // meshopt s8 axis (xyz) and cutoff (w)
 		uint32_t lod_level;
 		float    refined_error;    // < 0: original geometry (the finest level)
-		uint32_t reserved;
+		uint32_t refined_family;   // the finer family this cluster was simplified from (mesh-local groups), 0 if original
 		float4   refined_sphere;
 	};
 	static_assert(sizeof(ClusterHeader) == 64);
@@ -70,7 +78,7 @@ export namespace Quanta
 		uint32_t page;
 		uint32_t offset_in_page;
 		uint32_t size_bytes;
-		uint32_t reserved;
+		uint32_t family;           // this group's own family (see pack_family); group indices are mesh-local in a Mesh
 	};
 
 	static_assert(std::is_trivially_copyable_v<Group>);
@@ -124,6 +132,7 @@ export namespace Quanta
 		uint32_t lod_level   = 0;
 		float    refined_error = -1;
 		float4   refined_sphere;
+		uint32_t refined_family = 0;
 	};
 
 	struct GroupInput
@@ -134,6 +143,7 @@ export namespace Quanta
 		float4   refined_sphere;
 		float    refined_error = -1;
 		uint32_t depth = 0;
+		uint32_t family = 0;
 	};
 
 	// Smallest sphere enclosing both.
