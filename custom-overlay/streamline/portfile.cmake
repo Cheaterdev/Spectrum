@@ -44,7 +44,7 @@ set(SL_RUNTIME_DEV_EXTRA
 )
 
 set(SL_BIN_PROD "${PACKAGE_PATH}/bin/x64")
-set(SL_BIN_DEV  "${PACKAGE_PATH}/bin/x64/development")
+set(SL_BIN_DEV  "${PACKAGE_PATH}/bin/x64")
 
 foreach(dir IN ITEMS "${SL_BIN_PROD}" "${SL_BIN_DEV}" "${PACKAGE_PATH}/include" "${PACKAGE_PATH}/lib/x64")
     if(NOT EXISTS "${dir}")

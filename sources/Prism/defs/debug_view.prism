@@ -92,13 +92,17 @@ namespace Dev
 	#   commands[1]  drawn by the occlusion culler's stage-2 retest
 	#   commands[2]  culled
 	#   commands[3]  never rasterized by the main view (translucent)
+	#   commands[4..7]  the same buckets for meshes drawn from Quanta's clusters (quanta != 0 and the mesh has
+	#                   Quanta data), which DebugViewQuantaMesh draws
 	[Bind = DefaultLayout::Instance1]
 	struct DebugViewGather
 	{
-		AppendStructuredBuffer<DrawMeshCommand> commands[4];
+		AppendStructuredBuffer<DrawMeshCommand> commands[8];
 		StructuredBuffer<uint> stamps;
 		uint capture_frame;
 		DebugViewSource source;
+		# Quanta draw is on: meshes with Quanta data are drawn from it, as the main view does.
+		uint quanta;
 	}
 
 	# Per-bucket state for one DebugViewMesh indirect draw.
@@ -119,6 +123,9 @@ namespace Dev
 		uint meshlet_filter;
 
 		DebugViewColor color_mode;
+		# Quanta draw is on but this bucket is drawn from the mesh's own meshlets (it has no Quanta data, so
+		# the main view skips it): shaded with a checker, whatever the colour mode.
+		uint legacy_fallback;
 	}
 
 	# The captured main-camera frustum: pixels outside it are darkened, so what
@@ -153,6 +160,27 @@ namespace Dev
 
 		[EntryPoint = AS]
 		amplification = "debug/debug_view_mesh_shader.hlsl";
+
+		[EntryPoint = PS]
+		pixel = "debug/debug_view_mesh.hlsl";
+
+		rtv = { R8G8B8A8_UNORM };
+		ds = D32_FLOAT;
+		cull = None;
+	}
+
+	# DebugViewMesh for Quanta's clusters: the main view's recorded cut is replayed per cluster (the capture slots
+	# after the part's original clusters, see MeshletCaptureWrite), or Quanta's own cut is walked from the debug
+	# camera. Never reports page requests to the streamer.
+	GraphicsPSO DebugViewQuantaMesh
+	{
+		root = DefaultLayout;
+
+		[EntryPoint = VS]
+		mesh = "debug/debug_view_quanta_mesh_shader.hlsl";
+
+		[EntryPoint = AS]
+		amplification = "debug/debug_view_quanta_mesh_shader.hlsl";
 
 		[EntryPoint = PS]
 		pixel = "debug/debug_view_mesh.hlsl";

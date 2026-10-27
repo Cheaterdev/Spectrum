@@ -1322,10 +1322,19 @@ namespace
 	// rendering, Hi-Z, depth analysis, blocker classify/search, resolve),
 	// failing on device loss. Then the last frame's result: clearly lit ground
 	// is the unshadowed N.L * albedo, clearly shadowed ground is black.
-	void run_vsm_full_chain(bool move_camera, const char* golden)
+	void run_vsm_full_chain(bool move_camera, const char* golden, bool quanta = false)
 	{
 		if (!RenderSystem::get().device().is_tiled_depth_supported())
 			throw Test::TestSkipped("no sparse depth textures for the VSM atlas");
+		if (quanta && !RenderSystem::get().device().is_mesh_shader_supported())
+			throw Test::TestSkipped("the Quanta shadow draw needs mesh shaders");
+
+		// The GBuffer here is synthetic, so this only changes how VSM_RenderPages draws the occluder.
+		struct QuantaDraw
+		{
+			explicit QuantaDraw(bool on) { Quanta::set_draw_enabled(on); }
+			~QuantaDraw() { Quanta::set_draw_enabled(false); }
+		} quanta_draw(quanta);
 
 		constexpr int w = Test::kReferenceWidth, h = Test::kReferenceHeight;
 		const vec3 sun = vec3(0.35f, 1.0f, 0.25f).normalize();
@@ -1443,6 +1452,19 @@ export namespace Test
 	TEST(RenderSystem.FrameGraph, Effect_VSM_FullChain_MovingCamera)
 	{
 		run_vsm_full_chain(true, nullptr);
+	}
+
+	// The same shadow, with the occluder drawn from Quanta's cut (VSMDepthDraw's Quanta permutation): the lit and
+	// shadowed ground must come out the same, so the grid of (node, page) groups reaches the right pages.
+	TEST(RenderSystem.FrameGraph, Effect_VSM_FullChain_QuantaDraw)
+	{
+		run_vsm_full_chain(false, nullptr, true);
+	}
+
+	// ... and with the pages invalidated and redrawn every frame.
+	TEST(RenderSystem.FrameGraph, Effect_VSM_FullChain_QuantaDrawMovingCamera)
+	{
+		run_vsm_full_chain(true, nullptr, true);
 	}
 
 	// VSM's tile lists are [Counted] buffers: the append counter sits at the

@@ -21,18 +21,21 @@ export namespace Table
 			static constexpr SlotID ID = SlotID::DebugViewGather;
 			uint capture_frame;
 			::Dev::DebugViewSource source;
+			uint quanta;
 			HLSL::StructuredBuffer<uint> stamps;
-			HLSL::AppendStructuredBuffer<DrawMeshCommand> commands[4];
+			HLSL::AppendStructuredBuffer<DrawMeshCommand> commands[8];
 			HLSL::AppendStructuredBuffer<DrawMeshCommand>* GetCommands() { return commands; }
 			HLSL::StructuredBuffer<uint>& GetStamps() { return stamps; }
 			uint& GetCapture_frame() { return capture_frame; }
 			::Dev::DebugViewSource& GetSource() { return source; }
+			uint& GetQuanta() { return quanta; }
 			static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 			template<class Compiler>
 			void compile(Compiler& compiler) const
 			{
 				compiler.compile(capture_frame, "DebugViewGather::capture_frame");
 				compiler.compile(source, "DebugViewGather::source");
+				compiler.compile(quanta, "DebugViewGather::quanta");
 				compiler.compile(stamps, "DebugViewGather::stamps");
 				compiler.compile(commands, "DebugViewGather::commands");
 			}
@@ -40,8 +43,9 @@ export namespace Table
 			{
 				uint capture_frame; // uint
 				::Dev::DebugViewSource source; // DebugViewSource
+				uint quanta; // uint
 				uint stamps; // StructuredBuffer<uint>
-				uint commands[4]; // AppendStructuredBuffer<DrawMeshCommand>
+				uint commands[8]; // AppendStructuredBuffer<DrawMeshCommand>
 
 			
 				private:
@@ -49,6 +53,7 @@ export namespace Table
 				{
 					ar& NVP(capture_frame);
 					ar& NVP(source);
+					ar& NVP(quanta);
 				}
 
 
@@ -63,6 +68,7 @@ export namespace Table
 			{
 				ar& NVP(capture_frame);
 				ar& NVP(source);
+				ar& NVP(quanta);
 			}
 
 		};

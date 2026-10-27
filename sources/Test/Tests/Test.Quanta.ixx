@@ -151,6 +151,31 @@ export namespace Test
 		ASSERT_EQ(mesh.original_triangle_count, loaded.original_triangle_count);
 	}
 
+	// Pages go to the file GDeflate-compressed where the backend can; the memory copy read back is the raw page.
+	TEST(Quanta, FilePagesAreCompressed)
+	{
+		if (!HAL::gdeflate_supported())
+			return;
+
+		Quanta::Mesh mesh = build(make_sphere(128, 64));
+		std::vector<uint8_t> bytes = Quanta::serialize(mesh);
+
+		size_t raw = 0;
+		for (auto& page : mesh.pages)
+			raw += page.data.size();
+		ASSERT_TRUE(bytes.size() < raw);
+
+		Quanta::Mesh loaded;
+		ASSERT_TRUE(Quanta::deserialize(bytes.data(), bytes.size(), loaded));
+		size_t compressed_pages = 0;
+		for (size_t p = 0; p < mesh.pages.size(); p++)
+		{
+			ASSERT_TRUE(mesh.pages[p].data == loaded.pages[p].data);
+			compressed_pages += loaded.pages[p].file_size < loaded.pages[p].data.size();
+		}
+		ASSERT_TRUE(compressed_pages > 0);
+	}
+
 	TEST(Quanta, FileRejectsDamagedInput)
 	{
 		Quanta::Mesh mesh = build(make_sphere(64, 32));
@@ -207,13 +232,20 @@ export namespace Test
 			for (size_t p = 0; p < b.pages.size(); p++)
 			{
 				ASSERT_TRUE(a.pages[p].data == b.pages[p].data);
-				ASSERT_EQ(uint32_t(b.pages[p].data.size()), b.pages[p].file_size);
+				ASSERT_TRUE(b.pages[p].file_size <= b.pages[p].data.size());
 
 				// What a DirectStorage request would read: the page's bytes at its offset in the file.
 				std::vector<uint8_t> from_file(b.pages[p].file_size);
 				file.seekg(b.pages[p].file_offset, std::ios::beg);
 				file.read(reinterpret_cast<char*>(from_file.data()), from_file.size());
-				ASSERT_TRUE(from_file == b.pages[p].data);
+				if (b.pages[p].file_size == b.pages[p].data.size())
+						ASSERT_TRUE(from_file == b.pages[p].data);
+					else   // GDeflate-compressed in the file
+					{
+						std::vector<uint8_t> expanded(b.pages[p].data.size());
+						ASSERT_TRUE(HAL::gdeflate_decompress(from_file.data(), from_file.size(), expanded.data(), expanded.size()));
+						ASSERT_TRUE(expanded == b.pages[p].data);
+					}
 			}
 		}
 		file.close();

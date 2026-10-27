@@ -24,6 +24,7 @@ export namespace Table
 			uint capture_frame;
 			uint meshlet_filter;
 			::Dev::DebugViewColor color_mode;
+			uint legacy_fallback;
 			HLSL::StructuredBuffer<uint> meshlet_masks;
 			float4& GetTint() { return tint; }
 			HLSL::StructuredBuffer<uint>& GetMeshlet_masks() { return meshlet_masks; }
@@ -31,6 +32,7 @@ export namespace Table
 			uint& GetCapture_frame() { return capture_frame; }
 			uint& GetMeshlet_filter() { return meshlet_filter; }
 			::Dev::DebugViewColor& GetColor_mode() { return color_mode; }
+			uint& GetLegacy_fallback() { return legacy_fallback; }
 			static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 			template<class Compiler>
 			void compile(Compiler& compiler) const
@@ -40,6 +42,7 @@ export namespace Table
 				compiler.compile(capture_frame, "DebugViewDraw::capture_frame");
 				compiler.compile(meshlet_filter, "DebugViewDraw::meshlet_filter");
 				compiler.compile(color_mode, "DebugViewDraw::color_mode");
+				compiler.compile(legacy_fallback, "DebugViewDraw::legacy_fallback");
 				compiler.compile(meshlet_masks, "DebugViewDraw::meshlet_masks");
 			}
 			struct Compiled
@@ -49,6 +52,7 @@ export namespace Table
 				uint capture_frame; // uint
 				uint meshlet_filter; // uint
 				::Dev::DebugViewColor color_mode; // DebugViewColor
+				uint legacy_fallback; // uint
 				uint meshlet_masks; // StructuredBuffer<uint>
 
 			
@@ -60,6 +64,7 @@ export namespace Table
 					ar& NVP(capture_frame);
 					ar& NVP(meshlet_filter);
 					ar& NVP(color_mode);
+					ar& NVP(legacy_fallback);
 				}
 
 
@@ -77,6 +82,7 @@ export namespace Table
 				ar& NVP(capture_frame);
 				ar& NVP(meshlet_filter);
 				ar& NVP(color_mode);
+				ar& NVP(legacy_fallback);
 			}
 
 		};

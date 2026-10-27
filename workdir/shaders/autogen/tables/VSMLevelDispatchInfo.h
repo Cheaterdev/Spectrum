@@ -17,9 +17,11 @@ namespace Shadows
 			uint page_batch_cb; // VSMPageBatch
 			float2 bounds_min; // float2
 			float2 bounds_max; // float2
+			float lod_threshold; // float
 			uint GetPage_batch_cb() { return page_batch_cb; }
 			float2 GetBounds_min() { return bounds_min; }
 			float2 GetBounds_max() { return bounds_max; }
+			float GetLod_threshold() { return lod_threshold; }
 		};
 	}
 }

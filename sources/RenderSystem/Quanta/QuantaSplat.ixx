@@ -15,4 +15,8 @@ export namespace Quanta
 	// mesh without Quanta data is not drawn while it is on.
 	bool draw_enabled();
 	void set_draw_enabled(bool enabled);
+
+	// With "Quanta draw" on, the shadow cascades draw the cut too: it stops refining at this many texels of the
+	// cascade's map ("Shadow LOD error (px)").
+	float shadow_lod_pixels();
 }

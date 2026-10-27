@@ -3,6 +3,7 @@ module Graphics:Quanta;
 import :Quanta;
 
 import Core;
+import HAL;
 
 namespace Quanta
 {
@@ -169,7 +170,7 @@ namespace Quanta
 	namespace
 	{
 		constexpr uint32_t FileMagic = 0x41544E51;   // "QNTA"
-		constexpr uint32_t FileVersion = 2;   // 2: groups and cluster headers carry their family links
+		constexpr uint32_t FileVersion = 3;   // 2: groups and cluster headers carry their family links; 3: pages may be GDeflate
 
 		struct FileHeader
 		{
@@ -194,6 +195,8 @@ namespace Quanta
 			uint32_t root;
 			uint32_t group_count;
 			uint32_t first_group_id;       // into the flattened list
+			uint32_t stored_size;          // bytes in the file: `size` for a raw page, fewer for a GDeflate one
+			uint32_t reserved;
 		};
 		static_assert(std::is_trivially_copyable_v<FileHeader> && std::is_trivially_copyable_v<PageEntry>);
 
@@ -221,9 +224,19 @@ namespace Quanta
 
 		std::vector<uint32_t> group_ids;
 		std::vector<PageEntry> entries(mesh.pages.size());
+		std::vector<std::vector<uint8_t>> compressed(mesh.pages.size());   // empty where the raw bytes are stored
 		for (size_t p = 0; p < mesh.pages.size(); p++)
 		{
-			entries[p].size = static_cast<uint32_t>(mesh.pages[p].data.size());
+			const auto& data = mesh.pages[p].data;
+			if (!data.empty())
+			{
+				auto packed = HAL::gdeflate_compress(data.data(), data.size());
+				if (!packed.empty() && packed.size() < data.size())
+					compressed[p] = std::move(packed);
+			}
+
+			entries[p].size = static_cast<uint32_t>(data.size());
+			entries[p].stored_size = compressed[p].empty() ? entries[p].size : static_cast<uint32_t>(compressed[p].size());
 			entries[p].root = mesh.pages[p].root ? 1 : 0;
 			entries[p].group_count = static_cast<uint32_t>(mesh.pages[p].groups.size());
 			entries[p].first_group_id = static_cast<uint32_t>(group_ids.size());
@@ -237,7 +250,7 @@ namespace Quanta
 		{
 			cursor = align_up(static_cast<uint32_t>(cursor), BlobAlignment);
 			entries[p].offset = cursor;
-			cursor += entries[p].size;
+			cursor += entries[p].stored_size;
 		}
 
 		std::vector<uint8_t> out;
@@ -250,7 +263,8 @@ namespace Quanta
 		for (size_t p = 0; p < entries.size(); p++)
 		{
 			out.resize(entries[p].offset, 0);
-			out.insert(out.end(), mesh.pages[p].data.begin(), mesh.pages[p].data.end());
+			const auto& stored = compressed[p].empty() ? mesh.pages[p].data : compressed[p];
+			out.insert(out.end(), stored.begin(), stored.end());
 		}
 		return out;
 	}
@@ -300,16 +314,24 @@ namespace Quanta
 		for (uint32_t p = 0; p < header.page_count; p++)
 		{
 			const PageEntry& e = entries[p];
-			if (e.size > PageBytes || e.offset + e.size > size)
+			if (e.size > PageBytes || e.stored_size > e.size || e.offset + e.stored_size > size)
 				return false;
 			if (uint64_t(e.first_group_id) + e.group_count > group_ids.size())
 				return false;
 
 			Page& page = mesh.pages[p];
-			page.data.assign(data + e.offset, data + e.offset + e.size);
+			if (e.stored_size == e.size)
+				page.data.assign(data + e.offset, data + e.offset + e.size);
+			else
+			{
+				// The memory copy stays raw: only the file (and DirectStorage's read of it) is compressed.
+				page.data.resize(e.size);
+				if (!HAL::gdeflate_decompress(data + e.offset, e.stored_size, page.data.data(), e.size))
+					return false;
+			}
 			page.root = e.root != 0;
 			page.file_offset = base_file_offset + e.offset;
-			page.file_size = e.size;
+			page.file_size = e.stored_size;
 			for (uint32_t i = 0; i < e.group_count; i++)
 			{
 				uint32_t g = group_ids[e.first_group_id + i];

@@ -85,6 +85,7 @@ namespace Quanta
 	void Residency::release(Resident& resident)
 	{
 		std::lock_guard<std::mutex> g(m);
+		changed.erase(&resident);
 		if (!resident.streamed)
 			return;
 
@@ -286,8 +287,8 @@ namespace Quanta
 			request.file = resident.mesh->file;
 			request.file_offset = source.file_offset;
 			request.size = source.file_size;
-			request.uncompressed_size = source.file_size;
-			request.compressed = false;
+			request.uncompressed_size = source.data.size();
+			request.compressed = source.file_size < source.data.size();
 			request.operation = HAL::StorageRequest::Buffer{ (pages.buffer.get_data_offset() + pool[slot].get_offset()) * sizeof(uint32_t) };
 
 			auto& queue = RenderSystem::get().device().get_ds_queue();
@@ -336,6 +337,11 @@ namespace Quanta
 		groups.prepare(list);
 		nodes.prepare(list);
 		page_slots.prepare(list);
+
+		// The page-table writes of the changes below are in this list: draws recorded after it see the new cut.
+		for (Resident* resident : changed)
+			resident->generation.fetch_add(1, std::memory_order_relaxed);
+		changed.clear();
 
 		if (pool_map_pending)
 		{
@@ -536,6 +542,7 @@ namespace Quanta
 				page_slots.write(item.resident->page_id_base() + item.page, slot);
 				state.status = PageState::Status::Resident;
 				state.last_touched = current_epoch;
+				changed.insert(item.resident);
 				for (uint32_t parent : state.parents)
 					item.resident->states[parent].resident_children++;
 
@@ -574,6 +581,7 @@ namespace Quanta
 
 			std::vector<uint> hidden = { InvalidIndex };
 			page_slots.write(resident.page_id_base() + victims[i].ref.page, hidden);
+			changed.insert(&resident);
 			for (uint32_t parent : state.parents)
 				resident.states[parent].resident_children--;
 

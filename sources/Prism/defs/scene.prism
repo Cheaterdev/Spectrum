@@ -123,6 +123,20 @@ namespace Meshes
 		[AS, nullable]
 		define HiZOcclusion;
 
+		# The shadow cascades' Quanta draw (PSSM): the same permutations as GBufferDraw, matched by
+		# GatherPipeline's ClusterLod / Quanta.
+		[rename = CLUSTER_LOD]
+		[AS, nullable]
+		define ClusterLod;
+
+		[rename = QUANTA]
+		[AS, nullable]
+		define QuantaAmplification;
+
+		[rename = QUANTA]
+		[MS, nullable]
+		define QuantaMesh;
+
 		ds = D32_FLOAT;
 
 		cull = Front;

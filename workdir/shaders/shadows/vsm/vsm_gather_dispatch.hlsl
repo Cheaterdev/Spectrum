@@ -96,6 +96,16 @@ bool vsm_try_build_entry(uint mesh_id, MeshCommandData mesh, uint level_index, V
 
 	if (any(bmax < lmin) || any(bmin > lmax)) return false;
 
+#ifdef QUANTA
+	// A grid of (hierarchy node, page of the level): the AS walks the node for that page. A mesh without Quanta
+	// data casts no shadow, like it is not drawn in the main view (MeshCommandData::quanta_draw_commands).
+	uint node_count = mesh.quanta_draw_commands.counts.x;
+	if (node_count == 0) return false;
+
+	entry.draw_id = mesh_id | (level_index << 24);
+	entry.args.counts = uint3(node_count, VSM_PAGES_PER_LEVEL, 1);
+	return true;
+#else
 	uint pair_count = mesh.GetMeshlet_count() * VSM_PAGES_PER_LEVEL;
 	uint as_groups = (pair_count + 31) / 32;
 	if (as_groups == 0) return false;
@@ -103,6 +113,7 @@ bool vsm_try_build_entry(uint mesh_id, MeshCommandData mesh, uint level_index, V
 	entry.draw_id = mesh_id | (level_index << 24);
 	entry.args.counts = uint3(as_groups, 1, 1);
 	return true;
+#endif
 }
 
 #ifdef BUILD_FUNC_CS

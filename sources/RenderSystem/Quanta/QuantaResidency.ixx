@@ -59,12 +59,17 @@ export namespace Quanta
 		TypedHandle<uint> node_handle;
 
 		bool streamed = false;
+		std::atomic<uint32_t> generation{ 0 };
 
 	public:
 		std::shared_ptr<Mesh> mesh;
 		std::vector<PageState> states;       // streamed meshes only; guarded by the Residency lock
 
 		bool is_streamed() const { return streamed; }
+
+		// Bumped by the prepare() that applies a change to which of the mesh's pages the draw can see, i.e. to the
+		// cut it draws. Whoever caches what the cut drew (the shadow pages) redraws when it moves.
+		uint32_t cut_generation() const { return generation.load(std::memory_order_relaxed); }
 		uint64_t page_offset() const { return page_handle.get_offset(); }                    // dwords into `pages` (resident meshes)
 		uint64_t page_id_base() const { return page_id_handle.get_offset(); }                // page ids, one per page
 		uint64_t group_offset() const { return group_handle.get_offset() / GroupDwords; }   // records into `groups`
@@ -130,6 +135,7 @@ export namespace Quanta
 		std::vector<uint32_t> retiring;           // hidden since the last prepare, free once the frames that may read them are done
 		size_t retiring_inflight = 0;             // slots handed to a list's completion callback
 		std::vector<Loading> loading;
+		std::unordered_set<Resident*> changed;    // meshes whose visible pages changed since the last prepare
 
 		bool pool_mapped = false;                 // the pool's tiles are mapped on the GPU: DirectStorage may write them
 		bool pool_map_pending = false;

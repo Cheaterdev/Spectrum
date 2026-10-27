@@ -162,6 +162,7 @@ void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 	tasks.emplace_back(PSOBase::create<PSOS::Dev::DebugLinesDraw>(device, pso[PSO::DebugLinesDraw]));
 	tasks.emplace_back(PSOBase::create<PSOS::Dev::DebugLinesOccluded>(device, pso[PSO::DebugLinesOccluded]));
 	tasks.emplace_back(PSOBase::create<PSOS::Dev::DebugViewMesh>(device, pso[PSO::DebugViewMesh]));
+	tasks.emplace_back(PSOBase::create<PSOS::Dev::DebugViewQuantaMesh>(device, pso[PSO::DebugViewQuantaMesh]));
 	tasks.emplace_back(PSOBase::create<PSOS::UI::Text::GlyphRender>(device, pso[PSO::GlyphRender]));
 	tasks.emplace_back(PSOBase::create<PSOS::Tests::TestTriangle>(device, pso[PSO::TestTriangle]));
 	tasks.emplace_back(PSOBase::create<PSOS::Tests::TestInstancing>(device, pso[PSO::TestInstancing]));
@@ -238,6 +239,7 @@ void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 //decltype(PSOS::Lighting::SecondBounce) PSOS::Lighting::SecondBounce;
 //decltype(PSOS::VoxelDownsample::Count) PSOS::VoxelDownsample::Count;
 //decltype(PSOS::VSMShadowBlur::VsmRtxVerify) PSOS::VSMShadowBlur::VsmRtxVerify;
+//decltype(PSOS::VSMGatherDispatch::Quanta) PSOS::VSMGatherDispatch::Quanta;
 //decltype(PSOS::GlyphRender::Format) PSOS::GlyphRender::Format;
 //decltype(PSOS::CopyTexture::Format) PSOS::CopyTexture::Format;
 //decltype(PSOS::GBufferDraw::HiZOcclusion) PSOS::GBufferDraw::HiZOcclusion;
@@ -246,5 +248,12 @@ void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 //decltype(PSOS::GBufferDraw::QuantaAmplification) PSOS::GBufferDraw::QuantaAmplification;
 //decltype(PSOS::GBufferDraw::QuantaMesh) PSOS::GBufferDraw::QuantaMesh;
 //decltype(PSOS::DepthDraw::HiZOcclusion) PSOS::DepthDraw::HiZOcclusion;
+//decltype(PSOS::DepthDraw::ClusterLod) PSOS::DepthDraw::ClusterLod;
+//decltype(PSOS::DepthDraw::QuantaAmplification) PSOS::DepthDraw::QuantaAmplification;
+//decltype(PSOS::DepthDraw::QuantaMesh) PSOS::DepthDraw::QuantaMesh;
 //decltype(PSOS::Voxelization::Dynamic) PSOS::Voxelization::Dynamic;
 //decltype(PSOS::BackdropDraw::Direct) PSOS::BackdropDraw::Direct;
+//decltype(PSOS::VSMDepthDraw::QuantaAmplification) PSOS::VSMDepthDraw::QuantaAmplification;
+//decltype(PSOS::VSMDepthDraw::QuantaMesh) PSOS::VSMDepthDraw::QuantaMesh;
+//decltype(PSOS::VSMDepthDrawConservative::QuantaAmplification) PSOS::VSMDepthDrawConservative::QuantaAmplification;
+//decltype(PSOS::VSMDepthDrawConservative::QuantaMesh) PSOS::VSMDepthDrawConservative::QuantaMesh;

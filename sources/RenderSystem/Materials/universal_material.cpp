@@ -177,13 +177,20 @@ void materials::PipelinePasses::set_vertex_front_end(HAL::GraphicsContext& graph
 void materials::PipelinePasses::set(RENDER_TYPE render_type, MESH_TYPE type, HAL::GraphicsContext& graphics, bool hiz_occlusion, bool capture_meshlets, bool cluster_lod)
 {
 	if (render_type == RENDER_TYPE::DEPTH)
-		graphics.set_pipeline(depth_draw->GetPSO(PSOS::Meshes::DepthDraw::HiZOcclusion.Use(hiz_occlusion)));
+	{
+		// Must agree with mesh_renderer::render_meshes (only a context with a LOD threshold walks the clusters).
+		const bool quanta = cluster_lod && Quanta::draw_enabled();
+		graphics.set_pipeline(depth_draw->GetPSO(
+			PSOS::Meshes::DepthDraw::HiZOcclusion.Use(hiz_occlusion) |
+			PSOS::Meshes::DepthDraw::ClusterLod.Use(cluster_lod) |
+			PSOS::Meshes::DepthDraw::QuantaAmplification.Use(quanta) |
+			PSOS::Meshes::DepthDraw::QuantaMesh.Use(quanta)));
+	}
 	else
 		if (render_type == RENDER_TYPE::PIXEL)
 		{
 			// Must agree with mesh_renderer::render_meshes, whose gather hands out the matching arguments.
-			// Not while capturing: the capture records the mesh's own meshlets, which a Quanta draw does not use.
-			const bool quanta = cluster_lod && !capture_meshlets && Quanta::draw_enabled();
+			const bool quanta = cluster_lod && Quanta::draw_enabled();
 			graphics.set_pipeline(gbuffer->GetPSO(
 				PSOS::Meshes::GBufferDraw::HiZOcclusion.Use(hiz_occlusion) |
 				PSOS::Meshes::GBufferDraw::CaptureMeshlets.Use(capture_meshlets) |

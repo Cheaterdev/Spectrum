@@ -5,6 +5,7 @@ import :PSSM;
 import :BRDF;
 import :EngineAssets;
 import :FrameGraphContext;
+import :QuantaSplat;
 
 import HAL;
 
@@ -14,6 +15,10 @@ using namespace FrameGraph;
 float jit = 0;
 import HAL;
 using namespace HAL;
+
+// PSSM_Depths / global_depth are [Size = 1024] in pssm.prism: a texel is 1/1024 of the cascade's height, which is
+// what the shadows' Quanta cut measures its error in.
+constexpr float ShadowMapSize = 1024.0f;
 // exp(renders_size) buckets the view depth range geometrically across the
 // cascades; znear/zfar per cascade are cam->z_near + exp(i) * this.
 float PSSM::cascade_scaler(const camera* cam) const
@@ -90,11 +95,14 @@ PSSM::PSSM()
 			command_list->get_graphics().set_rtv(rt, RTOptions::Default | RTOptions::ClearDepth);
 		}
 
+		mesh_ctx->lod_threshold = Quanta::shadow_lod_pixels() / ShadowMapSize;
+
 		{
 			Slots::Frame::FrameInfo frameInfo;
 			frameInfo.GetBrdf()   = EngineAssets::brdf.get_asset()->get_texture()->texture_3d().texture3D;
 			frameInfo.GetBestFitNormals() = EngineAssets::best_fit_normals.get_asset()->get_texture()->texture_2d().texture2D;
 			frameInfo.GetCamera() = light_cam.camera_cb.current;
+			frameInfo.GetLodThreshold() = mesh_ctx->lod_threshold;
 			graphics.set(frameInfo);
 			compute.set(frameInfo);
 		}
@@ -174,11 +182,14 @@ PSSM::PSSM()
 				command_list->get_graphics().set_rtv(rt, RTOptions::Default | RTOptions::ClearDepth);
 			}
 
+			mesh_ctx->lod_threshold = Quanta::shadow_lod_pixels() / ShadowMapSize;
+
 			{
 				Slots::Frame::FrameInfo frameInfo;
 				frameInfo.GetBrdf()   = EngineAssets::brdf.get_asset()->get_texture()->texture_3d().texture3D;
 				frameInfo.GetBestFitNormals() = EngineAssets::best_fit_normals.get_asset()->get_texture()->texture_2d().texture2D;
 				frameInfo.GetCamera() = light_cam.camera_cb.current;
+				frameInfo.GetLodThreshold() = mesh_ctx->lod_threshold;
 				graphics.set(frameInfo);
 				compute.set(frameInfo);
 			}

@@ -23,6 +23,7 @@ namespace
 
 	Variable<bool> g_quanta_splat = { false, "Quanta splat", &quanta_context() };
 	Variable<bool> g_quanta_draw = { false, "Quanta draw", &quanta_context() };
+	Variable<float> g_shadow_lod_pixels = { 1.0f, "Shadow LOD error (px)", &quanta_context(), 0.25f, 16.0f };
 }
 
 namespace Quanta
@@ -45,6 +46,11 @@ namespace Quanta
 	void set_draw_enabled(bool enabled)
 	{
 		g_quanta_draw = enabled;
+	}
+
+	float shadow_lod_pixels()
+	{
+		return g_shadow_lod_pixels;
 	}
 }
 

@@ -22,6 +22,14 @@
 
 static const SceneData sceneData = GetSceneData();
 
+#ifdef QUANTA
+// Quanta's cut instead of the mesh's own meshlets (VSMDepthDraw's QuantaAmplification / QuantaMesh): see below.
+#include "../../quanta/quanta_lod.hlsl"
+#ifdef BUILD_FUNC_AS
+#include "../../autogen/QuantaShadowFeedback.h"
+#endif
+#endif
+
 // This draw's tables, set first thing in every entry: the task stage reads the
 // draw id, the mesh stage gets it through the payload (a mesh shader behind a
 // task shader may not read DrawIndex, VUID-VkGraphicsPipelineCreateInfo-pStages-09631).
@@ -90,11 +98,24 @@ struct vsm_prim_attrs
 #endif
 };
 
+#ifdef QUANTA
+// One AS group walks one hierarchy node for one page: at most 32 groups of 16 clusters.
+static const uint LOD_NODE_GROUPS = 32;
+static const uint PAYLOAD_CLUSTERS = 16 * LOD_NODE_GROUPS;
+
+struct Payload
+{
+	uint draw_id;
+	uint page;   // local page of the level: the mesh stage looks its slice up
+	uint ClusterEntries[PAYLOAD_CLUSTERS];   // (group << 4) | cluster-in-group, as in gbuffer/mesh_shader.hlsl
+};
+#else
 struct Payload
 {
 	uint draw_id;
 	uint PackedPairIndices[32];
 };
+#endif
 
 float vsm_plane_dist(float4 plane, float3 pt)
 {
@@ -224,6 +245,123 @@ bool vsm_is_occluded(MeshletCullData c, float4x4 world, Camera page_cam, int slo
 #if defined(BUILD_FUNC_AS) && !defined(VERTEX_FRONT_END)
 groupshared Payload s_Payload;
 
+#ifdef QUANTA
+groupshared uint s_GroupFirst[LOD_NODE_GROUPS];
+groupshared uint s_GroupEnd[LOD_NODE_GROUPS];
+
+// One hierarchy node of Quanta for one page of the level per group: x = node, y = the level's local page
+// (vsm_gather_dispatch.hlsl). The cut does not depend on the page, because a level's page cameras are
+// orthographic and share one texel size, so only the visibility tests are per page. Otherwise the same walk as
+// the Quanta AS in gbuffer/mesh_shader.hlsl, and it reports to the streamer the same way.
+[NumThreads(32, 1, 1)]
+void AS(uint gtid : SV_GroupThreadID, uint3 gid : SV_GroupID)
+{
+	bind_draw(read_draw_id());
+	s_Payload.draw_id = draw_id;
+	const uint pageLocal = gid.y;
+	s_Payload.page = pageLocal;
+
+	// DispatchMesh is called once, at the end, by every thread: a page that is not drawn dispatches nothing.
+	const uint slot = vsm_slot_of(pageLocal);
+	const bool page_dirty = (GetVSMPageBatch().GetDirty_mask() >> pageLocal) & 1;
+	const bool page_live = slot != VSM_INVALID_SLOT && page_dirty && gid.x < meshInfo.GetQuanta_node_count();
+	const uint safe_slot = page_live ? slot : 0;
+
+	Camera page_cam = GetVSMPageTableData().GetPage_cameras()[safe_slot];
+	node_data node = sceneData.GetNodes()[meshInfo.GetNode_offset()];
+	matrix m = node.GetNode_global_matrix();
+	float scale = MaxScale(m);
+	float lod_threshold = GetVSMPageTableData().GetLevels()[draw_id >> 24].GetLod_threshold();
+
+	StructuredBuffer<uint> pages = meshInstanceInfo.GetQuanta_pages();
+	StructuredBuffer<uint> groups = meshInstanceInfo.GetQuanta_groups();
+	StructuredBuffer<uint> nodes = meshInstanceInfo.GetQuanta_nodes();
+	StructuredBuffer<uint> slots = meshInstanceInfo.GetQuanta_page_slots();
+	QuantaShadowFeedback feedback = GetQuantaShadowFeedback();
+	uint group_base = meshInfo.GetQuanta_group_offset();
+
+	MeshletGroup quanta_node = (MeshletGroup)0;
+	bool node_live = page_live;
+	if (node_live)
+	{
+		quanta_node = QuantaRecord(nodes, (meshInfo.GetQuanta_node_offset() + gid.x) * Q_NODE_DWORDS);
+		node_live = !QuantaNodeSkip(quanta_node, m, scale, page_cam, lod_threshold);
+	}
+
+	// See skip_occlusion in the legacy AS below.
+	const bool skip_occlusion = (GetVSMPageBatch().GetSkip_occlusion() >> pageLocal) & 1;
+
+	uint visible_count = 0;
+	if (node_live)
+	{
+		uint first = 0;
+		uint count = 0;
+		if (gtid < quanta_node.ClusterCount)
+		{
+			uint group = quanta_node.FirstCluster + gtid;
+			MeshletGroup record = QuantaRecord(groups, group * Q_GROUP_DWORDS);
+			if (LodGroupPasses(record, m, scale, page_cam, lod_threshold))
+			{
+				uint family = groups[group * Q_GROUP_DWORDS + 15];
+				uint family_first = family & 0xFFFFFF;
+				uint family_count = (family >> 24) + 1;
+				if (QuantaFamilyResident(slots, groups, family_first, family_count))
+				{
+					first = group;
+					count = groups[group * Q_GROUP_DWORDS + 10];
+					QuantaTouch(feedback.GetPages(), feedback.GetEpoch(), groups, group);
+				}
+				else
+				{
+					QuantaWantFamily(feedback.GetPages(), feedback.GetEpoch(), groups, family_first, family_count,
+						LodProjectedError(record.GetLodSphere(), record.GetLodError(), m, scale, page_cam));
+				}
+			}
+		}
+
+		uint total = WaveActiveSum(count);
+		s_GroupFirst[gtid] = first;
+		s_GroupEnd[gtid] = WavePrefixSum(count) + count;
+		GroupMemoryBarrierWithGroupSync();
+
+		for (uint base = 0; base < total; base += 32)
+		{
+			uint item = base + gtid;
+			bool visible = false;
+			uint entry = 0;
+			if (item < total)
+			{
+				// The lane whose span holds the item (see the Quanta AS in gbuffer/mesh_shader.hlsl).
+				uint lane = 0;
+				[unroll]
+				for (uint step = 16; step > 0; step >>= 1)
+					if (s_GroupEnd[lane + step - 1] <= item)
+						lane += step;
+
+				uint start = lane > 0 ? s_GroupEnd[lane - 1] : 0;
+				uint group = s_GroupFirst[lane];
+				uint cluster = item - start;
+				uint header = QuantaBlob(slots, groups, group) + Q_GROUP_HEADER_DWORDS + cluster * Q_CLUSTER_DWORDS;
+				MeshletCullData cull_data = QuantaClusterCull(pages, header);
+
+				// Frustum first: a cluster outside this page must not ask the streamer for pages.
+				visible = vsm_is_visible(cull_data, m, page_cam)
+					&& QuantaClusterPasses(cull_data, pages[header + 11], group_base, slots, groups, feedback.GetPages(), feedback.GetEpoch(), m, scale, page_cam, lod_threshold);
+				if (visible && !skip_occlusion)
+					visible = !vsm_is_occluded(cull_data, m, page_cam, safe_slot);
+				entry = (group << 4) | cluster;
+			}
+
+			uint index = visible_count + WavePrefixCountBits(visible);
+			if (visible)
+				s_Payload.ClusterEntries[index] = entry;
+			visible_count += WaveActiveCountBits(visible);
+		}
+	}
+
+	DispatchMesh(visible_count, 1, 1, s_Payload);
+}
+#else
 // One thread per (meshlet, page) pair, 32 pairs per group -- flattens the
 // 2D (meshlet x page) space into 1D for wave-prefix compaction, same
 // technique as mesh_shader.hlsl's AS just over a bigger flattened index
@@ -273,6 +411,7 @@ void AS(uint gtid : SV_GroupThreadID, uint dtid : SV_DispatchThreadID)
 	uint visibleCount = WaveActiveCountBits(visible);
 	DispatchMesh(visibleCount, 1, 1, s_Payload);
 }
+#endif   // QUANTA
 #endif
 
 #ifndef VERTEX_FRONT_END   // the mesh stage; vertex_shader_vsm.hlsl reuses everything above it
@@ -288,6 +427,58 @@ void VS(
 )
 {
 	bind_draw(payload.draw_id);
+#ifdef QUANTA
+	// The payload entry names the cluster as (group << 4) | cluster-in-group (the AS above); decoded as in
+	// gbuffer/mesh_shader.hlsl.
+	const uint slot = vsm_slot_of(payload.page);
+	Camera page_cam = GetVSMPageTableData().GetPage_cameras()[slot];
+	node_data node = sceneData.GetNodes()[meshInfo.GetNode_offset()];
+	matrix node_mat = node.GetNode_global_matrix();
+
+	StructuredBuffer<uint> pages = meshInstanceInfo.GetQuanta_pages();
+	StructuredBuffer<uint> groups = meshInstanceInfo.GetQuanta_groups();
+	uint entry = payload.ClusterEntries[gid];
+	uint blob = QuantaBlob(meshInstanceInfo.GetQuanta_page_slots(), groups, entry >> 4);
+	uint header = 0;
+	uint vertex_count = 0;
+	uint triangle_count = 0;
+	// The page table is fixed for the frame, so the AS only hands out resident groups; this guards a bad entry.
+	if (blob != Q_INVALID)
+	{
+		header = blob + Q_GROUP_HEADER_DWORDS + (entry & 15) * Q_CLUSTER_DWORDS;
+		vertex_count = pages[header + 2];
+		triangle_count = pages[header + 3];
+	}
+	SetMeshOutputCounts(vertex_count, triangle_count);
+
+	if (gtid < triangle_count)
+	{
+		// Three byte indices per triangle at a byte offset from the blob start.
+		uint byte_offset = blob * 4 + pages[header + 1] + gtid * 3;
+		uint3 tri;
+		[unroll]
+		for (uint k = 0; k < 3; k++)
+		{
+			uint b = byte_offset + k;
+			tri[k] = (pages[b >> 2] >> ((b & 3) * 8)) & 0xFF;
+		}
+		tris[gtid] = tri;
+		prims[gtid].slice = slot;
+#ifdef __spirv__
+		prims[gtid].draw_id = draw_id;
+#endif
+	}
+
+	if (gtid < vertex_count)
+	{
+		// Quanta::Vertex is mesh_vertex_input's twelve floats; only the position and uv are used here.
+		uint p = blob + pages[header] / 4 + gtid * 12;
+		float4 wpos = mul(node_mat, float4(asfloat(pages[p]), asfloat(pages[p + 1]), asfloat(pages[p + 2]), 1));
+		verts[gtid].pos = mul(page_cam.GetViewProj(), wpos);
+		verts[gtid].wpos = wpos.xyz;
+		verts[gtid].tc = float2(asfloat(pages[p + 6]), asfloat(pages[p + 7]));
+	}
+#else
 	uint pairIndex = payload.PackedPairIndices[gid];
 	uint meshletIndex = pairIndex / VSM_PAGES_PER_LEVEL;
 	uint pageLocal = pairIndex % VSM_PAGES_PER_LEVEL;
@@ -324,5 +515,6 @@ void VS(
 		verts[gtid].wpos = wpos.xyz;
 		verts[gtid].tc = v.tc;
 	}
+#endif   // QUANTA
 }
 #endif

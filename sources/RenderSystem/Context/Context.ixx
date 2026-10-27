@@ -94,6 +94,9 @@ export{
 		RENDER_TYPE render_type = RENDER_TYPE::PIXEL;
 		MESH_TYPE render_mesh = MESH_TYPE::ALL;
 		TaskPriority priority = TaskPriority::NORMAL;
+		// A depth pass (the shadow cascades) draws Quanta's cluster cut when this is above 0: the error, as a fraction
+		// of the view's height, the cut stops refining at. It is also what the pass writes to FrameInfo::lodThreshold.
+		float lod_threshold = 0;
 		float delta_time = 0;
 		size_t current_time = 0;
 		// HAL::Handle set_4_table;

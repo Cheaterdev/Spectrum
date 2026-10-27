@@ -110,6 +110,15 @@ namespace Meshes
 		uint epoch;
 	}
 
+	# QuantaFeedback for the shadow pages' draw (VSMDepthDraw): Instance4 is VSMPageHiZ there, and Instance5 is the
+	# only slot left in that draw. Same fields, same meaning.
+	[Bind = DefaultLayout::Instance5]
+	struct QuantaShadowFeedback
+	{
+		RWStructuredBuffer<uint> pages;
+		uint epoch;
+	}
+
 	struct RaytraceInstanceInfo
 	{
 		StructuredBuffer<mesh_vertex_input> vertexes;

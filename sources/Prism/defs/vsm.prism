@@ -689,6 +689,17 @@ namespace Shadows
 			[EntryPoint = AS]
 			amplification = "shadows/vsm/mesh_shader_vsm.hlsl";
 
+			# The Quanta draw (see scene.prism's GBufferDraw): a grid of (hierarchy node, page) instead of
+			# (meshlet, page) pairs, the cut taken from Quanta's shared buffers. A define reaches one stage, so the
+			# AS and the mesh stage each get one; VSM.cpp sets both, and VSMGatherDispatch's Quanta.
+			[rename = QUANTA]
+			[AS, nullable]
+			define QuantaAmplification;
+
+			[rename = QUANTA]
+			[MS, nullable]
+			define QuantaMesh;
+
 			ds = D32_FLOAT;
 			# Back to cull=Front (render only back faces -- avoids self-shadow acne
 			# "for free" by using the far side of closed geometry as the recorded
@@ -755,6 +766,14 @@ namespace Shadows
 			[EntryPoint = AS]
 			amplification = "shadows/vsm/mesh_shader_vsm.hlsl";
 
+			[rename = QUANTA]
+			[AS, nullable]
+			define QuantaAmplification;
+
+			[rename = QUANTA]
+			[MS, nullable]
+			define QuantaMesh;
+
 			ds = D32_FLOAT;
 			cull = Front;
 			conservative = true;
@@ -809,6 +828,9 @@ namespace Shadows
 			VSMPageBatch* page_batch_cb;
 			float2 bounds_min;
 			float2 bounds_max;
+			# The Quanta draw's cut stops refining at this error, as a fraction of a page's height (one texel is
+			# 1 / page_size of it). 0 = no Quanta draw this frame.
+			float lod_threshold;
 		}
 
 		[Bind = DefaultLayout::Instance1]
@@ -830,6 +852,12 @@ namespace Shadows
 
 			[EntryPoint = CS]
 			compute = "shadows/vsm/vsm_gather_dispatch.hlsl";
+
+			# Hands out Quanta's hierarchy nodes per page (a grid of node x page) instead of meshlet x page pairs, and
+			# no entry for a mesh without Quanta data. Must match VSMDepthDraw's QuantaAmplification / QuantaMesh.
+			[rename = QUANTA]
+			[CS, nullable]
+			define Quanta;
 		}
 
 		# Phase 5.19: alpha-cutout material routing. A different PSO from

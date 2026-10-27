@@ -105,6 +105,7 @@ export namespace Quanta
 
 		// Where these bytes sit in the asset file they were loaded from (Mesh::file), so a DirectStorage
 		// request can read the page straight into the page pool. 0 / 0 for a mesh that was never loaded.
+		// file_size < data.size() means the file holds the page GDeflate-compressed (DirectStorage expands it).
 		uint64_t file_offset = 0;
 		uint32_t file_size   = 0;
 	};

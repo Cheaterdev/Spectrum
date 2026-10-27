@@ -25,9 +25,11 @@ export namespace Table
 				Pointer<Table::Shadows::VSM::VSMPageBatch> page_batch_cb;
 				float2 bounds_min;
 				float2 bounds_max;
+				float lod_threshold;
 				Pointer<Table::Shadows::VSM::VSMPageBatch>& GetPage_batch_cb() { return page_batch_cb; }
 				float2& GetBounds_min() { return bounds_min; }
 				float2& GetBounds_max() { return bounds_max; }
+				float& GetLod_threshold() { return lod_threshold; }
 				static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 				template<class Compiler>
 				void compile(Compiler& compiler) const
@@ -35,6 +37,7 @@ export namespace Table
 					compiler.compile(page_batch_cb, "VSMLevelDispatchInfo::page_batch_cb");
 					compiler.compile(bounds_min, "VSMLevelDispatchInfo::bounds_min");
 					compiler.compile(bounds_max, "VSMLevelDispatchInfo::bounds_max");
+					compiler.compile(lod_threshold, "VSMLevelDispatchInfo::lod_threshold");
 				}
 				using Compiled = VSMLevelDispatchInfo;
 
@@ -48,6 +51,7 @@ export namespace Table
 					ar& NVP(page_batch_cb);
 					ar& NVP(bounds_min);
 					ar& NVP(bounds_max);
+					ar& NVP(lod_threshold);
 				}
 
 			};

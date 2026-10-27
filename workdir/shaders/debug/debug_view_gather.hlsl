@@ -38,14 +38,29 @@ void CS(uint3 dispatchID : SV_DispatchThreadID)
 
     DrawMeshCommand command;
     command.draw_id = id;
-    // DebugViewMesh always walks the LOD hierarchy (DEBUG_VIEW implies it).
-    command.args = mesh.lod_draw_commands;
+    // DebugViewMesh always walks the LOD hierarchy (DEBUG_VIEW implies it); a mesh with Quanta data is
+    // drawn from Quanta, as the main view does with Quanta draw on.
+    bool quanta = gather.GetQuanta() != 0 && mesh.quanta_draw_commands.counts.x > 0;
+    if (quanta)
+        command.args = mesh.quanta_draw_commands;
+    else
+        command.args = mesh.lod_draw_commands;
 
     // Literal indices: bucket varies per thread, and a varying descriptor index
     // would need NonUniformResourceIndex (AMD reads the wrong buffer without it).
-    if (bucket == 0)      gather.GetCommands(0).Append(command);
-    else if (bucket == 1) gather.GetCommands(1).Append(command);
-    else if (bucket == 2) gather.GetCommands(2).Append(command);
-    else                  gather.GetCommands(3).Append(command);
+    if (quanta)
+    {
+        if (bucket == 0)      gather.GetCommands(4).Append(command);
+        else if (bucket == 1) gather.GetCommands(5).Append(command);
+        else if (bucket == 2) gather.GetCommands(6).Append(command);
+        else                  gather.GetCommands(7).Append(command);
+    }
+    else
+    {
+        if (bucket == 0)      gather.GetCommands(0).Append(command);
+        else if (bucket == 1) gather.GetCommands(1).Append(command);
+        else if (bucket == 2) gather.GetCommands(2).Append(command);
+        else                  gather.GetCommands(3).Append(command);
+    }
 }
 #endif

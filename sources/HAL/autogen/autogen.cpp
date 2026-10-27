@@ -50,6 +50,7 @@ std::optional<SlotID> get_slot(std::string_view slot_name)
 	if(slot_name == "MeshInfo") return SlotID::MeshInfo;
 	if(slot_name == "MeshletCaptureWrite") return SlotID::MeshletCaptureWrite;
 	if(slot_name == "QuantaFeedback") return SlotID::QuantaFeedback;
+	if(slot_name == "QuantaShadowFeedback") return SlotID::QuantaShadowFeedback;
 	if(slot_name == "IndirectDraw") return SlotID::IndirectDraw;
 	if(slot_name == "GatherPipelineGlobal") return SlotID::GatherPipelineGlobal;
 	if(slot_name == "GatherPipeline") return SlotID::GatherPipeline;
@@ -274,6 +275,8 @@ uint get_table_index(SlotID id)
 	if(id == SlotID::MeshletCaptureWrite) return Slots::Meshes::MeshletCaptureWrite::Slot::ID;
 
 	if(id == SlotID::QuantaFeedback) return Slots::Meshes::QuantaFeedback::Slot::ID;
+
+	if(id == SlotID::QuantaShadowFeedback) return Slots::Meshes::QuantaShadowFeedback::Slot::ID;
 
 	if(id == SlotID::IndirectDraw) return Slots::Meshes::IndirectDraw::Slot::ID;
 
@@ -594,6 +597,7 @@ std::string get_slot_name(SlotID id)
 	if(id == SlotID::MeshInfo) return "MeshInfo";
 	if(id == SlotID::MeshletCaptureWrite) return "MeshletCaptureWrite";
 	if(id == SlotID::QuantaFeedback) return "QuantaFeedback";
+	if(id == SlotID::QuantaShadowFeedback) return "QuantaShadowFeedback";
 	if(id == SlotID::IndirectDraw) return "IndirectDraw";
 	if(id == SlotID::GatherPipelineGlobal) return "GatherPipelineGlobal";
 	if(id == SlotID::GatherPipeline) return "GatherPipeline";

@@ -21,18 +21,22 @@ export namespace PSOS
 			struct VSMGatherDispatch: public PSOBase
 			{
 				struct Keys {
+					KeyValue<int, Nullable> Quanta;
 					GEN_DEF_COMP(Keys);
 				private:
 					SERIALIZE()
 					{
+						ar&NVP(Quanta);
 					}
 				};
 
-				GEN_COMPUTE_PSO(VSMGatherDispatch)
+				GEN_COMPUTE_PSO(VSMGatherDispatch, Quanta)
+				GEN_KEY(Quanta, true);
 
 
 				SimplePSO init_pso(Keys & key, std::function<void(SimplePSO&, Keys&)> f)
 				{
+					static const ShaderDefine<&Keys::Quanta,&SimpleComputePSO::compute> Quanta = "QUANTA";
 
 
 					SimplePSO mpso("VSMGatherDispatch");
@@ -44,6 +48,7 @@ export namespace PSOS
 					mpso.compute.entry_point = "CS";
 					mpso.compute.flags = HAL::ShaderOptions::None;
 			
+					Quanta.Apply(mpso, key);
 					return mpso;
 				}
 

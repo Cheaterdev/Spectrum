@@ -16,12 +16,14 @@ namespace Dev
 		uint capture_frame; // uint
 		uint meshlet_filter; // uint
 		DebugViewColor color_mode; // DebugViewColor
+		uint legacy_fallback; // uint
 		uint meshlet_masks; // StructuredBuffer<uint>
 		float4 GetTint() { return tint; }
 		uint GetRead_meshlet_masks() { return read_meshlet_masks; }
 		uint GetCapture_frame() { return capture_frame; }
 		uint GetMeshlet_filter() { return meshlet_filter; }
 		DebugViewColor GetColor_mode() { return color_mode; }
+		uint GetLegacy_fallback() { return legacy_fallback; }
 		StructuredBuffer<uint> GetMeshlet_masks() { return ResourceDescriptorHeap[meshlet_masks]; }
 	};
 }

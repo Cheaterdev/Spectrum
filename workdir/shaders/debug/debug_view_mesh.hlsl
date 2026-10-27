@@ -122,6 +122,8 @@ float4 PS(vertex_output i, primitive_output prim) : SV_TARGET0
     float3 V = normalize(GetFrameInfo().GetCamera().GetPosition().xyz - i.wpos);
     float3 N = normalize(i.normal);
     float headlight = 0.25 + 0.75 * abs(dot(N, V));
+    if (draw.GetLegacy_fallback() != 0 && (((uint)i.pos.x >> 3) + ((uint)i.pos.y >> 3)) % 2 == 0)
+        headlight *= 0.6;
     return float4(color * headlight, 1);
 }
 #endif

@@ -71,7 +71,10 @@ void mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, Scene::pt
 	auto capture_stage = [&](CullCapture::Stage stage) { return capturing ? std::optional(stage) : std::nullopt; };
 	// Same GBuffer-only scope as the capture: the hierarchy is walked for the
 	// main view's own camera, and the gather must hand out the matching args.
-	bool lod = cluster_lod && gbuffer && mesh_render_context->render_type == RENDER_TYPE::PIXEL;
+	// A depth pass opts in with a threshold of its own, and only for Quanta's cut (the legacy hierarchy keeps drawing
+	// full detail in the shadows).
+	bool lod = (cluster_lod && gbuffer && mesh_render_context->render_type == RENDER_TYPE::PIXEL)
+		|| (mesh_render_context->render_type == RENDER_TYPE::DEPTH && mesh_render_context->lod_threshold > 0 && Quanta::draw_enabled());
 
 	if (!gbuffer || !use_gpu_occlusion)
 	{
@@ -251,7 +254,7 @@ void  mesh_renderer::render_meshes(MeshRenderContext::ptr mesh_render_context, S
 	UINT meshes_count = (UINT)scene->command_ids[(int)mesh_render_context->render_mesh].size();
 
 	// Must agree with materials::PipelinePasses::set: the draws and the gather both need the Quanta permutation.
-	const bool quanta_draw = walk_lod && !capture_stage.has_value() && Quanta::draw_enabled();
+	const bool quanta_draw = walk_lod && Quanta::draw_enabled();
 
 	Slots::Meshes::GatherPipeline gather;
 

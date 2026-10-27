@@ -417,6 +417,16 @@ private:
 	// replaces.
 	std::vector<Table::Shadows::VSM::VSMLevelDispatchInfo> m_level_dispatch_info;
 
+	// "Quanta draw" for the shadow pages (VSMDepthDraw's Quanta permutation): decided once per frame in
+	// plan_frame(), because the gather and the draw passes must agree on it. The cut a cached page was drawn with
+	// depends on which of the mesh's pages were resident then, so each mesh's cut generation
+	// (Quanta::Resident::cut_generation) is kept and the pages of a mesh whose generation moved are redrawn.
+	bool  frame_quanta = false;
+	float frame_quanta_lod_px = 0;
+	std::unordered_map<const void*, uint32_t> quanta_cut_generations;
+	void mark_world_bounds(vec3 world_min, vec3 world_max);
+	void invalidate_quanta_cuts(Scene& scene);
+
 	// Phase 5.13: every per-slot view VSM_RenderPages' render() would
 	// otherwise call create_2d_slice() for -- once per dirty page, every
 	// frame, for the atlas DSV clear -- is instead built ONCE, eagerly,

@@ -4,6 +4,8 @@ import :VSM;
 import :BRDF;
 import :EngineAssets;
 import :FrameGraphContext;
+import :QuantaSplat;
+import :QuantaResidency;
 
 import HAL;
 
@@ -98,34 +100,7 @@ void VSM::attach_scene(std::shared_ptr<Scene> scene)
 		vec3 wmin = object->get_min();
 		vec3 wmax = object->get_max();
 
-		auto mark_bounds = [this](vec3 mn, vec3 mx)
-		{
-			camera light_view_cam = make_light_view_camera(get_position());
-			box bounds_ls = light_view_cam.get_points(mn, mx).get_bounds_in(light_view_cam.get_view());
-			float2 ls_min(bounds_ls.left, bounds_ls.top);
-			float2 ls_max(bounds_ls.right, bounds_ls.bottom);
-
-			for (int level = 0; level < VSM::MaxLevels; level++)
-			{
-				// A level that hasn't rendered yet has no meaningful
-				// cached_origin -- it'll get a full-mask render (recentered)
-				// the first time it does run, so there's nothing useful to
-				// mark here yet. Also true of any level currently outside
-				// [active_min, active_max] -- plan_frame() never planned it.
-				if (!level_initialized[level])
-					continue;
-
-				ivec2 p0 = page_table.clipmap.world_to_page(level, ls_min, cached_origin[level]);
-				ivec2 p1 = page_table.clipmap.world_to_page(level, ls_max, cached_origin[level]);
-
-				uint32_t mask = 0;
-				for (int py = p0.y; py <= p1.y; py++)
-					for (int px = p0.x; px <= p1.x; px++)
-						mask |= 1u << (py * page_table.clipmap.pages_per_level + px);
-
-				tracker.mark_pages(level, mask);
-			}
-		};
+		auto mark_bounds = [this](vec3 mn, vec3 mx) { mark_world_bounds(mn, mx); };
 
 		mark_bounds(wmin, wmax);
 
@@ -142,6 +117,56 @@ void VSM::attach_scene(std::shared_ptr<Scene> scene)
 			mark_bounds(it->second.first, it->second.second);
 		last_marked_bounds[object] = { wmin, wmax };
 	});
+}
+
+// Marks the (level, page) bits a world AABB overlaps, in every level that has rendered.
+void VSM::mark_world_bounds(vec3 mn, vec3 mx)
+{
+	camera light_view_cam = make_light_view_camera(get_position());
+	box bounds_ls = light_view_cam.get_points(mn, mx).get_bounds_in(light_view_cam.get_view());
+	float2 ls_min(bounds_ls.left, bounds_ls.top);
+	float2 ls_max(bounds_ls.right, bounds_ls.bottom);
+
+	for (int level = 0; level < VSM::MaxLevels; level++)
+	{
+		// A level that hasn't rendered yet has no meaningful
+		// cached_origin -- it'll get a full-mask render (recentered)
+		// the first time it does run, so there's nothing useful to
+		// mark here yet. Also true of any level currently outside
+		// [active_min, active_max] -- plan_frame() never planned it.
+		if (!level_initialized[level])
+			continue;
+
+		ivec2 p0 = page_table.clipmap.world_to_page(level, ls_min, cached_origin[level]);
+		ivec2 p1 = page_table.clipmap.world_to_page(level, ls_max, cached_origin[level]);
+
+		uint32_t mask = 0;
+		for (int py = p0.y; py <= p1.y; py++)
+			for (int px = p0.x; px <= p1.x; px++)
+				mask |= 1u << (py * page_table.clipmap.pages_per_level + px);
+
+		tracker.mark_pages(level, mask);
+	}
+}
+
+// A Quanta mesh's shadow depends on which of its pages are resident, so a page cached with an older cut is stale
+// once the streamer shows or hides one of them.
+void VSM::invalidate_quanta_cuts(Scene& scene)
+{
+	std::unordered_map<const void*, uint32_t> seen;
+	for (MeshAssetInstance* instance : scene.mesh_objects)
+	{
+		uint32_t generation = 0;
+		for (auto& resident : instance->quanta_residents)
+			if (resident)
+				generation += resident->cut_generation();
+
+		auto it = quanta_cut_generations.find(instance);
+		if (it == quanta_cut_generations.end() || it->second != generation)
+			mark_world_bounds(instance->get_min(), instance->get_max());
+		seen[instance] = generation;
+	}
+	quanta_cut_generations = std::move(seen);
 }
 
 void VSM::build_atlas_views()
@@ -290,6 +315,22 @@ void VSM::plan_frame(FrameGraph::Graph& graph)
 	if (hiz_culling_enabled && !hiz_culling_enabled_prev)
 		light_change_pending.fill(true);
 	hiz_culling_enabled_prev = hiz_culling_enabled;
+
+	// The gather and the draw passes of this frame both follow this, so it is read once. Switching it, or the
+	// error it stops at, changes what every cached page holds: redraw them all.
+	{
+		const bool quanta = Quanta::draw_enabled() && RenderSystem::get().device().is_mesh_shader_supported();
+		const float lod_px = quanta ? Quanta::shadow_lod_pixels() : 0.0f;
+		if (quanta != frame_quanta || lod_px != frame_quanta_lod_px)
+		{
+			light_change_pending.fill(true);
+			quanta_cut_generations.clear();
+		}
+		frame_quanta = quanta;
+		frame_quanta_lod_px = lod_px;
+		if (frame_quanta)
+			invalidate_quanta_cuts(*scene);
+	}
 
 	float3 current_light_pos = get_position();
 	frame_light_pos = current_light_pos;
@@ -677,6 +718,7 @@ VSM::VSM() : VariableContext(L"VSM")
 			info.page_batch_cb = compiled_batch.compiled();
 			info.bounds_min = level_min;
 			info.bounds_max = level_max;
+			info.lod_threshold = frame_quanta ? frame_quanta_lod_px / (float)page_table.page_size : 0.0f;
 			m_level_dispatch_info.push_back(info);
 		}
 
@@ -704,7 +746,7 @@ VSM::VSM() : VariableContext(L"VSM")
 		compute.set(scene->compiledGather[(int)MESH_TYPE::ALL]);
 		compute.set(scene->compiledScene);
 
-		compute.set_pipeline<PSOS::Shadows::VSM::VSMGatherDispatch>();
+		compute.set_pipeline<PSOS::Shadows::VSM::VSMGatherDispatch>(PSOS::Shadows::VSM::VSMGatherDispatch::Quanta.Use(frame_quanta));
 		compute.dispatch(ivec2((int)mesh_count, (int)m_level_dispatch_info.size()), ivec2(64, 1));
 	};
 
@@ -894,9 +936,22 @@ VSM::VSM() : VariableContext(L"VSM")
 			// VSM_DispatchCommands' own append counter, MaxDispatchEntries
 			// is only the upper bound.
 			if (use_vsm_conservative_raster)
-				graphics.set_pipeline<PSOS::Shadows::VSM::VSMDepthDrawConservative>();
+				graphics.set_pipeline<PSOS::Shadows::VSM::VSMDepthDrawConservative>(
+					PSOS::Shadows::VSM::VSMDepthDrawConservative::QuantaAmplification.Use(frame_quanta) |
+					PSOS::Shadows::VSM::VSMDepthDrawConservative::QuantaMesh.Use(frame_quanta));
 			else
-				graphics.set_pipeline<PSOS::Shadows::VSM::VSMDepthDraw>();
+				graphics.set_pipeline<PSOS::Shadows::VSM::VSMDepthDraw>(
+					PSOS::Shadows::VSM::VSMDepthDraw::QuantaAmplification.Use(frame_quanta) |
+					PSOS::Shadows::VSM::VSMDepthDraw::QuantaMesh.Use(frame_quanta));
+
+			if (frame_quanta)
+			{
+				// The cut's page requests, to the same streamer as the main view's.
+				Slots::Meshes::QuantaShadowFeedback feedback;
+				feedback.GetPages() = Quanta::Residency::get().feedback;
+				feedback.GetEpoch() = Quanta::Residency::get().epoch();
+				graphics.set(feedback);
+			}
 			{
 				Slots::Shadows::VSM::VSMPageTableData pageTableData;
 				pageTableData.GetPage_table()   = data.VSM_PageTable->texture2DArray;

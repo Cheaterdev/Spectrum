@@ -147,6 +147,10 @@ namespace HAL
         return dest;
     }
 
+    bool gdeflate_supported() { return false; }
+    std::vector<uint8_t> gdeflate_compress(const uint8_t*, size_t) { return {}; }
+    bool gdeflate_decompress(const uint8_t*, size_t, uint8_t*, size_t) { return false; }
+
     HAL::DeviceProperties Device::probe(HAL::Adapter::ptr adapter)
     {
         HAL::DeviceProperties props;

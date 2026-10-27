@@ -101,9 +101,9 @@ private:
 	std::shared_ptr<HAL::Texture> color_target;
 	std::shared_ptr<HAL::Texture> depth_target;
 
-	// One indirect list per DebugViewGather bucket (debug_view.prism).
+	// One indirect list per DebugViewGather bucket (debug_view.prism); the second set is the meshes drawn from Quanta.
 	static constexpr int bucket_count = 4;
-	HAL::virtual_gpu_buffer<DrawMeshCommand>::ptr commands[bucket_count];
+	HAL::virtual_gpu_buffer<DrawMeshCommand>::ptr commands[bucket_count * 2];
 	HAL::virtual_gpu_buffer<Table::Dev::DebugLineSegment>::ptr lines;
 
 	// Captured by update_frame() for this frame's render().

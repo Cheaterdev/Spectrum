@@ -738,13 +738,23 @@ void MeshAssetInstance::update_nodes()
 	nodes_count = 0;
 	rendering_count = 0;
 
+	// The debug view's capture slots (MeshletCaptureWrite): one per original cluster of the DAG, then 16 per Quanta
+	// group (a group holds at most 16 clusters), so a Quanta draw records its cut the same way.
+	auto mask_words_for = [&](int mesh_id)
+	{
+		uint words = universal_meshlet_mask_manager::words_for(static_cast<uint>(mesh_asset->meshes[mesh_id].meshet_view.desc.size / sizeof(Table::Meshes::Meshlet)));
+		if (size_t(mesh_id) < mesh_asset->quanta.size() && mesh_asset->quanta[mesh_id])
+			words += universal_meshlet_mask_manager::words_for(static_cast<uint>(mesh_asset->quanta[mesh_id]->groups.size()) * 16);
+		return words;
+	};
+
 	uint mask_words = 0;
 	mesh_asset->root_node.iterate([&](MeshNode* m)
 	{
 		nodes_count++;
 		rendering_count += (m->mesh_id != -1);
 		if (m->mesh_id != -1)
-			mask_words += universal_meshlet_mask_manager::words_for(static_cast<uint>(mesh_asset->meshes[m->mesh_id].meshet_view.desc.size / sizeof(Table::Meshes::Meshlet)));
+			mask_words += mask_words_for(m->mesh_id);
 		return true;
 	});
 
@@ -863,7 +873,7 @@ void MeshAssetInstance::update_nodes()
 			info.mesh_info.GetLod_group_offset() = mesh_asset->meshes[m].lod_group_offset;
 			info.mesh_info.GetLod_node_offset() = mesh_asset->meshes[m].lod_node_offset;
 			info.mesh_info.GetLod_node_count() = mesh_asset->meshes[m].lod_node_count;
-			mask_offset += universal_meshlet_mask_manager::words_for(info.mesh_info.GetLod_meshlet_count());
+			mask_offset += mask_words_for(m);
 
 			info.meshlet_offset = info.mesh_info.GetMeshlet_offset_local();
 			info.meshlet_count = info.mesh_info.GetMeshlet_count();

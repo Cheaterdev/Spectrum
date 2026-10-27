@@ -14,10 +14,12 @@ namespace Dev
 	{
 		uint capture_frame; // uint
 		DebugViewSource source; // DebugViewSource
+		uint quanta; // uint
 		uint stamps; // StructuredBuffer<uint>
-		uint commands[4]; // AppendStructuredBuffer<DrawMeshCommand>
+		uint commands[8]; // AppendStructuredBuffer<DrawMeshCommand>
 		uint GetCapture_frame() { return capture_frame; }
 		DebugViewSource GetSource() { return source; }
+		uint GetQuanta() { return quanta; }
 		AppendStructuredBuffer<DrawMeshCommand> GetCommands(int i) { return ResourceDescriptorHeap[commands[i]]; }
 
 		StructuredBuffer<uint> GetStamps() { return ResourceDescriptorHeap[stamps]; }

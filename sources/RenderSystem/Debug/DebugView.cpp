@@ -6,6 +6,8 @@ import :MeshAsset;
 import :MeshRenderer;   // exec_draw_mesh_indirect
 import :EngineAssets;
 import :BRDF;
+import :QuantaSplat;
+import :QuantaResidency;
 
 using namespace HAL;
 using namespace FrameGraph;
@@ -37,7 +39,7 @@ debug_view::debug_view() : VariableContext(L"Debug View")
 	texture.linear_source = true;
 
 	auto& device = RenderSystem::get().device();
-	for (int i = 0; i < bucket_count; i++)
+	for (int i = 0; i < bucket_count * 2; i++)
 	{
 		commands[i] = std::make_shared<virtual_gpu_buffer<DrawMeshCommand>>(device, max_debug_meshes, counterType::HELP_BUFFER,
 			HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess);
@@ -76,11 +78,12 @@ debug_view::debug_view() : VariableContext(L"Debug View")
 
 			{
 				Slots::Dev::DebugViewGather gather;
-				for (int i = 0; i < bucket_count; i++)
+				for (int i = 0; i < bucket_count * 2; i++)
 					gather.GetCommands()[i] = commands[i]->buffer;
 				gather.GetStamps()        = capture->stamps->buffer;
 				gather.GetCapture_frame() = frame_capture;
 				gather.GetSource()        = frame_source;
+					gather.GetQuanta()        = Quanta::draw_enabled();
 				compute.set(gather);
 			}
 			compute.set(scene->compiledGather[(int)MESH_TYPE::ALL]);
@@ -145,6 +148,8 @@ debug_view::debug_view() : VariableContext(L"Debug View")
 			}
 			uint meshlet_filter = frame_source == Dev::DebugViewSource::Rendered ? 1
 				: frame_source == Dev::DebugViewSource::Culled ? 2 : 0;
+			auto draw_buckets = [&](int first_command)
+			{
 			for (int i = 0; i < bucket_count; i++)
 			{
 				Slots::Dev::DebugViewDraw draw;
@@ -156,8 +161,25 @@ debug_view::debug_view() : VariableContext(L"Debug View")
 				draw.GetCapture_frame()      = frame_capture;
 				draw.GetMeshlet_filter()     = meshlet_filter;
 				draw.GetColor_mode()         = color_mode;
+					draw.GetLegacy_fallback() = first_command == 0 && Quanta::draw_enabled();
 				graphics.set(draw);
-				exec_draw_mesh_indirect(graphics, commands[i]->buffer, mesh_count);
+				exec_draw_mesh_indirect(graphics, commands[first_command + i]->buffer, mesh_count);
+			}
+			};
+			draw_buckets(0);
+
+			if (Quanta::draw_enabled())
+			{
+				PROFILE(L"debug_view_quanta_meshes");
+				graphics.set_pipeline<PSOS::Dev::DebugViewQuantaMesh>();
+				bind_targets();
+				graphics.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::LIST);
+				// The shader's cut functions take the feedback buffer but never write it here.
+				Slots::Meshes::QuantaShadowFeedback feedback;
+				feedback.GetPages() = Quanta::Residency::get().feedback;
+				feedback.GetEpoch() = Quanta::Residency::get().epoch();
+				graphics.set(feedback);
+				draw_buckets(bucket_count);
 			}
 		}
 

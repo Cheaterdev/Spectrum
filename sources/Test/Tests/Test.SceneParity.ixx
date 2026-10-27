@@ -693,6 +693,187 @@ export namespace Test
 			throw Test::TestFailure("the picture from DirectStorage pages differs from the resident one in " + std::to_string(diff.differing) + " of " + std::to_string(diff.size) + " bytes");
 	}
 
+	// A dense sphere (130 pages) through the asset file and a pool a fifth of its size: many DirectStorage reads into
+	// a tight pool, and a picture that still matches the resident one. Eviction itself is QuantaStreamingEvictsWhatTheViewLeft.
+	TEST(RenderSystem.SceneParity, QuantaStreamingBigMeshThroughDirectStorage)
+	{
+		const std::filesystem::path obj_path = std::filesystem::temp_directory_path() / "quanta_stress_sphere.obj";
+		const std::filesystem::path path = std::filesystem::temp_directory_path() / "quanta_stress_asset_test.bin";
+		{
+			constexpr uint32_t slices = 640, stacks = 320;
+			std::ofstream obj(obj_path);
+			for (uint32_t y = 0; y <= stacks; y++)
+				for (uint32_t x = 0; x <= slices; x++)
+				{
+					const float phi = float(y) / stacks * 3.14159265f, theta = float(x) / slices * 2.0f * 3.14159265f;
+					const float nx = std::sin(phi) * std::cos(theta), ny = std::cos(phi), nz = std::sin(phi) * std::sin(theta);
+					obj << "v " << nx << ' ' << ny << ' ' << nz << "\nvn " << nx << ' ' << ny << ' ' << nz
+						<< "\nvt " << float(x) / slices << ' ' << float(y) / stacks << '\n';
+				}
+			for (uint32_t y = 0; y < stacks; y++)
+				for (uint32_t x = 0; x < slices; x++)
+				{
+					const uint32_t a = y * (slices + 1) + x + 1, b = a + 1, c = a + slices + 1, d = c + 1;
+					obj << "f " << a << '/' << a << '/' << a << ' ' << c << '/' << c << '/' << c << ' ' << b << '/' << b << '/' << b << '\n'
+						<< "f " << b << '/' << b << '/' << b << ' ' << c << '/' << c << '/' << c << ' ' << d << '/' << d << '/' << d << '\n';
+				}
+		}
+
+		auto* raw = new MeshAsset(obj_path.wstring());   // see QuantaSplatDrawsTheCut for why a raw `new`
+		raw->register_new(L"quanta_stress_sphere");
+		auto mesh = raw->get_ptr<MeshAsset>();
+		std::filesystem::remove(obj_path);
+		ASSERT_FALSE(mesh->quanta.empty());
+
+		uint32_t roots = 0, total = 0;
+		for (auto& quanta : mesh->quanta)
+		{
+			roots += quanta->root_page_count;
+			total += static_cast<uint32_t>(quanta->pages.size());
+		}
+		ASSERT_TRUE(total > 100);
+
+		{
+			FileDataStorage storage(path);
+			storage.start_save();
+			mesh->save_partitions(storage);
+			storage.save();
+		}
+		mesh->quanta.clear();
+		{
+			FileDataStorage storage(path);
+			mesh->load_partitions(storage, nullptr);
+		}
+		size_t compressed_pages = 0;
+		for (auto& quanta : mesh->quanta)
+		{
+			ASSERT_FALSE(quanta->file.empty());
+			for (auto& page : quanta->pages)
+				compressed_pages += page.file_size < page.data.size();
+		}
+		if (HAL::gdeflate_supported())
+			ASSERT_TRUE(compressed_pages > 0);   // the reads below then go through DirectStorage's decompression
+
+		auto make_scene = [&](SceneFrame& frame) {
+			auto instance = std::make_shared<MeshAssetInstance>(mesh);
+			mat4x4 place = mat4x4::translation(vec3(3, 1, 3));
+			place.scaling(6.0f);   // near and large, so the cut goes deep and asks for many pages
+			instance->set_local_transform(place);
+			frame.scene->add_child(instance);
+		};
+
+		{
+			SceneFrame warm;
+			make_scene(warm);
+			warm.wait_for_materials();
+			Quanta::set_draw_enabled(true);
+			warm.wait_for_materials();
+			Quanta::set_draw_enabled(false);
+		}
+
+		// Roots plus a few more pages than the view needs (about 21 of the 130): a tight pool, a fifth of the mesh.
+		const uint32_t pool = roots + 26;
+
+		auto render = [&](bool streamed, Quanta::StreamStats* stats, bool* settled) {
+			Quanta::set_streaming(streamed, pool);
+			HAL::texture_data::ptr picture;
+			{
+				SceneFrame frame;
+				make_scene(frame);
+
+				std::shared_ptr<HAL::TextureResource> albedo;
+				FGT_RasterCapturePipeline capture;
+				capture.fGT_CaptureAlbedo.render_func = [&](auto& data, FrameContext&) { albedo = as_texture(data.GBuffer_Albedo); };
+
+				Quanta::set_draw_enabled(true);
+				if (streamed)
+					*settled = settle_streaming(frame, capture, 4000);
+				else
+					for (int i = 0; i < kSettleFrames; ++i)
+						frame.run(capture);
+				Quanta::set_draw_enabled(false);
+
+				picture = Test::readback_texture(albedo.get());
+				*stats = Quanta::Residency::get().stats();
+			}
+			Quanta::set_streaming(false);
+			return picture;
+		};
+
+		Quanta::StreamStats resident_stats, streamed_stats;
+		bool settled = true;
+		auto resident = render(false, &resident_stats, &settled);
+		auto streamed = render(true, &streamed_stats, &settled);
+		std::filesystem::remove(path);
+
+		Log::get() << "Quanta stress: " << total << " pages (" << roots << " roots), pool " << streamed_stats.pool_pages << ", "
+			<< streamed_stats.loads << " loads, " << streamed_stats.file_loads << " from the file, " << streamed_stats.evictions << " evictions" << Log::endl;
+
+		if (!settled)
+			throw Test::TestFailure("streaming never settled: " + std::to_string(streamed_stats.loads) + " loads, " + std::to_string(streamed_stats.wanted) + " pages still wanted, "
+				+ std::to_string(streamed_stats.evictions) + " evictions");
+		ASSERT_TRUE(streamed_stats.file_loads > 8);
+
+		PictureDiff diff = compare_pictures(resident, streamed);
+		if (diff.covered < diff.size / 100)
+			throw Test::TestFailure("the mesh covers almost nothing of the GBuffer albedo (" + std::to_string(diff.covered) + " bytes)");
+		if (diff.differing > diff.size / 5000)
+			throw Test::TestFailure("the picture from the small pool differs from the resident one in " + std::to_string(diff.differing) + " of " + std::to_string(diff.size) + " bytes");
+	}
+
+	// What the shadow pages key their redraws on: a mesh's cut generation moves when the streamer shows pages of
+	// it, and stays put when nothing changes.
+	TEST(RenderSystem.SceneParity, QuantaStreamingBumpsTheCutGeneration)
+	{
+		auto* raw = new MeshAsset(L"resources/sphere.obj");   // see QuantaSplatDrawsTheCut for why a raw `new`
+		raw->register_new(L"quanta_generation_test");
+		auto mesh = raw->get_ptr<MeshAsset>();
+		ASSERT_FALSE(mesh->quanta.empty());
+
+		{
+			SceneFrame warm;
+			warm.scene->add_child(std::make_shared<MeshAssetInstance>(mesh));
+			warm.wait_for_materials();
+			Quanta::set_draw_enabled(true);
+			warm.wait_for_materials();
+			Quanta::set_draw_enabled(false);
+		}
+
+		auto generation = [](const MeshAssetInstance& instance) {
+			uint32_t sum = 0;
+			for (auto& resident : instance.quanta_residents)
+				if (resident)
+					sum += resident->cut_generation();
+			return sum;
+		};
+
+		Quanta::set_streaming(true, 512);
+		uint32_t settled = 0, later = 0;
+		{
+			SceneFrame frame;
+			auto instance = std::make_shared<MeshAssetInstance>(mesh);
+			mat4x4 place = mat4x4::translation(vec3(3, 1, 3));
+			instance->set_local_transform(place);
+			frame.scene->add_child(instance);
+
+			FGT_RasterCapturePipeline capture;
+			capture.fGT_CaptureAlbedo.render_func = [](auto&, FrameContext&) {};
+			Quanta::set_draw_enabled(true);
+			ASSERT_TRUE(settle_streaming(frame, capture));
+			for (int i = 0; i < 8; ++i)
+				frame.run(capture);   // the last prepare() applies the last change
+			settled = generation(*instance);
+			for (int i = 0; i < 30; ++i)
+				frame.run(capture);
+			later = generation(*instance);
+			Quanta::set_draw_enabled(false);
+		}
+		Quanta::set_streaming(false);
+
+		ASSERT_TRUE(settled > 0);
+		ASSERT_EQ(settled, later);
+	}
+
 	// Two meshes share a pool that holds only one's detail: when the view moves from one to the other the first
 	// one's pages are evicted for the second's, and the second ends up drawn like it would be resident.
 	TEST(RenderSystem.SceneParity, QuantaStreamingEvictsWhatTheViewLeft)
