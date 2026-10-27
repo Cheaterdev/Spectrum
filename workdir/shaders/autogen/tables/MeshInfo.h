@@ -21,6 +21,8 @@ namespace Meshes
 		uint lod_node_count; // uint
 		uint object_id; // uint
 		uint meshlet_mask_offset; // uint
+		uint quanta_node_offset; // uint
+		uint quanta_node_count; // uint
 		uint GetVertex_offset_local() { return vertex_offset_local; }
 		uint GetMeshlet_offset_local() { return meshlet_offset_local; }
 		uint GetNode_offset() { return node_offset; }
@@ -31,6 +33,8 @@ namespace Meshes
 		uint GetLod_node_count() { return lod_node_count; }
 		uint GetObject_id() { return object_id; }
 		uint GetMeshlet_mask_offset() { return meshlet_mask_offset; }
+		uint GetQuanta_node_offset() { return quanta_node_offset; }
+		uint GetQuanta_node_count() { return quanta_node_count; }
 	};
 }
 using Meshes::MeshInfo;

@@ -407,7 +407,139 @@ uint CapturedStatus(uint cluster)
 }
 #endif
 
-#ifndef CLUSTER_LOD
+#ifdef QUANTA
+
+// Quanta's clusters instead of the mesh's own meshlets. The same LOD walk as the ClusterLod AS below, but
+// the hierarchy and the clusters come from Quanta's shared buffers (MeshInstanceInfo::quanta_*), laid out as
+// in Quanta.ixx / QuantaResidency.ixx: dword records, group.page already a dword offset into the pages.
+static const uint Q_NODE_DWORDS = 12;     // lod_sphere[4] refined_sphere[4] lod_error refined_error first_group group_count
+static const uint Q_GROUP_DWORDS = 16;    // same, then cluster_count depth page offset_in_page(bytes) size reserved
+static const uint Q_CLUSTER_DWORDS = 16;  // vertex_offset triangle_offset vertex_count triangle_count bounding_sphere[4] cone lod_level refined_error reserved refined_sphere[4]
+static const uint Q_GROUP_HEADER_DWORDS = 4;
+
+float4 QuantaLoad4(StructuredBuffer<uint> b, uint i)
+{
+    return float4(asfloat(b[i]), asfloat(b[i + 1]), asfloat(b[i + 2]), asfloat(b[i + 3]));
+}
+
+// The LOD tests take a MeshletGroup: a node's record fits it as is (FirstCluster / ClusterCount = its group
+// range); for a group only the two spheres and errors matter.
+MeshletGroup QuantaRecord(StructuredBuffer<uint> b, uint dword)
+{
+    MeshletGroup r;
+    r.LodSphere = QuantaLoad4(b, dword);
+    r.RefinedSphere = QuantaLoad4(b, dword + 4);
+    r.LodError = asfloat(b[dword + 8]);
+    r.RefinedError = asfloat(b[dword + 9]);
+    r.FirstCluster = b[dword + 10];
+    r.ClusterCount = b[dword + 11];
+    return r;
+}
+
+// Dword offset of a group's blob in the pages buffer.
+uint QuantaBlob(StructuredBuffer<uint> groups, uint group)
+{
+    uint g = group * Q_GROUP_DWORDS;
+    return groups[g + 12] + groups[g + 13] / 4;
+}
+
+MeshletCullData QuantaClusterCull(StructuredBuffer<uint> pages, uint header)
+{
+    MeshletCullData c;
+    c.BoundingSphere = QuantaLoad4(pages, header + 4);
+    c.NormalCone = pages[header + 8];
+    c.LodLevel = pages[header + 9];
+    c.RefinedError = asfloat(pages[header + 10]);
+    c.RefinedSphere = QuantaLoad4(pages, header + 12);
+    return c;
+}
+
+groupshared uint s_GroupFirst[LOD_NODE_GROUPS];
+groupshared uint s_GroupEnd[LOD_NODE_GROUPS];
+
+// One Quanta hierarchy node per AS group (MeshCommandData::quanta_draw_commands). The payload entry of a
+// cluster is (group << 4) | cluster-in-group: a group holds at most 16 clusters.
+[NumThreads(32, 1, 1)]
+void AS(uint gtid : SV_GroupThreadID, uint gid : SV_GroupID)
+{
+    bind_draw(read_draw_id());
+    s_Payload.draw_id = draw_id;
+    float lod_threshold = frameInfo.GetLodThreshold();
+    Camera camera = frameInfo.GetCamera();
+    node_data node = sceneData.GetNodes()[meshInfo.GetNode_offset()];
+    matrix m = node.GetNode_global_matrix();
+    float scale = MaxScale(m);
+
+    StructuredBuffer<uint> pages = meshInstanceInfo.GetQuanta_pages();
+    StructuredBuffer<uint> groups = meshInstanceInfo.GetQuanta_groups();
+    StructuredBuffer<uint> nodes = meshInstanceInfo.GetQuanta_nodes();
+
+    bool node_live = gid < meshInfo.GetQuanta_node_count();
+    MeshletGroup quanta_node = (MeshletGroup)0;
+    if (node_live)
+    {
+        quanta_node = QuantaRecord(nodes, (meshInfo.GetQuanta_node_offset() + gid) * Q_NODE_DWORDS);
+        node_live = !LodCanSkip(quanta_node, m, scale, camera, lod_threshold);
+    }
+
+    uint visible_count = 0;
+    if (node_live)
+    {
+        uint first = 0;
+        uint count = 0;
+        if (gtid < quanta_node.ClusterCount)
+        {
+            uint group = quanta_node.FirstCluster + gtid;
+            MeshletGroup record = QuantaRecord(groups, group * Q_GROUP_DWORDS);
+            if (LodGroupPasses(record, m, scale, camera, lod_threshold) && !LodCanSkip(record, m, scale, camera, lod_threshold))
+            {
+                first = group;
+                count = groups[group * Q_GROUP_DWORDS + 10];
+            }
+        }
+
+        uint total = WaveActiveSum(count);
+        s_GroupFirst[gtid] = first;
+        s_GroupEnd[gtid] = WavePrefixSum(count) + count;
+        GroupMemoryBarrierWithGroupSync();
+
+        for (uint base = 0; base < total; base += 32)
+        {
+            uint item = base + gtid;
+            bool visible = false;
+            uint entry = 0;
+            if (item < total)
+            {
+                // The lane whose span holds the item (see the ClusterLod AS below).
+                uint lane = 0;
+                [unroll]
+                for (uint step = 16; step > 0; step >>= 1)
+                    if (s_GroupEnd[lane + step - 1] <= item)
+                        lane += step;
+
+                uint start = lane > 0 ? s_GroupEnd[lane - 1] : 0;
+                uint group = s_GroupFirst[lane];
+                uint cluster = item - start;
+                uint header = QuantaBlob(groups, group) + Q_GROUP_HEADER_DWORDS + cluster * Q_CLUSTER_DWORDS;
+                MeshletCullData cull_data = QuantaClusterCull(pages, header);
+
+                uint cull = LodClusterPasses(cull_data, m, scale, camera, lod_threshold)
+                    ? CameraCull(cull_data, m) : MESHLET_LOD_REJECTED;
+                visible = cull == MESHLET_DRAWN;
+                entry = (group << 4) | cluster;
+            }
+
+            uint index = visible_count + WavePrefixCountBits(visible);
+            if (visible)
+                s_Payload.MeshletIndices[index] = entry;
+            visible_count += WaveActiveCountBits(visible);
+        }
+    }
+
+    DispatchMesh(visible_count, 1, 1, s_Payload);
+}
+
+#elif !defined(CLUSTER_LOD)
 
 // The original clusters, 32 per group (MeshCommandData::draw_commands).
 [NumThreads(32, 1, 1)]
@@ -580,6 +712,50 @@ void VS(
 )
 {
     bind_draw(payload.draw_id);
+
+#ifdef QUANTA
+    // The payload entry names the cluster as (group << 4) | cluster-in-group (the AS above).
+    StructuredBuffer<uint> pages = meshInstanceInfo.GetQuanta_pages();
+    StructuredBuffer<uint> groups = meshInstanceInfo.GetQuanta_groups();
+    uint entry = payload.MeshletIndices[gid2.x];
+    uint blob = groups[(entry >> 4) * 16 + 12] + groups[(entry >> 4) * 16 + 13] / 4;
+    uint header = blob + 4 + (entry & 15) * 16;
+    uint vertex_count = pages[header + 2];
+    uint triangle_count = pages[header + 3];
+    SetMeshOutputCounts(vertex_count, triangle_count);
+
+    if (gtid < triangle_count)
+    {
+        // Three byte indices per triangle at a byte offset from the blob start.
+        uint byte_offset = blob * 4 + pages[header + 1] + gtid * 3;
+        uint3 tri;
+        [unroll]
+        for (uint k = 0; k < 3; k++)
+        {
+            uint b = byte_offset + k;
+            tri[k] = (pages[b >> 2] >> ((b & 3) * 8)) & 0xFF;
+        }
+        tris[gtid] = tri;
+#ifdef __spirv__
+        prims[gtid].draw_id = draw_id;
+#endif
+    }
+
+    if (gtid < vertex_count)
+    {
+        // Quanta::Vertex is mesh_vertex_input's twelve floats.
+        uint p = blob + pages[header] / 4 + gtid * 12;
+        mesh_vertex_input v;
+        v.pos = float3(asfloat(pages[p]), asfloat(pages[p + 1]), asfloat(pages[p + 2]));
+        v.normal = float3(asfloat(pages[p + 3]), asfloat(pages[p + 4]), asfloat(pages[p + 5]));
+        v.tc = float2(asfloat(pages[p + 6]), asfloat(pages[p + 7]));
+        v.tangent = float4(asfloat(pages[p + 8]), asfloat(pages[p + 9]), asfloat(pages[p + 10]), asfloat(pages[p + 11]));
+
+        node_data node = sceneData.GetNodes()[meshInfo.GetNode_offset()];
+        verts[gtid] = transform(node.GetNode_global_matrix(), node.GetNode_global_matrix_prev(), frameInfo.GetCamera(), v);
+    }
+    return;
+#endif
 
     uint gid = gid2.x;
 

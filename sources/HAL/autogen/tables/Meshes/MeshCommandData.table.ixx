@@ -28,6 +28,7 @@ export namespace Table
 			uint meshlet_count;
 			DispatchMeshArguments draw_commands;
 			DispatchMeshArguments lod_draw_commands;
+			DispatchMeshArguments quanta_draw_commands;
 			uint& GetMaterial_id() { return material_id; }
 			uint& GetNode_offset() { return node_offset; }
 			Pointer<Table::Meshes::MeshInfo>& GetMesh_cb() { return mesh_cb; }
@@ -35,6 +36,7 @@ export namespace Table
 			uint& GetMeshlet_count() { return meshlet_count; }
 			DispatchMeshArguments& GetDraw_commands() { return draw_commands; }
 			DispatchMeshArguments& GetLod_draw_commands() { return lod_draw_commands; }
+			DispatchMeshArguments& GetQuanta_draw_commands() { return quanta_draw_commands; }
 			static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 			template<class Compiler>
 			void compile(Compiler& compiler) const
@@ -46,6 +48,7 @@ export namespace Table
 				compiler.compile(meshlet_count, "MeshCommandData::meshlet_count");
 				compiler.compile(draw_commands, "MeshCommandData::draw_commands");
 				compiler.compile(lod_draw_commands, "MeshCommandData::lod_draw_commands");
+				compiler.compile(quanta_draw_commands, "MeshCommandData::quanta_draw_commands");
 			}
 			using Compiled = MeshCommandData;
 
@@ -62,6 +65,7 @@ export namespace Table
 				ar& NVP(meshinstance_cb);
 				ar& NVP(draw_commands);
 				ar& NVP(lod_draw_commands);
+				ar& NVP(quanta_draw_commands);
 				ar& NVP(meshlet_count);
 			}
 

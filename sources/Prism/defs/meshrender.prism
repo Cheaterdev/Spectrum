@@ -38,6 +38,11 @@ namespace Meshes
 		StructuredBuffer<uint> unique_indices;
 		StructuredBuffer<uint> primitive_indices;
 
+		# Quanta's shared buffers (Graphics:QuantaResidency), the same for every mesh: dword views the
+		# Quanta draw lays the group/node/cluster records over (gbuffer/mesh_shader.hlsl, QUANTA).
+		StructuredBuffer<uint> quanta_pages;
+		StructuredBuffer<uint> quanta_groups;
+		StructuredBuffer<uint> quanta_nodes;
 	}
 
 
@@ -68,6 +73,11 @@ namespace Meshes
 		# This part's first entry in universal_meshlet_mask_manager, one per
 		# cluster of the whole DAG (MeshletCaptureWrite).
 		uint meshlet_mask_offset;
+
+		# This part's hierarchy nodes in Quanta's shared node table (0 nodes = the mesh has no Quanta
+		# data and a Quanta draw skips it).
+		uint quanta_node_offset;
+		uint quanta_node_count;
 	}
 
 	# Debug view meshlet capture: the GBuffer AS (CaptureMeshlets permutation)
@@ -219,6 +229,8 @@ namespace Meshes
 		DispatchMeshArguments draw_commands;
 		# One AS group per LOD hierarchy node: GatherPipeline's ClusterLod.
 		DispatchMeshArguments lod_draw_commands;
+		# One AS group per Quanta hierarchy node: GatherPipeline's Quanta.
+		DispatchMeshArguments quanta_draw_commands;
 		uint meshlet_count;
 	}
 
@@ -384,6 +396,12 @@ namespace Meshes
 		[rename = CLUSTER_LOD]
 		[CS, nullable]
 		define ClusterLod;
+
+		# Hands out quanta_draw_commands (implies ClusterLod). Must match the draws' GBufferDraw
+		# QuantaAmplification / QuantaMesh permutations (mesh_renderer sets all three).
+		[rename = QUANTA]
+		[CS, nullable]
+		define Quanta;
 	}
 
 

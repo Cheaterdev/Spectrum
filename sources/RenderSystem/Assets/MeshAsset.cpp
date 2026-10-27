@@ -485,6 +485,7 @@ void MeshAssetInstance::override_material(size_t i, MaterialAsset::ptr mat)
 
 	meshpart[0].draw_commands = info.dispatch_mesh_arguments;
 	meshpart[0].lod_draw_commands = info.lod_dispatch_mesh_arguments;
+	meshpart[0].quanta_draw_commands = info.quanta_dispatch_mesh_arguments;
 	meshpart[0].node_offset = info.mesh_info.GetNode_offset();
 	meshpart[0].meshlet_count = info.meshlet_count;
 
@@ -577,6 +578,7 @@ void MeshAssetInstance::on_add(scene_object* parent)
 			meshpart[i].material_id = static_cast<materials::universal_material*>(info.material)->get_material_id();
 			meshpart[i].draw_commands = info.dispatch_mesh_arguments;
 			meshpart[i].lod_draw_commands = info.lod_dispatch_mesh_arguments;
+			meshpart[i].quanta_draw_commands = info.quanta_dispatch_mesh_arguments;
 			meshpart[i].node_offset = info.mesh_info.GetNode_offset();
 			meshpart[i].meshlet_count = info.meshlet_count;
 
@@ -778,6 +780,16 @@ void MeshAssetInstance::update_nodes()
 	instance_info.GetUnique_indices() = mesh_asset->unique_indices;
 	instance_info.GetPrimitive_indices() = mesh_asset->primitive_indices;
 
+	auto& quanta_residency = Quanta::Residency::get();
+	instance_info.GetQuanta_pages() = quanta_residency.pages.buffer.structuredBuffer;
+	instance_info.GetQuanta_groups() = quanta_residency.groups.buffer.structuredBuffer;
+	instance_info.GetQuanta_nodes() = quanta_residency.nodes.buffer.structuredBuffer;
+
+	quanta_residents.assign(mesh_asset->quanta.size(), nullptr);
+	for (size_t q = 0; q < mesh_asset->quanta.size(); q++)
+		if (mesh_asset->quanta[q])
+			quanta_residents[q] = quanta_residency.acquire(mesh_asset->quanta[q]);
+
 	mesh_instance_info = instance_info.compile(RenderSystem::get().device().get_static_gpu_data());
 	auto gpu_nodes = nodes_handle.map();
 	auto gpu_instances = instance_handle.map();
@@ -807,6 +819,15 @@ void MeshAssetInstance::update_nodes()
 			info.draw_arguments = mesh_asset->meshes[m].draw_arguments;
 			info.dispatch_mesh_arguments = mesh_asset->meshes[m].dispatch_mesh_arguments;
 			info.lod_dispatch_mesh_arguments = mesh_asset->meshes[m].lod_dispatch_mesh_arguments;
+			info.quanta_dispatch_mesh_arguments = {};
+			info.quanta_dispatch_mesh_arguments.ThreadGroupCountY = 1;
+			info.quanta_dispatch_mesh_arguments.ThreadGroupCountZ = 1;
+			if (size_t(m) < quanta_residents.size() && quanta_residents[m])
+			{
+				info.mesh_info.GetQuanta_node_offset() = static_cast<uint>(quanta_residents[m]->node_offset());
+				info.mesh_info.GetQuanta_node_count() = static_cast<uint>(quanta_residents[m]->mesh->nodes.size());
+				info.quanta_dispatch_mesh_arguments.ThreadGroupCountX = info.mesh_info.GetQuanta_node_count();
+			}
 
 
 			info.primitive = mesh_asset->meshes[m].primitive;
@@ -957,6 +978,8 @@ void SceneFrameManager::prepare(HAL::CommandList::ptr& command_list, Scene& scen
 	universal_nodes_manager::get().prepare(command_list);
 
 	universal_mesh_instance_manager::get().prepare(command_list);
+	// Quanta's pages, groups and nodes for the instances above (and the Quanta draw reading them).
+	Quanta::Residency::get().prepare(command_list);
 	//	universal_mesh_info_part_manager::get().prepare(command_list);
 	universal_material_info_part_manager::get().prepare(command_list);
 	universal_rtx_manager::get().prepare(command_list);

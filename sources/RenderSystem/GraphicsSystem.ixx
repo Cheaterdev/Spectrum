@@ -9,6 +9,7 @@ import :EngineAssets;
 import :FontAsset;
 import :Materials.UniversalMaterial;
 import :MeshAsset;
+import :QuantaResidency;
 import GUI;
 import Core;
 import TextEngine;
@@ -83,6 +84,7 @@ public:
         universal_material_info_part_manager::reset();
         universal_rtx_manager::reset();
         universal_meshlet_mask_manager::reset();
+        Quanta::Residency::reset();
     	RenderSystem::get().device().stop_all();
         RenderSystem::reset();
     }

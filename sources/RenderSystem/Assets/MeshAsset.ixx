@@ -10,6 +10,7 @@ import HAL;
 import :Texture;
 import :Quanta;
 import :QuantaAsset;
+import :QuantaResidency;
 
 import stl.core;
 export{
@@ -314,6 +315,7 @@ export{
 			DrawIndexedArguments draw_arguments;
 			DispatchMeshArguments dispatch_mesh_arguments;
 			DispatchMeshArguments lod_dispatch_mesh_arguments;
+			DispatchMeshArguments quanta_dispatch_mesh_arguments;   // one group per Quanta node, 0 without Quanta
 			UINT material_id;
 			MaterialAsset* material;
 			UINT meshlet_offset;
@@ -330,6 +332,10 @@ export{
 			HAL::StructuredBufferView<UINT32> index_buffer_view;
 
 		};
+
+		// This instance's copy of each of mesh_asset->quanta in the shared GPU buffers (null where the
+		// mesh has none), indexed like it. Held so the ranges live as long as the instance draws them.
+		std::vector<std::shared_ptr<Quanta::Resident>> quanta_residents;
 
 		std::vector<render_info> rendering;
 		std::vector<mesh_asset_node> nodes;

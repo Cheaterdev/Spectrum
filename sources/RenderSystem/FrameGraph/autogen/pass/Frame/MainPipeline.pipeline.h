@@ -55,6 +55,7 @@
 #include "../Denoise/NRD/NRD_SIGMA_Execute.h"
 #include "../Denoise/NRD/NRD_ShadowCombine.h"
 #include "../GI/DDGI/Dev/DDGIDebug.h"
+#include "../Dev/QuantaSplat.h"
 #include "../Environment/Sky.h"
 #include "../Raytrace/TranslucentRTX.h"
 #include "../Post/BloomBuild.h"
@@ -188,6 +189,7 @@ namespace Frame
 			Passes::Denoise::NRD::NRD_SIGMA_Execute::Name.ptr,
 			Passes::Denoise::NRD::NRD_ShadowCombine::Name.ptr,
 			Passes::GI::DDGI::Dev::DDGIDebug::Name.ptr,
+			Passes::Dev::QuantaSplat::Name.ptr,
 			Passes::Environment::Sky::Name.ptr,
 			Passes::Raytrace::TranslucentRTX::Name.ptr,
 			Passes::Post::BloomBuild::Name.ptr,
@@ -712,11 +714,12 @@ namespace Frame
 			{ PassID::SSSRR_BlurV, 0 },
 			{ PassID::NRD_ShadowCombine, 0 },
 			{ PassID::DDGIDebug, 0 },
+			{ PassID::QuantaSplat, 0 },
 			{ PassID::VoxelDebug, 0 },
 		};
 		static inline const FrameGraph::PrecompiledState GBuffer_DepthMips_c0_states[] = {
 			{ true, { GBuffer_DepthMips_c0_pass_refs + 0, 1 } },
-			{ false, { GBuffer_DepthMips_c0_pass_refs + 1, 28 } },
+			{ false, { GBuffer_DepthMips_c0_pass_refs + 1, 29 } },
 		};
 		static inline const FrameGraph::PassRef GBuffer_Quality_c0_pass_refs[] = {
 			{ PassID::Scene, 0 },
@@ -821,6 +824,7 @@ namespace Frame
 			{ PassID::ReflCombine, 0 },
 			{ PassID::NRD_ShadowCombine, 0 },
 			{ PassID::DDGIDebug, 0 },
+			{ PassID::QuantaSplat, 0 },
 			{ PassID::Sky, 0 },
 			{ PassID::TranslucentRTX, 0 },
 		};
@@ -837,7 +841,8 @@ namespace Frame
 			{ true, { ResultTexture_c0_pass_refs + 9, 1 } },
 			{ true, { ResultTexture_c0_pass_refs + 10, 1 } },
 			{ true, { ResultTexture_c0_pass_refs + 11, 1 } },
-			{ false, { ResultTexture_c0_pass_refs + 12, 1 } },
+			{ true, { ResultTexture_c0_pass_refs + 12, 1 } },
+			{ false, { ResultTexture_c0_pass_refs + 13, 1 } },
 		};
 		static inline const FrameGraph::PassRef GBuffer_TempColor_c0_pass_refs[] = {
 			{ PassID::GBufferDownsampler, 0 },
@@ -2633,10 +2638,25 @@ namespace Frame
 			{ PassID::VSM_ShadowResolve, 0 },
 			{ PassID::VSM_Unshadowed, 0 },
 		};
+		static inline const FrameGraph::PassRef QuantaSplat_0_prev[] = {
+			{ PassID::DDGIDebug, 0 },
+			{ PassID::NRD_IndirectCombine, 0 },
+			{ PassID::NRD_ShadowCombine, 0 },
+			{ PassID::ReflCombine, 0 },
+			{ PassID::ResultCreation, 0 },
+			{ PassID::SSS_BlurH, 0 },
+			{ PassID::SSS_BlurV, 0 },
+			{ PassID::Scene, 0 },
+			{ PassID::VSM_Combine, 0 },
+			{ PassID::VSM_DebugClassifyOverlay, 0 },
+			{ PassID::VSM_ShadowResolve, 0 },
+			{ PassID::VSM_Unshadowed, 0 },
+		};
 		static inline const FrameGraph::PassRef Sky_0_prev[] = {
 			{ PassID::DDGIDebug, 0 },
 			{ PassID::NRD_IndirectCombine, 0 },
 			{ PassID::NRD_ShadowCombine, 0 },
+			{ PassID::QuantaSplat, 0 },
 			{ PassID::ReflCombine, 0 },
 			{ PassID::ResultCreation, 0 },
 			{ PassID::SSS_BlurH, 0 },
@@ -2654,6 +2674,7 @@ namespace Frame
 			{ PassID::NRD_IndirectCombine, 0 },
 			{ PassID::NRD_ShadowCombine, 0 },
 			{ PassID::PreScene, 0 },
+			{ PassID::QuantaSplat, 0 },
 			{ PassID::ReflCombine, 0 },
 			{ PassID::ResultCreation, 0 },
 			{ PassID::SSS_BlurH, 0 },
@@ -2669,6 +2690,7 @@ namespace Frame
 			{ PassID::DDGIDebug, 0 },
 			{ PassID::NRD_IndirectCombine, 0 },
 			{ PassID::NRD_ShadowCombine, 0 },
+			{ PassID::QuantaSplat, 0 },
 			{ PassID::ReflCombine, 0 },
 			{ PassID::ResultCreation, 0 },
 			{ PassID::SSS_BlurH, 0 },
@@ -2689,6 +2711,7 @@ namespace Frame
 			{ PassID::DDGIDebug, 0 },
 			{ PassID::NRD_IndirectCombine, 0 },
 			{ PassID::NRD_ShadowCombine, 0 },
+			{ PassID::QuantaSplat, 0 },
 			{ PassID::ReflCombine, 0 },
 			{ PassID::ResultCreation, 0 },
 			{ PassID::SSS_BlurH, 0 },
@@ -2705,6 +2728,7 @@ namespace Frame
 			{ PassID::DDGIDebug, 0 },
 			{ PassID::NRD_IndirectCombine, 0 },
 			{ PassID::NRD_ShadowCombine, 0 },
+			{ PassID::QuantaSplat, 0 },
 			{ PassID::ReflCombine, 0 },
 			{ PassID::ResultCreation, 0 },
 			{ PassID::SMAA, 0 },
@@ -2723,6 +2747,7 @@ namespace Frame
 			{ PassID::FSR, 0 },
 			{ PassID::NRD_IndirectCombine, 0 },
 			{ PassID::NRD_ShadowCombine, 0 },
+			{ PassID::QuantaSplat, 0 },
 			{ PassID::ReflCombine, 0 },
 			{ PassID::ResultCreation, 0 },
 			{ PassID::SMAA, 0 },
@@ -2743,6 +2768,7 @@ namespace Frame
 			{ PassID::NRD_IndirectCombine, 0 },
 			{ PassID::NRD_ShadowCombine, 0 },
 			{ PassID::NormalRoughnessRepack, 0 },
+			{ PassID::QuantaSplat, 0 },
 			{ PassID::RTXCombine, 0 },
 			{ PassID::ReflCombine, 0 },
 			{ PassID::ReflectionRTX, 0 },
@@ -2768,6 +2794,7 @@ namespace Frame
 			{ PassID::FSR, 0 },
 			{ PassID::NRD_IndirectCombine, 0 },
 			{ PassID::NRD_ShadowCombine, 0 },
+			{ PassID::QuantaSplat, 0 },
 			{ PassID::ReflCombine, 0 },
 			{ PassID::ResultCreation, 0 },
 			{ PassID::SMAA, 0 },
@@ -2790,6 +2817,7 @@ namespace Frame
 			{ PassID::FSR, 0 },
 			{ PassID::NRD_IndirectCombine, 0 },
 			{ PassID::NRD_ShadowCombine, 0 },
+			{ PassID::QuantaSplat, 0 },
 			{ PassID::ReflCombine, 0 },
 			{ PassID::ResultCreation, 0 },
 			{ PassID::SMAA, 0 },
@@ -2812,6 +2840,7 @@ namespace Frame
 			{ PassID::FSR, 0 },
 			{ PassID::NRD_IndirectCombine, 0 },
 			{ PassID::NRD_ShadowCombine, 0 },
+			{ PassID::QuantaSplat, 0 },
 			{ PassID::ReflCombine, 0 },
 			{ PassID::ResultCreation, 0 },
 			{ PassID::SMAA, 0 },
@@ -2841,6 +2870,7 @@ namespace Frame
 			{ PassID::FSR, 0 },
 			{ PassID::NRD_IndirectCombine, 0 },
 			{ PassID::NRD_ShadowCombine, 0 },
+			{ PassID::QuantaSplat, 0 },
 			{ PassID::ReflCombine, 0 },
 			{ PassID::ResultCreation, 0 },
 			{ PassID::SMAA, 0 },
@@ -2942,6 +2972,7 @@ namespace Frame
 			{ PassID::NRD_SIGMA_Execute, 0, false, NRD_SIGMA_Execute_0_prev },
 			{ PassID::NRD_ShadowCombine, 0, true, NRD_ShadowCombine_0_prev },
 			{ PassID::DDGIDebug, 0, false, DDGIDebug_0_prev },
+			{ PassID::QuantaSplat, 0, false, QuantaSplat_0_prev },
 			{ PassID::Sky, 0, true, Sky_0_prev },
 			{ PassID::TranslucentRTX, 0, false, TranslucentRTX_0_prev },
 			{ PassID::BloomBuild, 0, false, BloomBuild_0_prev },
@@ -3115,6 +3146,7 @@ namespace Frame
 			graph.add_library_pass<Passes::Denoise::NRD::NRD_SIGMA_Execute>(PassDefault<Passes::Denoise::NRD::NRD_SIGMA_Execute>::setup, PassDefault<Passes::Denoise::NRD::NRD_SIGMA_Execute>::render, (PassDefault<Passes::Denoise::NRD::NRD_SIGMA_Execute>::flags));
 			graph.add_library_pass<Passes::Denoise::NRD::NRD_ShadowCombine>(PassDefault<Passes::Denoise::NRD::NRD_ShadowCombine>::setup, PassDefault<Passes::Denoise::NRD::NRD_ShadowCombine>::render, (PassDefault<Passes::Denoise::NRD::NRD_ShadowCombine>::flags));
 			graph.add_library_pass<Passes::GI::DDGI::Dev::DDGIDebug>(PassDefault<Passes::GI::DDGI::Dev::DDGIDebug>::setup, PassDefault<Passes::GI::DDGI::Dev::DDGIDebug>::render, (PassDefault<Passes::GI::DDGI::Dev::DDGIDebug>::flags & ~FrameGraph::PassFlags::Compute));
+			graph.add_library_pass<Passes::Dev::QuantaSplat>(PassDefault<Passes::Dev::QuantaSplat>::setup, PassDefault<Passes::Dev::QuantaSplat>::render, (PassDefault<Passes::Dev::QuantaSplat>::flags & ~FrameGraph::PassFlags::Compute));
 			// Setup is generated (PassSetupDefault<T>, pass_defaults.h); the owner
 			// only supplies render_func, so that is what gates registration.
 			if (sky.render_func)

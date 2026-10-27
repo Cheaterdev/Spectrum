@@ -99,6 +99,7 @@ std::optional<SlotID> get_slot(std::string_view slot_name)
 	if(slot_name == "PSSMData") return SlotID::PSSMData;
 	if(slot_name == "PSSMDataGlobal") return SlotID::PSSMDataGlobal;
 	if(slot_name == "PSSMLighting") return SlotID::PSSMLighting;
+	if(slot_name == "QuantaSplatData") return SlotID::QuantaSplatData;
 	if(slot_name == "DispatchRaysArgsBuildData") return SlotID::DispatchRaysArgsBuildData;
 	if(slot_name == "RaytracingRays") return SlotID::RaytracingRays;
 	if(slot_name == "ColorRTXOutput") return SlotID::ColorRTXOutput;
@@ -371,6 +372,8 @@ uint get_table_index(SlotID id)
 
 	if(id == SlotID::PSSMLighting) return Slots::Shadows::PSSM::PSSMLighting::Slot::ID;
 
+	if(id == SlotID::QuantaSplatData) return Slots::Dev::QuantaSplatData::Slot::ID;
+
 	if(id == SlotID::DispatchRaysArgsBuildData) return Slots::Raytrace::DispatchRaysArgsBuildData::Slot::ID;
 
 	if(id == SlotID::RaytracingRays) return Slots::Raytrace::RaytracingRays::Slot::ID;
@@ -637,6 +640,7 @@ std::string get_slot_name(SlotID id)
 	if(id == SlotID::PSSMData) return "PSSMData";
 	if(id == SlotID::PSSMDataGlobal) return "PSSMDataGlobal";
 	if(id == SlotID::PSSMLighting) return "PSSMLighting";
+	if(id == SlotID::QuantaSplatData) return "QuantaSplatData";
 	if(id == SlotID::DispatchRaysArgsBuildData) return "DispatchRaysArgsBuildData";
 	if(id == SlotID::RaytracingRays) return "RaytracingRays";
 	if(id == SlotID::ColorRTXOutput) return "ColorRTXOutput";

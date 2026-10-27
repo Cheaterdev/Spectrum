@@ -247,6 +247,22 @@ struct PassDefault<Passes::Denoise::NRD::NRD_ShadowCombine>
 
 
 template<>
+struct PassDefault<Passes::Dev::QuantaSplat>
+{
+	static constexpr bool enabled = true;
+	static constexpr FrameGraph::PassFlags flags = FrameGraph::PassFlags::Compute;
+
+	// setup() is declared here regardless -- if this pass carries
+	// [RunAlways]/[SetupCondition]/[RenderCondition], its DEFINITION is
+	// generated into autogen/pass_defaults.cpp instead of a hand-written one
+	// in some .cpp (see that file's own header comment for why it's a
+	// separate translation unit, not inlined here).
+	static FrameGraph::SetupResult setup(Passes::Dev::QuantaSplat::Context& data, FrameGraph::TaskBuilder& builder);
+	static void render(Passes::Dev::QuantaSplat::Context& data, FrameGraph::FrameContext& context);
+};
+
+
+template<>
 struct PassDefault<Passes::Shadows::RTXShadow>
 {
 	static constexpr bool enabled = true;

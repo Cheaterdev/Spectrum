@@ -101,6 +101,7 @@ export
 		Library::PSSM_GenerateMask PSSM_GenerateMask;
 		Library::PSSM_Combine PSSM_Combine;
 		Library::PSSM_Global PSSM_Global;
+		Library::QuantaSplat QuantaSplat;
 		Library::RTXShadow RTXShadow;
 		Library::RTXColorPass RTXColorPass;
 		Library::TranslucentRTX TranslucentRTX;

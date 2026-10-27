@@ -5,6 +5,7 @@ import RenderSystem;
 import :EngineAssets;
 import :Materials.UniversalMaterial;
 import :MipMapGenerator;
+import :QuantaSplat;
 
 import HAL;
 
@@ -296,7 +297,8 @@ void  mesh_renderer::render_meshes(MeshRenderContext::ptr mesh_render_context, S
 			compute.set_pipeline<PSOS::Meshes::GatherPipeline>(
 				PSOS::Meshes::GatherPipeline::CheckFrustum.Use(needCulling) |
 				PSOS::Meshes::GatherPipeline::CaptureVisibility.Use(capture_stage.has_value()) |
-				PSOS::Meshes::GatherPipeline::ClusterLod.Use(walk_lod));
+				PSOS::Meshes::GatherPipeline::ClusterLod.Use(walk_lod) |
+				PSOS::Meshes::GatherPipeline::Quanta.Use(walk_lod && Quanta::draw_enabled()));
 			compute.set(gatherData);
 			compute.set(gather);
 			if (capture_stage)

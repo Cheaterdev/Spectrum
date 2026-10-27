@@ -95,6 +95,7 @@ export import "../defines.h";
 #include "pass/Shadows/PSSM/PSSM_GenerateMask.h"
 #include "pass/Shadows/PSSM/PSSM_Combine.h"
 #include "pass/Shadows/PSSM/PSSM_Global.h"
+#include "pass/Dev/QuantaSplat.h"
 #include "pass/Shadows/RTXShadow.h"
 #include "pass/Raytrace/Dev/RTXColorPass.h"
 #include "pass/Raytrace/TranslucentRTX.h"
@@ -561,6 +562,10 @@ export namespace Passes
 		{
 			using ::Passes::Shadows::PSSM::PSSM_Global;
 		}
+	}
+	namespace Dev
+	{
+		using ::Passes::Dev::QuantaSplat;
 	}
 	namespace Shadows
 	{

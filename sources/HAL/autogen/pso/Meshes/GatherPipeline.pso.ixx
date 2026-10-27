@@ -22,6 +22,7 @@ export namespace PSOS
 				KeyValue<int, Nullable> CheckFrustum;
 				KeyValue<int, Nullable> CaptureVisibility;
 				KeyValue<int, Nullable> ClusterLod;
+				KeyValue<int, Nullable> Quanta;
 				GEN_DEF_COMP(Keys);
 			private:
 				SERIALIZE()
@@ -29,13 +30,15 @@ export namespace PSOS
 					ar&NVP(CheckFrustum);
 					ar&NVP(CaptureVisibility);
 					ar&NVP(ClusterLod);
+					ar&NVP(Quanta);
 				}
 			};
 
-			GEN_COMPUTE_PSO(GatherPipeline, CheckFrustum, CaptureVisibility, ClusterLod)
+			GEN_COMPUTE_PSO(GatherPipeline, CheckFrustum, CaptureVisibility, ClusterLod, Quanta)
 			GEN_KEY(CheckFrustum, true);
 			GEN_KEY(CaptureVisibility, true);
 			GEN_KEY(ClusterLod, true);
+			GEN_KEY(Quanta, true);
 
 
 			SimplePSO init_pso(Keys & key, std::function<void(SimplePSO&, Keys&)> f)
@@ -43,6 +46,7 @@ export namespace PSOS
 				static const ShaderDefine<&Keys::CheckFrustum,&SimpleComputePSO::compute> CheckFrustum = "CHECK_FRUSTUM";
 				static const ShaderDefine<&Keys::CaptureVisibility,&SimpleComputePSO::compute> CaptureVisibility = "CAPTURE_VISIBILITY";
 				static const ShaderDefine<&Keys::ClusterLod,&SimpleComputePSO::compute> ClusterLod = "CLUSTER_LOD";
+				static const ShaderDefine<&Keys::Quanta,&SimpleComputePSO::compute> Quanta = "QUANTA";
 
 
 				SimplePSO mpso("GatherPipeline");
@@ -57,6 +61,7 @@ export namespace PSOS
 				CheckFrustum.Apply(mpso, key);
 				CaptureVisibility.Apply(mpso, key);
 				ClusterLod.Apply(mpso, key);
+				Quanta.Apply(mpso, key);
 				return mpso;
 			}
 

@@ -1,0 +1,47 @@
+namespace Dev
+{
+	# Quanta debug splat: the LOD cut Quanta selects for every mesh instance, drawn as colored points
+	# straight into ResultTexture, depth-tested by hand against GBuffer_DepthMips (the same approach as
+	# DDGIDebug). It reads the cluster hierarchy and the cluster blobs from the shared Quanta buffers
+	# (QuantaResidency.ixx), so a point cloud lying exactly on the shaded surfaces, colored by LOD level,
+	# shows that the hierarchy walk, the LOD test and the page addressing all work -- before any of it
+	# feeds the real draw.
+	#
+	# One dispatch per mesh part: a thread group walks one hierarchy node, a lane takes one of its groups.
+	[Bind = DefaultLayout::Instance0]
+	struct QuantaSplatData
+	{
+		# Dword views over Quanta::Residency's three buffers; the record layouts are in
+		# quanta/quanta_splat.hlsl and must match Quanta.ixx.
+		StructuredBuffer<uint> pages;
+		StructuredBuffer<uint> groups;
+		StructuredBuffer<uint> nodes;
+
+		Texture2D<float> depth;
+		RWTexture2D<float4> target;
+
+		# The mesh part's node_global_matrix, as the real draws use it.
+		float4x4 world;
+
+		# This mesh part's nodes: a range of the shared node table.
+		uint node_offset;
+		uint node_count;
+	}
+
+	ComputePSO QuantaSplat
+	{
+		root = DefaultLayout;
+
+		[EntryPoint = CS]
+		compute = "quanta/quanta_splat.hlsl";
+	}
+
+	# Runs only while "Quanta splat" is on in the Properties panel (QuantaSplat.cpp).
+	[Static]
+	[Compute]
+	PassNode QuantaSplat
+	{
+		[Always = Read] Texture GBuffer_DepthMips;
+		[Always = UnorderedAccess] Texture ResultTexture;
+	}
+}

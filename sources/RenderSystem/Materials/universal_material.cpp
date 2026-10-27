@@ -4,6 +4,7 @@ import RenderSystem;
 
 
 import :EngineAssets;
+import :QuantaSplat;
 import :RTX;
 
 
@@ -179,10 +180,16 @@ void materials::PipelinePasses::set(RENDER_TYPE render_type, MESH_TYPE type, HAL
 		graphics.set_pipeline(depth_draw->GetPSO(PSOS::Meshes::DepthDraw::HiZOcclusion.Use(hiz_occlusion)));
 	else
 		if (render_type == RENDER_TYPE::PIXEL)
+		{
+			// Must agree with mesh_renderer::render_meshes, whose gather hands out the matching arguments.
+			const bool quanta = cluster_lod && Quanta::draw_enabled();
 			graphics.set_pipeline(gbuffer->GetPSO(
 				PSOS::Meshes::GBufferDraw::HiZOcclusion.Use(hiz_occlusion) |
 				PSOS::Meshes::GBufferDraw::CaptureMeshlets.Use(capture_meshlets) |
-				PSOS::Meshes::GBufferDraw::ClusterLod.Use(cluster_lod)));
+				PSOS::Meshes::GBufferDraw::ClusterLod.Use(cluster_lod) |
+				PSOS::Meshes::GBufferDraw::QuantaAmplification.Use(quanta) |
+				PSOS::Meshes::GBufferDraw::QuantaMesh.Use(quanta)));
+		}
 		else
 		{
 			graphics.set_pipeline(voxelization->GetPSO(PSOS::GI::Voxel::Voxelization::Dynamic.Use(type == MESH_TYPE::DYNAMIC)));

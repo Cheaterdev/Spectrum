@@ -166,6 +166,8 @@ namespace Frame
 			# switch (Base.cpp) does for other debug views. Revisit if the splat
 			# doesn't show up under DLSS-RR.
 			DDGIDebug;
+			# Quanta's LOD cut as colored points, off unless "Quanta splat" is on (quanta.prism).
+			QuantaSplat;
 
 		# sky + post
 			[Async]Sky;

@@ -21,12 +21,14 @@ namespace Meshes
 		uint meshlet_count; // uint
 		DispatchMeshArguments draw_commands; // DispatchMeshArguments
 		DispatchMeshArguments lod_draw_commands; // DispatchMeshArguments
+		DispatchMeshArguments quanta_draw_commands; // DispatchMeshArguments
 		uint GetMaterial_id() { return material_id; }
 		uint GetNode_offset() { return node_offset; }
 		uint GetMesh_cb() { return mesh_cb; }
 		uint GetMeshinstance_cb() { return meshinstance_cb; }
 		DispatchMeshArguments GetDraw_commands() { return draw_commands; }
 		DispatchMeshArguments GetLod_draw_commands() { return lod_draw_commands; }
+		DispatchMeshArguments GetQuanta_draw_commands() { return quanta_draw_commands; }
 		uint GetMeshlet_count() { return meshlet_count; }
 	};
 }

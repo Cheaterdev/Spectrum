@@ -19,6 +19,8 @@ export import :MaterialAsset;
 export import :MeshAsset;
 export import :Quanta;
 export import :QuantaAsset;
+export import :QuantaResidency;
+export import :QuantaSplat;
 export import :EngineAssets;
 export import :AssetRenderer;
 

@@ -22,6 +22,9 @@ namespace Meshes
 		uint meshletGroups; // StructuredBuffer<MeshletGroup>
 		uint unique_indices; // StructuredBuffer<uint>
 		uint primitive_indices; // StructuredBuffer<uint>
+		uint quanta_pages; // StructuredBuffer<uint>
+		uint quanta_groups; // StructuredBuffer<uint>
+		uint quanta_nodes; // StructuredBuffer<uint>
 		StructuredBuffer<mesh_vertex_input> GetVertexes() { return ResourceDescriptorHeap[vertexes]; }
 		StructuredBuffer<uint> GetIndices() { return ResourceDescriptorHeap[indices]; }
 		StructuredBuffer<Meshlet> GetMeshlets() { return ResourceDescriptorHeap[meshlets]; }
@@ -29,6 +32,9 @@ namespace Meshes
 		StructuredBuffer<MeshletGroup> GetMeshletGroups() { return ResourceDescriptorHeap[meshletGroups]; }
 		StructuredBuffer<uint> GetUnique_indices() { return ResourceDescriptorHeap[unique_indices]; }
 		StructuredBuffer<uint> GetPrimitive_indices() { return ResourceDescriptorHeap[primitive_indices]; }
+		StructuredBuffer<uint> GetQuanta_pages() { return ResourceDescriptorHeap[quanta_pages]; }
+		StructuredBuffer<uint> GetQuanta_groups() { return ResourceDescriptorHeap[quanta_groups]; }
+		StructuredBuffer<uint> GetQuanta_nodes() { return ResourceDescriptorHeap[quanta_nodes]; }
 	};
 }
 using Meshes::MeshInstanceInfo;

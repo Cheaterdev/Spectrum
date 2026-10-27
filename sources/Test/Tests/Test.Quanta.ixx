@@ -7,6 +7,8 @@ export module Test.Quanta;
 export import Test.Framework;
 
 import Core;
+import HAL;
+import RenderSystem;
 import Graphics;
 
 // Defined in RenderSystem/Quanta/QuantaBuilder.cpp (a plain TU).
@@ -233,6 +235,60 @@ export namespace Test
 		ASSERT_TRUE(storage.has("asset"));
 		ASSERT_FALSE(storage.has("quanta"));
 		std::filesystem::remove(path);
+	}
+
+	// Resident-only upload: every page and both tables land in the shared GPU buffers where the CPU says they do.
+	TEST(Quanta.Import, ResidencyUploadsPagesAndTables)
+	{
+		auto mesh = std::make_shared<Quanta::Mesh>(build(make_sphere(128, 64)));
+		ASSERT_TRUE(mesh->pages.size() >= 1);
+
+		auto& residency = Quanta::Residency::get();
+		auto resident = residency.acquire(mesh);
+		ASSERT_TRUE(residency.acquire(mesh) == resident);   // same mesh, same copy
+
+		auto list = RenderSystem::get().device().get_queue(HAL::CommandListType::DIRECT)->get_free_list();
+		list->begin(L"QuantaResidency");
+		residency.prepare(list);
+
+		std::vector<uint> page_dwords, group_dwords, node_dwords;
+		std::vector<std::future<bool>> pending;
+		pending.push_back(list->get_copy().read<uint>(residency.pages.buffer, resident->page_offset(), mesh->pages.size() * Quanta::PageDwords,
+			[&](std::span<uint> r) { page_dwords.assign(r.begin(), r.end()); }));
+		pending.push_back(list->get_copy().read<uint>(residency.groups.buffer, resident->group_offset() * Quanta::GroupDwords, mesh->groups.size() * Quanta::GroupDwords,
+			[&](std::span<uint> r) { group_dwords.assign(r.begin(), r.end()); }));
+		pending.push_back(list->get_copy().read<uint>(residency.nodes.buffer, resident->node_offset() * Quanta::NodeDwords, mesh->nodes.size() * Quanta::NodeDwords,
+			[&](std::span<uint> r) { node_dwords.assign(r.begin(), r.end()); }));
+		list->execute_and_wait();
+		for (auto& p : pending)
+			p.wait();
+
+		ASSERT_EQ(mesh->pages.size() * Quanta::PageDwords, page_dwords.size());
+		for (size_t p = 0; p < mesh->pages.size(); p++)
+		{
+			const auto& data = mesh->pages[p].data;
+			ASSERT_TRUE(std::memcmp(page_dwords.data() + p * Quanta::PageDwords, data.data(), data.size()) == 0);
+		}
+
+		// The group records carry the page's dword offset in the shared buffer; the node's groups are global indices.
+		ASSERT_EQ(mesh->groups.size() * Quanta::GroupDwords, group_dwords.size());
+		for (size_t g = 0; g < mesh->groups.size(); g++)
+		{
+			Quanta::Group gpu;
+			std::memcpy(&gpu, &group_dwords[g * Quanta::GroupDwords], sizeof(gpu));
+			ASSERT_EQ(uint32_t(resident->page_offset() + uint64_t(mesh->groups[g].page) * Quanta::PageDwords), gpu.page);
+			ASSERT_EQ(mesh->groups[g].offset_in_page, gpu.offset_in_page);
+			ASSERT_EQ(mesh->groups[g].lod_error, gpu.lod_error);
+		}
+
+		ASSERT_EQ(mesh->nodes.size() * Quanta::NodeDwords, node_dwords.size());
+		for (size_t n = 0; n < mesh->nodes.size(); n++)
+		{
+			Quanta::Node gpu;
+			std::memcpy(&gpu, &node_dwords[n * Quanta::NodeDwords], sizeof(gpu));
+			ASSERT_EQ(uint32_t(resident->group_offset() + mesh->nodes[n].first_group), gpu.first_group);
+			ASSERT_EQ(mesh->nodes[n].group_count, gpu.group_count);
+		}
 	}
 
 	// MeshAsset writes and reads its Quanta data through the asset-file hooks.

@@ -96,6 +96,7 @@ void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 	tasks.emplace_back(PSOBase::create<PSOS::Denoise::NRD::NRD_ShadowCombine>(device, pso[PSO::NRD_ShadowCombine]));
 	tasks.emplace_back(PSOBase::create<PSOS::Shadows::PSSM::PSSMApplyCompute>(device, pso[PSO::PSSMApplyCompute]));
 	tasks.emplace_back(PSOBase::create<PSOS::Meshes::GBufferDownsample>(device, pso[PSO::GBufferDownsample]));
+	tasks.emplace_back(PSOBase::create<PSOS::Dev::QuantaSplat>(device, pso[PSO::QuantaSplat]));
 	tasks.emplace_back(PSOBase::create<PSOS::Raytrace::DispatchRaysArgsBuild>(device, pso[PSO::DispatchRaysArgsBuild]));
 	tasks.emplace_back(PSOBase::create<PSOS::Shadows::RTXShadowReferenceCompute>(device, pso[PSO::RTXShadowReferenceCompute]));
 	tasks.emplace_back(PSOBase::create<PSOS::Environment::SkyCompute>(device, pso[PSO::SkyCompute]));
@@ -226,6 +227,7 @@ void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 //decltype(PSOS::GatherPipeline::CheckFrustum) PSOS::GatherPipeline::CheckFrustum;
 //decltype(PSOS::GatherPipeline::CaptureVisibility) PSOS::GatherPipeline::CaptureVisibility;
 //decltype(PSOS::GatherPipeline::ClusterLod) PSOS::GatherPipeline::ClusterLod;
+//decltype(PSOS::GatherPipeline::Quanta) PSOS::GatherPipeline::Quanta;
 //decltype(PSOS::GatherBoxes::CheckFrustum) PSOS::GatherBoxes::CheckFrustum;
 //decltype(PSOS::InitDispatch::CheckFrustum) PSOS::InitDispatch::CheckFrustum;
 //decltype(PSOS::GatherMeshes::Invisible) PSOS::GatherMeshes::Invisible;
@@ -241,6 +243,8 @@ void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 //decltype(PSOS::GBufferDraw::HiZOcclusion) PSOS::GBufferDraw::HiZOcclusion;
 //decltype(PSOS::GBufferDraw::CaptureMeshlets) PSOS::GBufferDraw::CaptureMeshlets;
 //decltype(PSOS::GBufferDraw::ClusterLod) PSOS::GBufferDraw::ClusterLod;
+//decltype(PSOS::GBufferDraw::QuantaAmplification) PSOS::GBufferDraw::QuantaAmplification;
+//decltype(PSOS::GBufferDraw::QuantaMesh) PSOS::GBufferDraw::QuantaMesh;
 //decltype(PSOS::DepthDraw::HiZOcclusion) PSOS::DepthDraw::HiZOcclusion;
 //decltype(PSOS::Voxelization::Dynamic) PSOS::Voxelization::Dynamic;
 //decltype(PSOS::BackdropDraw::Direct) PSOS::BackdropDraw::Direct;

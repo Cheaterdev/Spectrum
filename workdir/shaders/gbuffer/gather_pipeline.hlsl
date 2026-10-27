@@ -117,7 +117,9 @@ void CS(
         // The draw's shaders fetch mesh and material by this id (draw_data.hlsl).
         DrawMeshCommand command;
         command.draw_id = id;
-#ifdef CLUSTER_LOD
+#ifdef QUANTA
+        command.args = mesh.quanta_draw_commands;
+#elif defined(CLUSTER_LOD)
         command.args = mesh.lod_draw_commands;
 #else
         command.args = mesh.draw_commands;

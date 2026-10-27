@@ -91,6 +91,7 @@ namespace FrameGraph
 		PSSM_GenerateMask,
 		PSSM_Combine,
 		PSSM_Global,
+		QuantaSplat,
 		RTXShadow,
 		RTXColorPass,
 		TranslucentRTX,
