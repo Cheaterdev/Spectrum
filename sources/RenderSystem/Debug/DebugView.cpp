@@ -239,6 +239,8 @@ void debug_view::update_frame(FrameGraph::Graph& graph)
 
 	if (on_screen && draw_main_frustum)
 		submit_main_camera();
+	if (on_screen && draw_bvh)
+		submit_bvh();
 	if (on_screen && draw_grid)
 		DebugDraw::get().grid(vec3(0, 0, 0), 10.0f, 20, float4(0.4f, 0.45f, 0.5f, 0.5f));
 
@@ -313,6 +315,67 @@ void debug_view::submit_main_camera()
 	float4 color = { 1.0f, 0.8f, 0.2f, 1.0f };
 	dd.frustum(c, color, 2.0f);
 	dd.sphere(eye, 0.25f, color, 2.0f, 16);
+}
+
+void debug_view::submit_bvh()
+{
+	if (!scene || !has_captured_camera)
+		return;
+
+	scene->update_bvh();
+	const auto& bvh = scene->bvh;
+
+	// The test the GPU walk makes (scene_bvh_cull.hlsl): outside when the box's far corner along some plane is behind it.
+	auto outside = [&](vec3 lo, vec3 hi)
+	{
+		for (int i = 0; i < 6; i++)
+		{
+			const float4& p = captured_frustum.planes[i];
+			vec3 corner = { p.x >= 0 ? hi.x : lo.x, p.y >= 0 ? hi.y : lo.y, p.z >= 0 ? hi.z : lo.z };
+			if (corner.x * p.x + corner.y * p.y + corner.z * p.z + p.w < 0)
+				return true;
+		}
+		return false;
+	};
+
+	// A scene with more boxes than the line buffer holds would drop the rest anyway.
+	constexpr int max_boxes = 40000;
+	int boxes = 0;
+	const float4 inside_color = { 0.2f, 0.9f, 0.3f, 1.0f };
+	const float4 outside_color = { 0.9f, 0.2f, 0.2f, 0.6f };
+	auto& dd = DebugDraw::get();
+
+	// A treelet's nodes are all rejected with its root, which is where the GPU stops.
+	std::vector<std::pair<uint32_t, bool>> stack;
+	for (uint32_t root : bvh.treelets)
+	{
+		stack.clear();
+		stack.push_back({ root, true });
+		while (!stack.empty() && boxes < max_boxes)
+		{
+			auto [node, parent_inside] = stack.back();
+			stack.pop_back();
+
+			const uint32_t* n = &bvh.nodes[node * 8ull];
+			vec3 lo = { std::bit_cast<float>(n[0]), std::bit_cast<float>(n[1]), std::bit_cast<float>(n[2]) };
+			vec3 hi = { std::bit_cast<float>(n[4]), std::bit_cast<float>(n[5]), std::bit_cast<float>(n[6]) };
+			const bool inside = parent_inside && !outside(lo, hi);
+			const bool is_root = node == root;
+
+			if (is_root || bvh_all_nodes)
+			{
+				dd.box(lo, hi, inside ? inside_color : outside_color, is_root ? 2.0f : 1.0f);
+				boxes++;
+			}
+
+			// Below the root only the nodes the GPU reaches are of interest in the all-nodes view.
+			if (n[7] != 0 && bvh_all_nodes)
+			{
+				stack.push_back({ n[3], inside });
+				stack.push_back({ n[7], inside });
+			}
+		}
+	}
 }
 
 void debug_view::place_behind_main_camera()

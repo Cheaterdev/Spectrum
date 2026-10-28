@@ -402,6 +402,94 @@ export namespace Test
 			throw Test::TestFailure("Quanta draw's GBuffer albedo differs from the meshlets' in " + std::to_string(differing) + " of " + std::to_string(x.size()) + " bytes");
 	}
 
+	// The scene BVH (Scene::Bvh) only chooses which mesh parts the first culling stage looks at, so a frame with it
+	// must equal one that scans the whole list. A grid of spheres reaching far outside the view gives the BVH something
+	// to drop and something to keep, and its leaves must be exactly the scene's mesh parts.
+	TEST(RenderSystem.SceneParity, SceneBvhMatchesTheFullScan)
+	{
+		auto* raw = new MeshAsset(L"resources/sphere.obj");   // see QuantaSplatDrawsTheCut for why a raw `new`
+		raw->register_new(L"scene_bvh_test");
+		auto mesh = raw->get_ptr<MeshAsset>();
+
+		constexpr int kGrid = 8;
+		auto make_scene = [&](SceneFrame& frame) {
+			for (int x = 0; x < kGrid; ++x)
+				for (int z = 0; z < kGrid; ++z)
+				{
+					auto instance = std::make_shared<MeshAssetInstance>(mesh);
+					mat4x4 place = mat4x4::translation(vec3((x - kGrid / 2) * 9.0f + 3, 1, (z - kGrid / 2) * 9.0f + 3));
+					instance->set_local_transform(place);
+					frame.scene->add_child(instance);
+				}
+		};
+
+		{
+			SceneFrame warm;
+			make_scene(warm);
+			warm.wait_for_materials();
+		}
+
+		struct Result
+		{
+			HAL::texture_data::ptr albedo;
+			bool used_bvh = false;
+			size_t leaves = 0, parts = 0, treelets = 0;
+			uint candidates = 0;
+		};
+
+		auto render = [&](bool bvh) {
+			SceneFrame frame;
+			make_scene(frame);
+			frame.renderer->main_view_mesh_renderer()->use_scene_bvh = bvh;
+
+			std::shared_ptr<HAL::TextureResource> albedo;
+			FGT_RasterCapturePipeline capture;
+			capture.fGT_CaptureAlbedo.render_func = [&](auto& data, FrameContext&) { albedo = as_texture(data.GBuffer_Albedo); };
+
+			for (int i = 0; i < kSettleFrames; ++i)
+				frame.run(capture);
+
+			Result out;
+			out.albedo = Test::readback_texture(albedo.get());
+			out.used_bvh = frame.renderer->main_view_mesh_renderer()->bvh_used;
+			const auto& tree = frame.scene->bvh;
+			for (size_t n = 0; n + 7 < tree.nodes.size(); n += 8)
+				out.leaves += tree.nodes[n + 7] == 0;
+			if (bvh)
+			{
+				// What the last cull left for the box gather: the counter bvh_cull's dispatch appended to.
+				auto list = RenderSystem::get().device().get_upload_list();
+				auto done = list->get_copy().read_buffer(frame.renderer->main_view_mesh_renderer()->bvh_candidate_counter().get(), 0, sizeof(uint),
+					[&](std::span<std::byte> bytes) { std::memcpy(&out.candidates, bytes.data(), sizeof(uint)); });
+				list->execute_and_wait();
+				done.wait();
+			}
+			out.parts = frame.scene->command_ids[(int)MESH_TYPE::ALL].size();
+			out.treelets = tree.treelets.size();
+			return out;
+		};
+
+		auto scan = render(false);
+		auto tree = render(true);
+
+		ASSERT_FALSE(scan.used_bvh);
+		if (!tree.used_bvh)
+			throw Test::TestFailure("the first culling stage did not take the BVH's list");
+		ASSERT_TRUE(tree.parts >= size_t(kGrid * kGrid));
+		ASSERT_EQ(tree.leaves, tree.parts);
+		ASSERT_TRUE(tree.treelets >= tree.parts / 32);
+		// The grid reaches well outside the view, and some of it is inside.
+		if (tree.candidates == 0 || tree.candidates >= tree.parts)
+			throw Test::TestFailure("the BVH left " + std::to_string(tree.candidates) + " of " + std::to_string(tree.parts) + " mesh parts for the box gather");
+
+		const auto diff = compare_pictures(scan.albedo, tree.albedo);
+		// Equal frames prove nothing if nothing is in view.
+		if (diff.covered < diff.size / 100)
+			throw Test::TestFailure("the spheres cover almost nothing of the GBuffer albedo (" + std::to_string(diff.covered) + " bytes)");
+		if (diff.differing > diff.size / 5000)
+			throw Test::TestFailure("the BVH's GBuffer albedo differs from the full scan's in " + std::to_string(diff.differing) + " of " + std::to_string(diff.size) + " bytes");
+	}
+
 	// Streaming's safety net: with every page but the roots hidden from the page table, the Quanta draw must still
 	// cover the surface (coarser clusters stand in for the missing finer ones) and must say which pages it wanted.
 	// With everything resident it must want nothing.

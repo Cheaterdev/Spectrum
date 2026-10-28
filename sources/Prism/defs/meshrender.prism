@@ -363,6 +363,23 @@ namespace Meshes
 
 
 
+	# Scene BVH culling (Graphics:Scene's Bvh): one thread per treelet walks its tree against the camera's frustum
+	# and appends the mesh parts that survive to `ids`, in the shape the box gather (GatherBoxes) takes as its
+	# input list, with `args` the indirect dispatch for it (bumped by InterlockedMax like the other producers).
+	[Bind = DefaultLayout::Instance1]
+	struct SceneBvhCull
+	{
+		# Eight dwords per node: min.xyz, a, max.xyz, b. A leaf has b == 0 and a = the mesh id; an inner node has
+		# its children's node indices in a and b.
+		StructuredBuffer<uint> nodes;
+		StructuredBuffer<uint> treelets;
+		uint treelet_count;
+
+		RWStructuredBuffer<uint> ids;
+		RWStructuredBuffer<uint> count;
+		RWStructuredBuffer<DispatchArguments> args;
+	}
+
 	[Bind = DefaultLayout::Instance1]
 	struct DrawBoxes
 	{
@@ -440,6 +457,14 @@ namespace Meshes
 		[rename = CHECK_FRUSTUM]
 		[CS, nullable]
 		define CheckFrustum;
+	}
+
+	ComputePSO SceneBvhCull
+	{
+		root = DefaultLayout;
+
+		[EntryPoint = CS]
+		compute = "gbuffer/scene_bvh_cull.hlsl";
 	}
 
 	ComputePSO InitDispatch

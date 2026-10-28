@@ -87,6 +87,27 @@ public:
 
     Slots::Meshes::GatherPipelineGlobal::Compiled compiledGather[8];
 
+    // A BVH over every mesh part of the scene (command_ids[ALL]), for the GPU to cull the whole scene without
+    // testing each part (mesh_renderer::bvh_cull). Built from the parts' world AABBs on the CPU, split into
+    // "treelets" of at most Bvh::TreeletLeaves parts: the GPU tests one thread per treelet and walks the
+    // treelet's own tree, so the levels above the treelets are never stored. Static and dynamic parts are
+    // built separately, so a moving object only rebuilds the dynamic one.
+    struct Bvh
+    {
+        static constexpr uint TreeletLeaves = 32;
+
+        // Eight dwords per node: min.xyz, a, max.xyz, b. A leaf has b == 0 and a = the mesh id; an inner node
+        // has the node indices of its children in a and b.
+        std::vector<uint32_t> nodes;
+        // The root node of each treelet.
+        std::vector<uint32_t> treelets;
+        // Changes whenever the arrays do, so a renderer knows to upload them again.
+        uint64_t version = 0;
+    } bvh;
+
+    // Rebuilds what moved or was added or removed since the last call; call before reading `bvh`.
+    void update_bvh();
+
 
 	Slots::GI::Voxel::VoxelInfo::Compiled voxels_compiled;
    
@@ -96,6 +117,15 @@ public:
    bool init_ras(CommandList::ptr& list);
 
 private:
+    bool     bvh_static_dirty     = true;
+    bool     bvh_dynamic_dirty    = true;
+    // The two parts' own trees (node indices relative to the part), combined into `bvh`.
+    struct BvhPart
+    {
+        std::vector<uint32_t> nodes;
+        std::vector<uint32_t> treelets;
+    } bvh_static, bvh_dynamic;
+
     bool     scene_caches_dirty   = true;
     uint64_t cached_material_epoch = 0;
 

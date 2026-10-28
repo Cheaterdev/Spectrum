@@ -32,6 +32,11 @@ public:
 	Variable<Dev::DebugViewColor> color_mode = { Dev::DebugViewColor::Object, "Colour", this };
 	Variable<bool>  draw_main_frustum = { true, "Main camera frustum", this };
 	Variable<bool>  draw_grid         = { true, "Ground grid", this };
+	// The scene BVH (Scene::Bvh): the box of each treelet, green while the captured main camera's frustum
+	// touches it (the GPU walks it) and red when the frustum rejects it (its parts are never looked at).
+	Variable<bool>  draw_bvh          = { false, "Scene BVH", this };
+	// Every node of the treelets' trees instead of just the treelet roots.
+	Variable<bool>  bvh_all_nodes     = { false, "BVH all nodes", this };
 	Variable<float> frustum_length    = { 100.0f, "Frustum length", this, 1.0f, 1500.0f };
 	// Darkens geometry outside the main camera's frustum; 1 = off.
 	Variable<float> outside_frustum_brightness = { 0.3f, "Outside frustum brightness", this, 0.0f, 1.0f };
@@ -78,6 +83,7 @@ private:
 	bool cam_placed = false;
 	void place_behind_main_camera();
 	void submit_main_camera();
+	void submit_bvh();
 
 	// The main camera as of the last captured frame, so the frustum freezes
 	// together with the stamps.

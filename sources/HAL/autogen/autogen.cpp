@@ -56,6 +56,7 @@ std::optional<SlotID> get_slot(std::string_view slot_name)
 	if(slot_name == "GatherPipeline") return SlotID::GatherPipeline;
 	if(slot_name == "CullCaptureWrite") return SlotID::CullCaptureWrite;
 	if(slot_name == "GatherBoxes") return SlotID::GatherBoxes;
+	if(slot_name == "SceneBvhCull") return SlotID::SceneBvhCull;
 	if(slot_name == "DrawBoxes") return SlotID::DrawBoxes;
 	if(slot_name == "InitDispatch") return SlotID::InitDispatch;
 	if(slot_name == "GatherMeshesBoxes") return SlotID::GatherMeshesBoxes;
@@ -287,6 +288,8 @@ uint get_table_index(SlotID id)
 	if(id == SlotID::CullCaptureWrite) return Slots::Meshes::CullCaptureWrite::Slot::ID;
 
 	if(id == SlotID::GatherBoxes) return Slots::Meshes::GatherBoxes::Slot::ID;
+
+	if(id == SlotID::SceneBvhCull) return Slots::Meshes::SceneBvhCull::Slot::ID;
 
 	if(id == SlotID::DrawBoxes) return Slots::Meshes::DrawBoxes::Slot::ID;
 
@@ -603,6 +606,7 @@ std::string get_slot_name(SlotID id)
 	if(id == SlotID::GatherPipeline) return "GatherPipeline";
 	if(id == SlotID::CullCaptureWrite) return "CullCaptureWrite";
 	if(id == SlotID::GatherBoxes) return "GatherBoxes";
+	if(id == SlotID::SceneBvhCull) return "SceneBvhCull";
 	if(id == SlotID::DrawBoxes) return "DrawBoxes";
 	if(id == SlotID::InitDispatch) return "InitDispatch";
 	if(id == SlotID::GatherMeshesBoxes) return "GatherMeshesBoxes";

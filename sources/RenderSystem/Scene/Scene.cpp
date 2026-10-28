@@ -57,6 +57,18 @@ Scene::Scene()
 		invalidate_scene_caches();
 		});
 
+	on_moved.register_handler(this, [this](scene_object* object) {
+
+		auto render_object = dynamic_cast<MeshAssetInstance*>(object);
+
+		if (!render_object) return;
+
+		if (render_object->type == MESH_TYPE::STATIC)
+			bvh_static_dirty = true;
+		else
+			bvh_dynamic_dirty = true;
+		});
+
 	mesh_infos = std::make_shared< virtual_gpu_buffer<Table::Meshes::MeshCommandData>>(RenderSystem::get().device(), 1024 * 1024);
 	raytrace = std::make_shared<virtual_gpu_buffer<HAL::InstanceDesc>>(RenderSystem::get().device(), 1024 * 1024);
 
@@ -71,6 +83,171 @@ Scene::Scene()
 void Scene::invalidate_scene_caches()
 {
 	scene_caches_dirty = true;
+	bvh_static_dirty = true;
+	bvh_dynamic_dirty = true;
+}
+
+namespace
+{
+	struct BvhItem
+	{
+		float lo[3];
+		float hi[3];
+		uint id;
+
+		float center(int axis) const { return (lo[axis] + hi[axis]) * 0.5f; }
+	};
+
+	// Nodes of the tree over items[begin, end), depth first: the left child follows its parent. Returns the
+	// node's index. Splits at the median of the longest axis of the centers, so the depth is log2 of the count.
+	uint32_t emit_bvh_node(std::vector<BvhItem>& items, size_t begin, size_t end, std::vector<uint32_t>& nodes)
+	{
+		float lo[3] = { items[begin].lo[0], items[begin].lo[1], items[begin].lo[2] };
+		float hi[3] = { items[begin].hi[0], items[begin].hi[1], items[begin].hi[2] };
+		float center_lo[3] = { items[begin].center(0), items[begin].center(1), items[begin].center(2) };
+		float center_hi[3] = { center_lo[0], center_lo[1], center_lo[2] };
+		for (size_t i = begin + 1; i < end; i++)
+			for (int a = 0; a < 3; a++)
+			{
+				lo[a] = std::min(lo[a], items[i].lo[a]);
+				hi[a] = std::max(hi[a], items[i].hi[a]);
+				center_lo[a] = std::min(center_lo[a], items[i].center(a));
+				center_hi[a] = std::max(center_hi[a], items[i].center(a));
+			}
+
+		const uint32_t index = static_cast<uint32_t>(nodes.size() / 8);
+		nodes.resize(nodes.size() + 8);
+		auto write = [&](uint32_t a, uint32_t b)
+		{
+			uint32_t* n = &nodes[index * 8ull];
+			for (int k = 0; k < 3; k++)
+			{
+				n[k] = std::bit_cast<uint32_t>(lo[k]);
+				n[4 + k] = std::bit_cast<uint32_t>(hi[k]);
+			}
+			n[3] = a;
+			n[7] = b;
+		};
+
+		if (end - begin == 1)
+		{
+			write(items[begin].id, 0);
+			return index;
+		}
+
+		int axis = 0;
+		for (int a = 1; a < 3; a++)
+			if (center_hi[a] - center_lo[a] > center_hi[axis] - center_lo[axis])
+				axis = a;
+
+		const size_t mid = begin + (end - begin) / 2;
+		std::nth_element(items.begin() + begin, items.begin() + mid, items.begin() + end,
+			[axis](const BvhItem& l, const BvhItem& r) { return l.center(axis) < r.center(axis); });
+
+		const uint32_t left = emit_bvh_node(items, begin, mid, nodes);
+		const uint32_t right = emit_bvh_node(items, mid, end, nodes);
+		write(left, right);
+		return index;
+	}
+
+	// Splits the same way until a range fits a treelet; the splits above the treelets are not stored.
+	void emit_bvh_treelets(std::vector<BvhItem>& items, size_t begin, size_t end, std::vector<uint32_t>& nodes, std::vector<uint32_t>& treelets)
+	{
+		if (end <= begin)
+			return;
+
+		if (end - begin <= Scene::Bvh::TreeletLeaves)
+		{
+			treelets.push_back(emit_bvh_node(items, begin, end, nodes));
+			return;
+		}
+
+		int axis = 0;
+		float extent = -1;
+		for (int a = 0; a < 3; a++)
+		{
+			float lo = items[begin].center(a), hi = lo;
+			for (size_t i = begin + 1; i < end; i++)
+			{
+				lo = std::min(lo, items[i].center(a));
+				hi = std::max(hi, items[i].center(a));
+			}
+			if (hi - lo > extent)
+			{
+				extent = hi - lo;
+				axis = a;
+			}
+		}
+
+		const size_t mid = begin + (end - begin) / 2;
+		std::nth_element(items.begin() + begin, items.begin() + mid, items.begin() + end,
+			[axis](const BvhItem& l, const BvhItem& r) { return l.center(axis) < r.center(axis); });
+
+		emit_bvh_treelets(items, begin, mid, nodes, treelets);
+		emit_bvh_treelets(items, mid, end, nodes, treelets);
+	}
+}
+
+void Scene::update_bvh()
+{
+	if (!bvh_static_dirty && !bvh_dynamic_dirty)
+		return;
+
+	PROFILE(L"scene_update_bvh");
+
+	if (scene_caches_dirty)
+		rebuild_scene_caches();
+
+	auto rebuild = [&](MESH_TYPE type, BvhPart& part)
+	{
+		std::vector<BvhItem> items;
+		for (auto object : mesh_objects)
+		{
+			if (object->type != type)
+				continue;
+
+			uint index = 0;
+			for (auto& info : object->rendering)
+			{
+				BvhItem item;
+				item.id = object->first_mesh_id() + index++;
+				auto lo = info.primitive_global->get_min();
+				auto hi = info.primitive_global->get_max();
+				item.lo[0] = lo.x; item.lo[1] = lo.y; item.lo[2] = lo.z;
+				item.hi[0] = hi.x; item.hi[1] = hi.y; item.hi[2] = hi.z;
+				items.push_back(item);
+			}
+		}
+
+		part.nodes.clear();
+		part.treelets.clear();
+		part.nodes.reserve(items.size() * 16);
+		emit_bvh_treelets(items, 0, items.size(), part.nodes, part.treelets);
+	};
+
+	if (bvh_static_dirty)
+		rebuild(MESH_TYPE::STATIC, bvh_static);
+	if (bvh_dynamic_dirty)
+		rebuild(MESH_TYPE::DYNAMIC, bvh_dynamic);
+	bvh_static_dirty = false;
+	bvh_dynamic_dirty = false;
+
+	// The dynamic part's node indices are relative to it; they follow the static part's.
+	bvh.nodes = bvh_static.nodes;
+	bvh.treelets = bvh_static.treelets;
+	const uint32_t offset = static_cast<uint32_t>(bvh_static.nodes.size() / 8);
+	const size_t first_dynamic = bvh.nodes.size();
+	bvh.nodes.insert(bvh.nodes.end(), bvh_dynamic.nodes.begin(), bvh_dynamic.nodes.end());
+	for (size_t n = first_dynamic; n < bvh.nodes.size(); n += 8)
+		if (bvh.nodes[n + 7] != 0)
+		{
+			bvh.nodes[n + 3] += offset;
+			bvh.nodes[n + 7] += offset;
+		}
+	for (auto root : bvh_dynamic.treelets)
+		bvh.treelets.push_back(root + offset);
+
+	bvh.version++;
 }
 
 void Scene::rebuild_scene_caches()

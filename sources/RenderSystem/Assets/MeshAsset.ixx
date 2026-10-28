@@ -291,6 +291,9 @@ export{
 		bool need_update_mats = false;
 	public:
 		MESH_TYPE type = MESH_TYPE::STATIC;
+			// The scene's mesh id of rendering[0] (SceneData.meshes, command_ids); rendering[i] is this + i. Only
+			// meaningful while the instance is in a scene.
+			uint first_mesh_id() const { return static_cast<uint>(meshpart_handle.get_offset()); }
 		MeshAsset::ref mesh_asset;
 
 		struct mesh_asset_node

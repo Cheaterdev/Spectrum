@@ -55,6 +55,7 @@ void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 	tasks.emplace_back(PSOBase::create<PSOS::Post::LensFlareStreak>(device, pso[PSO::LensFlareStreak]));
 	tasks.emplace_back(PSOBase::create<PSOS::Meshes::GatherPipeline>(device, pso[PSO::GatherPipeline]));
 	tasks.emplace_back(PSOBase::create<PSOS::Meshes::GatherBoxes>(device, pso[PSO::GatherBoxes]));
+	tasks.emplace_back(PSOBase::create<PSOS::Meshes::SceneBvhCull>(device, pso[PSO::SceneBvhCull]));
 	tasks.emplace_back(PSOBase::create<PSOS::Meshes::InitDispatch>(device, pso[PSO::InitDispatch]));
 	tasks.emplace_back(PSOBase::create<PSOS::Meshes::GatherMeshes>(device, pso[PSO::GatherMeshes]));
 	tasks.emplace_back(PSOBase::create<PSOS::Utility::DownsampleDepth>(device, pso[PSO::DownsampleDepth]));

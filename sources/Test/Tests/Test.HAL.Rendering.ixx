@@ -157,6 +157,7 @@ namespace {
 			draw.GetCapture_frame()      = 0;
 			draw.GetMeshlet_filter()     = 0;
 			draw.GetColor_mode()         = color_mode;
+			draw.GetLegacy_fallback()    = 0;
 			gfx.set(draw);
 		}
 
