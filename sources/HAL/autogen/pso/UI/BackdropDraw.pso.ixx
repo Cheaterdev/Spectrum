@@ -34,7 +34,7 @@ export namespace PSOS
 
 			SimplePSO init_pso(Keys & key, std::function<void(SimplePSO&, Keys&)> f)
 			{
-				static const ShaderDefine<&Keys::Direct,&SimpleGraphicsPSO::pixel> Direct = "BACKDROP_DIRECT";
+				static const ShaderDefine<&Keys::Direct, &SimpleGraphicsPSO::pixel> Direct = "BACKDROP_DIRECT";
 
 
 				SimplePSO mpso("BackdropDraw");

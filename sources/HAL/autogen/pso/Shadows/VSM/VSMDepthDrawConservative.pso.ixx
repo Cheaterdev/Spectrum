@@ -21,26 +21,22 @@ export namespace PSOS
 			struct VSMDepthDrawConservative: public PSOBase
 			{
 				struct Keys {
-					KeyValue<int, Nullable> QuantaAmplification;
-					KeyValue<int, Nullable> QuantaMesh;
+					KeyValue<int, Nullable> Quanta;
 					GEN_DEF_COMP(Keys);
 				private:
 					SERIALIZE()
 					{
-						ar&NVP(QuantaAmplification);
-						ar&NVP(QuantaMesh);
+						ar&NVP(Quanta);
 					}
 				};
 
-				GEN_GRAPHICS_PSO(VSMDepthDrawConservative, QuantaAmplification, QuantaMesh)
-				GEN_KEY(QuantaAmplification, true);
-				GEN_KEY(QuantaMesh, true);
+				GEN_GRAPHICS_PSO(VSMDepthDrawConservative, Quanta)
+				GEN_KEY(Quanta, true);
 
 
 				SimplePSO init_pso(Keys & key, std::function<void(SimplePSO&, Keys&)> f)
 				{
-					static const ShaderDefine<&Keys::QuantaAmplification,&SimpleGraphicsPSO::amplification> QuantaAmplification = "QUANTA";
-					static const ShaderDefine<&Keys::QuantaMesh,&SimpleGraphicsPSO::mesh> QuantaMesh = "QUANTA";
+					static const ShaderDefine<&Keys::Quanta, &SimpleGraphicsPSO::mesh, &SimpleGraphicsPSO::amplification> Quanta = "QUANTA";
 
 
 					SimplePSO mpso("VSMDepthDrawConservative");
@@ -59,8 +55,7 @@ export namespace PSOS
 					mpso.amplification.entry_point = "AS";
 					mpso.amplification.flags = HAL::ShaderOptions::None;
 			
-					QuantaAmplification.Apply(mpso, key);
-					QuantaMesh.Apply(mpso, key);
+					Quanta.Apply(mpso, key);
 
 					mpso.requires_tiled_depth = true;
 

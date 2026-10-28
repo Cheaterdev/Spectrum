@@ -69,15 +69,11 @@ namespace Meshes
 		define ClusterLod;
 
 		# Reads the clusters from Quanta's shared buffers instead of the mesh's own meshlets (implies
-		# ClusterLod). A define reaches one stage, so the AS and the mesh stage each get one; the draws
-		# set both, and GatherPipeline's Quanta.
+		# ClusterLod). One define for both stages: separate keys would also build the AS/MS pairs that
+		# disagree on the payload size (D3D12 #1276). The draws set it, and GatherPipeline's Quanta.
 		[rename = QUANTA]
-		[AS, nullable]
-		define QuantaAmplification;
-
-		[rename = QUANTA]
-		[MS, nullable]
-		define QuantaMesh;
+		[AS, MS, nullable]
+		define Quanta;
 
 		rtv ={ R8G8B8A8_UNORM, R8G8B8A8_UNORM, R8G8B8A8_UNORM, R16G16_FLOAT, R32_UINT, R8G8B8A8_UNORM };
 
@@ -130,12 +126,8 @@ namespace Meshes
 		define ClusterLod;
 
 		[rename = QUANTA]
-		[AS, nullable]
-		define QuantaAmplification;
-
-		[rename = QUANTA]
-		[MS, nullable]
-		define QuantaMesh;
+		[AS, MS, nullable]
+		define Quanta;
 
 		ds = D32_FLOAT;
 

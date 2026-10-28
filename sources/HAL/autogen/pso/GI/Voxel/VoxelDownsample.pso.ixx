@@ -36,7 +36,7 @@ export namespace PSOS
 
 				SimplePSO init_pso(Keys & key, std::function<void(SimplePSO&, Keys&)> f)
 				{
-					static const ShaderDefine<&Keys::Count,&SimpleComputePSO::compute> Count = "COUNT";
+					static const ShaderDefine<&Keys::Count, &SimpleComputePSO::compute> Count = "COUNT";
 
 
 					SimplePSO mpso("VoxelDownsample");

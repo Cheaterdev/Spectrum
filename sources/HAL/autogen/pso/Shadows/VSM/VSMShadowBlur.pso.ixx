@@ -36,7 +36,7 @@ export namespace PSOS
 
 				SimplePSO init_pso(Keys & key, std::function<void(SimplePSO&, Keys&)> f)
 				{
-					static const ShaderDefine<&Keys::VsmRtxVerify,&SimpleComputePSO::compute> VsmRtxVerify = "VSM_RTX_VERIFY";
+					static const ShaderDefine<&Keys::VsmRtxVerify, &SimpleComputePSO::compute> VsmRtxVerify = "VSM_RTX_VERIFY";
 
 
 					SimplePSO mpso("VSMShadowBlur");

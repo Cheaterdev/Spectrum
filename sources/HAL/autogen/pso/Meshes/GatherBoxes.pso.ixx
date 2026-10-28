@@ -34,7 +34,7 @@ export namespace PSOS
 
 			SimplePSO init_pso(Keys & key, std::function<void(SimplePSO&, Keys&)> f)
 			{
-				static const ShaderDefine<&Keys::CheckFrustum,&SimpleComputePSO::compute> CheckFrustum = "CHECK_FRUSTUM";
+				static const ShaderDefine<&Keys::CheckFrustum, &SimpleComputePSO::compute> CheckFrustum = "CHECK_FRUSTUM";
 
 
 				SimplePSO mpso("GatherBoxes");

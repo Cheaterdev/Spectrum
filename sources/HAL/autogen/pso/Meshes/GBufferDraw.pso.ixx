@@ -22,8 +22,7 @@ export namespace PSOS
 				KeyValue<int, Nullable> HiZOcclusion;
 				KeyValue<int, Nullable> CaptureMeshlets;
 				KeyValue<int, Nullable> ClusterLod;
-				KeyValue<int, Nullable> QuantaAmplification;
-				KeyValue<int, Nullable> QuantaMesh;
+				KeyValue<int, Nullable> Quanta;
 				GEN_DEF_COMP(Keys);
 			private:
 				SERIALIZE()
@@ -31,26 +30,23 @@ export namespace PSOS
 					ar&NVP(HiZOcclusion);
 					ar&NVP(CaptureMeshlets);
 					ar&NVP(ClusterLod);
-					ar&NVP(QuantaAmplification);
-					ar&NVP(QuantaMesh);
+					ar&NVP(Quanta);
 				}
 			};
 
-			GEN_GRAPHICS_PSO(GBufferDraw, HiZOcclusion, CaptureMeshlets, ClusterLod, QuantaAmplification, QuantaMesh)
+			GEN_GRAPHICS_PSO(GBufferDraw, HiZOcclusion, CaptureMeshlets, ClusterLod, Quanta)
 			GEN_KEY(HiZOcclusion, true);
 			GEN_KEY(CaptureMeshlets, true);
 			GEN_KEY(ClusterLod, true);
-			GEN_KEY(QuantaAmplification, true);
-			GEN_KEY(QuantaMesh, true);
+			GEN_KEY(Quanta, true);
 
 
 			SimplePSO init_pso(Keys & key, std::function<void(SimplePSO&, Keys&)> f)
 			{
-				static const ShaderDefine<&Keys::HiZOcclusion,&SimpleGraphicsPSO::amplification> HiZOcclusion = "HIZ_OCCLUSION";
-				static const ShaderDefine<&Keys::CaptureMeshlets,&SimpleGraphicsPSO::amplification> CaptureMeshlets = "CAPTURE_MESHLETS";
-				static const ShaderDefine<&Keys::ClusterLod,&SimpleGraphicsPSO::amplification> ClusterLod = "CLUSTER_LOD";
-				static const ShaderDefine<&Keys::QuantaAmplification,&SimpleGraphicsPSO::amplification> QuantaAmplification = "QUANTA";
-				static const ShaderDefine<&Keys::QuantaMesh,&SimpleGraphicsPSO::mesh> QuantaMesh = "QUANTA";
+				static const ShaderDefine<&Keys::HiZOcclusion, &SimpleGraphicsPSO::amplification> HiZOcclusion = "HIZ_OCCLUSION";
+				static const ShaderDefine<&Keys::CaptureMeshlets, &SimpleGraphicsPSO::amplification> CaptureMeshlets = "CAPTURE_MESHLETS";
+				static const ShaderDefine<&Keys::ClusterLod, &SimpleGraphicsPSO::amplification> ClusterLod = "CLUSTER_LOD";
+				static const ShaderDefine<&Keys::Quanta, &SimpleGraphicsPSO::mesh, &SimpleGraphicsPSO::amplification> Quanta = "QUANTA";
 
 
 				SimplePSO mpso("GBufferDraw");
@@ -69,8 +65,7 @@ export namespace PSOS
 				HiZOcclusion.Apply(mpso, key);
 				CaptureMeshlets.Apply(mpso, key);
 				ClusterLod.Apply(mpso, key);
-				QuantaAmplification.Apply(mpso, key);
-				QuantaMesh.Apply(mpso, key);
+				Quanta.Apply(mpso, key);
 
 				mpso.rtv_formats = { HAL::Format::R8G8B8A8_UNORM, HAL::Format::R8G8B8A8_UNORM, HAL::Format::R8G8B8A8_UNORM, HAL::Format::R16G16_FLOAT, HAL::Format::R32_UINT, HAL::Format::R8G8B8A8_UNORM };	
 				mpso.blend = {  };

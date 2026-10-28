@@ -36,7 +36,7 @@ export namespace PSOS
 
 				SimplePSO init_pso(Keys & key, std::function<void(SimplePSO&, Keys&)> f)
 				{
-					static const ShaderDefine<&Keys::SecondBounce,&SimpleComputePSO::compute> SecondBounce = "SECOND_BOUNCE";
+					static const ShaderDefine<&Keys::SecondBounce, &SimpleComputePSO::compute> SecondBounce = "SECOND_BOUNCE";
 
 
 					SimplePSO mpso("Lighting");

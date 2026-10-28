@@ -34,7 +34,7 @@ export namespace PSOS
 
 			SimplePSO init_pso(Keys & key, std::function<void(SimplePSO&, Keys&)> f)
 			{
-				static const ShaderDefine<&Keys::Up,&SimpleComputePSO::compute> Up = "BACKDROP_UP";
+				static const ShaderDefine<&Keys::Up, &SimpleComputePSO::compute> Up = "BACKDROP_UP";
 
 
 				SimplePSO mpso("BackdropBlur");

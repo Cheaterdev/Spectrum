@@ -36,7 +36,7 @@ export namespace PSOS
 
 				SimplePSO init_pso(Keys & key, std::function<void(SimplePSO&, Keys&)> f)
 				{
-					static const ShaderDefine<&Keys::cas,&SimpleComputePSO::compute> cas = "RCAS";
+					static const ShaderDefine<&Keys::cas, &SimpleComputePSO::compute> cas = "RCAS";
 
 
 					SimplePSO mpso("RCAS");

@@ -43,10 +43,10 @@ export namespace PSOS
 
 			SimplePSO init_pso(Keys & key, std::function<void(SimplePSO&, Keys&)> f)
 			{
-				static const ShaderDefine<&Keys::CheckFrustum,&SimpleComputePSO::compute> CheckFrustum = "CHECK_FRUSTUM";
-				static const ShaderDefine<&Keys::CaptureVisibility,&SimpleComputePSO::compute> CaptureVisibility = "CAPTURE_VISIBILITY";
-				static const ShaderDefine<&Keys::ClusterLod,&SimpleComputePSO::compute> ClusterLod = "CLUSTER_LOD";
-				static const ShaderDefine<&Keys::Quanta,&SimpleComputePSO::compute> Quanta = "QUANTA";
+				static const ShaderDefine<&Keys::CheckFrustum, &SimpleComputePSO::compute> CheckFrustum = "CHECK_FRUSTUM";
+				static const ShaderDefine<&Keys::CaptureVisibility, &SimpleComputePSO::compute> CaptureVisibility = "CAPTURE_VISIBILITY";
+				static const ShaderDefine<&Keys::ClusterLod, &SimpleComputePSO::compute> ClusterLod = "CLUSTER_LOD";
+				static const ShaderDefine<&Keys::Quanta, &SimpleComputePSO::compute> Quanta = "QUANTA";
 
 
 				SimplePSO mpso("GatherPipeline");

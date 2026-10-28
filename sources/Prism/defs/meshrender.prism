@@ -439,7 +439,7 @@ namespace Meshes
 		define ClusterLod;
 
 		# Hands out quanta_draw_commands (implies ClusterLod). Must match the draws' GBufferDraw
-		# QuantaAmplification / QuantaMesh permutations (mesh_renderer sets all three).
+		# Quanta permutations (mesh_renderer sets both).
 		[rename = QUANTA]
 		[CS, nullable]
 		define Quanta;

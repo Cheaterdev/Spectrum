@@ -690,15 +690,12 @@ namespace Shadows
 			amplification = "shadows/vsm/mesh_shader_vsm.hlsl";
 
 			# The Quanta draw (see scene.prism's GBufferDraw): a grid of (hierarchy node, page) instead of
-			# (meshlet, page) pairs, the cut taken from Quanta's shared buffers. A define reaches one stage, so the
-			# AS and the mesh stage each get one; VSM.cpp sets both, and VSMGatherDispatch's Quanta.
+			# (meshlet, page) pairs, the cut taken from Quanta's shared buffers. One define for both stages: separate
+			# keys would also build the AS/MS pairs that disagree on the payload size (D3D12 #1276). VSM.cpp sets it,
+			# and VSMGatherDispatch's Quanta.
 			[rename = QUANTA]
-			[AS, nullable]
-			define QuantaAmplification;
-
-			[rename = QUANTA]
-			[MS, nullable]
-			define QuantaMesh;
+			[AS, MS, nullable]
+			define Quanta;
 
 			ds = D32_FLOAT;
 			# Back to cull=Front (render only back faces -- avoids self-shadow acne
@@ -767,12 +764,8 @@ namespace Shadows
 			amplification = "shadows/vsm/mesh_shader_vsm.hlsl";
 
 			[rename = QUANTA]
-			[AS, nullable]
-			define QuantaAmplification;
-
-			[rename = QUANTA]
-			[MS, nullable]
-			define QuantaMesh;
+			[AS, MS, nullable]
+			define Quanta;
 
 			ds = D32_FLOAT;
 			cull = Front;
@@ -854,7 +847,7 @@ namespace Shadows
 			compute = "shadows/vsm/vsm_gather_dispatch.hlsl";
 
 			# Hands out Quanta's hierarchy nodes per page (a grid of node x page) instead of meshlet x page pairs, and
-			# no entry for a mesh without Quanta data. Must match VSMDepthDraw's QuantaAmplification / QuantaMesh.
+			# no entry for a mesh without Quanta data. Must match VSMDepthDraw's Quanta.
 			[rename = QUANTA]
 			[CS, nullable]
 			define Quanta;

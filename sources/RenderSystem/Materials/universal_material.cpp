@@ -183,8 +183,7 @@ void materials::PipelinePasses::set(RENDER_TYPE render_type, MESH_TYPE type, HAL
 		graphics.set_pipeline(depth_draw->GetPSO(
 			PSOS::Meshes::DepthDraw::HiZOcclusion.Use(hiz_occlusion) |
 			PSOS::Meshes::DepthDraw::ClusterLod.Use(cluster_lod) |
-			PSOS::Meshes::DepthDraw::QuantaAmplification.Use(quanta) |
-			PSOS::Meshes::DepthDraw::QuantaMesh.Use(quanta)));
+			PSOS::Meshes::DepthDraw::Quanta.Use(quanta)));
 	}
 	else
 		if (render_type == RENDER_TYPE::PIXEL)
@@ -195,8 +194,7 @@ void materials::PipelinePasses::set(RENDER_TYPE render_type, MESH_TYPE type, HAL
 				PSOS::Meshes::GBufferDraw::HiZOcclusion.Use(hiz_occlusion) |
 				PSOS::Meshes::GBufferDraw::CaptureMeshlets.Use(capture_meshlets) |
 				PSOS::Meshes::GBufferDraw::ClusterLod.Use(cluster_lod) |
-				PSOS::Meshes::GBufferDraw::QuantaAmplification.Use(quanta) |
-				PSOS::Meshes::GBufferDraw::QuantaMesh.Use(quanta)));
+				PSOS::Meshes::GBufferDraw::Quanta.Use(quanta)));
 		}
 		else
 		{

@@ -44,15 +44,15 @@ export namespace PSOS
 		{
 {% for v in (pso.defines|list) -%}
 {%- set d = pso.defines[v]-%}
-			static const ShaderDefine<&Keys::{{d.name}}, 
-			{{- "&SimpleComputePSO::compute" if d.options.CS is defined -}}
-			{{- "&SimpleGraphicsPSO::pixel" if d.options.PS is defined -}}
-			{{- "&SimpleGraphicsPSO::vertex" if d.options.VS is defined -}}
-			{{- "&SimpleGraphicsPSO::geometry" if d.options.GS is defined -}}
-			{{- "&SimpleGraphicsPSO::domain" if d.options.FS is defined -}}
-			{{- "&SimpleGraphicsPSO::hull" if d.options.HS is defined -}}
-			{{- "&SimpleGraphicsPSO::mesh" if d.options.MS is defined -}}
-			{{- "&SimpleGraphicsPSO::amplification" if d.options.AS is defined -}}
+			static const ShaderDefine<&Keys::{{d.name}}
+			{{- ", &SimpleComputePSO::compute" if d.options.CS is defined -}}
+			{{- ", &SimpleGraphicsPSO::pixel" if d.options.PS is defined -}}
+			{{- ", &SimpleGraphicsPSO::vertex" if d.options.VS is defined -}}
+			{{- ", &SimpleGraphicsPSO::geometry" if d.options.GS is defined -}}
+			{{- ", &SimpleGraphicsPSO::domain" if d.options.FS is defined -}}
+			{{- ", &SimpleGraphicsPSO::hull" if d.options.HS is defined -}}
+			{{- ", &SimpleGraphicsPSO::mesh" if d.options.MS is defined -}}
+			{{- ", &SimpleGraphicsPSO::amplification" if d.options.AS is defined -}}
 > {{d.name}} = "{{d.name if d.options.rename is undefined else d.options.rename.value_atom.expr -}}";
 {% endfor%}
 

@@ -937,12 +937,10 @@ VSM::VSM() : VariableContext(L"VSM")
 			// is only the upper bound.
 			if (use_vsm_conservative_raster)
 				graphics.set_pipeline<PSOS::Shadows::VSM::VSMDepthDrawConservative>(
-					PSOS::Shadows::VSM::VSMDepthDrawConservative::QuantaAmplification.Use(frame_quanta) |
-					PSOS::Shadows::VSM::VSMDepthDrawConservative::QuantaMesh.Use(frame_quanta));
+					PSOS::Shadows::VSM::VSMDepthDrawConservative::Quanta.Use(frame_quanta));
 			else
 				graphics.set_pipeline<PSOS::Shadows::VSM::VSMDepthDraw>(
-					PSOS::Shadows::VSM::VSMDepthDraw::QuantaAmplification.Use(frame_quanta) |
-					PSOS::Shadows::VSM::VSMDepthDraw::QuantaMesh.Use(frame_quanta));
+					PSOS::Shadows::VSM::VSMDepthDraw::Quanta.Use(frame_quanta));
 
 			if (frame_quanta)
 			{

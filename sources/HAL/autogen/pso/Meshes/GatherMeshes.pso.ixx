@@ -34,7 +34,7 @@ export namespace PSOS
 
 			SimplePSO init_pso(Keys & key, std::function<void(SimplePSO&, Keys&)> f)
 			{
-				static const ShaderDefine<&Keys::Invisible,&SimpleComputePSO::compute> Invisible = "INVISIBLE";
+				static const ShaderDefine<&Keys::Invisible, &SimpleComputePSO::compute> Invisible = "INVISIBLE";
 
 
 				SimplePSO mpso("GatherMeshes");

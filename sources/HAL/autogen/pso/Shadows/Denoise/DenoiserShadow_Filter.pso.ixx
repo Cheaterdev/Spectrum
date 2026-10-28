@@ -36,7 +36,7 @@ export namespace PSOS
 
 				SimplePSO init_pso(Keys & key, std::function<void(SimplePSO&, Keys&)> f)
 				{
-					static const ShaderDefine<&Keys::Pass,&SimpleComputePSO::compute> Pass = "Pass";
+					static const ShaderDefine<&Keys::Pass, &SimpleComputePSO::compute> Pass = "Pass";
 
 
 					SimplePSO mpso("DenoiserShadow_Filter");

@@ -40,9 +40,9 @@ export namespace PSOS
 
 			SimplePSO init_pso(Keys & key, std::function<void(SimplePSO&, Keys&)> f)
 			{
-				static const ShaderDefine<&Keys::NonPowerOfTwo,&SimpleComputePSO::compute> NonPowerOfTwo = "NON_POWER_OF_TWO";
-				static const ShaderDefine<&Keys::Gamma,&SimpleComputePSO::compute> Gamma = "CONVERT_TO_SRGB";
-				static const ShaderDefine<&Keys::Slices,&SimpleComputePSO::compute> Slices = "ARRAY_SLICES";
+				static const ShaderDefine<&Keys::NonPowerOfTwo, &SimpleComputePSO::compute> NonPowerOfTwo = "NON_POWER_OF_TWO";
+				static const ShaderDefine<&Keys::Gamma, &SimpleComputePSO::compute> Gamma = "CONVERT_TO_SRGB";
+				static const ShaderDefine<&Keys::Slices, &SimpleComputePSO::compute> Slices = "ARRAY_SLICES";
 
 
 				SimplePSO mpso("MipMapping");

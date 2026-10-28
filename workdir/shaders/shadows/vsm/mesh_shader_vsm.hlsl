@@ -23,7 +23,7 @@
 static const SceneData sceneData = GetSceneData();
 
 #ifdef QUANTA
-// Quanta's cut instead of the mesh's own meshlets (VSMDepthDraw's QuantaAmplification / QuantaMesh): see below.
+// Quanta's cut instead of the mesh's own meshlets (VSMDepthDraw's Quanta): see below.
 #include "../../quanta/quanta_lod.hlsl"
 #ifdef BUILD_FUNC_AS
 #include "../../autogen/QuantaShadowFeedback.h"
