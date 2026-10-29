@@ -363,7 +363,7 @@ namespace Meshes
 
 
 
-	# Scene BVH culling (Graphics:Scene's Bvh): one thread per treelet walks its tree against the camera's frustum
+	# Scene BVH culling (Graphics:Scene's Bvh): one thread per treelet walks its tree against a convex volume
 	# and appends the mesh parts that survive to `ids`, in the shape the box gather (GatherBoxes) takes as its
 	# input list, with `args` the indirect dispatch for it (bumped by InterlockedMax like the other producers).
 	[Bind = DefaultLayout::Instance1]
@@ -373,7 +373,11 @@ namespace Meshes
 		# its children's node indices in a and b.
 		StructuredBuffer<uint> nodes;
 		StructuredBuffer<uint> treelets;
+		uint treelet_first;
 		uint treelet_count;
+		# What to cull against: any convex volume as six inward-pointing planes (a camera's frustum, a light's
+		# orthographic box, an AABB).
+		Frustum volume;
 
 		RWStructuredBuffer<uint> ids;
 		RWStructuredBuffer<uint> count;

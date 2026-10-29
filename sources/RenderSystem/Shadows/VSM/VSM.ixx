@@ -112,6 +112,10 @@ public:
 	// affects the opaque VSMDepthDraw path, not per-material alpha-cutout PSOs.
 	Variable<bool> use_vsm_conservative_raster = { false, "Conservative rasterization", this };
 
+	// The gather tests only the meshes the scene BVH leaves inside each level's light-space rectangle instead of
+	// every mesh of the scene against every level. Off scans the whole list.
+	Variable<bool> use_scene_bvh = { true, "Scene BVH", this };
+
 	// Debug-only: VSM_BlockerSearchResult and VSM_ContactShadow are freshly
 	// (re)allocated resources each frame, only ever written for the pixels
 	// their own dispatch actually covers -- everything else is whatever
@@ -416,6 +420,8 @@ private:
 	// Rebuilt fresh every frame, same as the old m_dispatch_entries it
 	// replaces.
 	std::vector<Table::Shadows::VSM::VSMLevelDispatchInfo> m_level_dispatch_info;
+	// Created on first use: the device is not up when this class is constructed.
+	std::unique_ptr<SceneBvhCuller> m_bvh_culler;
 
 	// "Quanta draw" for the shadow pages (VSMDepthDraw's Quanta permutation): decided once per frame in
 	// plan_frame(), because the gather and the draw passes must agree on it. The cut a cached page was drawn with

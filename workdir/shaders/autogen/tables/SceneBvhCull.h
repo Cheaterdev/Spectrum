@@ -8,17 +8,22 @@
 #include "sig_hlsl.hlsl"
 #include "enums.h"
 #include "DispatchArguments.h"
+#include "Frustum.h"
 namespace Meshes
 {
 	struct SceneBvhCull
 	{
+		uint treelet_first; // uint
 		uint treelet_count; // uint
 		uint nodes; // StructuredBuffer<uint>
 		uint treelets; // StructuredBuffer<uint>
 		uint ids; // RWStructuredBuffer<uint>
 		uint count; // RWStructuredBuffer<uint>
 		uint args; // RWStructuredBuffer<DispatchArguments>
+		Frustum volume; // Frustum
+		uint GetTreelet_first() { return treelet_first; }
 		uint GetTreelet_count() { return treelet_count; }
+		Frustum GetVolume() { return volume; }
 		StructuredBuffer<uint> GetNodes() { return ResourceDescriptorHeap[nodes]; }
 		StructuredBuffer<uint> GetTreelets() { return ResourceDescriptorHeap[treelets]; }
 		RWStructuredBuffer<uint> GetIds() { return ResourceDescriptorHeap[ids]; }

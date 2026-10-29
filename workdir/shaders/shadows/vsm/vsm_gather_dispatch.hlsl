@@ -133,10 +133,11 @@ void CS(uint3 dispatchID : SV_DispatchThreadID)
 	MaterialCommandData material = GetSceneData().GetMaterials()[mesh.GetMaterial_id()];
 	if (material.GetTransparency_mode() != TransparencyMode::Opaque) return;
 
-	VSMLevelDispatchInfo level = gatherData.GetLevels()[dispatchID.y];
+	const uint level_index = gatherData.GetLevel_base() + dispatchID.y;
+	VSMLevelDispatchInfo level = gatherData.GetLevels()[level_index];
 
 	DrawMeshCommand entry;
-	if (!vsm_try_build_entry(id, mesh, dispatchID.y, level, gatherData.GetLight_view(), entry)) return;
+	if (!vsm_try_build_entry(id, mesh, level_index, level, gatherData.GetLight_view(), entry)) return;
 
 	gatherData.GetDispatch_commands().Append(entry);
 }

@@ -88,7 +88,7 @@ public:
     Slots::Meshes::GatherPipelineGlobal::Compiled compiledGather[8];
 
     // A BVH over every mesh part of the scene (command_ids[ALL]), for the GPU to cull the whole scene without
-    // testing each part (mesh_renderer::bvh_cull). Built from the parts' world AABBs on the CPU, split into
+    // testing each part (SceneBvhCuller). Built from the parts' world AABBs on the CPU, split into
     // "treelets" of at most Bvh::TreeletLeaves parts: the GPU tests one thread per treelet and walks the
     // treelet's own tree, so the levels above the treelets are never stored. Static and dynamic parts are
     // built separately, so a moving object only rebuilds the dynamic one.
@@ -101,6 +101,8 @@ public:
         std::vector<uint32_t> nodes;
         // The root node of each treelet.
         std::vector<uint32_t> treelets;
+        // The first treelets, [0, static_treelets), hold the static parts and the rest the dynamic ones.
+        uint static_treelets = 0;
         // Changes whenever the arrays do, so a renderer knows to upload them again.
         uint64_t version = 0;
     } bvh;
@@ -117,6 +119,8 @@ public:
    bool init_ras(CommandList::ptr& list);
 
 private:
+    // Passes record on several threads and each calls update_bvh().
+    std::mutex bvh_mutex;
     bool     bvh_static_dirty     = true;
     bool     bvh_dynamic_dirty    = true;
     // The two parts' own trees (node indices relative to the part), combined into `bvh`.
@@ -139,6 +143,33 @@ public:
     void iterate_meshes(MESH_TYPE mesh_type, std::function<void(scene_object::ptr)> f);
 
 
-   
 
+
+};
+
+// Culls a Scene's mesh parts against a convex volume through Scene::Bvh, for any pass that draws the scene: a camera's
+// frustum, a light's orthographic box, an AABB (six inward-pointing planes in every case). One per consumer, since it
+// owns the GPU copy of the BVH, uploaded when Scene::Bvh::version changes, and the result of the last cull.
+export class SceneBvhCuller
+{
+public:
+    SceneBvhCuller();
+
+    // Fills `gather` and `args` with the parts of `type` (STATIC, DYNAMIC or ALL) that touch `volume`. The parts that are
+    // kept are a superset of the ones inside it. False when there is nothing to cull through (no BVH, or a scene larger
+    // than the buffers): the caller scans the whole list instead.
+    bool cull(HAL::CommandList& list, Scene& scene, MESH_TYPE type, const Table::Frame::Frustum& volume);
+
+    // The result in the shape the gathers take as their input list, and the indirect dispatch sized for it.
+    Slots::Meshes::GatherPipelineGlobal::Compiled gather;
+    HAL::StructuredBufferView<DispatchArguments> args;
+
+    // The buffer holding, in its first dword, how many parts the last cull kept.
+    HAL::Buffer::ptr count_buffer() { return ids->buffer.get_counter_buffer(); }
+
+private:
+    HAL::virtual_gpu_buffer<UINT>::ptr nodes;
+    HAL::virtual_gpu_buffer<UINT>::ptr treelets;
+    HAL::virtual_gpu_buffer<UINT>::ptr ids;
+    uint64_t uploaded = 0;
 };

@@ -11,6 +11,7 @@ import :SIG;
 import :Types;
 import :HLSL;
 import :Enums;
+import :Autogen.Tables.Frame.Frustum;
 export namespace Table
 {
 	#pragma pack(push, 1)
@@ -19,43 +20,53 @@ export namespace Table
 		struct SceneBvhCull
 		{
 			static constexpr SlotID ID = SlotID::SceneBvhCull;
+			uint treelet_first;
 			uint treelet_count;
 			HLSL::StructuredBuffer<uint> nodes;
 			HLSL::StructuredBuffer<uint> treelets;
 			HLSL::RWStructuredBuffer<uint> ids;
 			HLSL::RWStructuredBuffer<uint> count;
 			HLSL::RWStructuredBuffer<DispatchArguments> args;
+			Table::Frame::Frustum volume;
 			HLSL::StructuredBuffer<uint>& GetNodes() { return nodes; }
 			HLSL::StructuredBuffer<uint>& GetTreelets() { return treelets; }
+			uint& GetTreelet_first() { return treelet_first; }
 			uint& GetTreelet_count() { return treelet_count; }
 			HLSL::RWStructuredBuffer<uint>& GetIds() { return ids; }
 			HLSL::RWStructuredBuffer<uint>& GetCount() { return count; }
 			HLSL::RWStructuredBuffer<DispatchArguments>& GetArgs() { return args; }
+			Table::Frame::Frustum& GetVolume() { return volume; }
 			static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 			template<class Compiler>
 			void compile(Compiler& compiler) const
 			{
+				compiler.compile(treelet_first, "SceneBvhCull::treelet_first");
 				compiler.compile(treelet_count, "SceneBvhCull::treelet_count");
 				compiler.compile(nodes, "SceneBvhCull::nodes");
 				compiler.compile(treelets, "SceneBvhCull::treelets");
 				compiler.compile(ids, "SceneBvhCull::ids");
 				compiler.compile(count, "SceneBvhCull::count");
 				compiler.compile(args, "SceneBvhCull::args");
+				compiler.compile(volume, "SceneBvhCull::volume");
 			}
 			struct Compiled
 			{
+				uint treelet_first; // uint
 				uint treelet_count; // uint
 				uint nodes; // StructuredBuffer<uint>
 				uint treelets; // StructuredBuffer<uint>
 				uint ids; // RWStructuredBuffer<uint>
 				uint count; // RWStructuredBuffer<uint>
 				uint args; // RWStructuredBuffer<DispatchArguments>
+				Table::Frame::Frustum::Compiled volume; // Frustum
 
 			
 				private:
 				SERIALIZE()
 				{
+					ar& NVP(treelet_first);
 					ar& NVP(treelet_count);
+					ar& NVP(volume);
 				}
 
 
@@ -68,7 +79,9 @@ export namespace Table
 			private:
 			SERIALIZE()
 			{
+				ar& NVP(treelet_first);
 				ar& NVP(treelet_count);
+				ar& NVP(volume);
 			}
 
 		};

@@ -88,17 +88,11 @@ class mesh_renderer : public renderer, public Events::prop_handler, VariableCont
 		void  draw_boxes(MeshRenderContext::ptr mesh_render_context, Scene::ptr scene);
 		void  generate_boxes(MeshRenderContext::ptr mesh_render_context, Slots::Meshes::GatherPipelineGlobal::Compiled& gatherData, HAL::StructuredBufferView<DispatchArguments>* dispatch_args, UINT direct_count);
 		void  gather_rendered_boxes(MeshRenderContext::ptr mesh_render_context, Scene::ptr scene, bool invisibleToo);
-		// Culls the scene's mesh parts against the camera frustum through Scene::Bvh into bvh_ids/bvh_args, the input
-		// list of generate_boxes (gather_bvh). False when there is no BVH to use: the caller scans the whole list.
+		// Culls the scene's mesh parts of the context's type against its camera's frustum through Scene::Bvh. False when
+		// there is no BVH to use or no camera: the caller scans the whole list. On true, bvh_culler holds the list.
 		bool  bvh_cull(MeshRenderContext::ptr mesh_render_context, Scene::ptr scene);
 
-		// Scene::Bvh on the GPU, uploaded again when its version changes.
-		virtual_gpu_buffer<UINT>::ptr bvh_nodes;
-		virtual_gpu_buffer<UINT>::ptr bvh_treelets;
-		virtual_gpu_buffer<UINT>::ptr bvh_ids;
-		HAL::StructuredBufferView<DispatchArguments> bvh_args; // sized by bvh_ids count
-		Slots::Meshes::GatherPipelineGlobal::Compiled gather_bvh;
-		uint64_t bvh_uploaded = 0;
+		SceneBvhCuller bvh_culler;
 
 
 		virtual_gpu_buffer<Table::Meshes::BoxInfo>::ptr commands_boxes;
@@ -141,7 +135,7 @@ class mesh_renderer : public renderer, public Events::prop_handler, VariableCont
         // Whether the last frame's first culling stage took the BVH's list (false: it scanned the whole scene).
         bool bvh_used = false;
         // The buffer holding, in its first dword, how many mesh parts the last BVH cull handed to the box gather.
-        HAL::Buffer::ptr bvh_candidate_counter() { return bvh_ids->buffer.get_counter_buffer(); }
+        HAL::Buffer::ptr bvh_candidate_counter() { return bvh_culler.count_buffer(); }
         // Additive on top of use_gpu_occlusion's instance-level box test --
         // per-meshlet Hi-Z check in the AS, for objects partly occluded
         // within an otherwise-visible instance. Independent toggle to A/B

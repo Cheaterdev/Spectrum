@@ -190,6 +190,8 @@ namespace
 
 void Scene::update_bvh()
 {
+	std::lock_guard lock(bvh_mutex);
+
 	if (!bvh_static_dirty && !bvh_dynamic_dirty)
 		return;
 
@@ -235,6 +237,7 @@ void Scene::update_bvh()
 	// The dynamic part's node indices are relative to it; they follow the static part's.
 	bvh.nodes = bvh_static.nodes;
 	bvh.treelets = bvh_static.treelets;
+	bvh.static_treelets = static_cast<uint>(bvh_static.treelets.size());
 	const uint32_t offset = static_cast<uint32_t>(bvh_static.nodes.size() / 8);
 	const size_t first_dynamic = bvh.nodes.size();
 	bvh.nodes.insert(bvh.nodes.end(), bvh_dynamic.nodes.begin(), bvh_dynamic.nodes.end());
@@ -248,6 +251,89 @@ void Scene::update_bvh()
 		bvh.treelets.push_back(root + offset);
 
 	bvh.version++;
+}
+
+namespace
+{
+	// Capacity of a SceneBvhCuller's GPU buffers: nodes are 8 dwords, at most 2 per mesh part.
+	constexpr size_t BvhNodeDwords = 8 * 1024 * 1024;
+	constexpr size_t BvhTreeletCapacity = 1024 * 1024;
+	constexpr UINT BvhMaxParts = 1024 * 1024;
+}
+
+SceneBvhCuller::SceneBvhCuller()
+{
+	auto& device = RenderSystem::get().device();
+	nodes    = std::make_shared<virtual_gpu_buffer<UINT>>(device, BvhNodeDwords, counterType::NONE, HAL::ResFlags::ShaderResource);
+	treelets = std::make_shared<virtual_gpu_buffer<UINT>>(device, BvhTreeletCapacity, counterType::NONE, HAL::ResFlags::ShaderResource);
+	ids      = std::make_shared<virtual_gpu_buffer<UINT>>(device, BvhMaxParts, counterType::HELP_BUFFER, HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess);
+	args     = HAL::StructuredBufferView<DispatchArguments>(device, 1, counterType::NONE, HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess);
+
+	Slots::Meshes::GatherPipelineGlobal global;
+	global.GetCommands() = ids->buffer.structuredBuffer;
+	global.GetMeshes_count() = ids->buffer.counter_view;
+	gather = global.compile(device.get_static_gpu_data());
+}
+
+bool SceneBvhCuller::cull(HAL::CommandList& list, Scene& scene, MESH_TYPE type, const Table::Frame::Frustum& volume)
+{
+	scene.update_bvh();
+	auto& bvh = scene.bvh;
+
+	// The buffers are fixed in size; a scene beyond them scans the whole list.
+	if (bvh.treelets.empty() || bvh.nodes.size() > BvhNodeDwords || bvh.treelets.size() > BvhTreeletCapacity)
+		return false;
+
+	uint first = 0;
+	uint count = (uint)bvh.treelets.size();
+	if (type == MESH_TYPE::STATIC)
+		count = bvh.static_treelets;
+	else if (type == MESH_TYPE::DYNAMIC)
+	{
+		first = bvh.static_treelets;
+		count -= first;
+	}
+	else if (type != MESH_TYPE::ALL)
+		return false;
+
+	PROFILE_GPU(L"scene_bvh_cull");
+
+	auto& compute = list.get_compute();
+	auto& copy = list.get_copy();
+
+	if (uploaded != bvh.version)
+	{
+		PROFILE(L"scene_bvh_upload");
+		nodes->reserve(list, bvh.nodes.size());
+		treelets->reserve(list, bvh.treelets.size());
+		copy.update(nodes->buffer, 0, std::span{ bvh.nodes });
+		copy.update(treelets->buffer, 0, std::span{ bvh.treelets });
+		uploaded = bvh.version;
+	}
+
+	ids->reserve(list, scene.command_ids[(int)MESH_TYPE::ALL].size());
+
+	// Same reset as the other producers of an indirect dispatch (mesh_renderer::generate_boxes).
+	compute.clear_counter(ids->buffer);
+	compute.clear(args);
+
+	if (count == 0)
+		return true;
+
+	Slots::Meshes::SceneBvhCull cull;
+	cull.GetNodes() = nodes->buffer.structuredBuffer;
+	cull.GetTreelets() = treelets->buffer.structuredBuffer;
+	cull.GetTreelet_first() = first;
+	cull.GetTreelet_count() = count;
+	cull.GetVolume() = volume;
+	cull.GetIds() = ids->buffer;
+	cull.GetCount() = ids->buffer.counter_view;
+	cull.GetArgs() = args;
+
+	compute.set_pipeline<PSOS::Meshes::SceneBvhCull>();
+	compute.set(cull);
+	compute.dispatch((int)Math::DivideByMultiple(count, 64), 1, 1);
+	return true;
 }
 
 void Scene::rebuild_scene_caches()

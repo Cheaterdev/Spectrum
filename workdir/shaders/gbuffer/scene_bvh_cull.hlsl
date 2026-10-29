@@ -1,9 +1,8 @@
-// Scene BVH culling: one thread per treelet (Scene::Bvh) walks its tree against the camera frustum and appends the
-// mesh parts whose world box is not outside it. The test is conservative (a box touching a plane stays), so it never
-// drops a part the box gather's own test (gather_pipeline.hlsl CS_boxes) would keep.
+// Scene BVH culling: one thread per treelet (Scene::Bvh) walks its tree against a convex volume (six planes) and
+// appends the mesh parts whose world box is not outside it. The test is conservative (a box touching a plane stays),
+// so it never drops a part the box gather's own test (gather_pipeline.hlsl CS_boxes) would keep.
 
 #include "../autogen/SceneBvhCull.h"
-#include "../autogen/FrameInfo.h"
 
 bool BoxOutside(Frustum f, float3 box_min, float3 box_max)
 {
@@ -27,19 +26,19 @@ void CS(uint3 dispatchID : SV_DispatchThreadID)
         return;
 
     StructuredBuffer<uint> nodes = cull.GetNodes();
-    Frustum frustum = GetFrameInfo().GetCamera().GetFrustum();
+    Frustum volume = cull.GetVolume();
 
     // A treelet holds at most 32 leaves, split at the median: its depth is 6 and the stack never holds more than 7.
     uint stack[16];
     uint top = 0;
-    stack[top++] = cull.GetTreelets()[dispatchID.x];
+    stack[top++] = cull.GetTreelets()[cull.GetTreelet_first() + dispatchID.x];
 
     while (top > 0)
     {
         uint base = stack[--top] * 8;
         float3 box_min = asfloat(uint3(nodes[base], nodes[base + 1], nodes[base + 2]));
         float3 box_max = asfloat(uint3(nodes[base + 4], nodes[base + 5], nodes[base + 6]));
-        if (BoxOutside(frustum, box_min, box_max))
+        if (BoxOutside(volume, box_min, box_max))
             continue;
 
         uint a = nodes[base + 3];

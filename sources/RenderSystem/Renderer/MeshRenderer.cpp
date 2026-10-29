@@ -12,13 +12,6 @@ import HAL;
 
 using namespace HAL;
 
-namespace
-{
-	// Capacity of the scene BVH's GPU buffers (mesh_renderer::bvh_cull): nodes are 8 dwords, at most 2 per mesh part.
-	constexpr size_t BvhNodeDwords = 8 * 1024 * 1024;
-	constexpr size_t BvhTreeletCapacity = 1024 * 1024;
-}
-
 void mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, Scene::ptr scene)
 {
 	if (!draw_meshes) return;
@@ -86,8 +79,14 @@ void mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, Scene::pt
 
 	if (!gbuffer || !use_gpu_occlusion)
 	{
-		// Scene mesh count is CPU-known — direct dispatch, no indirect args.
-		render_meshes(mesh_render_context, scene, pipelines, scene->compiledGather[(int)mesh_render_context->render_mesh], (mesh_render_context->render_type != RENDER_TYPE::VOXEL), nullptr, meshes_count, false, capture_stage(CullCapture::First), lod);
+		// No first stage to cull for it: the scene BVH narrows the scan to what the camera can see (voxelization is
+		// not culled by the camera at all).
+		bvh_used = use_scene_bvh && mesh_render_context->render_type != RENDER_TYPE::VOXEL && bvh_cull(mesh_render_context, scene);
+		if (bvh_used)
+			render_meshes(mesh_render_context, scene, pipelines, bvh_culler.gather, true, &bvh_culler.args, 0, false, capture_stage(CullCapture::First), lod);
+		else
+			// Scene mesh count is CPU-known — direct dispatch, no indirect args.
+			render_meshes(mesh_render_context, scene, pipelines, scene->compiledGather[(int)mesh_render_context->render_mesh], (mesh_render_context->render_type != RENDER_TYPE::VOXEL), nullptr, meshes_count, false, capture_stage(CullCapture::First), lod);
 		return;
 	}
 
@@ -111,9 +110,9 @@ void mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, Scene::pt
 
 		// Stage 1 walks the full scene list (CPU-known count, direct dispatch), or what the scene BVH leaves
 		// inside the frustum (sized on the GPU).
-		bvh_used = use_scene_bvh && mesh_render_context->render_mesh == MESH_TYPE::ALL && bvh_cull(mesh_render_context, scene);
+		bvh_used = use_scene_bvh && bvh_cull(mesh_render_context, scene);
 		if (bvh_used)
-			generate_boxes(mesh_render_context, gather_bvh, &bvh_args, 0);
+			generate_boxes(mesh_render_context, bvh_culler.gather, &bvh_culler.args, 0);
 		else
 			generate_boxes(mesh_render_context, scene->compiledGather[(int)mesh_render_context->render_mesh], nullptr, meshes_count);
 
@@ -194,47 +193,10 @@ void  mesh_renderer::gather_rendered_boxes(MeshRenderContext::ptr mesh_render_co
 
 bool  mesh_renderer::bvh_cull(MeshRenderContext::ptr mesh_render_context, Scene::ptr scene)
 {
-	scene->update_bvh();
-	auto& bvh = scene->bvh;
-
-	// The buffers are fixed in size; a scene beyond them scans the whole list.
-	if (bvh.treelets.empty() || bvh.nodes.size() > BvhNodeDwords || bvh.treelets.size() > BvhTreeletCapacity)
+	if (!mesh_render_context->cam)
 		return false;
 
-	PROFILE_GPU(L"scene_bvh_cull");
-
-	auto& list = *mesh_render_context->list;
-	auto& compute = list.get_compute();
-	auto& copy = list.get_copy();
-
-	if (bvh_uploaded != bvh.version)
-	{
-		PROFILE(L"scene_bvh_upload");
-		bvh_nodes->reserve(list, bvh.nodes.size());
-		bvh_treelets->reserve(list, bvh.treelets.size());
-		copy.update(bvh_nodes->buffer, 0, std::span{ bvh.nodes });
-		copy.update(bvh_treelets->buffer, 0, std::span{ bvh.treelets });
-		bvh_uploaded = bvh.version;
-	}
-
-	bvh_ids->reserve(list, scene->command_ids[(int)MESH_TYPE::ALL].size());
-
-	// Same reset as the other producers of an indirect dispatch (generate_boxes).
-	compute.clear_counter(bvh_ids->buffer);
-	compute.clear(bvh_args);
-
-	Slots::Meshes::SceneBvhCull cull;
-	cull.GetNodes() = bvh_nodes->buffer.structuredBuffer;
-	cull.GetTreelets() = bvh_treelets->buffer.structuredBuffer;
-	cull.GetTreelet_count() = (uint)bvh.treelets.size();
-	cull.GetIds() = bvh_ids->buffer;
-	cull.GetCount() = bvh_ids->buffer.counter_view;
-	cull.GetArgs() = bvh_args;
-
-	compute.set_pipeline<PSOS::Meshes::SceneBvhCull>();
-	compute.set(cull);
-	compute.dispatch((int)Math::DivideByMultiple((uint)bvh.treelets.size(), 64), 1, 1);
-	return true;
+	return bvh_culler.cull(*mesh_render_context->list, *scene, mesh_render_context->render_mesh, mesh_render_context->cam->camera_cb.current.frustum);
 }
 
 void  mesh_renderer::generate_boxes(MeshRenderContext::ptr mesh_render_context, Slots::Meshes::GatherPipelineGlobal::Compiled& gatherData, HAL::StructuredBufferView<DispatchArguments>* dispatch_args, UINT direct_count)
@@ -504,17 +466,6 @@ mesh_renderer::mesh_renderer() :VariableContext(L"mesh_renderer")
 		gather_meshes_args = HAL::StructuredBufferView<DispatchArguments>(RenderSystem::get().device(), 1, counterType::NONE, HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess);
 		render_args        = HAL::StructuredBufferView<DispatchArguments>(RenderSystem::get().device(), 1, counterType::NONE, HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess);
 		retest_args        = HAL::StructuredBufferView<DispatchArguments>(RenderSystem::get().device(), 1, counterType::NONE, HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess);
-		bvh_args           = HAL::StructuredBufferView<DispatchArguments>(RenderSystem::get().device(), 1, counterType::NONE, HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess);
-	}
-	{
-		bvh_nodes    = std::make_shared<virtual_gpu_buffer<UINT>>(RenderSystem::get().device(), BvhNodeDwords, counterType::NONE, HAL::ResFlags::ShaderResource);
-		bvh_treelets = std::make_shared<virtual_gpu_buffer<UINT>>(RenderSystem::get().device(), BvhTreeletCapacity, counterType::NONE, HAL::ResFlags::ShaderResource);
-		bvh_ids      = std::make_shared<virtual_gpu_buffer<UINT>>(RenderSystem::get().device(), max_meshes, counterType::HELP_BUFFER, HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess);
-
-		Slots::Meshes::GatherPipelineGlobal gather;
-		gather.GetCommands() = bvh_ids->buffer.structuredBuffer;
-		gather.GetMeshes_count() = bvh_ids->buffer.counter_view;
-		gather_bvh = gather.compile(RenderSystem::get().device().get_static_gpu_data());
 	}
 	{
 		Slots::Meshes::GatherPipelineGlobal gather;

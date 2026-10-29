@@ -16,10 +16,12 @@ namespace Shadows
 		struct VSMGatherDispatchData
 		{
 			uint level_count; // uint
+			uint level_base; // uint
 			float4x4 light_view; // float4x4
 			uint levels; // StructuredBuffer<VSMLevelDispatchInfo>
 			uint dispatch_commands; // AppendStructuredBuffer<DrawMeshCommand>
 			uint GetLevel_count() { return level_count; }
+			uint GetLevel_base() { return level_base; }
 			float4x4 GetLight_view() { return light_view; }
 			StructuredBuffer<VSMLevelDispatchInfo> GetLevels() { return ResourceDescriptorHeap[levels]; }
 			AppendStructuredBuffer<DrawMeshCommand> GetDispatch_commands() { return ResourceDescriptorHeap[dispatch_commands]; }

@@ -831,6 +831,9 @@ namespace Shadows
 		{
 			StructuredBuffer<VSMLevelDispatchInfo> levels;
 			uint level_count;
+			# The dispatch covers levels [level_base, level_base + level_count) of `levels`: one level per dispatch
+			# when the scene BVH hands each level its own list of meshes.
+			uint level_base;
 			# Same rotation-only light-space view make_light_view_camera() builds
 			# CPU-side (VSM.cpp) -- mesh AABBs are transformed into this space here
 			# to compare against each level's bounds_min/bounds_max, computed in the

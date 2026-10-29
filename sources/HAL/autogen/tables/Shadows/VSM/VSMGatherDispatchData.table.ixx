@@ -23,11 +23,13 @@ export namespace Table
 			{
 				static constexpr SlotID ID = SlotID::VSMGatherDispatchData;
 				uint level_count;
+				uint level_base;
 				float4x4 light_view;
 				HLSL::StructuredBuffer<Table::Shadows::VSM::VSMLevelDispatchInfo> levels;
 				HLSL::AppendStructuredBuffer<DrawMeshCommand> dispatch_commands;
 				HLSL::StructuredBuffer<Table::Shadows::VSM::VSMLevelDispatchInfo>& GetLevels() { return levels; }
 				uint& GetLevel_count() { return level_count; }
+				uint& GetLevel_base() { return level_base; }
 				float4x4& GetLight_view() { return light_view; }
 				HLSL::AppendStructuredBuffer<DrawMeshCommand>& GetDispatch_commands() { return dispatch_commands; }
 				static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
@@ -35,6 +37,7 @@ export namespace Table
 				void compile(Compiler& compiler) const
 				{
 					compiler.compile(level_count, "VSMGatherDispatchData::level_count");
+					compiler.compile(level_base, "VSMGatherDispatchData::level_base");
 					compiler.compile(light_view, "VSMGatherDispatchData::light_view");
 					compiler.compile(levels, "VSMGatherDispatchData::levels");
 					compiler.compile(dispatch_commands, "VSMGatherDispatchData::dispatch_commands");
@@ -42,6 +45,7 @@ export namespace Table
 				struct Compiled
 				{
 					uint level_count; // uint
+					uint level_base; // uint
 					float4x4 light_view; // float4x4
 					uint levels; // StructuredBuffer<VSMLevelDispatchInfo>
 					uint dispatch_commands; // AppendStructuredBuffer<DrawMeshCommand>
@@ -51,6 +55,7 @@ export namespace Table
 					SERIALIZE()
 					{
 						ar& NVP(level_count);
+						ar& NVP(level_base);
 						ar& NVP(light_view);
 					}
 
@@ -65,6 +70,7 @@ export namespace Table
 				SERIALIZE()
 				{
 					ar& NVP(level_count);
+					ar& NVP(level_base);
 					ar& NVP(light_view);
 				}
 

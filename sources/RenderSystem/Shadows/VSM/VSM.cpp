@@ -731,22 +731,77 @@ VSM::VSM() : VariableContext(L"VSM")
 		if (mesh_count == 0)
 			return;
 
+		camera light_view_cam = make_light_view_camera(frame_light_pos);
+
+		auto bind_gather = [&](uint level_base, uint level_count)
 		{
 			Slots::Shadows::VSM::VSMGatherDispatchData gatherData;
 			gatherData.GetLevels()            = data.VSM_LevelDispatchInfo->structuredBuffer;
-			gatherData.GetLevel_count()       = (uint)m_level_dispatch_info.size();
+			gatherData.GetLevel_count()       = level_count;
+			gatherData.GetLevel_base()        = level_base;
 			gatherData.GetDispatch_commands() = data.VSM_DispatchCommands->appendStructuredBuffer;
-
-			camera light_view_cam = make_light_view_camera(frame_light_pos);
-			gatherData.GetLight_view() = light_view_cam.get_view();
+			gatherData.GetLight_view()        = light_view_cam.get_view();
 
 			compute.set(gatherData);
+			compute.set(scene->compiledScene);
+		};
+		auto set_gather_pipeline = [&]
+		{
+			compute.set_pipeline<PSOS::Shadows::VSM::VSMGatherDispatch>(PSOS::Shadows::VSM::VSMGatherDispatch::Quanta.Use(frame_quanta));
+		};
+
+		// A level is a slab of the light's view: its rectangle in the light's XY plane, unbounded along the light. As
+		// a volume for the BVH cull, that is four inward-pointing planes in world space, and two that never reject.
+		auto level_volume = [&](const Table::Shadows::VSM::VSMLevelDispatchInfo& level)
+		{
+			const mat4x4 view = light_view_cam.get_view();
+			auto to_light = [&](float3 p) { float4 r = float4(p, 1) * view; return float3(r.x, r.y, r.z) / r.w; };
+			const float3 origin = to_light(float3(0, 0, 0));
+			const float3 ex = to_light(float3(1, 0, 0)) - origin;
+			const float3 ey = to_light(float3(0, 1, 0)) - origin;
+			const float3 ez = to_light(float3(0, 0, 1)) - origin;
+
+			// lpos.x = dot(world, (ex.x, ey.x, ez.x)) + origin.x, and the same for y.
+			const float3 nx = float3(ex.x, ey.x, ez.x);
+			const float3 ny = float3(ex.y, ey.y, ez.y);
+
+			Table::Frame::Frustum volume;
+			volume.planes[0] = float4(nx, origin.x - level.bounds_min.x);
+			volume.planes[1] = float4(-nx, level.bounds_max.x - origin.x);
+			volume.planes[2] = float4(ny, origin.y - level.bounds_min.y);
+			volume.planes[3] = float4(-ny, level.bounds_max.y - origin.y);
+			volume.planes[4] = float4(0, 0, 0, 1);
+			volume.planes[5] = float4(0, 0, 0, 1);
+			return volume;
+		};
+
+		if (use_scene_bvh)
+		{
+			if (!m_bvh_culler)
+				m_bvh_culler = std::make_unique<SceneBvhCuller>();
+
+			// One cull and one gather per level: each level has its own volume, so its own list of meshes.
+			bool culled = true;
+			for (uint level = 0; level < (uint)m_level_dispatch_info.size() && culled; level++)
+			{
+				culled = m_bvh_culler->cull(*command_list, *scene, MESH_TYPE::ALL, level_volume(m_level_dispatch_info[level]));
+				if (!culled)
+					break;
+
+				bind_gather(level, 1);
+				compute.set(m_bvh_culler->gather);
+				set_gather_pipeline();
+				compute.exec_indirect(m_bvh_culler->args, 1);
+			}
+
+			// No BVH to cull through (only possible before the first level, where the scene is the same): scan.
+			if (culled)
+				return;
 		}
 
+		bind_gather(0, (uint)m_level_dispatch_info.size());
 		compute.set(scene->compiledGather[(int)MESH_TYPE::ALL]);
-		compute.set(scene->compiledScene);
-
-		compute.set_pipeline<PSOS::Shadows::VSM::VSMGatherDispatch>(PSOS::Shadows::VSM::VSMGatherDispatch::Quanta.Use(frame_quanta));
+		set_gather_pipeline();
 		compute.dispatch(ivec2((int)mesh_count, (int)m_level_dispatch_info.size()), ivec2(64, 1));
 	};
 
