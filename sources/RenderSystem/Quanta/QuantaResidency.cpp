@@ -5,6 +5,7 @@ import :QuantaResidency;
 import Core;
 import HAL;
 import :Quanta;
+import :Streaming;
 
 import RenderSystem;
 
@@ -24,12 +25,6 @@ namespace
 
 	// Pages of a mesh loaded from an asset file are read straight into their pool slot by DirectStorage.
 	Variable<bool> g_direct_storage = { true, "Direct storage", &streaming_context() };
-
-	// Pages loaded per feedback snapshot at most: a burst of requests would otherwise stall the frame.
-	constexpr size_t MaxLoadsPerSnapshot = 64;
-
-	// A page the draw last reached this many frames ago is fair game for eviction.
-	constexpr uint32_t EvictionAge = 3;
 }
 
 namespace Quanta
@@ -47,25 +42,21 @@ namespace Quanta
 	}
 
 	Residency::Residency()
-		: pages(RenderSystem::get().device(), MaxPageDwords)
+		: streamer(std::make_shared<Streaming::Streamer>(static_cast<Streaming::Backend&>(*this), static_cast<uint32_t>(MaxPageIds)))
+		, m(streamer->mutex())
+		, pages(RenderSystem::get().device(), MaxPageDwords)
 		, groups(RenderSystem::get().device(), MaxGroupDwords)
 		, nodes(RenderSystem::get().device(), MaxNodeDwords)
 		, page_slots(RenderSystem::get().device(), MaxPageIds)
 		, feedback(RenderSystem::get().device(), MaxPageIds * 2, HAL::counterType::NONE,
 			HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess)
 	{
-		page_refs.resize(MaxPageIds);
 	}
 
 	Residency::~Residency()
 	{
-		{
-			std::lock_guard<std::mutex> g(snapshot_mutex);
-			stopping = true;
-		}
-		wake.notify_all();
-		if (streamer.joinable())
-			streamer.join();
+		// Before any member goes: the streamer thread calls back into this object.
+		streamer->stop();
 	}
 
 	Resident::~Resident()
@@ -85,49 +76,21 @@ namespace Quanta
 	void Residency::release(Resident& resident)
 	{
 		std::lock_guard<std::mutex> g(m);
-		changed.erase(&resident);
-		if (!resident.streamed)
-			return;
-
-		const uint32_t base = static_cast<uint32_t>(resident.page_id_base());
-		for (uint32_t p = 0; p < resident.states.size(); p++)
-		{
-			PageState& state = resident.states[p];
-			if (state.slot != InvalidIndex)
-				retiring.push_back(state.slot);
-			page_refs[base + p] = {};
-		}
-
-		loading.erase(std::remove_if(loading.begin(), loading.end(), [&](const Loading& l) { return l.resident == &resident; }), loading.end());
-		streamed_list.erase(std::remove(streamed_list.begin(), streamed_list.end(), &resident), streamed_list.end());
+		streamer->remove(resident);
 	}
 
-	void Residency::ensure_pool()
+	void Residency::allocate_pool(uint32_t count)
 	{
-		const size_t count = static_cast<size_t>(std::max(2, int(g_pool_pages)));
-		if (!pool.empty())
-		{
-			if (pool.size() == count || !streamed_list.empty())
-				return;
-
-			// Nothing streams from the pool any more, so it can take the size asked for since.
-			for (auto& handle : pool)
-				pages.free(handle);
-			pool.clear();
-			free_slots.clear();
-			retiring.clear();
-			retiring_inflight = 0;
-			pool_generation++;
-			pool_mapped = false;
-		}
-
-		pool_map_pending = true;
 		pool.resize(count);
-		for (size_t i = 0; i < count; i++)
-		{
+		for (uint32_t i = 0; i < count; i++)
 			pages.allocate(pool[i], PageDwords);
-			free_slots.push_back(static_cast<uint32_t>(count - 1 - i));
-		}
+	}
+
+	void Residency::free_pool()
+	{
+		for (auto& handle : pool)
+			pages.free(handle);
+		pool.clear();
 	}
 
 	std::shared_ptr<Resident> Residency::acquire(const std::shared_ptr<Mesh>& mesh)
@@ -145,7 +108,7 @@ namespace Quanta
 		resident->streamed = stream;
 
 		if (stream)
-			ensure_pool();
+			streamer->ensure_pool(static_cast<uint32_t>(std::max(2, int(g_pool_pages))));
 		else
 			pages.allocate(resident->page_handle, mesh->pages.size() * PageDwords);
 		page_slots.allocate(resident->page_id_handle, mesh->pages.size());
@@ -163,23 +126,13 @@ namespace Quanta
 		if (stream)
 		{
 			resident->states.resize(mesh->pages.size());
-			streamed_list.push_back(resident.get());
 			find_parents(*resident);
-			for (size_t p = 0; p < mesh->pages.size(); p++)
-				page_refs[page_id_base + p] = { resident.get(), static_cast<uint32_t>(p) };
+			streamer->add(*resident);
 
 			// Roots are always there: they are what a missing page falls back to.
 			for (uint32_t p = 0; p < mesh->pages.size(); p++)
 				if (mesh->pages[p].root)
-				{
-					ASSERT(!free_slots.empty());
-					PageState& state = resident->states[p];
-					state.slot = take_slot();
-					state.status = PageState::Status::Resident;
-					state.last_touched = current_epoch;
-					upload_page(*resident, p, state.slot, false);   // shown at once, so it cannot wait for a read
-					slots[p] = static_cast<uint32_t>(pool[state.slot].get_offset());
-				}
+					slots[p] = static_cast<uint32_t>(pool[streamer->load_root(*resident, p)].get_offset());
 		}
 		else
 		{
@@ -214,8 +167,8 @@ namespace Quanta
 		}
 		nodes.write(resident->node_handle.get_offset(), node_dwords);
 
-		if (stream && !streamer.joinable())
-			streamer = std::thread([this] { run_streamer(); });
+		if (stream)
+			streamer->start();
 
 		residents[mesh.get()] = resident;
 		return resident;
@@ -265,22 +218,16 @@ namespace Quanta
 		}
 	}
 
-	uint32_t Residency::take_slot()
-	{
-		const uint32_t slot = free_slots.back();
-		free_slots.pop_back();
-		return slot;
-	}
-
 	// Starts putting a page's bytes into its slot: through DirectStorage when the mesh came from an asset file
 	// (done when the returned waiter is), otherwise as a queued upload (visible from the next prepare()).
-	Residency::Loading Residency::upload_page(Resident& resident, uint32_t page, uint32_t slot, bool allow_file)
+	Streaming::Backend::Load Residency::begin_load(Streaming::Resource& resource, uint32_t page, uint32_t slot, bool allow_file)
 	{
-		Loading loading_page = { &resident, page };
+		Resident& resident = static_cast<Resident&>(resource);
+		Streaming::Backend::Load loading_page;
 		const Page& source = resident.mesh->pages[page];
 
-		// The slots' tiles must be mapped before DirectStorage writes them: the mapping happens on the queue.
-		if (allow_file && g_direct_storage && pool_mapped && !resident.mesh->file.empty() && source.file_size != 0)
+		// The slots' memory must be ready before DirectStorage writes it: the mapping happens on the queue.
+		if (allow_file && g_direct_storage && streamer->pool_mapped() && !resident.mesh->file.empty() && source.file_size != 0)
 		{
 			HAL::StorageRequest request;
 			request.resource = pages.buffer.resource;
@@ -295,7 +242,6 @@ namespace Quanta
 			loading_page.waiter = queue.execute(request);
 			loading_page.from_file = true;
 			queue.flush();
-			file_loads++;
 			return loading_page;
 		}
 
@@ -303,6 +249,18 @@ namespace Quanta
 		std::memcpy(dwords.data(), source.data.data(), source.data.size());
 		pages.write(pool[slot].get_offset(), dwords);
 		return loading_page;
+	}
+
+	void Residency::show(Streaming::Resource& resource, uint32_t page, uint32_t slot)
+	{
+		std::vector<uint> offset = { static_cast<uint32_t>(pool[slot].get_offset()) };
+		page_slots.write(resource.page_id_base() + page, offset);
+	}
+
+	void Residency::hide(Streaming::Resource& resource, uint32_t page)
+	{
+		std::vector<uint> hidden = { InvalidIndex };
+		page_slots.write(resource.page_id_base() + page, hidden);
 	}
 
 	void Residency::set_page_present(const Resident& resident, uint32_t page, bool present)
@@ -315,280 +273,49 @@ namespace Quanta
 
 	StreamStats Residency::stats()
 	{
-		std::lock_guard<std::mutex> g(m);
-		StreamStats out;
-		out.pool_pages = static_cast<uint32_t>(pool.size());
-		out.free_pages = static_cast<uint32_t>(free_slots.size());
-		out.loading_pages = static_cast<uint32_t>(loading.size());
-		out.loads = loads;
-		out.file_loads = file_loads;
-		out.evictions = evictions;
-		out.snapshots = snapshots_done;
-		out.wanted = last_wanted;
-		return out;
+		return streamer->stats();
 	}
 
 	void Residency::prepare(HAL::CommandList::ptr& list)
 	{
 		std::lock_guard<std::mutex> g(m);
 
-		current_epoch++;
+		streamer->advance_epoch();
 		pages.prepare(list);
 		groups.prepare(list);
 		nodes.prepare(list);
 		page_slots.prepare(list);
+		streamer->prepare(list);
 
-		// The page-table writes of the changes below are in this list: draws recorded after it see the new cut.
-		for (Resident* resident : changed)
-			resident->generation.fetch_add(1, std::memory_order_relaxed);
-		changed.clear();
-
-		if (pool_map_pending)
+		if (streamer->running() && max_page_id > 0)
 		{
-			// This list carries the pool's tile mappings; once it is done DirectStorage may write the slots.
-			pool_map_pending = false;
-			list->on_done([generation = pool_generation]
-			{
-				if (!Residency::is_good())
-					return;
-				auto& residency = Residency::get();
-				std::lock_guard<std::mutex> g(residency.m);
-				if (generation == residency.pool_generation)
-					residency.pool_mapped = true;
-			});
-		}
-
-		if (!retiring.empty())
-		{
-			// The table writes above hide these slots from every frame recorded after this list; the frames
-			// already submitted may still be reading them, and they all finish before this list does.
-			retiring_inflight += retiring.size();
-			list->on_done([slots = std::move(retiring), generation = pool_generation]
-			{
-				if (!Residency::is_good())
-					return;
-				auto& residency = Residency::get();
-				std::lock_guard<std::mutex> g(residency.m);
-				if (generation != residency.pool_generation)
-					return;   // the pool they came from was rebuilt
-				residency.free_slots.insert(residency.free_slots.end(), slots.begin(), slots.end());
-				residency.retiring_inflight -= slots.size();
-			});
-			retiring.clear();
-		}
-
-		if (streamer.joinable() && max_page_id > 0)
-		{
-			const uint32_t epoch = current_epoch - 1;   // the feedback holds the draws up to the previous frame
+			const uint32_t epoch = streamer->epoch() - 1;   // the feedback holds the draws up to the previous frame
 			list->get_copy().read_buffer(feedback.resource.get(), 0, uint64_t(max_page_id) * 2 * sizeof(uint32_t),
 				[epoch](std::span<std::byte> bytes)
 				{
 					if (!Residency::is_good())
 						return;
-					auto& residency = Residency::get();
-					Snapshot snapshot;
-					snapshot.epoch = epoch;
-					snapshot.data.resize(bytes.size() / sizeof(uint32_t));
-					std::memcpy(snapshot.data.data(), bytes.data(), snapshot.data.size() * sizeof(uint32_t));
+
+					// Two dwords per page id: the latest epoch and half-float error it was wanted at, and the last
+					// epoch a resident page was drawn from.
+					const uint32_t* data = reinterpret_cast<const uint32_t*>(bytes.data());
+					const size_t count = bytes.size() / (2 * sizeof(uint32_t));
+					const uint32_t epoch16 = epoch & 0xFFFF;
+
+					Streaming::Requests requests;
+					requests.epoch = epoch;
+					for (size_t id = 0; id < count; id++)
 					{
-						std::lock_guard<std::mutex> g(residency.snapshot_mutex);
-						residency.snapshots.push_back(std::move(snapshot));
-						if (residency.snapshots.size() > 2)
-							residency.snapshots.pop_front();
+						const uint32_t want = data[id * 2];
+						const uint32_t touched = data[id * 2 + 1];
+						if (touched != 0)
+							requests.touched.push_back({ static_cast<uint32_t>(id), touched });
+						// The half-float error bits order like their values for positive halves.
+						if (want != 0 && (want >> 16) == epoch16)
+							requests.wanted.push_back({ static_cast<uint32_t>(id), want & 0xFFFF });
 					}
-					residency.wake.notify_one();
+					Residency::get().streamer->submit(std::move(requests));
 				});
-		}
-	}
-
-	void Residency::run_streamer()
-	{
-		for (;;)
-		{
-			Snapshot snapshot;
-			bool have_snapshot = false;
-			{
-				// Wakes without a snapshot too, to show pages whose DirectStorage reads have finished.
-				std::unique_lock<std::mutex> lock(snapshot_mutex);
-				wake.wait_for(lock, std::chrono::milliseconds(2), [&] { return stopping || !snapshots.empty(); });
-				if (stopping)
-					return;
-				if (!snapshots.empty())
-				{
-					snapshot = std::move(snapshots.front());
-					snapshots.pop_front();
-					have_snapshot = true;
-				}
-			}
-
-			if (have_snapshot)
-			{
-				process(snapshot);
-			}
-			else
-			{
-				std::lock_guard<std::mutex> g(m);
-				if (!loading.empty())
-					publish();
-			}
-		}
-	}
-
-	// One feedback snapshot: refresh the LRU stamps, then start loading what the draw wanted and lacked.
-	void Residency::process(const Snapshot& snapshot)
-	{
-		PROFILE(L"quanta_streamer");
-		std::lock_guard<std::mutex> g(m);
-
-		const uint32_t epoch16 = snapshot.epoch & 0xFFFF;
-		const size_t count = std::min<size_t>(snapshot.data.size() / 2, page_refs.size());
-
-		struct Wanted
-		{
-			uint32_t id;
-			uint32_t priority;   // the half-float error bits: positive halves order like their values
-		};
-		std::vector<Wanted> wanted;
-
-		for (size_t id = 0; id < count; id++)
-		{
-			const PageRef& ref = page_refs[id];
-			if (!ref.resident)
-				continue;
-
-			PageState& state = ref.resident->states[ref.page];
-			const uint32_t touched = snapshot.data[id * 2 + 1];
-			if (state.status == PageState::Status::Resident && touched > state.last_touched)
-				state.last_touched = touched;
-
-			const uint32_t want = snapshot.data[id * 2];
-			if (want != 0 && (want >> 16) == epoch16 && state.status == PageState::Status::Missing)
-				wanted.push_back({ static_cast<uint32_t>(id), want & 0xFFFF });
-		}
-		last_wanted = static_cast<uint32_t>(wanted.size());
-		snapshots_done++;
-
-		std::sort(wanted.begin(), wanted.end(), [](const Wanted& a, const Wanted& b) { return a.priority > b.priority; });
-
-		// Each wanted page with its missing ancestors ahead of it.
-		std::vector<PageRef> order;
-		std::unordered_set<uint32_t> queued;
-		auto add = [&](auto&& self, Resident& resident, uint32_t page) -> void
-		{
-			if (resident.states[page].status != PageState::Status::Missing)
-				return;
-			if (!queued.insert(static_cast<uint32_t>(resident.page_id_base() + page)).second)
-				return;
-			for (uint32_t parent : resident.states[page].parents)
-				self(self, resident, parent);
-			order.push_back({ &resident, page });
-		};
-		for (const Wanted& w : wanted)
-		{
-			if (order.size() >= MaxLoadsPerSnapshot)
-				break;
-			add(add, *page_refs[w.id].resident, page_refs[w.id].page);
-		}
-
-		// Slots already on their way back (hidden, waiting for their frames to finish) count as available.
-		const size_t available = free_slots.size() + retiring.size() + retiring_inflight;
-		if (order.size() > available)
-			evict(order.size() - available, snapshot.epoch);
-
-		for (const PageRef& ref : order)
-		{
-			if (free_slots.empty())
-				break;
-
-			PageState& state = ref.resident->states[ref.page];
-			state.slot = take_slot();
-			state.status = PageState::Status::Loading;
-			loading.push_back(upload_page(*ref.resident, ref.page, state.slot, true));
-			loads++;
-		}
-
-		publish();
-	}
-
-	// Shows every loaded page whose parents are shown, parents first.
-	void Residency::publish()
-	{
-		bool progress = true;
-		while (progress)
-		{
-			progress = false;
-			for (size_t i = 0; i < loading.size();)
-			{
-				Loading item = loading[i];
-				PageState& state = item.resident->states[item.page];
-
-				if (item.from_file && !item.waiter.is_completed())
-				{
-					i++;
-					continue;
-				}
-
-				bool parents_shown = true;
-				for (uint32_t parent : state.parents)
-					parents_shown = parents_shown && item.resident->states[parent].status == PageState::Status::Resident;
-
-				if (!parents_shown)
-				{
-					i++;
-					continue;
-				}
-
-				std::vector<uint> slot = { static_cast<uint32_t>(pool[state.slot].get_offset()) };
-				page_slots.write(item.resident->page_id_base() + item.page, slot);
-				state.status = PageState::Status::Resident;
-				state.last_touched = current_epoch;
-				changed.insert(item.resident);
-				for (uint32_t parent : state.parents)
-					item.resident->states[parent].resident_children++;
-
-				loading.erase(loading.begin() + i);
-				progress = true;
-			}
-		}
-	}
-
-	// Hides up to `count` pages, least recently reached first, to make room. Their slots return to the pool once
-	// the frames that may still read them are done (prepare).
-	void Residency::evict(size_t count, uint32_t epoch)
-	{
-		struct Victim
-		{
-			uint32_t last_touched;
-			PageRef ref;
-		};
-		std::vector<Victim> victims;
-
-		for (Resident* resident : streamed_list)
-			for (uint32_t p = 0; p < resident->states.size(); p++)
-			{
-				const PageState& state = resident->states[p];
-				if (state.status == PageState::Status::Resident && !resident->mesh->pages[p].root
-					&& state.resident_children == 0 && state.last_touched + EvictionAge < epoch)
-					victims.push_back({ state.last_touched, { resident, p } });
-			}
-
-		std::sort(victims.begin(), victims.end(), [](const Victim& a, const Victim& b) { return a.last_touched < b.last_touched; });
-
-		for (size_t i = 0; i < std::min(count, victims.size()); i++)
-		{
-			Resident& resident = *victims[i].ref.resident;
-			PageState& state = resident.states[victims[i].ref.page];
-
-			std::vector<uint> hidden = { InvalidIndex };
-			page_slots.write(resident.page_id_base() + victims[i].ref.page, hidden);
-			changed.insert(&resident);
-			for (uint32_t parent : state.parents)
-				resident.states[parent].resident_children--;
-
-			retiring.push_back(state.slot);
-			state.slot = InvalidIndex;
-			state.status = PageState::Status::Missing;
-			evictions++;
 		}
 	}
 }
