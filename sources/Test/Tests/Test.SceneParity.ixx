@@ -837,7 +837,7 @@ export namespace Test
 		{
 			ASSERT_FALSE(quanta->file.empty());
 			for (auto& page : quanta->pages)
-				compressed_pages += page.file_size < page.data.size();
+				compressed_pages += page.file_size < page.bytes();
 		}
 		if (HAL::gdeflate_supported())
 			ASSERT_TRUE(compressed_pages > 0);   // the reads below then go through DirectStorage's decompression

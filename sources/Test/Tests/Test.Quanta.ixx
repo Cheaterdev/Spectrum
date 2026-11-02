@@ -225,26 +225,31 @@ export namespace Test
 		{
 			const Quanta::Mesh& a = *written.meshes[m];
 			const Quanta::Mesh& b = *loaded.meshes[m];
-			ASSERT_EQ(std::string(), Quanta::validate(b));
+			ASSERT_TRUE(b.parents_built);
+			Quanta::Mesh with_bytes = b;
 			ASSERT_TRUE(b.file == path);
 			ASSERT_EQ(a.pages.size(), b.pages.size());
 
 			for (size_t p = 0; p < b.pages.size(); p++)
 			{
-				ASSERT_TRUE(a.pages[p].data == b.pages[p].data);
-				ASSERT_TRUE(b.pages[p].file_size <= b.pages[p].data.size());
+				ASSERT_TRUE(b.pages[p].file_size <= b.pages[p].size);
+					ASSERT_TRUE(b.pages[p].data.empty());   // the page bytes stay in the file; read_page fetches them
+					ASSERT_EQ(static_cast<uint32_t>(a.pages[p].data.size()), b.pages[p].size);
+					ASSERT_TRUE(Quanta::read_page(b, static_cast<uint32_t>(p), with_bytes.pages[p].data));
+					ASSERT_TRUE(a.pages[p].data == with_bytes.pages[p].data);
+					ASSERT_TRUE(a.pages[p].parents == b.pages[p].parents);
 
 				// What a DirectStorage request would read: the page's bytes at its offset in the file.
 				std::vector<uint8_t> from_file(b.pages[p].file_size);
 				file.seekg(b.pages[p].file_offset, std::ios::beg);
 				file.read(reinterpret_cast<char*>(from_file.data()), from_file.size());
-				if (b.pages[p].file_size == b.pages[p].data.size())
-						ASSERT_TRUE(from_file == b.pages[p].data);
+				if (b.pages[p].file_size == b.pages[p].size)
+						ASSERT_TRUE(from_file == a.pages[p].data);
 					else   // GDeflate-compressed in the file
 					{
-						std::vector<uint8_t> expanded(b.pages[p].data.size());
+						std::vector<uint8_t> expanded(b.pages[p].size);
 						ASSERT_TRUE(HAL::gdeflate_decompress(from_file.data(), from_file.size(), expanded.data(), expanded.size()));
-						ASSERT_TRUE(expanded == b.pages[p].data);
+						ASSERT_TRUE(expanded == a.pages[p].data);
 					}
 			}
 		}
@@ -335,6 +340,56 @@ export namespace Test
 		}
 	}
 
+	// A mesh loaded from an asset file has no page bytes in memory: the pages that reach the pool are read from the file.
+	TEST(Quanta.Import, ResidencyReadsPagesFromTheAssetFile)
+	{
+		const std::filesystem::path path = std::filesystem::temp_directory_path() / "quanta_residency_file_test.bin";
+
+		Quanta::AssetPartition written;
+		written.meshes.push_back(std::make_shared<Quanta::Mesh>(build(make_sphere(128, 64))));
+		{
+			FileDataStorage storage(path);
+			storage.start_save();
+			storage.put("quanta", written);
+			storage.save();
+		}
+
+		Quanta::AssetPartition loaded;
+		{
+			FileDataStorage storage(path);
+			ASSERT_TRUE(storage.get("quanta", loaded));
+		}
+		auto mesh = loaded.meshes.front();
+		const auto& original = *written.meshes.front();
+		for (auto& page : mesh->pages)
+			ASSERT_TRUE(page.data.empty());
+
+		auto& residency = Quanta::Residency::get();
+		auto resident = residency.acquire(mesh);
+
+		auto list = RenderSystem::get().device().get_queue(HAL::CommandListType::DIRECT)->get_free_list();
+		list->begin(L"QuantaResidencyFile");
+		residency.prepare(list);
+
+		std::vector<std::vector<uint>> page_dwords(mesh->pages.size());
+		std::vector<std::future<bool>> pending;
+		for (uint32_t p = 0; p < mesh->pages.size(); p++)
+			pending.push_back(list->get_copy().read<uint>(residency.pages.buffer, residency.page_dword_offset(*resident, p), Quanta::PageDwords,
+				[&, p](std::span<uint> r) { page_dwords[p].assign(r.begin(), r.end()); }));
+		list->execute_and_wait();
+		for (auto& p : pending)
+			p.wait();
+
+		for (size_t p = 0; p < mesh->pages.size(); p++)
+		{
+			const auto& data = original.pages[p].data;
+			ASSERT_TRUE(std::memcmp(page_dwords[p].data(), data.data(), data.size()) == 0);
+		}
+
+		resident.reset();
+		std::filesystem::remove(path);
+	}
+
 	// MeshAsset writes and reads its Quanta data through the asset-file hooks.
 	TEST(Quanta.Import, AssetKeepsQuantaInItsFile)
 	{
@@ -358,7 +413,10 @@ export namespace Test
 		ASSERT_EQ(asset->quanta.size(), other->quanta.size());
 		for (size_t i = 0; i < other->quanta.size(); i++)
 		{
-			ASSERT_EQ(std::string(), Quanta::validate(*other->quanta[i]));
+			Quanta::Mesh full = *other->quanta[i];   // the loaded mesh keeps its pages in the file
+			for (uint32_t p = 0; p < full.pages.size(); p++)
+				ASSERT_TRUE(Quanta::read_page(*other->quanta[i], p, full.pages[p].data));
+			ASSERT_EQ(std::string(), Quanta::validate(full));
 			ASSERT_EQ(asset->quanta[i]->groups.size(), other->quanta[i]->groups.size());
 		}
 

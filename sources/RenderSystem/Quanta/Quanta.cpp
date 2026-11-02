@@ -145,6 +145,7 @@ namespace Quanta
 			rec.page = static_cast<uint32_t>(mesh.pages.size() - 1);
 			rec.offset_in_page = static_cast<uint32_t>(page.data.size());
 			page.data.insert(page.data.end(), blobs[g].begin(), blobs[g].end());
+			page.size = static_cast<uint32_t>(page.data.size());
 			page.groups.push_back(g);
 			if (rec.lod_error == Infinity)
 				page.root = true;
@@ -154,7 +155,40 @@ namespace Quanta
 			if (page.root)
 				mesh.root_page_count++;
 
+		build_page_parents(mesh);
 		return mesh;
+	}
+
+	// A page can be shown only once the pages holding the groups that refine into it (its coarser parents) are:
+	// otherwise the cut would find the fine groups and no stand-in for them.
+	void build_page_parents(Mesh& mesh)
+	{
+		for (Page& page : mesh.pages)
+			page.parents.clear();
+
+		for (uint32_t q = 0; q < mesh.groups.size(); q++)
+		{
+			const Group& coarse = mesh.groups[q];
+			GroupView view = read_group(mesh, q);
+			for (uint32_t c = 0; c < coarse.cluster_count; c++)
+			{
+				const ClusterHeader& header = view.clusters[c];
+				if (header.refined_error < 0)
+					continue;
+
+				const uint32_t first = family_first(header.refined_family);
+				for (uint32_t i = 0; i < family_count(header.refined_family); i++)
+				{
+					const uint32_t fine_page = mesh.groups[first + i].page;
+					if (fine_page == coarse.page)
+						continue;
+					auto& parents = mesh.pages[fine_page].parents;
+					if (std::find(parents.begin(), parents.end(), coarse.page) == parents.end())
+						parents.push_back(coarse.page);
+				}
+			}
+		}
+		mesh.parents_built = true;
 	}
 
 	GroupView read_group(const Mesh& mesh, uint32_t group)
@@ -170,7 +204,10 @@ namespace Quanta
 	namespace
 	{
 		constexpr uint32_t FileMagic = 0x41544E51;   // "QNTA"
-		constexpr uint32_t FileVersion = 3;   // 2: groups and cluster headers carry their family links; 3: pages may be GDeflate
+		constexpr uint32_t FileVersion = 4;   // 2: groups and cluster headers carry their family links; 3: pages may be GDeflate; 4: the page parent table
+		constexpr uint32_t FileVersionNoParents = 3;
+
+		bool keep_pages_in_memory = false;
 
 		struct FileHeader
 		{
@@ -185,8 +222,9 @@ namespace Quanta
 			uint32_t original_triangle_count;
 			uint32_t max_depth;
 			uint32_t root_page_count;
-			uint32_t reserved;
+			uint32_t parent_dwords;        // length of the page parent table: per page, a count then that many page numbers
 		};
+		static_assert(sizeof(FileHeader) == FileHeaderBytes);
 
 		struct PageEntry
 		{
@@ -210,6 +248,16 @@ namespace Quanta
 
 	std::vector<uint8_t> serialize(const Mesh& mesh)
 	{
+		// A loaded asset does not keep its page bytes: writing it back needs them from the file it came from.
+		if (std::any_of(mesh.pages.begin(), mesh.pages.end(), [](const Page& p) { return p.data.empty() && p.size != 0; }))
+		{
+			Mesh full = mesh;
+			for (uint32_t p = 0; p < full.pages.size(); p++)
+				if (full.pages[p].data.empty() && full.pages[p].size != 0 && !read_page(mesh, p, full.pages[p].data))
+					throw std::runtime_error("Quanta page cannot be read back from its asset file");
+			return serialize(full);
+		}
+
 		FileHeader header{};
 		header.magic = FileMagic;
 		header.version = FileVersion;
@@ -244,8 +292,16 @@ namespace Quanta
 		}
 		header.page_group_ids = static_cast<uint32_t>(group_ids.size());
 
+		std::vector<uint32_t> parent_table;
+		for (const Page& page : mesh.pages)
+		{
+			parent_table.push_back(static_cast<uint32_t>(page.parents.size()));
+			parent_table.insert(parent_table.end(), page.parents.begin(), page.parents.end());
+		}
+		header.parent_dwords = static_cast<uint32_t>(parent_table.size());
+
 		uint64_t cursor = sizeof(FileHeader) + mesh.groups.size() * sizeof(Group) + mesh.nodes.size() * sizeof(Node)
-			+ entries.size() * sizeof(PageEntry) + group_ids.size() * sizeof(uint32_t);
+			+ entries.size() * sizeof(PageEntry) + group_ids.size() * sizeof(uint32_t) + parent_table.size() * sizeof(uint32_t);
 		for (size_t p = 0; p < entries.size(); p++)
 		{
 			cursor = align_up(static_cast<uint32_t>(cursor), BlobAlignment);
@@ -260,6 +316,7 @@ namespace Quanta
 		append(out, mesh.nodes.data(), mesh.nodes.size());
 		append(out, entries.data(), entries.size());
 		append(out, group_ids.data(), group_ids.size());
+		append(out, parent_table.data(), parent_table.size());
 		for (size_t p = 0; p < entries.size(); p++)
 		{
 			out.resize(entries[p].offset, 0);
@@ -269,15 +326,36 @@ namespace Quanta
 		return out;
 	}
 
-	bool deserialize(const uint8_t* data, size_t size, Mesh& out, uint64_t base_file_offset)
+	bool metadata_size(const uint8_t* header_bytes, uint64_t& bytes, bool& needs_pages)
+	{
+		FileHeader header;
+		std::memcpy(&header, header_bytes, sizeof(header));
+		if (header.magic != FileMagic || (header.version != FileVersion && header.version != FileVersionNoParents) || header.page_bytes != PageBytes)
+			return false;
+
+		needs_pages = header.version < FileVersion;
+		bytes = sizeof(FileHeader) + uint64_t(header.group_count) * sizeof(Group) + uint64_t(header.node_count) * sizeof(Node)
+			+ uint64_t(header.page_count) * sizeof(PageEntry) + uint64_t(header.page_group_ids) * sizeof(uint32_t)
+			+ (header.version >= FileVersion ? uint64_t(header.parent_dwords) * sizeof(uint32_t) : 0);
+		return true;
+	}
+
+	bool keep_page_data() { return keep_pages_in_memory; }
+	void set_keep_page_data(bool keep) { keep_pages_in_memory = keep; }
+
+	bool deserialize(const uint8_t* data, size_t size, Mesh& out, uint64_t base_file_offset, bool keep_pages, uint64_t blob_size)
 	{
 		if (size < sizeof(FileHeader))
 			return false;
 
 		FileHeader header;
 		std::memcpy(&header, data, sizeof(header));
-		if (header.magic != FileMagic || header.version != FileVersion || header.page_bytes != PageBytes)
+		if (header.magic != FileMagic || (header.version != FileVersion && header.version != FileVersionNoParents) || header.page_bytes != PageBytes)
 			return false;
+
+		const bool has_parents = header.version >= FileVersion;
+		const bool read_bytes = keep_pages || !has_parents;
+		const uint64_t total = (blob_size && !read_bytes) ? blob_size : size;
 
 		uint64_t cursor = sizeof(FileHeader);
 		const uint64_t groups_at = cursor;
@@ -288,6 +366,9 @@ namespace Quanta
 		cursor += uint64_t(header.page_count) * sizeof(PageEntry);
 		const uint64_t ids_at = cursor;
 		cursor += uint64_t(header.page_group_ids) * sizeof(uint32_t);
+		const uint64_t parents_at = cursor;
+		if (has_parents)
+			cursor += uint64_t(header.parent_dwords) * sizeof(uint32_t);
 		if (cursor > size)
 			return false;
 
@@ -314,13 +395,18 @@ namespace Quanta
 		for (uint32_t p = 0; p < header.page_count; p++)
 		{
 			const PageEntry& e = entries[p];
-			if (e.size > PageBytes || e.stored_size > e.size || e.offset + e.stored_size > size)
+			if (e.size > PageBytes || e.stored_size > e.size || e.offset + e.stored_size > total)
 				return false;
 			if (uint64_t(e.first_group_id) + e.group_count > group_ids.size())
 				return false;
 
 			Page& page = mesh.pages[p];
-			if (e.stored_size == e.size)
+			page.size = e.size;
+			if (!read_bytes)
+			{
+				// Left in the file: read_page() fetches it when it is loaded.
+			}
+			else if (e.stored_size == e.size)
 				page.data.assign(data + e.offset, data + e.offset + e.size);
 			else
 			{
@@ -341,8 +427,72 @@ namespace Quanta
 			}
 		}
 
+		if (has_parents)
+		{
+			std::vector<uint32_t> table(header.parent_dwords);
+			if (header.parent_dwords)
+				std::memcpy(table.data(), data + parents_at, header.parent_dwords * sizeof(uint32_t));
+
+			size_t at = 0;
+			for (uint32_t p = 0; p < header.page_count; p++)
+			{
+				if (at >= table.size() || at + 1 + table[at] > table.size())
+					return false;
+				const uint32_t count = table[at++];
+				for (uint32_t i = 0; i < count; i++)
+				{
+					if (table[at] >= header.page_count)
+						return false;
+					mesh.pages[p].parents.push_back(table[at++]);
+				}
+			}
+			mesh.parents_built = true;
+		}
+		else
+		{
+			// Older file: the parents come from the page bytes, which were read for that.
+			build_page_parents(mesh);
+			if (!keep_pages)
+				for (Page& page : mesh.pages)
+				{
+					page.data.clear();
+					page.data.shrink_to_fit();
+				}
+		}
+
 		out = std::move(mesh);
 		return true;
+	}
+
+	// Reads one page's bytes from the asset file the mesh came from and expands them.
+	bool read_page(const Mesh& mesh, uint32_t page, std::vector<uint8_t>& out)
+	{
+		const Page& source = mesh.pages[page];
+		if (!source.data.empty())
+		{
+			out = source.data;
+			return true;
+		}
+		if (mesh.file.empty() || source.file_size == 0)
+			return false;
+
+		std::ifstream file(mesh.file, std::ios::binary);
+		if (!file)
+			return false;
+
+		std::vector<uint8_t> stored(source.file_size);
+		file.seekg(static_cast<std::streamoff>(source.file_offset));
+		file.read(reinterpret_cast<char*>(stored.data()), stored.size());
+		if (!file)
+			return false;
+
+		if (source.file_size == source.size)
+		{
+			out = std::move(stored);
+			return true;
+		}
+		out.resize(source.size);
+		return HAL::gdeflate_decompress(stored.data(), stored.size(), out.data(), out.size());
 	}
 
 	std::string validate(const Mesh& mesh)

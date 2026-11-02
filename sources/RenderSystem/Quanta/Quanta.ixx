@@ -99,9 +99,13 @@ export namespace Quanta
 
 	struct Page
 	{
-		std::vector<uint8_t>  data;     // <= PageBytes; the runtime pads to PageBytes
+		std::vector<uint8_t>  data;     // <= PageBytes; the runtime pads to PageBytes. Empty for a page of a loaded asset until read_page() fetches it
+		uint32_t              size = 0; // bytes the page holds once expanded; data.size() while the bytes are in memory
 		std::vector<uint32_t> groups;
+		std::vector<uint32_t> parents;  // pages that must be shown before this one (see build_page_parents)
 		bool                  root = false;  // holds a root group: pinned, never evicted
+
+		uint32_t bytes() const { return data.empty() ? size : static_cast<uint32_t>(data.size()); }
 
 		// Where these bytes sit in the asset file they were loaded from (Mesh::file), so a DirectStorage
 		// request can read the page straight into the page pool. 0 / 0 for a mesh that was never loaded.
@@ -122,6 +126,7 @@ export namespace Quanta
 		uint32_t root_page_count         = 0;
 
 		std::filesystem::path file;      // the asset file the pages came from, empty if built in memory
+		bool parents_built = false;      // Page::parents is filled in
 	};
 
 	struct ClusterInput
@@ -176,5 +181,25 @@ export namespace Quanta
 	// base_file_offset is where `data` starts in the file it was read from: pages get their absolute
 	// position from it.
 	std::vector<uint8_t> serialize(const Mesh& mesh);
-	bool deserialize(const uint8_t* data, size_t size, Mesh& out, uint64_t base_file_offset = 0);
+
+	// keep_pages false leaves Page::data empty (the page sizes and file positions are still set): `data` then only
+	// has to cover metadata_size() bytes, and blob_size is the size of the whole blob the offsets are checked
+	// against. A file older than the parent table needs the page bytes to build it, so it is read with keep_pages
+	// whatever the caller asked (metadata_size reports it); the bytes are dropped again if keep_pages was false.
+	bool deserialize(const uint8_t* data, size_t size, Mesh& out, uint64_t base_file_offset = 0, bool keep_pages = true, uint64_t blob_size = 0);
+
+	// The first FileHeaderBytes bytes of a blob say how many bytes of metadata (everything before the pages) it has.
+	constexpr size_t FileHeaderBytes = 48;
+	bool metadata_size(const uint8_t* header, uint64_t& bytes, bool& needs_pages);
+
+	// Fills Page::parents from the groups' family links. Needs the page bytes.
+	void build_page_parents(Mesh& mesh);
+
+	// Whether meshes loaded from an asset file keep their page bytes in memory (default: no, they are read back from
+	// the file when a page is loaded). Set before loading.
+	bool keep_page_data();
+	void set_keep_page_data(bool keep);
+
+	// The page's expanded bytes: from memory, or read (and expanded) from the asset file the mesh came from.
+	bool read_page(const Mesh& mesh, uint32_t page, std::vector<uint8_t>& out);
 }

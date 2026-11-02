@@ -210,32 +210,13 @@ namespace Quanta
 	}
 
 	// A page can be shown only once the pages holding the groups that refine into it (its coarser parents) are:
-	// otherwise the cut would find the fine groups and no stand-in for them.
+	// otherwise the cut would find the fine groups and no stand-in for them. The table is part of the mesh.
 	void Residency::find_parents(Resident& resident)
 	{
-		const Mesh& mesh = *resident.mesh;
-		for (uint32_t q = 0; q < mesh.groups.size(); q++)
-		{
-			const Group& coarse = mesh.groups[q];
-			GroupView view = read_group(mesh, q);
-			for (uint32_t c = 0; c < coarse.cluster_count; c++)
-			{
-				const ClusterHeader& header = view.clusters[c];
-				if (header.refined_error < 0)
-					continue;
-
-				const uint32_t first = family_first(header.refined_family);
-				for (uint32_t i = 0; i < family_count(header.refined_family); i++)
-				{
-					const uint32_t fine_page = mesh.groups[first + i].page;
-					if (fine_page == coarse.page)
-						continue;
-					auto& parents = resident.states[fine_page].parents;
-					if (std::find(parents.begin(), parents.end(), coarse.page) == parents.end())
-						parents.push_back(coarse.page);
-				}
-			}
-		}
+		Mesh& mesh = *resident.mesh;
+		ASSERT(mesh.parents_built);   // Pack and deserialize fill it
+		for (uint32_t p = 0; p < mesh.pages.size(); p++)
+			resident.states[p].parents = mesh.pages[p].parents;
 	}
 
 	// Starts putting a page's bytes into its slot: through DirectStorage when the mesh came from an asset file
@@ -254,8 +235,8 @@ namespace Quanta
 			request.file = resident.mesh->file;
 			request.file_offset = source.file_offset;
 			request.size = source.file_size;
-			request.uncompressed_size = source.data.size();
-			request.compressed = source.file_size < source.data.size();
+			request.uncompressed_size = source.bytes();
+			request.compressed = source.file_size < source.bytes();
 			request.operation = HAL::StorageRequest::Buffer{ (pages.buffer.get_data_offset() + pool[slot].get_offset()) * sizeof(uint32_t) };
 
 			auto& queue = RenderSystem::get().device().get_ds_queue();
@@ -265,8 +246,22 @@ namespace Quanta
 			return loading_page;
 		}
 
-		std::vector<uint> dwords((source.data.size() + 3) / 4, 0);
-		std::memcpy(dwords.data(), source.data.data(), source.data.size());
+		// Not in memory for a loaded asset: read (and expanded) from its file.
+		std::vector<uint8_t> fetched;
+		const std::vector<uint8_t>* bytes = &source.data;
+		if (source.data.empty() && source.size != 0)
+		{
+			if (!read_page(*resident.mesh, page, fetched))
+			{
+				// Runs on the streamer thread too: an empty page is better than a thrown exception there.
+				Log::get() << "Quanta: cannot read page " << page << " from " << resident.mesh->file.string() << Log::endl;
+				fetched.assign(source.size, 0);
+			}
+			bytes = &fetched;
+		}
+
+		std::vector<uint> dwords((bytes->size() + 3) / 4, 0);
+		std::memcpy(dwords.data(), bytes->data(), bytes->size());
 		pages.write(pool[slot].get_offset(), dwords);
 		return loading_page;
 	}
