@@ -131,6 +131,7 @@ std::optional<SlotID> get_slot(std::string_view slot_name)
 	if(slot_name == "GizmoResolveData") return SlotID::GizmoResolveData;
 	if(slot_name == "OutlineData") return SlotID::OutlineData;
 	if(slot_name == "OutlineCopy") return SlotID::OutlineCopy;
+	if(slot_name == "StreamCompact") return SlotID::StreamCompact;
 	if(slot_name == "Test") return SlotID::Test;
 	if(slot_name == "TonemapData") return SlotID::TonemapData;
 	if(slot_name == "DisplayOutput") return SlotID::DisplayOutput;
@@ -439,6 +440,8 @@ uint get_table_index(SlotID id)
 
 	if(id == SlotID::OutlineCopy) return Slots::Editor::OutlineCopy::Slot::ID;
 
+	if(id == SlotID::StreamCompact) return Slots::StreamGpu::StreamCompact::Slot::ID;
+
 	if(id == SlotID::Test) return Slots::Dev::Test::Slot::ID;
 
 	if(id == SlotID::TonemapData) return Slots::Post::TonemapData::Slot::ID;
@@ -681,6 +684,7 @@ std::string get_slot_name(SlotID id)
 	if(id == SlotID::GizmoResolveData) return "GizmoResolveData";
 	if(id == SlotID::OutlineData) return "OutlineData";
 	if(id == SlotID::OutlineCopy) return "OutlineCopy";
+	if(id == SlotID::StreamCompact) return "StreamCompact";
 	if(id == SlotID::Test) return "Test";
 	if(id == SlotID::TonemapData) return "TonemapData";
 	if(id == SlotID::DisplayOutput) return "DisplayOutput";

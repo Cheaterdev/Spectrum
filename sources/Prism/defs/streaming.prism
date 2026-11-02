@@ -1,0 +1,33 @@
+namespace StreamGpu
+{
+	# What a page streamer (Graphics:Streaming) needs from one frame's GPU feedback, compacted so the CPU reads a few
+	# kilobytes instead of the whole feedback array. One thread per page id:
+	#   - a page the draw wanted this epoch, that is not resident and not already loading, is appended to the request
+	#     bucket of its priority (a log-scale bucket of the half-float error: the highest buckets are loaded first);
+	#   - a resident page flagged evictable that has not been reached for `eviction_age` epochs is appended to the
+	#     list of eviction candidates.
+	# `result` must be cleared before the dispatch; its layout is in streaming/stream_compact.hlsl.
+	[Bind = DefaultLayout::Instance1]
+	struct StreamCompact
+	{
+		# Two dwords per page id, as the draws write them (QuantaFeedback): the epoch and priority it was wanted at,
+		# and the last epoch it was reached.
+		StructuredBuffer<uint> requests;
+		StructuredBuffer<uint> page_slots;
+		# Two dwords per page id, written by the streamer: its flags, and the epoch it was shown at.
+		StructuredBuffer<uint> page_flags;
+		RWStructuredBuffer<uint> result;
+		uint page_count;
+		# The epoch the feedback was written in.
+		uint epoch;
+		uint eviction_age;
+	}
+
+	ComputePSO StreamCompact
+	{
+		root = DefaultLayout;
+
+		[EntryPoint = CS]
+		compute = "streaming/stream_compact.hlsl";
+	}
+}

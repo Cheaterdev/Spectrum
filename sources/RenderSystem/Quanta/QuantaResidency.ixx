@@ -17,8 +17,8 @@ import :Streaming;
 //
 // A page id is global: each mesh owns a consecutive range of them (page_id_base() + the mesh-local page).
 //
-// Two ways to hold a mesh:
-//   resident  (the default) every page is in `pages` for as long as the mesh is in use;
+// Every mesh's pages sit in slots of one pool inside `pages`, and the Streaming::Streamer manages them. Two policies:
+//   pinned    (the default) every page is loaded when the mesh is acquired and stays for as long as it is in use;
 //   streamed  (set_streaming(true) before the mesh is acquired) only the root pages are. The draw reports the
 //             pages it wanted but lacked and the ones it reached (QuantaFeedback in meshrender.prism); the
 //             feedback is read back each frame, and a Streaming::Streamer turns it into loads and evictions in a
@@ -46,7 +46,6 @@ export namespace Quanta
 	{
 		friend class Residency;
 
-		TypedHandle<uint> page_handle;       // the page slots of a mesh resident in one piece
 		TypedHandle<uint> page_id_handle;
 		TypedHandle<uint> group_handle;
 		TypedHandle<uint> node_handle;
@@ -56,12 +55,12 @@ export namespace Quanta
 
 		bool is_streamed() const { return streamed; }
 
-		uint64_t page_offset() const { return page_handle.get_offset(); }                    // dwords into `pages` (resident meshes)
 		uint64_t page_id_base() const override { return page_id_handle.get_offset(); }       // page ids, one per page
 		uint64_t group_offset() const { return group_handle.get_offset() / GroupDwords; }   // records into `groups`
 		uint64_t node_offset() const { return node_handle.get_offset() / NodeDwords; }      // records into `nodes`
 
-		bool is_root(uint32_t page) const override { return mesh->pages[page].root; }
+		// A mesh that is not streamed is pinned: every page of it is a root.
+		bool is_root(uint32_t page) const override { return !streamed || mesh->pages[page].root; }
 
 		~Resident() override;
 	};
@@ -84,17 +83,29 @@ export namespace Quanta
 
 		uint32_t max_page_id = 0;                 // one past the highest page id handed out: the feedback to read back
 
-		std::vector<TypedHandle<uint>> pool;      // the slots, allocated once
+		std::vector<TypedHandle<uint>> pool;      // the slots; the streamer grows it as pinned and streamed meshes arrive
+
+		// What the pool has to hold: every page of the pinned meshes, plus the budget the streamed ones share.
+		uint32_t pinned_pages = 0;
+		uint32_t streamed_meshes = 0;
+
+		// The flags of page ids changed since the last prepare(): from `first`, two dwords per page id.
+		struct FlagWrite
+		{
+			uint32_t first;
+			std::vector<uint32_t> dwords;
+		};
+		std::vector<FlagWrite> flag_writes;
 
 		void release(Resident& resident);
 		void find_parents(Resident& resident);
 
 		// Streaming::Backend
 		void allocate_pool(uint32_t count) override;
-		void free_pool() override;
 		Streaming::Backend::Load begin_load(Streaming::Resource& resource, uint32_t page, uint32_t slot, bool allow_file) override;
 		void show(Streaming::Resource& resource, uint32_t page, uint32_t slot) override;
 		void hide(Streaming::Resource& resource, uint32_t page) override;
+		void set_flags(Streaming::Resource& resource, uint32_t page, uint32_t flags, uint32_t shown_epoch) override;
 
 	public:
 		HAL::virtual_gpu_buffer<uint> pages;
@@ -102,8 +113,13 @@ export namespace Quanta
 		HAL::virtual_gpu_buffer<uint> nodes;
 		HAL::virtual_gpu_buffer<uint> page_slots;
 
-		// What the Quanta draw reports (QuantaFeedback in meshrender.prism), two dwords per page id.
+		// What the Quanta draw reports (QuantaFeedback in meshrender.prism), two dwords per page id. It stays on the
+		// GPU: prepare() compacts it into stream_out, which is what is read back.
 		HAL::StructuredBufferView<uint> feedback;
+
+		// Per page id, two dwords the streamer writes: Streaming::Flag* bits, and the epoch the page was shown at.
+		HAL::StructuredBufferView<uint> page_flags;
+		HAL::StructuredBufferView<uint> stream_out;
 
 		Residency();
 		~Residency() override;
@@ -115,9 +131,12 @@ export namespace Quanta
 		// to own the copy, so it is not freed and re-uploaded every frame.
 		std::shared_ptr<Resident> pin(const std::shared_ptr<Mesh>& mesh);
 
-		// Makes one page of a resident (not streamed) mesh visible to, or hides it from, the shaders. Queued like
+		// Makes one page of a pinned (not streamed) mesh visible to, or hides it from, the shaders. Queued like
 		// the uploads, recorded by prepare(); a test hook for what the streamer does on its own.
 		void set_page_present(const Resident& resident, uint32_t page, bool present);
+
+		// Where a loaded page sits in `pages`, in dwords.
+		uint64_t page_dword_offset(const Resident& resident, uint32_t page);
 
 		// Identifies the frame the draws record: written into the feedback so stale entries can be told apart.
 		uint32_t epoch() const { return streamer->epoch(); }

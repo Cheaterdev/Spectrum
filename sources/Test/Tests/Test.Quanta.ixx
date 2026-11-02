@@ -283,10 +283,13 @@ export namespace Test
 		list->begin(L"QuantaResidency");
 		residency.prepare(list);
 
-		std::vector<uint> page_dwords, group_dwords, node_dwords;
+		// The pages sit in slots of the shared pool, not next to each other.
+		std::vector<std::vector<uint>> page_dwords(mesh->pages.size());
+		std::vector<uint> group_dwords, node_dwords;
 		std::vector<std::future<bool>> pending;
-		pending.push_back(list->get_copy().read<uint>(residency.pages.buffer, resident->page_offset(), mesh->pages.size() * Quanta::PageDwords,
-			[&](std::span<uint> r) { page_dwords.assign(r.begin(), r.end()); }));
+		for (uint32_t p = 0; p < mesh->pages.size(); p++)
+			pending.push_back(list->get_copy().read<uint>(residency.pages.buffer, residency.page_dword_offset(*resident, p), Quanta::PageDwords,
+				[&, p](std::span<uint> r) { page_dwords[p].assign(r.begin(), r.end()); }));
 		pending.push_back(list->get_copy().read<uint>(residency.groups.buffer, resident->group_offset() * Quanta::GroupDwords, mesh->groups.size() * Quanta::GroupDwords,
 			[&](std::span<uint> r) { group_dwords.assign(r.begin(), r.end()); }));
 		pending.push_back(list->get_copy().read<uint>(residency.nodes.buffer, resident->node_offset() * Quanta::NodeDwords, mesh->nodes.size() * Quanta::NodeDwords,
@@ -300,13 +303,13 @@ export namespace Test
 
 		ASSERT_EQ(mesh->pages.size(), slot_dwords.size());
 		for (size_t p = 0; p < mesh->pages.size(); p++)
-			ASSERT_EQ(uint32_t(resident->page_offset() + p * Quanta::PageDwords), slot_dwords[p]);
+			ASSERT_EQ(uint32_t(residency.page_dword_offset(*resident, static_cast<uint32_t>(p))), slot_dwords[p]);
 
-		ASSERT_EQ(mesh->pages.size() * Quanta::PageDwords, page_dwords.size());
 		for (size_t p = 0; p < mesh->pages.size(); p++)
 		{
 			const auto& data = mesh->pages[p].data;
-			ASSERT_TRUE(std::memcmp(page_dwords.data() + p * Quanta::PageDwords, data.data(), data.size()) == 0);
+			ASSERT_EQ(size_t(Quanta::PageDwords), page_dwords[p].size());
+			ASSERT_TRUE(std::memcmp(page_dwords[p].data(), data.data(), data.size()) == 0);
 		}
 
 		// The group records carry the page's dword offset in the shared buffer; the node's groups are global indices.

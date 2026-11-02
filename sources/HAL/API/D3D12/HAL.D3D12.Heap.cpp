@@ -26,6 +26,19 @@ namespace HAL
         }
         device.native_device->CreateHeap(&native_desc, IID_PPV_ARGS(&native_heap));
 
+        { // TEMP: heap creation log (heaps.temp)
+            static std::mutex log_mutex;
+            static uint64_t total_bytes = 0;
+            static uint32_t count = 0;
+            std::ostringstream stack;
+            stack << Exceptions::get_stack_trace();
+            std::lock_guard<std::mutex> g(log_mutex);
+            total_bytes += desc.Size;
+            const uint64_t live = (temp_live_heap_bytes += desc.Size);
+            std::ofstream("heaps.temp", std::ios::app) << "HEAP #" << ++count << " size=" << desc.Size / (1024.0 * 1024.0) << " MB type=" << static_cast<int>(native_desc.Properties.Type)
+                << " flags=" << static_cast<int>(native_desc.Flags) << " total=" << total_bytes / (1024.0 * 1024.0) << " MB live=" << live / (1024.0 * 1024.0) << " MB\n" << stack.str() << "\n";
+        }
+
         if constexpr (Debug::CheckErrors)    TEST(device, device.native_device->GetDeviceRemovedReason());
 
         if (desc.Flags != HeapFlags::TEXTURES_ONLY && desc.Flags != HeapFlags::RTDS_ONLY)

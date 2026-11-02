@@ -2291,7 +2291,7 @@ namespace FrameGraph
 						info->resource   = HAL::create_resource(RenderSystem::get().device(), info->d3ddesc, info->heap_type, info->clear_value);
 						info->resource->frame_graph_managed = true;
 						info->resource->set_name(info->name());
-						info->alloc_ptr  = HAL::ResourceHandle{};
+						info->alloc_ptr  = HAL::ResourceHandle{}; std::ofstream("fg_resources.temp", std::ios::app) << "OWN_HEAP(history) " << info->name() << " " << RenderSystem::get().device().get_alloc_info(info->d3ddesc).size / (1024.0 * 1024.0) << " MB\n"; // TEMP
 						info->is_new     = true;
 					}
 
@@ -2307,7 +2307,7 @@ namespace FrameGraph
 
 					if (!res || res.resource->get_desc() != info->d3ddesc)
 					{
-						PROFILE(L"placed");
+						PROFILE(L"placed"); std::ofstream("fg_resources.temp", std::ios::app) << "PLACED   " << info->name() << " " << RenderSystem::get().device().get_alloc_info(info->d3ddesc).size / (1024.0 * 1024.0) << " MB\n"; // TEMP
 						res.resource = HAL::create_resource(RenderSystem::get().device(), info->d3ddesc, info->alloc_ptr, info->clear_value);
 						//						 	res.resource->debug = info->name=="ResultTexture"; // TODO: move everywhere
 
@@ -2360,7 +2360,7 @@ namespace FrameGraph
 							*/
 					if (!info->resource || info->resource->get_desc() != info->d3ddesc)
 					{
-						PROFILE(L"DEFAULT");
+						PROFILE(L"DEFAULT"); std::ofstream("fg_resources.temp", std::ios::app) << "OWN_HEAP " << info->name() << " " << RenderSystem::get().device().get_alloc_info(info->d3ddesc).size / (1024.0 * 1024.0) << " MB\n"; // TEMP
 						info->resource = HAL::create_resource(RenderSystem::get().device(), info->d3ddesc, info->heap_type, info->clear_value);
 						info->is_new = true;
 

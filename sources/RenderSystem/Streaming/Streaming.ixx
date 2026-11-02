@@ -12,7 +12,8 @@ import HAL;
 //   - hands a freed slot back only after the frames that may still read it are done.
 // What a page is, where a slot lives, how bytes get into it and how the shaders find it is the Backend's business.
 //
-// Every method needs the streamer's mutex() held unless it says otherwise; the backend is called with it held.
+// Every method needs the streamer's mutex() held unless it says otherwise (submit, stop and stats take what they
+// need themselves); the backend is called with it held.
 
 export namespace Streaming
 {
@@ -34,7 +35,8 @@ export namespace Streaming
 	class Resource
 	{
 	public:
-		std::vector<PageState> states;       // streamed resources only; guarded by the streamer's mutex
+		std::vector<PageState> states;       // guarded by the streamer's mutex
+		// Whether its pages load on demand and can be evicted. Otherwise every page is a root: loaded at once, kept.
 		bool streamed = false;
 		std::atomic<uint32_t> generation{ 0 };
 
@@ -56,18 +58,24 @@ export namespace Streaming
 		uint32_t priority;   // higher is loaded first
 	};
 
-	struct Touch
+	// A resident page the GPU found idle: not reached for a while, and flagged evictable when it looked.
+	struct Victim
 	{
 		uint32_t id;
-		uint32_t epoch;      // the last frame the draw reached the page
+		uint32_t last_touched;   // the last epoch the draw reached the page, or it was shown
 	};
 
 	struct Requests
 	{
 		uint32_t epoch = 0;
-		std::vector<Want> wanted;     // pages the draw wanted this epoch (resident or not)
-		std::vector<Touch> touched;
+		std::vector<Want> wanted;     // pages the draw wanted this epoch and that were neither resident nor loading
+		std::vector<Victim> victims;  // candidates to hide when the pool is full; any order
+		uint32_t dropped = 0;         // wanted pages that did not fit in the request list
 	};
+
+	// What the GPU is told about a page (Backend::set_flags), so that it can compact the feedback itself.
+	constexpr uint32_t FlagLoading   = 1;   // on its way: no need to ask for it again
+	constexpr uint32_t FlagEvictable = 2;   // resident, not a root, and no shown page depends on it
 
 	struct Stats
 	{
@@ -79,6 +87,7 @@ export namespace Streaming
 		uint64_t file_loads = 0;    // of those, read from the asset file by DirectStorage
 		uint64_t evictions = 0;
 		uint64_t snapshots = 0;
+		uint64_t dropped = 0;       // wanted pages the GPU's request list had no room for
 	};
 
 	struct Policy
@@ -100,8 +109,8 @@ export namespace Streaming
 
 		virtual ~Backend() = default;
 
+		// Appends `count` slots to the pool; slot numbers continue from the last one.
 		virtual void allocate_pool(uint32_t count) = 0;
-		virtual void free_pool() = 0;
 
 		// Starts putting a page's bytes into its slot. allow_file is false for a page that is shown at once.
 		virtual Load begin_load(Resource& resource, uint32_t page, uint32_t slot, bool allow_file) = 0;
@@ -109,6 +118,9 @@ export namespace Streaming
 		// Makes the loaded page visible to the shaders, or hides it. These write the page table.
 		virtual void show(Resource& resource, uint32_t page, uint32_t slot) = 0;
 		virtual void hide(Resource& resource, uint32_t page) = 0;
+
+		// The page's Flag* bits, and the epoch it was last shown at, for the GPU's compaction.
+		virtual void set_flags(Resource& resource, uint32_t page, uint32_t flags, uint32_t shown_epoch) = 0;
 	};
 
 	// Created with std::make_shared: the completion callbacks it hands to command lists hold it weakly.
@@ -134,7 +146,7 @@ export namespace Streaming
 		uint32_t current_epoch = 1;
 
 		std::vector<PageRef> page_refs;           // by page id, streamed resources only
-		std::vector<Resource*> streamed_list;
+		std::vector<Resource*> resources;
 		size_t pool_size = 0;
 		std::vector<uint32_t> free_slots;
 		std::vector<uint32_t> retiring;           // hidden since the last prepare, free once the frames that may read them are done
@@ -144,7 +156,7 @@ export namespace Streaming
 
 		bool pool_mapped_flag = false;            // the pool's memory is ready on the GPU: DirectStorage may write the slots
 		bool pool_map_pending = false;
-		uint32_t pool_generation = 0;             // bumped when the pool is rebuilt: slots of an older one mean nothing
+		uint32_t pool_version = 0;                // bumped when the pool grows: a mapping callback is only good for the version it saw
 
 		uint64_t loads = 0;
 		uint64_t file_loads = 0;
@@ -158,6 +170,14 @@ export namespace Streaming
 		bool stopping = false;
 		std::thread thread;
 
+		std::vector<Victim> victims;              // the latest request set's candidates; guarded by m
+		uint64_t dropped_requests = 0;
+
+		// Slots the pages of streamed resources may hold together, roots included; pinned resources are outside it.
+		uint32_t budget = 0xFFFFFFFFu;
+		uint32_t streamed_in_use = 0;
+
+		void sync_flags(Resource& resource, uint32_t page);
 		uint32_t take_slot();
 		void run();
 		void process(const Requests& requests);
@@ -178,10 +198,19 @@ export namespace Streaming
 		void start();
 		bool running() const { return thread.joinable(); }
 
-		// The pool takes `count` slots; an existing one of another size is rebuilt, but only while nothing streams from it.
+		// The pool has at least `count` slots: it grows, and never shrinks.
 		void ensure_pool(uint32_t count);
 
-		// Takes the resource's pages under management (its states are sized), or lets go of them.
+		// How many slots streamed resources may hold: past it, wanted pages load only by evicting others. The pool
+		// itself can be larger (it only grows), so this is what makes a smaller setting take effect.
+		void set_budget(uint32_t slots) { budget = slots; }
+
+		// At least `count` slots are free now. Slots a released resource gave back are not, until the frames that may
+		// read them are done, so a resource arriving right after another may need the pool to grow past its budget.
+		void ensure_free(uint32_t count);
+
+		// Takes the resource's pages under management (its states are sized), or lets go of them. A resource that is
+		// not `streamed` is pinned: all its pages are loaded with load_root() and none is ever evicted.
 		void add(Resource& resource);
 		void remove(Resource& resource);
 

@@ -858,6 +858,13 @@ class GraphRender : public Window, public GUI::user_interface
 	GUI::Elements::stat_graph::ptr graph_upload;
 	GUI::Elements::stat_graph::ptr graph_readback;
 
+	// The Quanta tab: what the page streamer did (Quanta::Residency::stats()).
+	GUI::Elements::stat_graph::ptr graph_quanta_loaded;
+	GUI::Elements::stat_graph::ptr graph_quanta_requests;
+	GUI::Elements::stat_graph::ptr graph_quanta_evicted;
+	GUI::Elements::stat_graph::ptr graph_quanta_in_flight;
+	GUI::Elements::stat_graph::ptr graph_quanta_pool_used;
+
 	std::shared_ptr<triangle_drawer> drawer;
 	std::shared_ptr<triangle_drawer> drawer2;
 	std::shared_ptr<FrameFlowGraph> frameFlowGraph;
@@ -962,6 +969,22 @@ public:
 
 				if (graph_upload)    graph_upload->push((float)dev.get_upload_heap(), frame_dt);
 				if (graph_readback)  graph_readback->push((float)dev.get_readback_heap(), frame_dt);
+
+					// Not get() first: that would build the residency (and its buffers) just for the graphs.
+					if (graph_quanta_loaded && Quanta::Residency::is_good())
+					{
+						static uint64_t previous_loads = 0, previous_evictions = 0;
+						const Quanta::StreamStats s = Quanta::Residency::get().stats();
+
+						graph_quanta_loaded->push((float)(s.loads - previous_loads), frame_dt);
+						graph_quanta_evicted->push((float)(s.evictions - previous_evictions), frame_dt);
+						graph_quanta_requests->push((float)s.wanted, frame_dt);
+						graph_quanta_in_flight->push((float)s.loading_pages, frame_dt);
+						graph_quanta_pool_used->push((float)(s.pool_pages - s.free_pages), frame_dt);
+
+						previous_loads = s.loads;
+						previous_evictions = s.evictions;
+					}
 			});
 
 			
@@ -1751,6 +1774,33 @@ public:
 					stats_panel->add_child(graph_readback);
 
 					dock->get_tabs()->add_page("Stats", stats_panel);
+
+					{
+						auto quanta_panel = std::make_shared<GUI::base>();
+						quanta_panel->docking      = GUI::dock::FILL;
+						quanta_panel->width_size   = GUI::size_type::MATCH_PARENT;
+						quanta_panel->height_size  = GUI::size_type::MATCH_PARENT;
+
+						auto add_graph = [&](GUI::Elements::stat_graph::ptr& graph, const char* title, float min_range, float4 color)
+						{
+							graph.reset(new GUI::Elements::stat_graph());
+							graph->title      = title;
+							graph->size       = {0, 70};
+							graph->min_range  = min_range;
+							graph->line_color = color;
+							graph->fill_color = { color.x, color.y, color.z, 0.15f };
+							graph->mode       = GUI::Elements::stat_graph::draw_mode::lines;
+							quanta_panel->add_child(graph);
+						};
+
+						add_graph(graph_quanta_loaded,    "Pages loaded / frame", 8.0f,  {0.35f, 0.80f, 0.45f, 1.00f});
+						add_graph(graph_quanta_requests,  "Requests (wanted pages)", 8.0f, {0.95f, 0.70f, 0.20f, 1.00f});
+						add_graph(graph_quanta_evicted,   "Pages evicted / frame", 8.0f, {0.90f, 0.30f, 0.30f, 1.00f});
+						add_graph(graph_quanta_in_flight, "Pages in flight", 8.0f,       {0.40f, 0.70f, 1.00f, 1.00f});
+						add_graph(graph_quanta_pool_used, "Pool slots used", 16.0f,      {0.70f, 0.50f, 0.95f, 1.00f});
+
+						dock->get_tabs()->add_page("Quanta", quanta_panel);
+					}
 					dock->size = {100, 230};
 				}
 			}
