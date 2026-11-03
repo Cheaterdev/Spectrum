@@ -19,8 +19,6 @@ export namespace HAL
 		HeapFlags Flags;
 	};
 
-	inline std::atomic<uint64_t> temp_live_heap_bytes{ 0 }; // TEMP
-
 	class Buffer;
 	class Heap :public SharedObject<Heap>, public ObjectState<TrackedObjectState>, public TrackedObject, public API::Heap
 	{
@@ -33,11 +31,7 @@ export namespace HAL
 		Heap(Device& device, const HeapDesc& desc);
 
 		HeapType get_type();
-		virtual ~Heap() // TEMP: heap free log (heaps.temp)
-		{
-			const uint64_t live = (temp_live_heap_bytes -= desc.Size);
-			std::ofstream("heaps.temp", std::ios::app) << "FREE size=" << desc.Size / (1024.0 * 1024.0) << " MB live=" << live / (1024.0 * 1024.0) << " MB\n";
-		}
+		virtual ~Heap() = default;
 
 		std::span<std::byte> get_data();
 		size_t get_size();

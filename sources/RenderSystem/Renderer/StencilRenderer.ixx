@@ -85,6 +85,10 @@ export class stencil_renderer : public GUI::base, public Events::Runner, public 
         Scene::ptr scene;
         first_person_camera* player_cam;
 
+        // Says how the selected part is drawn: Quanta, or the regular meshlets. Refreshed by update_frame().
+        GUI::Elements::label::ptr geometry_indicator;
+        std::string               geometry_indicator_text;
+
         Variable<bool> draw_aabb = { false, "Draw AABB", this };
 
         // Width is in output pixels; the overlays are drawn after tonemapping.

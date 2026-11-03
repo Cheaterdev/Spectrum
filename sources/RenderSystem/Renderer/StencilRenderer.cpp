@@ -5,6 +5,7 @@ import :EngineAssets;
 import :BRDF;
 
 import :Materials.UniversalMaterial;
+import :QuantaSplat;
 import GUI;
 
 using namespace GUI;
@@ -418,6 +419,13 @@ stencil_renderer::stencil_renderer() : VariableContext(L"stencil")
 
 	cam.set_projection_params(0, 0.01f, 0, 0.01f, 0.1f, 1000);
 
+	geometry_indicator = std::make_shared<label>();
+	geometry_indicator->docking = GUI::dock::BOTTOM;
+	geometry_indicator->clickable = false;
+	geometry_indicator->magnet_text = FW1_RIGHT | FW1_BOTTOM | FW1_NOWORDWRAP;
+	geometry_indicator->margin = { 0, 0, 8, 6 };
+	GUI::base::add_child(geometry_indicator);
+
 	axis = EngineAssets::axis.get_asset()->create_instance();
 
 	debug_scene = std::make_shared<Scene>();
@@ -761,6 +769,30 @@ void stencil_renderer::update_frame(FrameGraph::Graph& graph)
 {
 	process_tasks();
 	debug_scene->update_transforms();
+
+	{
+		std::string text;
+		if (!selected.empty() && selected.front().first)
+		{
+			auto& instance = *selected.front().first;
+			const size_t part = static_cast<size_t>(selected.front().second);
+			if (part < instance.rendering.size())
+			{
+				const bool has_quanta = instance.rendering[part].quanta_dispatch_mesh_arguments.ThreadGroupCountX > 0;
+				if (!has_quanta)
+					text = "Regular mesh (meshlets, no Quanta data)";
+				else if (Quanta::draw_enabled())
+					text = "Quanta mesh";
+				else
+					text = "Quanta data present, Quanta draw is off: drawn as regular meshlets";
+			}
+		}
+		if (text != geometry_indicator_text)
+		{
+			geometry_indicator_text = text;
+			geometry_indicator->text = text;
+		}
+	}
 
 	// Size the rotation rings from the arrows' actual (post-import-scale) bounds,
 	// once they are available. The arrows are drawn through the mesh node transform,

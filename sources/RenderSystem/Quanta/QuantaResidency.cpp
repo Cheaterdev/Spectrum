@@ -113,16 +113,6 @@ namespace Quanta
 
 		const bool stream = g_streaming;
 
-		{ // TEMP: scene size log (quanta_meshes.temp)
-			static uint64_t total_triangles = 0, total_pages = 0;
-			static uint32_t mesh_count = 0;
-			total_triangles += mesh->original_triangle_count;
-			total_pages += mesh->pages.size();
-			std::ofstream("quanta_meshes.temp", std::ios::app) << "MESH #" << ++mesh_count << " streamed=" << stream << " triangles=" << mesh->original_triangle_count
-				<< " pages=" << mesh->pages.size() << " (" << mesh->pages.size() / 4.0 << " MB) groups=" << mesh->groups.size() << " nodes=" << mesh->nodes.size()
-				<< " | total triangles=" << total_triangles << " pages=" << total_pages << " (" << total_pages / 4.0 << " MB)\n";
-		}
-
 		auto resident = std::make_shared<Resident>();
 		resident->mesh = mesh;
 		resident->streamed = stream;
