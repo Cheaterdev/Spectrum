@@ -133,6 +133,7 @@ std::optional<SlotID> get_slot(std::string_view slot_name)
 	if(slot_name == "OutlineCopy") return SlotID::OutlineCopy;
 	if(slot_name == "StreamCompact") return SlotID::StreamCompact;
 	if(slot_name == "Test") return SlotID::Test;
+	if(slot_name == "StreamClampProbe") return SlotID::StreamClampProbe;
 	if(slot_name == "TonemapData") return SlotID::TonemapData;
 	if(slot_name == "DisplayOutput") return SlotID::DisplayOutput;
 	if(slot_name == "NinePatch") return SlotID::NinePatch;
@@ -444,6 +445,8 @@ uint get_table_index(SlotID id)
 
 	if(id == SlotID::Test) return Slots::Dev::Test::Slot::ID;
 
+	if(id == SlotID::StreamClampProbe) return Slots::TextureStreamingTests::StreamClampProbe::Slot::ID;
+
 	if(id == SlotID::TonemapData) return Slots::Post::TonemapData::Slot::ID;
 
 	if(id == SlotID::DisplayOutput) return Slots::UI::DisplayOutput::Slot::ID;
@@ -686,6 +689,7 @@ std::string get_slot_name(SlotID id)
 	if(id == SlotID::OutlineCopy) return "OutlineCopy";
 	if(id == SlotID::StreamCompact) return "StreamCompact";
 	if(id == SlotID::Test) return "Test";
+	if(id == SlotID::StreamClampProbe) return "StreamClampProbe";
 	if(id == SlotID::TonemapData) return "TonemapData";
 	if(id == SlotID::DisplayOutput) return "DisplayOutput";
 	if(id == SlotID::NinePatch) return "NinePatch";

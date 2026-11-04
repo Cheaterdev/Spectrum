@@ -5,6 +5,7 @@ import RenderSystem;
 
 import :EngineAssets;
 import :QuantaSplat;
+import :TextureStreaming;
 import :RTX;
 
 
@@ -64,6 +65,12 @@ materials::PipelinePasses::PipelinePasses(UINT id, std::string pixel, std::strin
 		voxel_macros = with_draw_id(voxel_macros);
 	}
 
+	// Only the main view's draws bind the texture feedback (QuantaFeedback::textures); the depth, voxel and shadow draws
+	// run the same pixel shaders without it.
+	auto gbuffer_macros = pixel_macros;
+	if (TextureStreaming::Manager::supported())
+		gbuffer_macros.emplace_back("STREAM_FEEDBACK", "1");
+
 	depth_draw = std::make_shared<PSOS::Meshes::DepthDraw>(RenderSystem::get().device(),[&](SimpleGraphicsPSO& target, PSOS::Meshes::DepthDraw::Keys& )
 	{
 		target.name += std::to_string(id);
@@ -83,7 +90,7 @@ materials::PipelinePasses::PipelinePasses(UINT id, std::string pixel, std::strin
 	gbuffer = std::make_shared<PSOS::Meshes::GBufferDraw>(RenderSystem::get().device(),[&](SimpleGraphicsPSO& target, PSOS::Meshes::GBufferDraw::Keys& )
 	{
 		target.name += std::to_string(id);
-		target.pixel = { pixel, "PS", HAL::ShaderOptions::None, pixel_macros, true };
+		target.pixel = { pixel, "PS", HAL::ShaderOptions::None, gbuffer_macros, true };
 
 		if (!tess.empty()) {
 			target.hull = { tess, "HS", HAL::ShaderOptions::None,context->get_tess_result().macros, true };
@@ -137,7 +144,7 @@ materials::PipelinePasses::PipelinePasses(UINT id, std::string pixel, std::strin
 	// Not with tessellation: its front end is hull/domain shaders, and a vertex stage is no replacement.
 	if (tess.empty() && (!RenderSystem::get().device().is_mesh_shader_supported() || PipelineOptions::vertex_front_end()))
 	{
-		auto vertex_macros = pixel_macros;
+		auto vertex_macros = gbuffer_macros;
 		vertex_macros.emplace_back("VERTEX_FRONT_END", "1");   // draw id as a flat input (draw_data.hlsl)
 
 		gbuffer_vs = std::make_shared<PSOS::Meshes::GBufferDrawVS>(RenderSystem::get().device(), [&](SimpleGraphicsPSO& target, PSOS::Meshes::GBufferDrawVS::Keys&)
@@ -340,6 +347,7 @@ void materials::universal_material::update()
 
 	if (need_update_compiled)
 	{
+		material_info.GetStream_info() = TextureStreaming::Manager::get().stream_info.structuredBuffer;
 		material_info.GetTextures() = texture_srvs;// textures_handle ? (UINT)textures_handle.get_offset() : 0;
 		material_info.GetData() = pixel_data;
 		compiled_material_info = material_info.compile(RenderSystem::get().device().get_static_gpu_data());
@@ -419,19 +427,19 @@ void materials::universal_material::compile()
 	handlers.clear();
 
 	texture_srvs.resize(textures.size());
-	texture_feedbacks.resize(textures.size());
 
 	for (int i = 0; i < textures.size(); i++)
 	{
 			TextureAsset::ptr tex = *textures[i];
 		if (tex && tex->get_texture()->texture_2d())
 		{
+			auto render_texture = tex->get_render_texture();
 			// texture_to_linear may be shorter than textures for a material
 			// serialized before this field existed -- default to false (the
 			// plain linear view) rather than indexing out of bounds.
 			bool to_linear = i < (int)texture_to_linear.size() && texture_to_linear[i];
-			texture_srvs[i] = to_linear ? tex->get_texture()->texture_2d_srgb().texture2D : tex->get_texture()->texture_2d().texture2D;
-		texture_feedbacks[i] = tex->get_texture()->texture_2d().feedback;
+			texture_srvs[i] = to_linear ? render_texture->texture_2d_srgb().texture2D : render_texture->texture_2d().texture2D;
+			TextureStreaming::Manager::get().bind_view(render_texture->resource.get(), texture_srvs[i].get_offset());
 		}
 
 		else
@@ -455,6 +463,7 @@ void materials::universal_material::compile()
 
 
 	generate(ps_uniforms);
+	material_info.GetStream_info() = TextureStreaming::Manager::get().stream_info.structuredBuffer;
 	material_info.GetTextures() = texture_srvs;// textures_handle ? (UINT)textures_handle.get_offset() : 0;
 	material_info.GetData() = pixel_data;
 	compiled_material_info = material_info.compile(RenderSystem::get().device().get_static_gpu_data());

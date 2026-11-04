@@ -37,6 +37,46 @@ HAL::Texture::ptr TextureAsset::get_texture()
 	return texture;
 }
 
+void TextureAsset::reset_streamed()
+{
+	streamed.reset();
+	stream_checked = false;
+}
+
+HAL::Texture::ptr TextureAsset::get_render_texture()
+{
+	if (!stream_checked)
+	{
+		stream_checked = true;
+
+		// Below this a texture has too few tiles to be worth streaming.
+		constexpr uint MinStreamedSize = 1024;
+
+		if (TextureStreaming::Manager::supported() && texture && texture != HAL::Texture::null && texture->resource)
+		{
+			const auto& desc = texture->get_desc();
+			if (desc.is_texture() && !desc.is_virtual() && !check(desc.Flags & HAL::ResFlags::RenderTarget))
+			{
+				const auto texture_desc = desc.as_texture();
+				if (texture_desc.is2D() && texture_desc.ArraySize == 1 && std::max(texture_desc.Dimensions.x, texture_desc.Dimensions.y) >= MinStreamedSize)
+				{
+					auto data = texture->get_data();
+					auto candidate = TextureStreaming::Manager::get().create(data, name);
+
+					if (candidate->standard_mips() >= 2)
+					{
+						streamed = candidate;
+						Log::get() << L"Streaming texture " << name << L" (" << texture_desc.Dimensions.x << L"x" << texture_desc.Dimensions.y
+							<< L", " << candidate->standard_mips() << L" streamed mips)" << Log::endl;
+					}
+				}
+			}
+		}
+	}
+
+	return streamed ? streamed->texture : texture;
+}
+
 TextureAsset::TextureAsset(std::filesystem::path file_name)
 {
 	auto task = TaskInfoManager::get().create_task(file_name.generic_wstring());
@@ -71,6 +111,7 @@ void TextureAsset::try_register()
 inline void TextureAsset::reload_resource()
 {
 	texture->reload_resource();
+	reset_streamed();
 }
 
 TextureAsset::TextureAsset()
@@ -101,6 +142,7 @@ bool TextureAsset::compress()
 	if (new_texture)
 	{
 		texture = new_texture;
+		reset_streamed();
 		mark_contents_changed();
 	}
 

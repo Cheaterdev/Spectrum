@@ -12,16 +12,10 @@ namespace Meshes
 	struct MaterialInfo
 	{
 		MaterialCB data; // MaterialCB
+		uint stream_info; // StructuredBuffer<uint>
 		uint textures; // Texture2D<float4>
-		uint texture_feedbacks; // FeedbackTexture2DMip
 		MaterialCB GetData() { return data; }
-		FeedbackTexture2DMip GetTexture_feedbacks(int i)
-		{
-			StructuredBuffer<uint> indirection = ResourceDescriptorHeap[texture_feedbacks];
-			uint id = indirection[NonUniformResourceIndex(i)];
-			return ResourceDescriptorHeap[NonUniformResourceIndex(id)];
-		}
-
+		StructuredBuffer<uint> GetStream_info() { return ResourceDescriptorHeap[stream_info]; }
 		Texture2D<float4> GetTextures(int i)
 		{
 			StructuredBuffer<uint> indirection = ResourceDescriptorHeap[textures];

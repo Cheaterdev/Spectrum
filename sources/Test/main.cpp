@@ -13,6 +13,7 @@ import Test.HAL.SubresRangeMap;
 import Test.RenderSystem.FrameGraph;
 import Test.SceneParity;
 import Test.Quanta;
+import Test.TextureStreaming;
 import Test.MaterialX;
 import Core;
 import HAL;

@@ -80,6 +80,22 @@ Texture2D get_texture(uint i)
 
 #ifdef BUILD_FUNC_PS
 
+#ifdef STREAM_FEEDBACK
+#include "autogen/QuantaFeedback.h"
+#include "streaming/stream_feedback.hlsl"
+
+// What this pixel's streamed samples got (ps_sample), for the debug view painted at the end of PS.
+static float stream_sampled_mip = 0;
+static float stream_missing_mips = 0;
+
+// 0..1 as blue, cyan, green, yellow, red.
+float3 stream_ramp(float t)
+{
+    t = saturate(t);
+    return saturate(float3(1.5 - abs(4.0 * t - 3.0), 1.5 - abs(4.0 * t - 2.0), 1.5 - abs(4.0 * t - 1.0)));
+}
+#endif
+
 
 GBuffer universal(vertex_output i, float4 albedo, float metallic,float roughness, float4 bump, float4 glow, float coat, float coat_roughness, float sheen, float sheen_roughness, float anisotropy, float aniso_rotation, float sss_weight, float3 sss_radius, float sss_scale, float sheen_tint, float film_thickness, float film_ior)
 { 
@@ -121,6 +137,11 @@ GBuffer universal(vertex_output i, float4 albedo, float metallic,float roughness
 }    
 
 void COMPILED_FUNC(in float3 a, in float2 b, out float4 c, out float d, out float e, out float4 f, out float4 g, out float h, out float ior, out float thickness, out float transmission, out float absorption_distance, out float coat, out float coat_roughness, out float sheen, out float sheen_roughness, out float anisotropy, out float aniso_rotation, out float sss_weight, out float3 sss_radius, out float sss_scale, out float sheen_tint, out float3 transmission_color, out float opacity_threshold, out float thin_film_thickness, out float thin_film_ior, float lod);
+// A shader that writes a UAV loses the automatic early depth test, so pixels the depth test rejects would report what
+// they sampled. Not with ALPHA_CLIP: a discard must come before the depth write.
+#if defined(STREAM_FEEDBACK) && !defined(ALPHA_CLIP)
+[earlydepthstencil]
+#endif
 GBuffer PS(vertex_output i DRAW_ID_PARAM)
 {
 	SET_DRAW_ID();
@@ -135,6 +156,16 @@ GBuffer PS(vertex_output i DRAW_ID_PARAM)
     mx_set_geometry(normalize(i.normal), normalize(i.tangent), normalize(i.binormal));
     mx_set_time(GetFrameInfo().GetTime().y);
     COMPILED_FUNC(i.wpos, i.tc, color, metallic, roughness, normal, glow, opacity, refraction, thickness, transmission, absorption_distance, coat, coat_roughness, sheen, sheen_roughness, anisotropy, aniso_rotation, sss_weight, sss_radius, sss_scale, sheen_tint, transmission_color, opacity_threshold, thin_film_thickness, thin_film_ior, 0);
+
+#ifdef STREAM_FEEDBACK
+    // TextureStreaming::DebugView: 1 = the mip the pixel got, 2 = how far it is from the mip it wanted.
+    const uint stream_debug = GetQuantaFeedback().GetStream_debug();
+    if (stream_debug != 0)
+    {
+        color.rgb = stream_debug == 1 ? stream_ramp(stream_sampled_mip / 8.0) : lerp(float3(0, 0.6, 0), float3(1, 0, 0), saturate(stream_missing_mips / 4.0));
+        metallic = 0;
+    }
+#endif
 
 color.w = opacity - opacity_threshold + 0.5;   // universal() clips at 0.5
 	return universal(i, color, metallic, roughness, normal, glow, coat, coat_roughness, sheen, sheen_roughness, anisotropy, aniso_rotation, sss_weight, sss_radius, sss_scale, sheen_tint, thin_film_thickness, thin_film_ior);
@@ -298,16 +329,45 @@ vertex_output2 HS(InputPatch<vertex_output2, 3> inputPatch,
 }
 
 
+// The finest mip of texture `i` that has memory behind it: 0 unless it is streamed (MaterialInfo::stream_info holds
+// the mip plus one, 0 for a texture that is not streamed). Sampling finer would read the unmapped tiles as zero.
+float stream_min_mip(uint i)
+{
+    StructuredBuffer<uint> indirection = ResourceDescriptorHeap[GetMaterialInfo().textures];
+    uint view = indirection[NonUniformResourceIndex(i)];
+    return float(max(GetMaterialInfo().GetStream_info()[NonUniformResourceIndex(view)], 1u) - 1u);
+}
+
 #ifdef BUILD_FUNC_PS
-#define sample(tex, s,  tc, lod) get_texture(tex).SampleBias(s, tc, GetFrameInfo().GetMipBias());
+
+float4 ps_sample(uint tex, SamplerState s, float2 tc)
+{
+    Texture2D<float4> t = get_texture(tex);
+#ifdef STREAM_FEEDBACK
+    StructuredBuffer<uint> indirection = ResourceDescriptorHeap[GetMaterialInfo().textures];
+    const uint view = indirection[NonUniformResourceIndex(tex)];
+    const float lod = max(t.CalculateLevelOfDetailUnclamped(s, tc) + GetFrameInfo().GetMipBias(), 0.0);
+    stream_report(GetMaterialInfo().GetStream_info(), GetQuantaFeedback().GetTextures(), view, lod);
+
+    const uint resident = GetMaterialInfo().GetStream_info()[NonUniformResourceIndex(view)];
+    if (resident != 0)
+    {
+        stream_sampled_mip = max(stream_sampled_mip, max(lod, float(resident - 1)));
+        stream_missing_mips = max(stream_missing_mips, float(resident - 1) - lod);
+    }
+#endif
+    return t.SampleBias(s, tc, GetFrameInfo().GetMipBias(), int2(0, 0), stream_min_mip(tex));
+}
+
+#define sample(tex, s,  tc, lod) ps_sample(tex, s, tc);
 #elif defined(BUILD_FUNC_PS_VOXEL)
- 
- 
-#define sample(tex, s,  tc, lod) get_texture(tex).Sample(s, tc); 
+
+
+#define sample(tex, s,  tc, lod) get_texture(tex).Sample(s, tc, int2(0, 0), stream_min_mip(tex));
 #else
 
-#define sample(tex, s,  tc, lod) get_texture(tex).SampleLevel(s, tc, lod);
-#endif 
+#define sample(tex, s,  tc, lod) get_texture(tex).SampleLevel(s, tc, max(lod, stream_min_mip(tex)));
+#endif
 
 
 #ifdef BUILD_FUNC_DS

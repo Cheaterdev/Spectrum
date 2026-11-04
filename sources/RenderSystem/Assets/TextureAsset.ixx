@@ -4,6 +4,7 @@ import :Asset;
 import Core;
 import HAL;
 import :Texture;
+import :TextureStreaming;
 
 export{
 
@@ -24,6 +25,13 @@ export{
 	protected:
 		HAL::Texture::ptr texture;
 
+		// A streamed copy of `texture` for the materials (get_render_texture), made on first use and never saved: the
+		// asset on disk is `texture`.
+		std::shared_ptr<TextureStreaming::Streamed> streamed;
+		bool stream_checked = false;
+
+		void reset_streamed();
+
 	public:
 
 
@@ -35,6 +43,10 @@ export{
 		TextureAsset();
 
 		HAL::Texture::ptr get_texture();
+
+		// What the materials bind: a streamed copy of a large 2D texture, so only the mips the draws sample take memory
+		// from the streaming pool; any other texture as it is. Use get_texture() for everything that wants all the texels.
+		HAL::Texture::ptr get_render_texture();
 		bool compress();
 
 		virtual Asset_Type get_type();

@@ -20,26 +20,35 @@ export namespace Table
 		{
 			static constexpr SlotID ID = SlotID::QuantaFeedback;
 			uint epoch;
+			uint stream_debug;
 			HLSL::RWStructuredBuffer<uint> pages;
+			HLSL::RWStructuredBuffer<uint> textures;
 			HLSL::RWStructuredBuffer<uint>& GetPages() { return pages; }
 			uint& GetEpoch() { return epoch; }
+			HLSL::RWStructuredBuffer<uint>& GetTextures() { return textures; }
+			uint& GetStream_debug() { return stream_debug; }
 			static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 			template<class Compiler>
 			void compile(Compiler& compiler) const
 			{
 				compiler.compile(epoch, "QuantaFeedback::epoch");
+				compiler.compile(stream_debug, "QuantaFeedback::stream_debug");
 				compiler.compile(pages, "QuantaFeedback::pages");
+				compiler.compile(textures, "QuantaFeedback::textures");
 			}
 			struct Compiled
 			{
 				uint epoch; // uint
+				uint stream_debug; // uint
 				uint pages; // RWStructuredBuffer<uint>
+				uint textures; // RWStructuredBuffer<uint>
 
 			
 				private:
 				SERIALIZE()
 				{
 					ar& NVP(epoch);
+					ar& NVP(stream_debug);
 				}
 
 
@@ -53,6 +62,7 @@ export namespace Table
 			SERIALIZE()
 			{
 				ar& NVP(epoch);
+				ar& NVP(stream_debug);
 			}
 
 		};

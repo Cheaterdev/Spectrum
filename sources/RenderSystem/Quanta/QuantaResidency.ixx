@@ -69,10 +69,16 @@ export namespace Quanta
 	{
 		friend class Resident;
 
-		static constexpr size_t MaxPageDwords  = (1024ull * 1024 * 1024) / sizeof(uint32_t);
-		static constexpr size_t MaxGroupDwords = (64ull * 1024 * 1024) / sizeof(uint32_t);
-		static constexpr size_t MaxNodeDwords  = (16ull * 1024 * 1024) / sizeof(uint32_t);
-		static constexpr size_t MaxPageIds     = 1u << 18;
+		// Virtual reservations: memory is committed only for what is allocated, so these are address space, not VRAM.
+		// The pages buffer stays one page under 4 GB so a byte range into it fits 32 bits (Vulkan's storage buffer limit).
+		static constexpr size_t MaxPageDwords  = (4096ull * 1024 * 1024 - PageBytes) / sizeof(uint32_t);
+		// A family's first group is packed into FamilyCountShift bits, so the shared group table cannot hold more.
+		static constexpr size_t MaxGroups      = size_t(1) << FamilyCountShift;
+		static constexpr size_t MaxGroupDwords = MaxGroups * GroupDwords;
+		static constexpr size_t MaxNodes       = MaxGroups / 8;
+		static constexpr size_t MaxNodeDwords  = MaxNodes * NodeDwords;
+		static constexpr size_t MaxPageIds     = 1u << 20;
+		static constexpr size_t MaxPoolPages   = MaxPageDwords / PageDwords;
 
 		std::shared_ptr<Streaming::Streamer> streamer;
 
@@ -88,6 +94,14 @@ export namespace Quanta
 		// What the pool has to hold: every page of the pinned meshes, plus the budget the streamed ones share.
 		uint32_t pinned_pages = 0;
 		uint32_t streamed_meshes = 0;
+
+		// What the shared tables hold now, against the caps above: a mesh that does not fit is refused before anything changes.
+		uint64_t page_ids_in_use = 0;
+		uint64_t groups_in_use = 0;
+		uint64_t nodes_in_use = 0;
+
+		// The streamed meshes' share of the pool: the setting, cut to what the pages buffer has left after the pinned ones.
+		uint32_t streaming_budget() const;
 
 		// The flags of page ids changed since the last prepare(): from `first`, two dwords per page id.
 		struct FlagWrite

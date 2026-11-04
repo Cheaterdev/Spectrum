@@ -5,9 +5,10 @@ namespace Meshes
 	{
 		[dynamic] MaterialCB data;
 	    Texture2D<float4> textures[];
-		# [Auto]: only virtual (tiled) textures have a sampler-feedback view;
-		# a regular texture's element stays unbound.
-		[Auto = Texture_Null]
-		FeedbackTexture2DMip texture_feedbacks[];
+		# Indexed by the descriptor-heap index of a texture's SRV (what `textures` holds): 0 for a texture that is fully
+		# resident, otherwise the finest mip of a streamed one that has memory behind it, plus one. A shader must not
+		# sample finer than that: the tiles of the finer mips are not mapped and read as zero. Shared by every material
+		# (TextureStreaming::Manager), so it reaches the raster and the ray tracing shaders alike.
+		StructuredBuffer<uint> stream_info;
 	}
 }

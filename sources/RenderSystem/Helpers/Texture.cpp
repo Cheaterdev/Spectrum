@@ -28,7 +28,7 @@ namespace HAL
 			else
 				texture_2d_view = Texture2DView(resource, frame);
 
-			if (desc.is2D()&&resource->get_tiled_manager().is_tiled())
+			if (desc.is2D() && resource->get_tiled_manager().is_tiled() && !check(get_desc().Flags & HAL::ResFlags::NoSamplerFeedback))
 			feedback = std::make_shared<HAL::TextureResource>(resource->get_device(), ResourceDesc::Feedback(resource.get()), HeapType::DEFAULT);
 		}
 	}
@@ -74,7 +74,8 @@ namespace HAL
 	{
 		auto desc = get_desc().as_texture();
 
-		auto list = (resource->get_device().get_queue(CommandListType::COPY)->get_free_list());
+		// Not the copy queue: a texture rests in its shader-resource layout, which that queue cannot take it out of.
+		auto list = (resource->get_device().get_queue(CommandListType::DIRECT)->get_free_list());
 		list->begin(L"Texture Readback");
 
 		desc.Format = desc.Format.to_typeless();

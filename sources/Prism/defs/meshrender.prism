@@ -108,6 +108,12 @@ namespace Meshes
 	{
 		RWStructuredBuffer<uint> pages;
 		uint epoch;
+		# What the main view's material pixel shaders sample, one dword per descriptor-heap index
+		# (TextureStreaming::Manager::wanted, see stream_feedback.hlsl). Bound with this struct, in every
+		# main-view draw, because a table is the one place a UAV gets its barriers.
+		RWStructuredBuffer<uint> textures;
+		# TextureStreaming::DebugView: what the material pixel shaders paint over the albedo (0 = nothing).
+		uint stream_debug;
 	}
 
 	# QuantaFeedback for the shadow pages' draw (VSMDepthDraw): Instance4 is VSMPageHiZ there, and Instance5 is the

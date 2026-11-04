@@ -18,6 +18,7 @@ export import :TextureAsset;
 export import :MaterialAsset;
 export import :MeshAsset;
 export import :Streaming;
+export import :TextureStreaming;
 export import :Quanta;
 export import :QuantaAsset;
 export import :QuantaResidency;

@@ -7,6 +7,7 @@ import :Materials.UniversalMaterial;
 import :MipMapGenerator;
 import :QuantaSplat;
 import :QuantaResidency;
+import :TextureStreaming;
 
 import HAL;
 
@@ -264,6 +265,26 @@ void  mesh_renderer::draw_boxes(MeshRenderContext::ptr mesh_render_context, Scen
 
 	graphics.set_rtv(gbuffer->compiled);
 }
+// QuantaFeedback is one slot for both reports: the Quanta draw's pages, and the textures the main view's pixel shaders
+// sample. A draw that has only one of them gets the other's field pointed at a buffer it never touches.
+static void set_draw_feedback(HAL::GraphicsContext& graphics, bool quanta_draw, bool stream_feedback)
+{
+	Slots::Meshes::QuantaFeedback feedback;
+	if (quanta_draw)
+	{
+		feedback.GetPages() = Quanta::Residency::get().feedback;
+		feedback.GetEpoch() = Quanta::Residency::get().epoch();
+	}
+	else
+	{
+		feedback.GetPages() = TextureStreaming::Manager::get().wanted.rwStructuredBuffer;
+	}
+
+	feedback.GetTextures() = stream_feedback ? TextureStreaming::Manager::get().wanted.rwStructuredBuffer : feedback.GetPages();
+	feedback.GetStream_debug() = stream_feedback ? static_cast<uint32_t>(TextureStreaming::Manager::debug_view()) : 0u;
+	graphics.set(feedback);
+}
+
 void  mesh_renderer::render_meshes(MeshRenderContext::ptr mesh_render_context, Scene::ptr scene, std::map<size_t, materials::Pipeline::ptr>& pipelines, Slots::Meshes::GatherPipelineGlobal::Compiled& gatherData, bool needCulling, HAL::StructuredBufferView<DispatchArguments>* dispatch_args, UINT direct_count, bool hiz_occlusion, std::optional<CullCapture::Stage> capture_stage, bool walk_lod)
 {
 	PROFILE_GPU(L"render_meshes");
@@ -366,13 +387,9 @@ void  mesh_renderer::render_meshes(MeshRenderContext::ptr mesh_render_context, S
 						graphics.set(write);
 					}
 
-					if (quanta_draw)
-					{
-						Slots::Meshes::QuantaFeedback feedback;
-						feedback.GetPages() = Quanta::Residency::get().feedback;
-						feedback.GetEpoch() = Quanta::Residency::get().epoch();
-						graphics.set(feedback);
-					}
+					const bool stream_feedback = mesh_render_context->render_type == RENDER_TYPE::PIXEL && TextureStreaming::Manager::supported();
+					if (quanta_draw || stream_feedback)
+						set_draw_feedback(graphics, quanta_draw, stream_feedback);
 				}
 
 			for (int i = 0; i < total; i++)
@@ -575,6 +592,8 @@ void mesh_renderer::render_vertex_front_end(MeshRenderContext::ptr mesh_render_c
 
 	graphics.set(scene->compiledScene);
 	graphics.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::LIST);
+	if (TextureStreaming::Manager::supported())
+		set_draw_feedback(graphics, false, true);
 
 	for (auto* instance : scene->mesh_objects)
 		for (auto& part : instance->rendering)

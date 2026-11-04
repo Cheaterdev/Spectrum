@@ -196,6 +196,12 @@ export
 
 			void map_tile(update_tiling_info&, uint3 target_pos, TileHeapPosition pos);
 
+			// Maps or unmaps one tile of the (slice, mip) subresource `storage_index` names, to a position in a heap the
+			// caller owns (a streamer's pool of tiles). Unlike load_tile/zero_tile nothing is allocated or freed here and the
+			// coarser mips are left alone: the caller decides when the memory behind the tile may be reused.
+			void map_tile(update_tiling_info&, uint3 target_pos, uint storage_index, TileHeapPosition pos);
+			void unmap_tile(update_tiling_info&, uint3 target_pos, uint storage_index);
+
 
 			void load_packed(CommandList& list);
 

@@ -19,11 +19,11 @@ export namespace Table
 		struct MaterialInfo
 		{
 			static constexpr SlotID ID = SlotID::MaterialInfo;
+			HLSL::StructuredBuffer<uint> stream_info;
 			std::vector<HLSL::Texture2D<float4>> textures;
-			HLSL::FeedbackTexture2DMip texture_feedbacks;
 			DynamicData data;
 
-			HLSL::FeedbackTexture2DMip& GetTexture_feedbacks() { return texture_feedbacks; }
+			HLSL::StructuredBuffer<uint>& GetStream_info() { return stream_info; }
 			std::vector<HLSL::Texture2D<float4>>& GetTextures() { return textures; }
 			DynamicData& GetData() { return data; }
 			static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
@@ -31,8 +31,8 @@ export namespace Table
 			void compile(Compiler& compiler) const
 			{
 				compiler.compile(data, "MaterialInfo::data");
+				compiler.compile(stream_info, "MaterialInfo::stream_info");
 				compiler.compile(textures, "MaterialInfo::textures");
-				compiler.compile_auto(texture_feedbacks, "MaterialInfo::texture_feedbacks");
 			}
 
 

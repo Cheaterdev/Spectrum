@@ -12,9 +12,13 @@ namespace Meshes
 	struct QuantaFeedback
 	{
 		uint epoch; // uint
+		uint stream_debug; // uint
 		uint pages; // RWStructuredBuffer<uint>
+		uint textures; // RWStructuredBuffer<uint>
 		uint GetEpoch() { return epoch; }
+		uint GetStream_debug() { return stream_debug; }
 		RWStructuredBuffer<uint> GetPages() { return ResourceDescriptorHeap[pages]; }
+		RWStructuredBuffer<uint> GetTextures() { return ResourceDescriptorHeap[textures]; }
 	};
 }
 using Meshes::QuantaFeedback;

@@ -865,6 +865,13 @@ class GraphRender : public Window, public GUI::user_interface
 	GUI::Elements::stat_graph::ptr graph_quanta_in_flight;
 	GUI::Elements::stat_graph::ptr graph_quanta_pool_used;
 
+	// The Textures tab: the same for the texture tile streamer (TextureStreaming::Manager::stats()).
+	GUI::Elements::stat_graph::ptr graph_texture_loaded;
+	GUI::Elements::stat_graph::ptr graph_texture_requests;
+	GUI::Elements::stat_graph::ptr graph_texture_evicted;
+	GUI::Elements::stat_graph::ptr graph_texture_in_flight;
+	GUI::Elements::stat_graph::ptr graph_texture_pool_used;
+
 	std::shared_ptr<triangle_drawer> drawer;
 	std::shared_ptr<triangle_drawer> drawer2;
 	std::shared_ptr<FrameFlowGraph> frameFlowGraph;
@@ -975,12 +982,40 @@ public:
 					{
 						static uint64_t previous_loads = 0, previous_evictions = 0;
 						const Quanta::StreamStats s = Quanta::Residency::get().stats();
+						{   // TEMP quanta-graph debugging: remove with quanta_stats.temp
+							static float temp_accum = 0.0f;
+							static uint64_t temp_frames = 0;
+							temp_frames++;
+							temp_accum += frame_dt;
+							if (temp_accum >= 1.0f)
+							{
+								temp_accum = 0.0f;
+								std::ofstream temp("quanta_stats.temp", std::ios::app);
+								temp << "frames " << temp_frames << " epoch " << Quanta::Residency::get().epoch() << " pool " << s.pool_pages << " free " << s.free_pages << " loading " << s.loading_pages << " wanted " << s.wanted
+									<< " loads " << s.loads << " evictions " << s.evictions << " snapshots " << s.snapshots << " dropped " << s.dropped << "\n";
+							}
+						}
 
 						graph_quanta_loaded->push((float)(s.loads - previous_loads), frame_dt);
 						graph_quanta_evicted->push((float)(s.evictions - previous_evictions), frame_dt);
 						graph_quanta_requests->push((float)s.wanted, frame_dt);
 						graph_quanta_in_flight->push((float)s.loading_pages, frame_dt);
 						graph_quanta_pool_used->push((float)(s.pool_pages - s.free_pages), frame_dt);
+
+						previous_loads = s.loads;
+						previous_evictions = s.evictions;
+					}
+
+					if (graph_texture_loaded && TextureStreaming::Manager::is_good())
+					{
+						static uint64_t previous_loads = 0, previous_evictions = 0;
+						const Streaming::Stats s = TextureStreaming::Manager::get().stats();
+
+						graph_texture_loaded->push((float)(s.loads - previous_loads), frame_dt);
+						graph_texture_evicted->push((float)(s.evictions - previous_evictions), frame_dt);
+						graph_texture_requests->push((float)s.wanted, frame_dt);
+						graph_texture_in_flight->push((float)s.loading_pages, frame_dt);
+						graph_texture_pool_used->push((float)(s.pool_pages - s.free_pages), frame_dt);
 
 						previous_loads = s.loads;
 						previous_evictions = s.evictions;
@@ -1275,6 +1310,11 @@ public:
 
 	GraphRender()
 	{
+		// The app draws with Quanta and streams its pages; the library defaults stay off so the tests start from the regular
+		// path. Streaming must be set before any mesh is acquired.
+		Quanta::set_streaming(true);
+		Quanta::set_draw_enabled(true);
+
 		// graph is a plain member, already fully constructed (default Graph())
 		// by the time this body runs, so it needs this explicit re-parent
 		// rather than a Scope wrapping its construction. Without it, it lands
@@ -1800,6 +1840,33 @@ public:
 						add_graph(graph_quanta_pool_used, "Pool slots used", 16.0f,      {0.70f, 0.50f, 0.95f, 1.00f});
 
 						dock->get_tabs()->add_page("Quanta", quanta_panel);
+					}
+
+					{
+						auto texture_panel = std::make_shared<GUI::base>();
+						texture_panel->docking      = GUI::dock::FILL;
+						texture_panel->width_size   = GUI::size_type::MATCH_PARENT;
+						texture_panel->height_size  = GUI::size_type::MATCH_PARENT;
+
+						auto add_graph = [&](GUI::Elements::stat_graph::ptr& graph, const char* title, float min_range, float4 color)
+						{
+							graph.reset(new GUI::Elements::stat_graph());
+							graph->title      = title;
+							graph->size       = {0, 70};
+							graph->min_range  = min_range;
+							graph->line_color = color;
+							graph->fill_color = { color.x, color.y, color.z, 0.15f };
+							graph->mode       = GUI::Elements::stat_graph::draw_mode::lines;
+							texture_panel->add_child(graph);
+						};
+
+						add_graph(graph_texture_loaded,    "Tiles loaded / frame", 8.0f,  {0.35f, 0.80f, 0.45f, 1.00f});
+						add_graph(graph_texture_requests,  "Requests (wanted tiles)", 8.0f, {0.95f, 0.70f, 0.20f, 1.00f});
+						add_graph(graph_texture_evicted,   "Tiles evicted / frame", 8.0f, {0.90f, 0.30f, 0.30f, 1.00f});
+						add_graph(graph_texture_in_flight, "Tiles in flight", 8.0f,       {0.40f, 0.70f, 1.00f, 1.00f});
+						add_graph(graph_texture_pool_used, "Pool tiles used", 16.0f,      {0.70f, 0.50f, 0.95f, 1.00f});
+
+						dock->get_tabs()->add_page("Textures", texture_panel);
 					}
 					dock->size = {100, 230};
 				}

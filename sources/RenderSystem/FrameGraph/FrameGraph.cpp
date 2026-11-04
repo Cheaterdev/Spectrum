@@ -2291,7 +2291,8 @@ namespace FrameGraph
 						info->resource   = HAL::create_resource(RenderSystem::get().device(), info->d3ddesc, info->heap_type, info->clear_value);
 						info->resource->frame_graph_managed = true;
 						info->resource->set_name(info->name());
-						info->alloc_ptr  = HAL::ResourceHandle{};						info->is_new     = true;
+						info->alloc_ptr  = HAL::ResourceHandle{};
+						info->is_new     = true;
 					}
 
 					info->view = nullptr;
@@ -2306,7 +2307,8 @@ namespace FrameGraph
 
 					if (!res || res.resource->get_desc() != info->d3ddesc)
 					{
-						PROFILE(L"placed");						res.resource = HAL::create_resource(RenderSystem::get().device(), info->d3ddesc, info->alloc_ptr, info->clear_value);
+						PROFILE(L"placed");
+						res.resource = HAL::create_resource(RenderSystem::get().device(), info->d3ddesc, info->alloc_ptr, info->clear_value);
 						//						 	res.resource->debug = info->name=="ResultTexture"; // TODO: move everywhere
 
 
@@ -2358,7 +2360,8 @@ namespace FrameGraph
 							*/
 					if (!info->resource || info->resource->get_desc() != info->d3ddesc)
 					{
-						PROFILE(L"DEFAULT");						info->resource = HAL::create_resource(RenderSystem::get().device(), info->d3ddesc, info->heap_type, info->clear_value);
+						PROFILE(L"DEFAULT");
+						info->resource = HAL::create_resource(RenderSystem::get().device(), info->d3ddesc, info->heap_type, info->clear_value);
 						info->is_new = true;
 
 					}

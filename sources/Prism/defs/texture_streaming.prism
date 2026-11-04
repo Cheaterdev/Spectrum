@@ -1,0 +1,29 @@
+namespace TextureStreamingTests
+{
+	# Samples one texel of a streamed texture at each of the first 16 mip levels, the way the material shaders do
+	# (see stream_min_mip in universal_material.hlsl): once with an explicit level raised to the resident mip, once
+	# with a gradient and the resident mip as the LOD clamp. Writes, per level, the red channel of both samples as an
+	# integer. One thread per level.
+	[Bind = DefaultLayout::Instance1]
+	struct StreamClampProbe
+	{
+		Texture2D<float4> source;
+		StructuredBuffer<uint> stream_info;
+		RWStructuredBuffer<uint> result;
+		# What stream_report writes (stream_feedback.hlsl), at the descriptor-heap index `view`.
+		RWStructuredBuffer<uint> wanted;
+		# The three levels from here on report what they sampled.
+		uint report_level;
+		# The descriptor-heap index of `source`, which is where stream_info holds its entry.
+		uint view;
+		float2 uv;
+	}
+
+	ComputePSO StreamClampProbe
+	{
+		root = DefaultLayout;
+
+		[EntryPoint = CS]
+		compute = "test/stream_clamp_probe.hlsl";
+	}
+}

@@ -569,7 +569,10 @@ private:
 		// 1<<10 was DisableStateTracking. Removed: "the FrameGraph owns this
 		// resource's transitions" is now Resource::frame_graph_managed, a
 		// property of the resource rather than of its creation desc.
-		Immutable            = 1<<11   // upload once (CopyDest → read), no further transitions
+		Immutable            = 1<<11,  // upload once (CopyDest → read), no further transitions
+		// A Virtual texture that gets no sampler-feedback companion: streamed textures report what they need from their
+		// shaders instead, and a feedback surface per texture would cost memory and need hardware support for nothing.
+		NoSamplerFeedback    = 1<<12
 	};
 
 	struct TextureDesc

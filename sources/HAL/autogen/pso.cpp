@@ -114,6 +114,7 @@ void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 	tasks.emplace_back(PSOBase::create<PSOS::Editor::OutlineTemporal>(device, pso[PSO::OutlineTemporal]));
 	tasks.emplace_back(PSOBase::create<PSOS::Editor::OutlineCopy>(device, pso[PSO::OutlineCopy]));
 	tasks.emplace_back(PSOBase::create<PSOS::StreamGpu::StreamCompact>(device, pso[PSO::StreamCompact]));
+	tasks.emplace_back(PSOBase::create<PSOS::TextureStreamingTests::StreamClampProbe>(device, pso[PSO::StreamClampProbe]));
 	tasks.emplace_back(PSOBase::create<PSOS::Post::TonemapHistogramClear>(device, pso[PSO::TonemapHistogramClear]));
 	tasks.emplace_back(PSOBase::create<PSOS::Post::TonemapHistogramBuild>(device, pso[PSO::TonemapHistogramBuild]));
 	tasks.emplace_back(PSOBase::create<PSOS::Post::TonemapExposureAdapt>(device, pso[PSO::TonemapExposureAdapt]));

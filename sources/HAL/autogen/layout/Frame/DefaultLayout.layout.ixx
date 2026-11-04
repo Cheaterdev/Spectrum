@@ -69,7 +69,7 @@ namespace Frame
 			static const uint CB_ID = 27;
 			static const uint SRV = 2;
 			static const uint SRV_ID = 29;
-			static const uint UAV = 1;
+			static const uint UAV = 2;
 			static const uint UAV_ID = 30;
 			static inline const std::vector<uint> tables = { 27, 29, 30 };
 		};

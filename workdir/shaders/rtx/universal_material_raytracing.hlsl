@@ -54,20 +54,29 @@ Texture2D get_texture(uint i)
 	//	return textures[i /*+ texture_offset*/];
 }
 
+// The finest mip of texture `i` that has memory behind it: 0 unless it is streamed (MaterialInfo::stream_info holds
+// the mip plus one, 0 for a texture that is not streamed). Sampling finer would read the unmapped tiles as zero.
+float stream_min_mip(uint i)
+{
+	StructuredBuffer<uint> indirection = ResourceDescriptorHeap[GetMaterialInfo().textures];
+	uint view = indirection[NonUniformResourceIndex(i)];
+	return float(max(GetMaterialInfo().GetStream_info()[NonUniformResourceIndex(view)], 1u) - 1u);
+}
+
 #ifdef BUILD_FUNC_PS
-#define sample(tex, s,  tc, lod) get_texture(tex).SampleBias(s, tc, GetFrameInfo().GetMipBias());
+#define sample(tex, s,  tc, lod) get_texture(tex).SampleBias(s, tc, GetFrameInfo().GetMipBias(), int2(0, 0), stream_min_mip(tex));
 #else
 float4 sample(uint itex, SamplerState s, float2 tc, float lod)
 {
     Texture2D tex = get_texture(itex);
-	
+
 	uint2 size;
 	tex.GetDimensions(size.x, size.y);
 	lod += 0.5 * log2(size.x * size.y);
 
-	return tex.SampleLevel(s, tc, lod);
+	return tex.SampleLevel(s, tc, max(lod, stream_min_mip(itex)));
 }
-#endif 
+#endif
 
 void COMPILED_FUNC(in float3 a, in float2 b, out float4 c, out float d, out float e, out float4 f, out float4 g, out float h, out float ior, out float thickness, out float transmission, out float absorption_distance, out float coat, out float coat_roughness, out float sheen, out float sheen_roughness, out float anisotropy, out float aniso_rotation, out float sss_weight, out float3 sss_radius, out float sss_scale, out float sheen_tint, out float3 transmission_color, out float opacity_threshold, out float thin_film_thickness, out float thin_film_ior, float lod);
 

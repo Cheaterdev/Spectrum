@@ -21,7 +21,7 @@ namespace
 	Variable<bool> g_streaming = { false, "Streaming", &streaming_context() };
 
 	// The pages buffer slots the streamed pages share, committed when the first streamed mesh arrives.
-	Variable<int> g_pool_pages = { 1024, "Pool pages", &streaming_context(), 2, 4096 };
+	Variable<int> g_pool_pages = { 1024, "Pool pages", &streaming_context(), 2, 16000 };
 
 	// Pages of a mesh loaded from an asset file are read straight into their pool slot by DirectStorage.
 	Variable<bool> g_direct_storage = { true, "Direct storage", &streaming_context() };
@@ -93,6 +93,16 @@ namespace Quanta
 			streamed_meshes--;
 		else
 			pinned_pages -= static_cast<uint32_t>(resident.states.size());
+
+		page_ids_in_use -= resident.mesh->pages.size();
+		groups_in_use -= resident.mesh->groups.size();
+		nodes_in_use -= resident.mesh->nodes.size();
+	}
+
+	uint32_t Residency::streaming_budget() const
+	{
+		const uint32_t room = pinned_pages < MaxPoolPages ? static_cast<uint32_t>(MaxPoolPages) - pinned_pages : 0;
+		return std::max(2u, std::min(static_cast<uint32_t>(std::max(2, int(g_pool_pages))), room));
 	}
 
 	void Residency::allocate_pool(uint32_t count)
@@ -113,6 +123,25 @@ namespace Quanta
 
 		const bool stream = g_streaming;
 
+		// Refused before anything changes, so the scene can go on without this mesh.
+		auto refuse = [&](const char* what, uint64_t need, uint64_t used, uint64_t cap, const char* hint)
+		{
+			throw std::runtime_error(std::string("Quanta: out of ") + what + ": the mesh needs " + std::to_string(need) + ", "
+				+ std::to_string(used) + " of " + std::to_string(cap) + " are in use. " + hint);
+		};
+		if (page_ids_in_use + mesh->pages.size() > MaxPageIds)
+			refuse("page ids", mesh->pages.size(), page_ids_in_use, MaxPageIds, "Raise MaxPageIds in QuantaResidency.ixx.");
+		if (groups_in_use + mesh->groups.size() > MaxGroups)
+			refuse("groups", mesh->groups.size(), groups_in_use, MaxGroups, "The family index packs 24 bits (FamilyCountShift).");
+		if (nodes_in_use + mesh->nodes.size() > MaxNodes)
+			refuse("nodes", mesh->nodes.size(), nodes_in_use, MaxNodes, "Raise MaxNodes in QuantaResidency.ixx.");
+		if (!stream && pinned_pages + mesh->pages.size() > MaxPoolPages)
+			refuse("pinned pages", mesh->pages.size(), pinned_pages, MaxPoolPages, "Turn Streaming on so only the pages in view are resident.");
+
+		page_ids_in_use += mesh->pages.size();
+		groups_in_use += mesh->groups.size();
+		nodes_in_use += mesh->nodes.size();
+
 		auto resident = std::make_shared<Resident>();
 		resident->mesh = mesh;
 		resident->streamed = stream;
@@ -122,7 +151,7 @@ namespace Quanta
 			streamed_meshes++;
 		else
 			pinned_pages += static_cast<uint32_t>(mesh->pages.size());
-		const uint32_t budget = static_cast<uint32_t>(std::max(2, int(g_pool_pages)));
+		const uint32_t budget = streaming_budget();
 		streamer->set_budget(budget);
 		streamer->ensure_pool(std::max(2u, pinned_pages + (streamed_meshes ? budget : 0)));
 
@@ -298,7 +327,7 @@ namespace Quanta
 		std::lock_guard<std::mutex> g(m);
 
 		streamer->advance_epoch();
-		streamer->set_budget(static_cast<uint32_t>(std::max(2, int(g_pool_pages))));
+		streamer->set_budget(streaming_budget());
 		pages.prepare(list);
 		groups.prepare(list);
 		nodes.prepare(list);

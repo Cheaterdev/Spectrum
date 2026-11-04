@@ -288,6 +288,29 @@ namespace HAL {
 		info.add_tile(tile);
 	}
 
+	void TiledResourceManager::map_tile(update_tiling_info& info, uint3 pos, uint storage_index, TileHeapPosition heap_pos)
+	{
+		auto& tile = tiles[storage_index][pos];
+
+		if (!tile.heap_position.heap)
+			mark_tile_mapped(storage_index);
+
+		tile.heap_position = heap_pos;
+		info.add_tile(tile);
+	}
+
+	void TiledResourceManager::unmap_tile(update_tiling_info& info, uint3 pos, uint storage_index)
+	{
+		auto& tile = tiles[storage_index][pos];
+
+		if (!tile.heap_position.heap)
+			return;
+
+		tile.heap_position = TileHeapPosition{};
+		mark_tile_unmapped(storage_index);
+		info.add_tile(tile);
+	}
+
 	uint3 TiledResourceManager::get_tiles_count(uint array_slice, uint mip)
 	{
 		return tiles[flat_index(array_slice, mip)].size();

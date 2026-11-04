@@ -5,6 +5,7 @@ import :Scene;
 import :AssetRenderer;
 import :Materials.UniversalMaterial;
 import :RTX;
+import :TextureStreaming;
 
 import HAL;
 using namespace HAL;
@@ -799,7 +800,17 @@ void MeshAssetInstance::update_nodes()
 	quanta_residents.assign(mesh_asset->quanta.size(), nullptr);
 	for (size_t q = 0; q < mesh_asset->quanta.size(); q++)
 		if (mesh_asset->quanta[q])
-			quanta_residents[q] = quanta_residency.acquire(mesh_asset->quanta[q]);
+		{
+			try
+			{
+				quanta_residents[q] = quanta_residency.acquire(mesh_asset->quanta[q]);
+			}
+			catch (const std::exception& e)
+			{
+				// Out of room in the shared tables: this mesh stays on its regular meshlets.
+				Log::get() << e.what() << Log::endl;
+			}
+		}
 
 	mesh_instance_info = instance_info.compile(RenderSystem::get().device().get_static_gpu_data());
 	auto gpu_nodes = nodes_handle.map();
@@ -992,6 +1003,13 @@ void SceneFrameManager::prepare(HAL::CommandList::ptr& command_list, Scene& scen
 	universal_mesh_instance_manager::get().prepare(command_list);
 	// Quanta's pages, groups and nodes for the instances above (and the Quanta draw reading them).
 	Quanta::Residency::get().prepare(command_list);
+	if (TextureStreaming::Manager::supported())
+	{
+		auto& textures = TextureStreaming::Manager::get();
+		textures.request_from_feedback();
+		textures.collect_feedback(command_list);
+		textures.prepare(command_list);
+	}
 	//	universal_mesh_info_part_manager::get().prepare(command_list);
 	universal_material_info_part_manager::get().prepare(command_list);
 	universal_rtx_manager::get().prepare(command_list);
