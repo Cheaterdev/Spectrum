@@ -24,6 +24,8 @@ namespace
 	Variable<bool> g_quanta_splat = { false, "Quanta splat", &quanta_context() };
 	Variable<bool> g_quanta_draw = { false, "Quanta draw", &quanta_context() };
 	Variable<float> g_shadow_lod_pixels = { 1.0f, "Shadow LOD error (px)", &quanta_context(), 0.25f, 16.0f };
+	Variable<bool> g_rt_proxy = { true, "RT from Quanta cut", &quanta_context() };
+	Variable<int> g_rt_triangles = { 100000, "RT triangle budget", &quanta_context(), 1000, 4000000 };
 }
 
 namespace Quanta
@@ -51,6 +53,16 @@ namespace Quanta
 	float shadow_lod_pixels()
 	{
 		return g_shadow_lod_pixels;
+	}
+
+	bool rt_proxy_enabled()
+	{
+		return g_rt_proxy;
+	}
+
+	uint32_t rt_triangle_budget()
+	{
+		return static_cast<uint32_t>(g_rt_triangles);
 	}
 }
 

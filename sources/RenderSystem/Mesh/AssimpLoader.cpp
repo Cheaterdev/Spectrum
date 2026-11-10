@@ -160,7 +160,8 @@ public:
 		auto scale_slider = std::make_shared<GUI::Elements::float_slider>();
 		scale_slider->min        = 0.01f;
 		scale_slider->max        = 100.0f;
-		scale_slider->value      = settings.scale;
+		scale_slider->logarithmic = true;
+		scale_slider->value     = settings.scale;
 		scale_slider->docking    = GUI::dock::FILL;
 		scale_slider->height_size = GUI::size_type::FIXED;
 		scale_slider->size       = {0, 14};

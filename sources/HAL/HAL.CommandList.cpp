@@ -949,6 +949,32 @@ namespace HAL
 		return result->get_future();
 	}
 
+	std::future<bool> CopyContext::read_tiles(const HAL::Resource* resource, uint3 first_tile, uint3 tile_count, UINT sub_resource,
+	                                          std::function<void(std::span<std::byte>)> f)
+	{
+		constexpr uint64 TileBytes = 64 * 1024;
+
+		base.pre_command<false, false>(*this, BarrierSync::COPY);
+		base.add_resource_usage(resource, ResourceStates::COPY_SOURCE, sub_resource);
+
+		const uint64 size = uint64(tile_count.x) * tile_count.y * tile_count.z * TileBytes;
+		auto info = base.read_data(size, TileBytes, static_cast<uint>(base.get_type()));
+		list->read_tiles(resource, first_tile, tile_count, sub_resource, info);
+
+		if constexpr (Debug::CheckErrors)
+			TEST(base.get_device(), base.get_device().get_device_removed_reason());
+		auto result = std::make_shared<std::promise<bool>>();
+		base.on_execute_funcs.push_back([result, info, f]()
+		{
+			f({info.get_cpu_data(), info.size});
+			result->set_value(true);
+		});
+
+		base.post_command<false, false>(*this, BarrierSync::COPY);
+
+		return result->get_future();
+	}
+
 	std::future<bool> CopyContext::read_buffer(Resource* resource, uint64 offset, uint64 size,
 	                                           std::function<void(std::span<std::byte>)> f)
 	{

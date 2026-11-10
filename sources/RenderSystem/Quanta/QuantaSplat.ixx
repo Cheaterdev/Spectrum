@@ -19,4 +19,9 @@ export namespace Quanta
 	// With "Quanta draw" on, the shadow cascades draw the cut too: it stops refining at this many texels of the
 	// cascade's map ("Shadow LOD error (px)").
 	float shadow_lod_pixels();
+
+	// Ray tracing: a mesh with more triangles than the budget gets its BLAS built from one coarser cut of its Quanta
+	// data instead of its full geometry ("RT triangle budget"). Read when the mesh asset is loaded.
+	bool rt_proxy_enabled();
+	uint32_t rt_triangle_budget();
 }

@@ -100,7 +100,17 @@ export namespace HAL
 			uint count;
 		};
 
-		std::variant<Buffer,Texture> operation;
+		// Tiles of a reserved texture, from data laid out as CopyContext::read_tiles() returns it. The file holds the
+		// GPU's own tile swizzle, which this assumes is the same on every GPU the asset is used on. If that ever turns out
+		// wrong the tile of a texture looks scrambled, not missing: regenerate such assets on the GPU they run on.
+		struct Tiles
+		{
+			uint subresource;
+			uint3 first_tile;
+			uint3 tile_count;
+		};
+
+		std::variant<Buffer,Texture,Tiles> operation;
 	};
 	class DirectStorageQueue:public API::DirectStorageQueue
 

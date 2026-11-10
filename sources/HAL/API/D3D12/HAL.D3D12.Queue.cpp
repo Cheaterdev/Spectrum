@@ -227,6 +227,22 @@ namespace HAL
                 auto l = device.get_texture_range_layout(srequest.resource->get_desc(), texture.subresource, texture.count);
                 ASSERT(l.total_size == srequest.uncompressed_size);
             },
+            [&](const StorageRequest::Tiles& tiles)
+            {
+                request.Options.DestinationType = DSTORAGE_REQUEST_DESTINATION_TILES;
+                request.Destination.Tiles.Resource = srequest.resource->get_dx();
+                request.Destination.Tiles.TiledRegionStartCoordinate = {};
+                request.Destination.Tiles.TiledRegionStartCoordinate.X = tiles.first_tile.x;
+                request.Destination.Tiles.TiledRegionStartCoordinate.Y = tiles.first_tile.y;
+                request.Destination.Tiles.TiledRegionStartCoordinate.Z = tiles.first_tile.z;
+                request.Destination.Tiles.TiledRegionStartCoordinate.Subresource = tiles.subresource;
+                request.Destination.Tiles.TileRegionSize = {};
+                request.Destination.Tiles.TileRegionSize.NumTiles = tiles.tile_count.x * tiles.tile_count.y * tiles.tile_count.z;
+                request.Destination.Tiles.TileRegionSize.UseBox = TRUE;
+                request.Destination.Tiles.TileRegionSize.Width = tiles.tile_count.x;
+                request.Destination.Tiles.TileRegionSize.Height = static_cast<UINT16>(tiles.tile_count.y);
+                request.Destination.Tiles.TileRegionSize.Depth = static_cast<UINT16>(tiles.tile_count.z);
+            },
             [&](auto other)
             {
                 ASSERT(false);

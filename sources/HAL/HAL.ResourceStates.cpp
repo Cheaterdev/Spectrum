@@ -17,6 +17,8 @@ namespace HAL
 		// anything else here would emit a barrier undoing it.
 		if (check(flags & ResFlags::Swapchain))       return TextureLayout::PRESENT;
 
+		if (check(flags & ResFlags::RestInCommon))    return TextureLayout::COPY_QUEUE;   // the COMMON layout
+
 		if (check(flags & ResFlags::ShaderResource))  return TextureLayout::SHADER_RESOURCE;
 		if (check(flags & ResFlags::UnorderedAccess)) return TextureLayout::UNORDERED_ACCESS;
 

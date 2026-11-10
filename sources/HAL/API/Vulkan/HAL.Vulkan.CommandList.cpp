@@ -1245,6 +1245,12 @@ namespace HAL::API
             VK_IMAGE_LAYOUT_GENERAL, staging.get_vk_buffer(), 1, &region);
     }
 
+    void CommandList::read_tiles(const HAL::Resource*, uint3, uint3, UINT, ResourceAddress)
+    {
+        // Streamed textures are D3D12-only (TextureStreaming::Manager::supported()).
+        ASSERT(false);
+    }
+
     void CommandList::copy_texture(const Resource::ptr& dest, int dest_sub,
                                     const Resource::ptr& source, int src_sub)
     {

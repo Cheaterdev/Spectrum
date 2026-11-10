@@ -19,6 +19,9 @@ namespace
 
 	Variable<int> g_mip_limit = { 0, "Mip limit (finest allowed)", &texture_streaming_context(), 0, 12 };
 	Variable<TextureStreaming::DebugView> g_debug_view = { TextureStreaming::DebugView::Off, "Debug view", &texture_streaming_context() };
+
+	// Textures made from now on keep every mip up to this size resident, so ray tracing never sees less than that.
+	Variable<int> g_resident_size = { 512, "Always-resident size (px)", &texture_streaming_context(), 0, 4096 };
 }
 
 namespace TextureStreaming
@@ -31,6 +34,16 @@ namespace TextureStreaming
 	DebugView Manager::debug_view()
 	{
 		return g_debug_view;
+	}
+
+	int Manager::resident_size()
+	{
+		return g_resident_size;
+	}
+
+	void Manager::set_resident_size(int texels)
+	{
+		g_resident_size = texels;
 	}
 
 	uint32_t Streamed::shader_mip() const
@@ -169,10 +182,11 @@ namespace TextureStreaming
 		auto& device = RenderSystem::get().device();
 
 		auto desc = HAL::ResourceDesc::Tex2D(data->format.to_typeless(), { data->width, data->height }, 1, data->mip_maps,
-			HAL::ResFlags::ShaderResource | HAL::ResFlags::Virtual | HAL::ResFlags::NoSamplerFeedback);
+			HAL::ResFlags::ShaderResource | HAL::ResFlags::Virtual | HAL::ResFlags::NoSamplerFeedback | HAL::ResFlags::RestInCommon);
 
 		auto streamed = std::make_shared<Streamed>();
-		streamed->texture = std::make_shared<HAL::Texture>(device, desc, HAL::TextureLayout::SHADER_RESOURCE);
+		// COPY_QUEUE is the COMMON layout: shaders read it there, and it is the only layout DirectStorage may write a tile in.
+		streamed->texture = std::make_shared<HAL::Texture>(device, desc, HAL::TextureLayout::COPY_QUEUE);
 		streamed->texture->resource->set_name(convert(name));
 		streamed->source = data;
 		streamed->streamed = true;
@@ -188,6 +202,16 @@ namespace TextureStreaming
 			const uint3 count = tiled.get_tiles_count(0, mip);
 			streamed->mips.push_back({ pages, count.x, count.y, 0 });
 			pages += count.x * count.y;
+		}
+
+		// The coarsest standard mip is always a root; so is every finer one that fits the resident size.
+		streamed->root_mip = standard ? standard - 1 : 0;
+		while (streamed->root_mip > 0)
+		{
+			const auto& finer = *data->array[0]->mips[streamed->root_mip - 1];
+			if (std::max(finer.width, finer.height) > static_cast<uint32_t>(std::max(resident_size(), 0)))
+				break;
+			streamed->root_mip--;
 		}
 
 		std::lock_guard<std::mutex> g(m);

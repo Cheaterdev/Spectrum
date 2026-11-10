@@ -196,6 +196,8 @@ export namespace HAL
                                 UINT sub_resource, ResourceAddress address, texture_layout layout);
             void read_texture(const HAL::Resource* resource, ivec3 offset, ivec3 box,
                               UINT sub_resource, ResourceAddress target, texture_layout layout);
+            void read_tiles(const HAL::Resource* resource, uint3 first_tile, uint3 tile_count,
+                            UINT sub_resource, ResourceAddress target);
             void transitions(const HAL::Barriers& barriers);
         };
     }

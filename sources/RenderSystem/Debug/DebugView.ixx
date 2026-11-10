@@ -24,6 +24,9 @@ export class debug_view : public GUI::Elements::image, public VariableContext
 public:
 	using ptr = s_ptr<debug_view>;
 
+	// The debug camera takes the main camera's position and direction every frame (your own input is ignored
+	// meanwhile); untick it to fly away from where the main camera was.
+	Variable<bool>  sync_camera       = { false, "Sync camera with main", this };
 	Variable<bool>  draw_scene        = { true, "Draw scene", this };
 	Variable<Dev::DebugViewSource> source = { Dev::DebugViewSource::Status, "Source", this };
 	// Stops recording: the stamps and the main-camera frustum stay at the last

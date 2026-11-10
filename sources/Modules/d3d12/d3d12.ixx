@@ -247,6 +247,9 @@ export namespace DXGI
     inline constexpr DXGI_COLOR_SPACE_TYPE COLOR_SPACE_RGB_FULL_G10_NONE_P709    = DXGI_COLOR_SPACE_RGB_FULL_G10_NONE_P709;
     inline constexpr DXGI_COLOR_SPACE_TYPE COLOR_SPACE_RGB_FULL_G2084_NONE_P2020 = DXGI_COLOR_SPACE_RGB_FULL_G2084_NONE_P2020;
     inline constexpr unsigned SWAP_CHAIN_COLOR_SPACE_SUPPORT_FLAG_PRESENT = DXGI_SWAP_CHAIN_COLOR_SPACE_SUPPORT_FLAG_PRESENT;
+    inline constexpr unsigned SWAP_CHAIN_FLAG_ALLOW_TEARING = DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
+    inline constexpr unsigned PRESENT_ALLOW_TEARING         = 0x00000200u;   // DXGI_PRESENT_ALLOW_TEARING is a macro
+    inline constexpr auto     FEATURE_PRESENT_ALLOW_TEARING = DXGI_FEATURE_PRESENT_ALLOW_TEARING;
     // GUIDs — defined by value to avoid external symbol dependency on dxguid.lib
     // Values from dxgidebug.h: DEFINE_GUID(DXGI_DEBUG_ALL, 0xe48ae283,0xda80,0x490b,0x87,0xe6,0x43,0xe9,0xa9,0xcf,0xda,0x08)
     inline constexpr GUID    DEBUG_ALL     = { 0xe48ae283, 0xda80, 0x490b, { 0x87, 0xe6, 0x43, 0xe9, 0xa9, 0xcf, 0xda, 0x08 } };

@@ -177,7 +177,7 @@ namespace GUI
 
         PROFILE(L"ui_layer_begin");
 
-        const ivec2 target_size = c.target.get_size();
+        const ivec2 target_size = c.visible_size();
         const float k = float(target_size.x) / c.window_size.x;
         const float pad = std::ceil(pad_ui * c.scale * k);
 
@@ -237,7 +237,7 @@ namespace GUI
 
         PROFILE(L"ui_layer_end");
 
-        const ivec2 target_size = c.target.get_size();
+        const ivec2 target_size = c.visible_size();
         const float k = float(target_size.x) / c.window_size.x;
 
         // Window pixels, clipped like the group's own drawing was.
@@ -283,7 +283,7 @@ namespace GUI
 
         PROFILE(L"backdrop_blur");
 
-        const ivec2 target_size = c.target.get_size();
+        const ivec2 target_size = c.visible_size();
         const float k = float(target_size.x) / c.window_size.x;
 
         // The part of the element that is actually visible.
@@ -412,6 +412,15 @@ namespace GUI
             RT::Frame::SingleColor rt;
             rt.GetColor() = c.target.renderTarget;
             graphics.set_rtv(rt, HAL::RTOptions::Default);
+            if (c.target_visible.x > 0 && c.target_visible.y > 0)
+            {
+                // set_rtv just reset the viewport to the whole (oversized) texture.
+                std::vector<HAL::Viewport> vps(1);
+                vps[0].size   = uint2(c.target_visible.x, c.target_visible.y);
+                vps[0].pos    = { 0, 0 };
+                vps[0].depths = { 0, 1 };
+                graphics.set_viewports(vps);
+            }
             graphics.set_scissors(c.scissors);
 
             Slots::UI::DisplayOutput output;

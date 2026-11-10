@@ -546,6 +546,10 @@ export{
 
 			std::future<bool> read_texture(HAL::Resource::ptr resource, ivec3 offset, ivec3 box, UINT sub_resource, std::function<void(std::span<std::byte>, texture_layout)>);
 			std::future<bool> read_texture(const HAL::Resource* resource, ivec3 offset, ivec3 box, UINT sub_resource, std::function<void(std::span<std::byte>, texture_layout)>);
+
+			// The tiles of a reserved texture's subresource, as CopyTiles lays them out (64 KB each, row by row): the layout
+			// DirectStorage's tile destination expects. The tiles must be mapped.
+			std::future<bool> read_tiles(const HAL::Resource* resource, uint3 first_tile, uint3 tile_count, UINT sub_resource, std::function<void(std::span<std::byte>)>);
 			std::future<bool> read_query(std::shared_ptr<QueryHeap>&, unsigned int offset, unsigned int count, std::function<void(std::span<std::byte>)>);
 
 

@@ -284,8 +284,7 @@ int command_demo(const CommandArgs& args)
 		desc.stereo = false;
 		swap = std::make_shared<HAL::SwapChain>(device, desc);
 
-		const auto& dims = swap->get_current_frame()->get_desc().as_texture().Dimensions;
-		target = demo::make_target(device, ivec2((int)dims.x, (int)dims.y));
+		target = demo::make_target(device, swap->get_size());
 		demo::surface_changed();
 	};
 

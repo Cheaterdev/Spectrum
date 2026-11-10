@@ -361,7 +361,14 @@ struct ShaderDefine
 			HAL::shader_macro m;
 
 
-			if constexpr (CanEnumToString<decltype((keys.*Member).value)>)
+			using KeyType = std::remove_cvref_t<decltype(keys.*Member)>;
+			using ValueType = std::remove_cvref_t<decltype((keys.*Member).value)>;
+
+			// A key that lists no values is an on/off switch: Use(true) leaves its value at the default 0, which would define
+			// the macro as 0 and make a plain `#if X` false while `#ifdef X` is true. On defines it as 1; off defines nothing.
+			if constexpr (std::is_integral_v<ValueType> && KeyType::values.size() == 0)
+				m = { std::string(str), (keys.*Member).value ? std::to_string((keys.*Member).value) : std::string("1") };
+			else if constexpr (CanEnumToString<decltype((keys.*Member).value)>)
 				m = { std::string(str), std::string(magic_enum::enum_name((keys.*Member).value)) };
 			else if constexpr (CanToString<decltype((keys.*Member).value)>)
 				m = { std::string(str), std::to_string((keys.*Member).value) };

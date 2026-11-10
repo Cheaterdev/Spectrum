@@ -129,6 +129,14 @@ export{
 		DispatchMeshArguments dispatch_mesh_arguments;
 		DispatchMeshArguments lod_dispatch_mesh_arguments;
 
+		// Ray tracing's own triangles when the BLAS is built from one cut of the Quanta data instead of the full mesh
+		// (MeshAsset::build_rt_proxies). Not serialized: rebuilt after the Quanta data is loaded. rt_error is the cut's
+		// error threshold in the mesh's own units, how far the BLAS surface may sit from the one that is drawn.
+		HAL::Buffer::ptr rt_buffer;
+		HAL::StructuredBufferView<Table::Meshes::mesh_vertex_input> rt_vertex_buffer_view;
+		HAL::StructuredBufferView<UINT32> rt_index_buffer_view;
+		float rt_error = 0;
+
 		uint node_index;
 			size_t material;
 				std::shared_ptr<Primitive> primitive;
@@ -223,6 +231,10 @@ export{
 
 
 		void init_gpu();
+
+		// Replaces the BLAS of every part that has more triangles than Quanta::rt_triangle_budget() with one built from a
+		// cut of its Quanta data. Needs `quanta`, so it runs after that is filled (import, or load_partitions).
+		void build_rt_proxies();
 	private:
 		SERIALIZE()
 		{

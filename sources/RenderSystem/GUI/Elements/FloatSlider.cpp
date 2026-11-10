@@ -15,9 +15,18 @@ namespace GUI
 
         float float_slider::normalized() const
         {
-            float range = max - min;
-            if (range == 0.0f) return 0.0f;
-            float t = ((float)value - min) / range;
+            float t;
+            if (logarithmic && min > 0.0f && max > min)
+            {
+                float v = std::max((float)value, min);
+                t = std::log(v / min) / std::log(max / min);
+            }
+            else
+            {
+                float range = max - min;
+                if (range == 0.0f) return 0.0f;
+                t = ((float)value - min) / range;
+            }
             return t < 0.0f ? 0.0f : (t > 1.0f ? 1.0f : t);
         }
 
@@ -26,7 +35,19 @@ namespace GUI
             rect b = get_render_bounds();
             float t = (screen_x - b.pos.x) / b.size.x;
             t = t < 0.0f ? 0.0f : (t > 1.0f ? 1.0f : t);
-            value = min + t * (max - min);
+
+            if (logarithmic && min > 0.0f && max > min)
+            {
+                float v = min * std::pow(max / min, t);
+                // Round to 3 significant digits so the result reads as 0.25 rather than 0.2347.
+                float step = std::pow(10.0f, std::floor(std::log10(v)) - 2.0f);
+                v = std::round(v / step) * step;
+                value = std::clamp(v, min, max);
+            }
+            else
+            {
+                value = min + t * (max - min);
+            }
         }
 
         void float_slider::draw(Context& c)

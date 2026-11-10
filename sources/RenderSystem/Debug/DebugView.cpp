@@ -273,6 +273,16 @@ void debug_view::update_frame(FrameGraph::Graph& graph)
 		cam_placed = true;
 	}
 
+	if (sync_camera && main_cam)
+	{
+		const vec3 eye = main_cam->camera_cb.current.position.xyz;
+		cam.position = eye;
+		cam.look_at(eye + main_cam->camera_cb.current.direction.xyz);
+		// look_at only sets the angles; update() reads `target`, which frame_move
+		// derives from them. Without this the synced view trails the main camera by a frame.
+		cam.frame_move(0.0f);
+	}
+
 	cam.set_projection_params(Math::pi / 4, float(size.x) / float(size.y), 0.1f, 5000.0f);
 	cam.update();
 	frame_camera = cam.camera_cb.current;

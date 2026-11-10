@@ -46,6 +46,17 @@ namespace
         }
     }
 
+    // Blocks until DWM's next composition. Called while the user drags a window edge, after
+    // the renderer has presented a frame for the new size, so the new window geometry and
+    // that frame are composed together.
+    void dwm_flush()
+    {
+        using flush_fn = HRESULT(WINAPI*)();
+        static const auto flush = reinterpret_cast<flush_fn>(GetProcAddress(LoadLibraryW(L"dwmapi.dll"), "DwmFlush"));
+        if (flush)
+            flush();
+    }
+
     // GetDpiForWindow needs Windows 10 1607; 96 (100%) when it is not there.
     UINT window_dpi(HWND hwnd)
     {
@@ -167,7 +178,7 @@ void Window::InitWindow(int width, int height, LPCTSTR name)
         y = monitor.rcWork.top + (area_height - height) / 2;
     }
 
-    HWND hWindow = CreateWindowExW((WS_EX_WINDOWEDGE) , wname.c_str(), wname.c_str(), WS_OVERLAPPEDWINDOW, x, y, width, height, NULL, NULL, GetModuleHandle(NULL), NULL);
+    HWND hWindow = CreateWindowExW((WS_EX_WINDOWEDGE | WS_EX_NOREDIRECTIONBITMAP) ,	/* TEMP-DEBUG experiment 2: no GDI redirection surface behind the swapchain */ wname.c_str(), wname.c_str(), WS_OVERLAPPEDWINDOW, x, y, width, height, NULL, NULL, GetModuleHandle(NULL), NULL);
     SetWindowLongPtrW(hWindow, GWLP_USERDATA, (LONG_PTR)this);
     hwnd = hWindow;
 
@@ -231,6 +242,8 @@ LRESULT Window::MsgProc(MSG msg)
         case WM_SIZE:
             size = { GET_X_LPARAM(msg.lParam), GET_Y_LPARAM(msg.lParam) };
 			on_resize(size);
+            if (sizing)
+                dwm_flush();	// TEMP-DEBUG experiment 1: back on, with the immediate present (was disabled to measure the resize rate)
             break;
         case WM_MOUSEMOVE:
         {

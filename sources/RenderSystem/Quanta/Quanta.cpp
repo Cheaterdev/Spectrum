@@ -495,6 +495,116 @@ namespace Quanta
 		return HAL::gdeflate_decompress(stored.data(), stored.size(), out.data(), out.size());
 	}
 
+	bool build_cut(const Mesh& mesh, uint32_t triangle_budget, CutGeometry& out)
+	{
+		constexpr float Infinity = std::numeric_limits<float>::max();
+		// Clusters hold 100 triangles on average: enough to judge a budget without reading the pages.
+		constexpr double TrianglesPerCluster = 100.0;
+
+		out = {};
+		if (mesh.groups.empty() || mesh.pages.empty())
+			return false;
+
+		const auto in_cut = [](const Group& group, float threshold) { return group.lod_error > threshold && group.refined_error <= threshold; };
+
+		std::vector<float> candidates{ 0.0f };
+		for (const Group& group : mesh.groups)
+			if (group.lod_error != Infinity)
+				candidates.push_back(group.lod_error);
+		std::sort(candidates.begin(), candidates.end());
+		candidates.erase(std::unique(candidates.begin(), candidates.end()), candidates.end());
+
+		const auto estimate = [&](float threshold)
+		{
+			double clusters = 0;
+			for (const Group& group : mesh.groups)
+				if (in_cut(group, threshold))
+					clusters += group.cluster_count;
+			return clusters * TrianglesPerCluster;
+		};
+
+		// The estimate only falls as the threshold rises: the first candidate that fits is the finest cut that does.
+		size_t low = 0, high = candidates.size() - 1;
+		while (low < high)
+		{
+			const size_t middle = (low + high) / 2;
+			if (estimate(candidates[middle]) <= triangle_budget)
+				high = middle;
+			else
+				low = middle + 1;
+		}
+		const float threshold = candidates[low];
+		out.error = threshold;
+
+		std::map<uint32_t, std::vector<uint32_t>> by_page;
+		for (uint32_t g = 0; g < mesh.groups.size(); g++)
+			if (in_cut(mesh.groups[g], threshold))
+				by_page[mesh.groups[g].page].push_back(g);
+
+		struct VertexKey
+		{
+			std::array<uint32_t, sizeof(Vertex) / sizeof(uint32_t)> words;
+			bool operator==(const VertexKey&) const = default;
+		};
+		struct VertexHash
+		{
+			size_t operator()(const VertexKey& key) const
+			{
+				uint64_t hash = 1469598103934665603ull;
+				for (uint32_t word : key.words)
+					hash = (hash ^ word) * 1099511628211ull;
+				return static_cast<size_t>(hash);
+			}
+		};
+		std::unordered_map<VertexKey, uint32_t, VertexHash> welded;
+
+		std::vector<uint8_t> bytes;
+		for (auto& [page, groups] : by_page)
+		{
+			if (!read_page(mesh, page, bytes))
+				return false;
+
+			for (uint32_t g : groups)
+			{
+				const Group& group = mesh.groups[g];
+				const uint8_t* blob = bytes.data() + group.offset_in_page;
+				const GroupHeader* header = reinterpret_cast<const GroupHeader*>(blob);
+				const ClusterHeader* clusters = reinterpret_cast<const ClusterHeader*>(blob + sizeof(GroupHeader));
+
+				for (uint32_t c = 0; c < header->cluster_count; c++)
+				{
+					const ClusterHeader& cluster = clusters[c];
+					if (cluster.refined_error >= 0 && cluster.refined_error > threshold)
+						continue;
+
+					const Vertex* vertices = reinterpret_cast<const Vertex*>(blob + cluster.vertex_offset);
+					const uint8_t* triangles = blob + cluster.triangle_offset;
+
+					uint32_t remap[MaxClusterVertices];
+					for (uint32_t v = 0; v < cluster.vertex_count; v++)
+					{
+						VertexKey key;
+						std::memcpy(key.words.data(), &vertices[v], sizeof(Vertex));
+						auto [it, added] = welded.try_emplace(key, static_cast<uint32_t>(out.vertices.size()));
+						if (added)
+							out.vertices.push_back(vertices[v]);
+						remap[v] = it->second;
+					}
+
+					for (uint32_t t = 0; t < cluster.triangle_count; t++)
+					{
+						const uint32_t a = remap[triangles[t * 3]], b = remap[triangles[t * 3 + 1]], d = remap[triangles[t * 3 + 2]];
+						if (a == b || b == d || a == d)
+							continue;
+						out.indices.insert(out.indices.end(), { a, b, d });
+					}
+				}
+			}
+		}
+
+		return !out.indices.empty();
+	}
+
 	std::string validate(const Mesh& mesh)
 	{
 		constexpr float Infinity = std::numeric_limits<float>::max();

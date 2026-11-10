@@ -572,7 +572,10 @@ private:
 		Immutable            = 1<<11,  // upload once (CopyDest → read), no further transitions
 		// A Virtual texture that gets no sampler-feedback companion: streamed textures report what they need from their
 		// shaders instead, and a feedback surface per texture would cost memory and need hardware support for nothing.
-		NoSamplerFeedback    = 1<<12
+		NoSamplerFeedback    = 1<<12,
+		// Rests in the COMMON layout instead of SHADER_RESOURCE: shaders still read it there, and DirectStorage may write
+		// tiles into it without the texture being moved to another layout first.
+		RestInCommon         = 1<<13
 	};
 
 	struct TextureDesc
@@ -1040,6 +1043,11 @@ PROCEDURAL
 		window_provider* window;
 		window_provider* fullscreen;
 		bool stereo;
+		// Allocate the backbuffers larger than the window and select the visible
+		// part with SetSourceSize, so window resizes skip ResizeBuffers. The
+		// textures then no longer match the window: users must draw into
+		// SwapChain::get_size() only.
+		bool oversized = false;
 	};
 
 	enum class PrimitiveTopologyType:uint

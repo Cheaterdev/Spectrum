@@ -19,6 +19,8 @@ export namespace GUI
             float min = 0.0f;
             float max = 1.0f;
 
+            bool logarithmic = false; // log mapping of value to position; requires min > 0
+
             property<float> value;
 
             float4 left_color  = {0.15f, 0.15f, 0.15f, 1.0f};

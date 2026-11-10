@@ -839,6 +839,14 @@ class GraphRender : public Window, public GUI::user_interface
 	tick_timer main_timer;
 	ivec2 new_size;
 
+	// Lock-step resize: on_resize() (WM_SIZE, message thread) publishes the size and waits
+	// until render() (thread pool) has presented a frame made at it, so the window and the
+	// picture change together instead of the picture lagging a few frames behind.
+	std::mutex resize_mutex;
+	std::condition_variable resize_cv;
+	uint64_t resize_requested = 0;
+	uint64_t resize_presented = 0;
+
 	std::future<void> task_future;
 	std::future<void> task_end;
 	std::promise<void> promise_end;
@@ -887,10 +895,112 @@ public:
 		Application::get().shutdown();
 	}
 
+	// TEMP-DEBUG: bypass the frame graph and look at what the oversized swapchain
+	// presents. The whole backbuffer is cleared magenta, then a green quad is drawn
+	// with viewport/scissor = the visible size. If SetSourceSize is honoured the
+	// window is all green; if the whole texture is shown stretched, the green is
+	// only the top-left (visible/capacity) part of the window.
+	// (A clear can't be restricted by scissor/viewport in D3D12, only by pRects,
+	// hence the draw.)
+	static constexpr bool kBackbufferTest = false;
+	std::shared_ptr<HAL::TextureResource> bb_test_src, bb_test_src2;
+
+	void backbuffer_test()
+	{
+		auto& device = RenderSystem::get().device();
+		auto target = swap_chain->get_current_frame();
+		const ivec2 vis = swap_chain->get_size();
+
+		if (!bb_test_src)
+			bb_test_src = std::make_shared<HAL::TextureResource>(device,
+				HAL::ResourceDesc::Tex2D(HAL::Format::R8G8B8A8_UNORM, { 4, 4 }, 1, 1, HAL::ResFlags::RenderTarget | HAL::ResFlags::ShaderResource),
+				HAL::HeapType::DEFAULT);
+
+		auto list = device.get_queue(HAL::CommandListType::DIRECT)->get_free_list();
+		list->begin(L"backbuffer_test");
+		auto& gfx = list->get_graphics();
+
+		HAL::Texture2DView src_view(bb_test_src, *list);
+		HAL::Texture2DView sc_view(target, *list);
+
+		{	// whole backbuffer -> magenta
+			RT::Frame::SingleColor rt;
+			rt.GetColor() = sc_view.renderTarget;
+			gfx.set_rtv(rt, HAL::RTOptions::Default | HAL::RTOptions::ClearColor, std::nullopt, std::nullopt, vec4(1, 0, 1, 1));
+		}
+		{	// 4x4 source -> green
+			RT::Frame::SingleColor rt;
+			rt.GetColor() = src_view.renderTarget;
+			gfx.set_rtv(rt, HAL::RTOptions::Default | HAL::RTOptions::ClearColor, std::nullopt, std::nullopt, vec4(0, 1, 0, 1));
+		}
+		if (!bb_test_src2)
+			bb_test_src2 = std::make_shared<HAL::TextureResource>(device,
+				HAL::ResourceDesc::Tex2D(HAL::Format::R8G8B8A8_UNORM, { 4, 4 }, 1, 1, HAL::ResFlags::RenderTarget | HAL::ResFlags::ShaderResource),
+				HAL::HeapType::DEFAULT);
+		HAL::Texture2DView src2_view(bb_test_src2, *list);
+		{	// 4x4 source #2 -> magenta (for the border)
+			RT::Frame::SingleColor rt;
+			rt.GetColor() = src2_view.renderTarget;
+			gfx.set_rtv(rt, HAL::RTOptions::Default | HAL::RTOptions::ClearColor, std::nullopt, std::nullopt, vec4(1, 0, 1, 1));
+		}
+		{	// green quad over the visible rect only
+			RT::Frame::SingleColor rt;
+			rt.GetColor() = sc_view.renderTarget;
+			gfx.set_rtv(rt);	// sets viewport+scissor to the whole texture: override below
+
+			HAL::Format sc_format = target->get_desc().as_texture().Format;
+			gfx.set_pipeline<PSOS::Utility::CopyTexture>(PSOS::Utility::CopyTexture::Format(sc_format));
+			gfx.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::STRIP);
+
+			std::vector<HAL::Viewport> vps(1);
+			vps[0].size   = uint2(vis.x, vis.y);
+			vps[0].pos    = { 0, 0 };
+			vps[0].depths = { 0, 1 };
+			gfx.set_viewports(vps);
+			gfx.set_scissors(sizer_long{ 0, 0, vis.x, vis.y });
+
+			Slots::Utility::CopyTexture copy;
+			copy.GetSrcTex() = src_view.texture2D;
+			gfx.set(copy);
+			gfx.draw(4);
+
+			// 8 px magenta border on the four edges of the visible rect: visible at the
+			// window edges only if the swapchain shows the buffer 1:1 from the top-left.
+			copy.GetSrcTex() = src2_view.texture2D;
+			gfx.set(copy);
+			const int b = 8;
+			const sizer_long edges[4] = {
+				{ 0, 0, vis.x, b }, { 0, vis.y - b, vis.x, vis.y },
+				{ 0, 0, b, vis.y }, { vis.x - b, 0, vis.x, vis.y } };
+			for (const auto& e : edges)
+			{
+				gfx.set_scissors(e);
+				gfx.draw(4);
+			}
+		}
+
+		list->execute_and_wait();
+		swap_chain->present();
+	}
+
 	virtual void render()
 	{
 		PROFILE(L"render");
-		if (swap_chain) swap_chain->resize(new_size);
+		// One snapshot per frame: the swapchain size and the UI layout size must agree.
+		ivec2 frame_size;
+		uint64_t frame_gen;
+		{
+			std::lock_guard<std::mutex> lock(resize_mutex);
+			frame_size = new_size;
+			frame_gen = resize_requested;
+		}
+		using tclk = std::chrono::steady_clock;	// TEMP-DEBUG timers (see resize_debug.temp below)
+		const auto tp0 = tclk::now();
+		auto tp_resize = tp0, tp_async = tp0, tp_ui = tp0, tp_wait = tp0, tp_graph = tp0;
+		auto tp_g_setup = tp0, tp_g_compile = tp0, tp_g_render = tp0;
+		bool g_replayed = false;
+		if (swap_chain) { swap_chain->resize(frame_size); swap_chain->trim_if_idle(); }
+		tp_resize = tclk::now();
 
 		{
 			std::lock_guard<std::mutex> g(m);
@@ -924,7 +1034,7 @@ public:
 			Profiler::get().on_frame(frame_counter++);
 			
 
-			GUI::user_interface::size = new_size;
+			GUI::user_interface::size = frame_size;
 			if (fps.tick())
 			{
 				size_t total = 0;
@@ -1025,9 +1135,16 @@ public:
 			
 			// wait for all three before setup_graph
 			{ PROFILE(L"async_wait"); f_asset.wait(); f_rtx.wait(); f_times.wait();  f_gc.wait(); }
+			tp_async = tclk::now();
 		   	process_ui(frame_dt);
 
+			tp_ui = tclk::now();
 			swap_chain->wait_for_free();
+			tp_wait = tclk::now();
+
+			if constexpr (kBackbufferTest)
+				backbuffer_test();	// TEMP-DEBUG
+			if (!kBackbufferTest) {	// TEMP-DEBUG: closed right before the present below
 
 			{
 				static float display_poll = 0.0f;
@@ -1063,6 +1180,7 @@ public:
 							i < previews.size() ? previews[i] : Passes::Editor::AssetPreview::render_func_type{};
 				}
 
+				graph.get_context<GUI::UIContext>().target_size = swap_chain->get_size();
 				pipeline.add_passes(graph);
 
 			}
@@ -1113,23 +1231,64 @@ public:
 				graph.DumpGraph(graph_key);
 			}
 
+			tp_g_setup = tclk::now();
 			graph.compile(swap_chain->m_frameIndex);
 				  if (!replayed)	   	graph.DumpGraph(graph_key);
+			tp_g_compile = tclk::now();
 			graph.render();
-
+			tp_g_render = tclk::now();
 
 			auto fence = graph.commit_command_lists();
+			tp_graph = tclk::now();
+			g_replayed = replayed;
 
 			{
 				PROFILE(L"reset");
 				graph.reset();
 			}
 
+			} // TEMP-DEBUG: end of `if (!kBackbufferTest)`
+
 			if (frame_counter <= 5)
 				Log::get() << "[Render] calling present frame " << frame_counter << Log::endl;
+			static uint64_t prev_present_gen = 0;
+			swap_chain->present_immediate = true;	// TEMP-DEBUG: no-vsync test (was: frame_gen != prev_present_gen)
+			prev_present_gen = frame_gen;
+			if (!kBackbufferTest)	// TEMP-DEBUG: backbuffer_test() presents itself
 			swap_chain->present();
 			if (frame_counter <= 5)
 				Log::get() << "[Render] present returned frame " << frame_counter << Log::endl;
+
+			{
+				std::lock_guard<std::mutex> lock(resize_mutex);
+				resize_presented = frame_gen;
+			}
+			resize_cv.notify_all();
+
+			{	// TEMP-DEBUG: where a frame made for a new window size spends its time
+				static uint64_t logged_gen = 0;
+				if (frame_gen != logged_gen)
+				{
+					logged_gen = frame_gen;
+					const auto tp_end = tclk::now();
+					auto ms = [](tclk::time_point a, tclk::time_point b) { return std::chrono::duration<double, std::milli>(b - a).count(); };
+					FILE* f = nullptr;
+					if (fopen_s(&f, "resize_debug.temp", "a") == 0 && f)
+					{
+						fprintf(f, "frame for gen %llu (%dx%d): swapchain_resize %.1f, async_wait %.1f, process_ui %.1f, wait_for_free %.1f, [add_passes+setup %.1f (%s), compile %.1f, render %.1f, commit %.1f], reset+present %.1f, total %.1f ms\n",
+							(unsigned long long)frame_gen, frame_size.x, frame_size.y,
+							ms(tp0, tp_resize), ms(tp_resize, tp_async), ms(tp_async, tp_ui), ms(tp_ui, tp_wait),
+							ms(tp_wait, tp_g_setup), g_replayed ? "cached" : "live", ms(tp_g_setup, tp_g_compile), ms(tp_g_compile, tp_g_render), ms(tp_g_render, tp_graph),
+							ms(tp_graph, tp_end), ms(tp0, tp_end));
+						RECT rc_now = {};
+						GetClientRect(get_hwnd(), &rc_now);
+						const int cw = rc_now.right - rc_now.left, ch = rc_now.bottom - rc_now.top;
+						fprintf(f, "   window client right after present: %dx%d  (frame was %dx%d, %s)\n", cw, ch, frame_size.x, frame_size.y,
+							(cw == frame_size.x && ch == frame_size.y) ? "match" : "STALE: window already bigger/smaller");
+						fclose(f);
+					}
+				}
+			}
 		}
 
 
@@ -1346,6 +1505,7 @@ public:
 		desc.fullscreen = nullptr;
 		desc.stereo = false;
 		desc.window = this;
+		desc.oversized = true;
 		swap_chain = std::make_shared<HAL::SwapChain>(RenderSystem::get().device(), desc);
 
 		set_capture = [this](bool v)
@@ -1377,7 +1537,8 @@ public:
 			area.reset(new GUI::base());
 			area->docking = GUI::dock::FILL;
 			add_child(area);
-			auto d = std::make_shared<GUI::Elements::dock_base>();
+
+			auto d =std::make_shared<GUI::Elements::dock_base>();
 			docker = d;
 			d->docking = GUI::dock::FILL;
 
@@ -2806,7 +2967,24 @@ public:
 	{
 		Log::get() << "[Resize] window resize requested " << size.x << "x" << size.y
 			<< " (clamped from previous new_size " << new_size.x << "x" << new_size.y << ")" << Log::endl;
+		std::unique_lock<std::mutex> lock(resize_mutex);
 		new_size = vec2::max(size, vec2{ 64, 64 });
+		const uint64_t target = ++resize_requested;
+
+		// Wait for a frame made at this size (not before the render loop runs; the timeout keeps a
+		// stalled renderer from freezing the window).
+		if (alive)
+		{
+			const auto w0 = std::chrono::steady_clock::now();
+			const bool ok = resize_cv.wait_for(lock, std::chrono::milliseconds(100), [&] { return resize_presented >= target; });
+			FILE* f = nullptr;	// TEMP-DEBUG
+			if (fopen_s(&f, "resize_debug.temp", "a") == 0 && f)
+			{
+				fprintf(f, "on_resize gen %llu (%.0fx%.0f): waited %.1f ms%s\n", (unsigned long long)target, size.x, size.y,
+					std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - w0).count(), ok ? "" : " (TIMEOUT)");
+				fclose(f);
+			}
+		}
 
 		/*bool was_alive = alive;
 	if (was_alive) stop();
@@ -2933,6 +3111,14 @@ int APIENTRY WinMain(_In_ HINSTANCE hinst,
 //	setlocale(LC_ALL, "");
 	CoInitialize(NULL);
 	SetProcessDpiAwareness(PROCESS_PER_MONITOR_DPI_AWARE);
+
+	// Scratch output from debugging sessions (*.temp, gitignored) is per-run: clear the working directory's leftovers.
+	{
+		std::error_code ec;
+		for (const auto& entry : std::filesystem::directory_iterator(std::filesystem::current_path(ec), ec))
+			if (entry.is_regular_file(ec) && entry.path().extension() == ".temp")
+				std::filesystem::remove(entry.path(), ec);
+	}
 
 	FlowGraph::FlowSystem::get().register_node("file", []()-> FlowGraph::graph::ptr
 		{

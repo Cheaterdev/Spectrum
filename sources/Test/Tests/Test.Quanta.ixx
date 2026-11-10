@@ -103,6 +103,59 @@ export namespace Test
 		ASSERT_EQ(std::string(), Quanta::validate(mesh));
 	}
 
+	// Ray tracing builds its BLAS from one cut: with room for everything it is the original triangles.
+	TEST(Quanta, CutWithRoomIsTheOriginal)
+	{
+		TestMesh sphere = make_sphere(256, 128);
+		Quanta::Mesh mesh = build(sphere);
+
+		Quanta::CutGeometry cut;
+		ASSERT_TRUE(Quanta::build_cut(mesh, 100000000u, cut));
+		ASSERT_EQ(uint32_t(sphere.indices.size() / 3), uint32_t(cut.indices.size() / 3));
+	}
+
+	// A smaller budget gives a coarser cut that still closes: every edge of the sphere has exactly two triangles
+	// (by position, so the seam and the lod borders count), which is what keeps rays from leaking between clusters.
+	TEST(Quanta, CutFitsTheBudgetAndStaysClosed)
+	{
+		TestMesh sphere = make_sphere(256, 128);
+		Quanta::Mesh mesh = build(sphere);
+
+		Quanta::CutGeometry cut;
+		ASSERT_TRUE(Quanta::build_cut(mesh, 6000u, cut));
+
+		const uint32_t triangles = uint32_t(cut.indices.size() / 3);
+		ASSERT_TRUE(triangles > 0u);
+		ASSERT_TRUE(triangles < uint32_t(sphere.indices.size() / 3));
+		ASSERT_TRUE(triangles <= 6000u * 3u);
+
+		// The sphere's own seam and poles are not closed by position (sin(2 pi) is not 0 in a float), so the cut is
+		// compared with the original geometry: it must not open anything more.
+		auto open_edges = [](const Quanta::CutGeometry& geometry)
+		{
+			using Position = std::array<float, 3>;
+			std::map<std::pair<Position, Position>, int> edges;
+			auto position = [&](uint32_t i) { const auto& p = geometry.vertices[i].position; return Position{ p.x, p.y, p.z }; };
+			for (size_t t = 0; t < geometry.indices.size(); t += 3)
+				for (size_t e = 0; e < 3; e++)
+				{
+					Position a = position(geometry.indices[t + e]), b = position(geometry.indices[t + (e + 1) % 3]);
+					if (a == b)
+						continue;
+					edges[a < b ? std::make_pair(a, b) : std::make_pair(b, a)]++;
+				}
+
+			int open = 0;
+			for (auto& [edge, uses] : edges)
+				open += uses != 2;
+			return open;
+		};
+
+		Quanta::CutGeometry original;
+		ASSERT_TRUE(Quanta::build_cut(mesh, 100000000u, original));
+		ASSERT_TRUE(open_edges(cut) <= open_edges(original));
+	}
+
 	TEST(Quanta, HasCoarserLevelsAndRoots)
 	{
 		Quanta::Mesh mesh = build(make_sphere(256, 128));

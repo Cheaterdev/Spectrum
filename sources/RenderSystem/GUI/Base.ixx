@@ -30,6 +30,14 @@ export
         // an empty view (tests, previews that render the UI elsewhere) makes
         // them fall back to their flat tint.
         HAL::Texture2DView target;
+        // The part of `target` the UI occupies, when the target is larger than that
+        // (oversized swapchain). {0,0} = all of it. UI-to-pixel math must use
+        // visible_size(), not target.get_size().
+        ivec2 target_visible = { 0, 0 };
+        ivec2 visible_size()	// not const: Texture2DView::get_size() isn't
+        {
+            return (target_visible.x > 0 && target_visible.y > 0) ? target_visible : ivec2(target.get_size());
+        }
         float ui_scale = 1;
 
         // Group opacity of the entry being drawn, from its draw_info.
@@ -881,6 +889,9 @@ namespace GUI
 
         float dt = 0;
         vec2  scaled_size;
+        // Visible part of the target when it is larger than the window (oversized
+        // swapchain). {0,0} = the whole target.
+        ivec2 target_size = { 0, 0 };
     };
 
     class user_interface : public base, public InputHandler, public Events::Runner

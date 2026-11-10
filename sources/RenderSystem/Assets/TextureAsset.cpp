@@ -63,7 +63,8 @@ HAL::Texture::ptr TextureAsset::get_render_texture()
 					auto data = texture->get_data();
 					auto candidate = TextureStreaming::Manager::get().create(data, name);
 
-					if (candidate->standard_mips() >= 2)
+					// Worth it only if some standard mip is left to stream above the always-resident ones.
+					if (candidate->resident_floor_mip() >= 1)
 					{
 						streamed = candidate;
 						Log::get() << L"Streaming texture " << name << L" (" << texture_desc.Dimensions.x << L"x" << texture_desc.Dimensions.y

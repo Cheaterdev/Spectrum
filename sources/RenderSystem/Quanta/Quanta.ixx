@@ -202,4 +202,18 @@ export namespace Quanta
 
 	// The page's expanded bytes: from memory, or read (and expanded) from the asset file the mesh came from.
 	bool read_page(const Mesh& mesh, uint32_t page, std::vector<uint8_t>& out);
+
+	// Triangles for ray tracing: one level of detail for the whole mesh.
+	struct CutGeometry
+	{
+		std::vector<Vertex>   vertices;   // welded: equal vertices of different clusters are one
+		std::vector<uint32_t> indices;
+		float                 error = 0;  // the threshold the cut was taken at, in the mesh's own units
+	};
+
+	// The crack-free cut of the DAG at one error threshold, the same test the draw makes per cluster (a cluster is in
+	// the cut when its own error is within the threshold and its group's is not). The threshold is the smallest one that
+	// leaves at most about `triangle_budget` triangles, so a mesh that fits the budget comes out as its original
+	// geometry. The budget is judged from the resident group table alone; only the pages the cut touches are read.
+	bool build_cut(const Mesh& mesh, uint32_t triangle_budget, CutGeometry& out);
 }

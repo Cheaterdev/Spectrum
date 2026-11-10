@@ -6,6 +6,7 @@ import :AssetRenderer;
 import :Materials.UniversalMaterial;
 import :RTX;
 import :TextureStreaming;
+import :QuantaSplat;
 
 import HAL;
 using namespace HAL;
@@ -109,6 +110,76 @@ void MeshAsset::init_gpu()
 		}
 	last.wait();
 }
+
+void MeshAsset::build_rt_proxies()
+{
+	auto& device = RenderSystem::get().device();
+	if (!device.is_ray_query_supported() || !Quanta::rt_proxy_enabled())
+		return;
+
+	const uint32_t budget = Quanta::rt_triangle_budget();
+
+	FenceWaiter last;
+	for (size_t i = 0; i < meshes.size() && i < quanta.size(); i++)
+	{
+		auto& mesh = meshes[i];
+		if (!quanta[i] || quanta[i]->original_triangle_count <= budget)
+			continue;
+
+		Quanta::CutGeometry cut;
+		if (!Quanta::build_cut(*quanta[i], budget, cut))
+		{
+			Log::get() << L"Quanta ray tracing: no cut for mesh " << name << L" part " << uint32_t(i) << L", using its full geometry" << Log::endl;
+			continue;
+		}
+
+		LinearAllocator allocator;
+		auto vertex_handle = allocator.Allocate<Table::Meshes::mesh_vertex_input>(cut.vertices.size(), device.structured_buffer_alignment(sizeof(Table::Meshes::mesh_vertex_input)));
+		auto index_handle = allocator.Allocate<uint>(cut.indices.size(), device.structured_buffer_alignment(sizeof(uint)));
+
+		mesh.rt_buffer = std::make_shared<HAL::Buffer>(device, HAL::ResourceDesc::Buffer(allocator.get_max_usage(), HAL::ResFlags::ShaderResource | HAL::ResFlags::Immutable), HAL::HeapType::DEFAULT);
+		mesh.rt_vertex_buffer_view = mesh.rt_buffer->create_view<HAL::StructuredBufferView<Table::Meshes::mesh_vertex_input>>(
+			device.get_static_gpu_data(), StructuredBufferViewDesc{ vertex_handle.get_offset(), vertex_handle.get_size(), counterType::NONE });
+		mesh.rt_index_buffer_view = mesh.rt_buffer->create_view<HAL::StructuredBufferView<UINT32>>(
+			device.get_static_gpu_data(), StructuredBufferViewDesc{ index_handle.get_offset(), index_handle.get_size(), counterType::NONE });
+		mesh.rt_error = cut.error;
+
+		static_assert(sizeof(Quanta::Vertex) == sizeof(Table::Meshes::mesh_vertex_input));
+		std::vector<Table::Meshes::mesh_vertex_input::Compiled> vertices(cut.vertices.size());
+		std::memcpy(vertices.data(), cut.vertices.data(), cut.vertices.size() * sizeof(Quanta::Vertex));
+
+		{
+			auto upload = device.get_upload_list();
+			upload->get_copy().update<Table::Meshes::mesh_vertex_input>(mesh.rt_vertex_buffer_view, 0, vertices);
+			upload->get_copy().update<UINT32>(mesh.rt_index_buffer_view, 0, cut.indices);
+			upload->execute_and_wait();
+		}
+
+		auto list = device.get_queue(CommandListType::DIRECT)->get_free_list();
+		list->begin(L"RTX");
+		auto mat = list->place_raw(to_transform3x4(nodes[mesh.node_index]->mesh_matrix));
+		GeometryDesc geometryDesc = {};
+		geometryDesc.Type = HAL::GeometryType::TRIANGLES;
+		geometryDesc.IndexBuffer = mesh.rt_index_buffer_view.get_resource_address();
+		geometryDesc.IndexCount = static_cast<uint>(cut.indices.size());
+		geometryDesc.IndexFormat = Format::R32_UINT;
+		geometryDesc.Transform3x4 = mat;
+		geometryDesc.VertexFormat = Format::R32G32B32_FLOAT;
+		geometryDesc.VertexBuffer = mesh.rt_vertex_buffer_view.get_resource_address();
+		geometryDesc.VertexCount = static_cast<uint>(cut.vertices.size());
+		geometryDesc.VertexStrideInBytes = sizeof(Table::Meshes::mesh_vertex_input);
+		geometryDesc.Flags = HAL::GeometryFlags::OPAQUE;
+		std::vector<GeometryDesc> descs;
+		descs.push_back(geometryDesc);
+		mesh.ras = std::make_shared<RaytracingAccelerationStructure>(device, descs, list);
+		last = list->execute();
+
+		Log::get() << L"Quanta ray tracing: " << name << L" part " << uint32_t(i) << L" uses " << uint32_t(cut.indices.size() / 3) << L" of "
+			<< quanta[i]->original_triangle_count << L" triangles (error " << cut.error << L")" << Log::endl;
+	}
+	last.wait();
+}
+
 MeshAsset::MeshAsset(std::wstring file_name, AssetLoadingContext::ptr c)
 {
 	auto task = TaskInfoManager::get().create_task(file_name);
@@ -354,6 +425,7 @@ MeshAsset::MeshAsset(std::wstring file_name, AssetLoadingContext::ptr c)
 	}
 
 	init_gpu();
+	build_rt_proxies();
 	mark_changed();
 }
 AssetStorage::ptr  MeshAsset::register_new(std::wstring name, Guid g)
@@ -389,6 +461,7 @@ void MeshAsset::load_partitions(FileDataStorage& storage, UniversalContext* cont
 		Quanta::AssetPartition partition;
 		storage.get("quanta", partition, context);
 		quanta = std::move(partition.meshes);
+		build_rt_proxies();
 	}
 	catch (const std::exception& e)
 	{
@@ -910,8 +983,10 @@ void MeshAssetInstance::update_nodes()
 
 			info.node_id = static_cast<UINT>(instance_handle.get_offset() + nodes.size() - 1);
 			auto& my_instance = gpu_instances[static_cast<UINT>(nodes.size()) - 1];
-			my_instance.vertexes = info.vertex_buffer_view.structuredBuffer.get_offset();
-			my_instance.indices = info.index_buffer_view.structuredBuffer.get_offset();
+			// The hit shaders read the triangles the BLAS was built from.
+			const auto& compiled_part = mesh_asset->meshes[m];
+			my_instance.vertexes = (compiled_part.rt_buffer ? compiled_part.rt_vertex_buffer_view : info.vertex_buffer_view).structuredBuffer.get_offset();
+			my_instance.indices = (compiled_part.rt_buffer ? compiled_part.rt_index_buffer_view : info.index_buffer_view).structuredBuffer.get_offset();
 			my_instance.material_id = static_cast<materials::universal_material*>(info.material)->get_material_id();
 			my_instance.node_offset = static_cast<UINT>(info.mesh_info.GetNode_offset());
 

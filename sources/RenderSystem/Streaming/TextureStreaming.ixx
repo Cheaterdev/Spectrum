@@ -55,6 +55,10 @@ export namespace TextureStreaming
 		uint32_t base_id = 0;
 		std::atomic<uint32_t> published_mip{ 0 };
 
+		// The finest mip that is always resident (with every coarser one): what a missing tile falls back to, and the
+		// quality ray tracing is guaranteed, since its samples report nothing to the streamer.
+		uint32_t root_mip = 0;
+
 		// What the draws last sampled (Manager::wanted), guarded by the streamer's mutex.
 		uint32_t wanted_mip = 0;
 		uint64_t last_seen = 0;   // the feedback frame it was reported in, 0 = never
@@ -84,7 +88,8 @@ export namespace TextureStreaming
 		uint32_t shader_mip() const;
 
 		uint64_t page_id_base() const override { return base_id; }
-		bool is_root(uint32_t page) const override { return page >= mips.back().first_page; }
+		bool is_root(uint32_t page) const override { return page >= mips[root_mip].first_page; }
+		uint32_t resident_floor_mip() const { return root_mip; }
 
 		~Streamed() override;
 	};
@@ -185,6 +190,11 @@ export namespace TextureStreaming
 		// reacts. A texture with fewer mips than the limit stays at its coarsest standard mip.
 		static int mip_limit();
 		static DebugView debug_view();
+
+		// The largest side, in texels, of the mips every streamed texture keeps resident (at least its coarsest standard
+		// mip). Read when a texture is created, so it applies to textures made afterwards.
+		static int resident_size();
+		static void set_resident_size(int texels);
 
 		// The most tiles the streamed textures hold together (roots included). Takes effect from the next texture.
 		void set_pool_tiles(uint32_t tiles);

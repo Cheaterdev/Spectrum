@@ -16,6 +16,8 @@ SETUP_CATEGORY(TextureStreaming, []() {
 		Test::TestRegistry::Instance().SkipCategory("TextureStreaming", "no suitable GPU device found");
 	else if (!TextureStreaming::Manager::supported())
 		Test::TestRegistry::Instance().SkipCategory("TextureStreaming", "needs reserved textures (D3D12)");
+	else
+		TextureStreaming::Manager::set_resident_size(0);   // the tests below start from the coarsest mip alone
 });
 
 TEARDOWN_CATEGORY(TextureStreaming, []() {
@@ -136,6 +138,33 @@ TEST(TextureStreaming, MipsStreamInAndMatchTheSource)
 	check_mips_match(*texture, texture->standard_mips() - 1);
 
 	ASSERT_TRUE(settle(manager, { { texture.get(), 2 } }));
+	check_mips_match(*texture, 2);
+
+	ASSERT_TRUE(settle(manager, { { texture.get(), 1 } }));
+	check_mips_match(*texture, 1);
+}
+
+// The resident size: every mip up to it is loaded when the texture is made and is not a candidate for eviction, so
+// whatever samples it (ray tracing reports nothing) always finds at least that much.
+TEST(TextureStreaming, KeepsTheResidentSizeLoaded)
+{
+	auto& manager = TextureStreaming::Manager::get();
+	manager.set_pool_tiles(400);
+
+	manager.set_resident_size(512);
+	auto texture = manager.create(make_pattern(2048, 12), L"pattern");
+	manager.set_resident_size(0);
+
+	ASSERT_EQ(5u, texture->standard_mips());       // 2048 .. 128
+	ASSERT_EQ(2u, texture->resident_floor_mip());   // 512 is the finest mip that fits
+	ASSERT_EQ(2u, texture->min_mip());
+
+	{
+		auto list = RenderSystem::get().device().get_queue(HAL::CommandListType::DIRECT)->get_free_list();
+		list->begin(L"TextureStreaming");
+		manager.prepare(list);
+		list->execute_and_wait();
+	}
 	check_mips_match(*texture, 2);
 
 	ASSERT_TRUE(settle(manager, { { texture.get(), 1 } }));
@@ -329,6 +358,83 @@ TEST(TextureStreaming, ReportedMipsAreStreamedIn)
 	ASSERT_TRUE(streamed);
 	ASSERT_EQ(reported_mip, texture->min_mip());
 	check_mips_match(*texture, reported_mip);
+}
+
+// A tile read back with CopyTiles and put in a file is what DirectStorage's tile destination loads into another texture:
+// the file is the only copy of the texels, with nothing re-cut from a CPU mip.
+TEST(TextureStreaming, TileFileLoadsThroughDirectStorage)
+{
+	auto& manager = TextureStreaming::Manager::get();
+	manager.set_pool_tiles(400);
+
+	constexpr uint32_t Size = 1024;   // RGBA8: a tile is 128x128 texels, mip 0 has 8x8 tiles
+	constexpr uint32_t Tile = 128;
+
+	auto source = manager.create(make_pattern(Size, 11), L"tile source");
+
+	// The same texture with the position texels mirrored, so a tile that did not arrive shows.
+	auto other_data = make_pattern(Size, 11);
+	for (uint32_t mip = 0; mip < 11; mip++)
+	{
+		auto& level = *other_data->array[0]->mips[mip];
+		for (uint32_t y = 0; y < level.height; y++)
+			for (uint32_t x = 0; x < level.width; x++)
+				level.data[size_t(y) * level.width_stride + size_t(x) * 4 + 1] = static_cast<uint8_t>(255 - x);
+	}
+	auto target = manager.create(other_data, L"tile target");
+
+	ASSERT_TRUE(settle(manager, { { source.get(), 0 }, { target.get(), 0 } }));
+
+	const uint32_t tile_x = 3, tile_y = 2;
+
+	// Read the tile of the source.
+	std::vector<std::byte> tile_bytes;
+	{
+		auto list = RenderSystem::get().device().get_queue(HAL::CommandListType::DIRECT)->get_free_list();
+		list->begin(L"TextureStreaming tile read");
+		auto done = list->get_copy().read_tiles(source->texture->resource.get(), uint3(tile_x, tile_y, 0), uint3(1, 1, 1), 0,
+			[&tile_bytes](std::span<std::byte> memory) { tile_bytes.assign(memory.begin(), memory.end()); });
+		list->execute_and_wait();
+		done.wait();
+	}
+	ASSERT_EQ(size_t(TextureStreaming::TileBytes), tile_bytes.size());
+
+	const auto path = std::filesystem::temp_directory_path() / "spectrum_tile_test.temp";
+	{
+		std::ofstream file(path, std::ios::binary);
+		file.write(reinterpret_cast<const char*>(tile_bytes.data()), std::streamsize(tile_bytes.size()));
+	}
+
+	// Load it into the same tile of the target.
+	{
+		HAL::StorageRequest request;
+		request.resource = target->texture->resource;
+		request.file = path;
+		request.file_offset = 0;
+		request.size = TextureStreaming::TileBytes;
+		request.uncompressed_size = TextureStreaming::TileBytes;
+		request.compressed = false;
+		request.operation = HAL::StorageRequest::Tiles{ 0, uint3(tile_x, tile_y, 0), uint3(1, 1, 1) };
+
+		auto& queue = RenderSystem::get().device().get_ds_queue();
+		auto waiter = queue.execute(request);
+		queue.flush();
+		waiter.wait();
+	}
+
+	auto readback = read_back(*target->texture);
+	const auto& level = *readback->array[0]->mips[0];
+	const auto& expected = *source->source->array[0]->mips[0];
+
+	for (uint32_t y = 0; y < Tile; y++)
+		ASSERT_TRUE(std::memcmp(level.data.data() + (size_t(tile_y) * Tile + y) * level.width_stride + size_t(tile_x) * Tile * 4,
+			expected.data.data() + (size_t(tile_y) * Tile + y) * expected.width_stride + size_t(tile_x) * Tile * 4, size_t(Tile) * 4) == 0);
+
+	// A neighbouring tile is still the target's own.
+	ASSERT_TRUE(std::memcmp(level.data.data() + (size_t(tile_y) * Tile) * level.width_stride + size_t(tile_x + 1) * Tile * 4,
+		target->source->array[0]->mips[0]->data.data() + (size_t(tile_y) * Tile) * level.width_stride + size_t(tile_x + 1) * Tile * 4, size_t(Tile) * 4) == 0);
+
+	std::filesystem::remove(path);
 }
 
 }

@@ -2204,7 +2204,9 @@ namespace GUI
 				mouse_move_event_internal(pos);
 			});
 
-		apply_cursor();
+		// No SetCursor here: this is also reached from WM_NCMOUSEMOVE (custom frame), where
+		// it overwrote the system's resize-border cursor with the arrow. The client area's
+		// cursor is applied from WM_SETCURSOR, which precedes every mouse move.
 	}
 
 	void user_interface::apply_cursor()
@@ -2671,6 +2673,35 @@ void PassDefault<Passes::UI::UI_Render>::render(
             ? HAL::RTOptions::Default | HAL::RTOptions::ClearColor
             : HAL::RTOptions::Default;
         command_list->get_graphics().set_rtv(rt, rt_options);
+
+        { // TEMP-DEBUG: what the UI pass sees (written when it changes)
+            static ivec2 last_tex = { -1, -1 }, last_vis = { -1, -1 };
+            static vec2 last_scaled = { -1, -1 };
+            const ivec2 tex_size = texture.get_size();
+            if (tex_size.x != last_tex.x || tex_size.y != last_tex.y || ui_ctx.target_size.x != last_vis.x
+                || ui_ctx.target_size.y != last_vis.y || ui_ctx.scaled_size.x != last_scaled.x || ui_ctx.scaled_size.y != last_scaled.y)
+            {
+                last_tex = tex_size; last_vis = ui_ctx.target_size; last_scaled = ui_ctx.scaled_size;
+                FILE* f = nullptr;
+                if (fopen_s(&f, "ui_debug.temp", "a") == 0 && f)
+                {
+                    fprintf(f, "UI_Render pass %u: texture %dx%d, target_size %dx%d, scaled_size %.1fx%.1f\n",
+                        (unsigned)data.pass_index, tex_size.x, tex_size.y, ui_ctx.target_size.x, ui_ctx.target_size.y,
+                        ui_ctx.scaled_size.x, ui_ctx.scaled_size.y);
+                    fclose(f);
+                }
+            }
+        }
+
+        if (ui_ctx.target_size.x > 0 && ui_ctx.target_size.y > 0)
+        {
+            std::vector<HAL::Viewport> vps(1);
+            vps[0].size   = uint2(ui_ctx.target_size.x, ui_ctx.target_size.y);
+            vps[0].pos    = { 0, 0 };
+            vps[0].depths = { 0, 1 };
+            command_list->get_graphics().set_viewports(vps);
+            command_list->get_graphics().set_scissors(sizer_long{ 0, 0, ui_ctx.target_size.x, ui_ctx.target_size.y });
+        }
     }
 
     const float ui_scale = [&]
@@ -2690,6 +2721,7 @@ void PassDefault<Passes::UI::UI_Render>::render(
     c.renderer   = &renderer;
     c.command_list = command_list;
     c.target     = texture;
+    c.target_visible = ui_ctx.target_size;
     c.ui_scale   = ui_scale;
     c.delta_time = ui_ctx.dt;
     // data.ResultTexture, not a context lookup: need() resolved this field to
