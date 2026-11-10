@@ -1251,6 +1251,11 @@ namespace HAL::API
         ASSERT(false);
     }
 
+    void CommandList::write_tiles(const HAL::Resource*, uint3, uint3, UINT, ResourceAddress)
+    {
+        ASSERT(false);
+    }
+
     void CommandList::copy_texture(const Resource::ptr& dest, int dest_sub,
                                     const Resource::ptr& source, int src_sub)
     {

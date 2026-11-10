@@ -101,12 +101,13 @@ namespace
 	}
 
 	// The mips from `first` down must match the source texel for texel: what the GPU holds is what the file said.
-	void check_mips_match(const TextureStreaming::Streamed& texture, uint32_t first)
+	void check_mips_match(const TextureStreaming::Streamed& texture, uint32_t first, const HAL::texture_data* reference = nullptr)
 	{
+		const HAL::texture_data& source = reference ? *reference : *texture.source;
 		auto readback = read_back(*texture.texture);
-		for (uint32_t mip = first; mip < texture.source->mip_maps; mip++)
+		for (uint32_t mip = first; mip < source.mip_maps; mip++)
 		{
-			const auto& expected = *texture.source->array[0]->mips[mip];
+			const auto& expected = *source.array[0]->mips[mip];
 			const auto& actual = *readback->array[0]->mips[mip];
 			ASSERT_EQ(expected.data.size(), actual.data.size());
 			ASSERT_TRUE(std::memcmp(expected.data.data(), actual.data.data(), expected.data.size()) == 0);
@@ -192,6 +193,58 @@ TEST(TextureStreaming, EvictsWhatIsNoLongerWanted)
 	ASSERT_TRUE(settle(manager, { { other.get(), 3 }, { texture.get(), 1 } }));
 	check_mips_match(*texture, 1);
 	check_mips_match(*other, 3);
+}
+
+// A pool lowered under what is resident gives tiles back even though the draw still wants them: the quality drops to what fits.
+TEST(TextureStreaming, ShrinkingThePoolEvictsWantedTiles)
+{
+	auto& manager = TextureStreaming::Manager::get();
+	manager.set_pool_tiles(400);
+
+	auto texture = manager.create(make_pattern(2048, 12), L"pattern");
+	ASSERT_TRUE(settle(manager, { { texture.get(), 1 } }));   // 64 + 16 + 4 + 1 tiles
+	ASSERT_EQ(1u, texture->min_mip());
+
+	const uint64_t evictions_before = manager.stats().evictions;
+	const uint32_t pool_before = manager.stats().pool_pages;
+	manager.set_pool_tiles(10);
+
+	for (uint32_t frame = 0; frame < 200; frame++)
+	{
+		std::vector<Demand> demands = { { texture.get(), 1 } };
+		manager.request(demands);
+
+		auto list = RenderSystem::get().device().get_queue(HAL::CommandListType::DIRECT)->get_free_list();
+		list->begin(L"TextureStreaming");
+		manager.prepare(list);
+		list->execute_and_wait();
+		std::this_thread::sleep_for(std::chrono::milliseconds(2));
+	}
+
+	ASSERT_TRUE(manager.stats().evictions > evictions_before);
+	ASSERT_TRUE(texture->min_mip() > 1);
+
+	// The memory of the evicted tiles went back to the heap, not only their budget.
+	ASSERT_TRUE(manager.stats().pool_pages < pool_before);
+
+	// And a larger pool takes memory again, as the tiles load.
+	manager.set_pool_tiles(400);
+	ASSERT_TRUE(settle(manager, { { texture.get(), 1 } }));
+	check_mips_match(*texture, 1);
+	ASSERT_TRUE(manager.stats().pool_pages > 10);
+}
+
+// Nothing is allocated for a pool nobody uses: the memory follows what is loaded, in chunks, and stays far under a big budget.
+TEST(TextureStreaming, PoolMemoryFollowsWhatIsLoaded)
+{
+	auto& manager = TextureStreaming::Manager::get();
+	manager.set_pool_tiles(4000);
+
+	auto texture = manager.create(make_pattern(2048, 12), L"pattern");
+	ASSERT_TRUE(settle(manager, { { texture.get(), 1 } }));   // 64 + 16 + 4 + 1 tiles
+	ASSERT_TRUE(manager.stats().pool_pages < 400);
+
+	manager.set_pool_tiles(400);
 }
 
 // The clamp the material shaders apply: with only the coarse mips resident, sampling a finer level returns the finest
@@ -358,6 +411,151 @@ TEST(TextureStreaming, ReportedMipsAreStreamedIn)
 	ASSERT_TRUE(streamed);
 	ASSERT_EQ(reported_mip, texture->min_mip());
 	check_mips_match(*texture, reported_mip);
+}
+
+// The tiles of a texture baked into an asset-file partition and streamed from there: nothing of the texture is kept in
+// memory, each tile is read from the file when it is wanted, and every texel that lands on the GPU is the original one.
+TEST(TextureStreaming, TilesStreamFromAnAssetFile)
+{
+	auto& manager = TextureStreaming::Manager::get();
+	manager.set_pool_tiles(400);
+
+	auto data = make_pattern(2048, 12);
+	auto baked = manager.bake(data);
+	ASSERT_EQ(5u, static_cast<uint32_t>(baked->mips.size()));
+	ASSERT_EQ(7u, static_cast<uint32_t>(baked->packed.size()));   // 64 .. 1
+
+	const auto path = std::filesystem::temp_directory_path() / "spectrum_texture_tiles_test.temp";
+	{
+		FileDataStorage storage(path);
+		storage.start_save();
+		storage.put("asset", 42);   // something ahead of it, so the offsets are not near zero
+		storage.put("tiles", *baked);
+		storage.save();
+	}
+	baked.reset();
+
+	auto file = std::make_shared<TextureStreaming::TileFile>();
+	{
+		FileDataStorage storage(path);
+		ASSERT_TRUE(storage.has("tiles"));
+		ASSERT_TRUE(storage.get("tiles", *file));
+	}
+	ASSERT_TRUE(file->tile_bytes.empty());   // the bytes stayed in the file
+
+	auto texture = manager.create(file, L"from file");
+	ASSERT_TRUE(texture->source == nullptr);
+	ASSERT_EQ(texture->standard_mips() - 1, texture->min_mip());
+
+	{
+		auto list = RenderSystem::get().device().get_queue(HAL::CommandListType::DIRECT)->get_free_list();
+		list->begin(L"TextureStreaming");
+		manager.prepare(list);
+		list->execute_and_wait();
+	}
+	check_mips_match(*texture, texture->standard_mips() - 1, data.get());
+
+	ASSERT_TRUE(settle(manager, { { texture.get(), 1 } }));
+	check_mips_match(*texture, 1, data.get());
+
+	ASSERT_TRUE(settle(manager, { { texture.get(), 0 } }));
+	check_mips_match(*texture, 0, data.get());
+
+	// The tiles came through DirectStorage, mapped by begin_load, not cut on the CPU.
+	ASSERT_TRUE(manager.stats().file_loads > 0);
+
+	texture.reset();
+	file.reset();
+	std::filesystem::remove(path);
+}
+
+// A streamable asset is saved as its tiles and loads as a streamed texture with no whole texture behind it; the whole one
+// is made from the texels in the file only when something asks for it. A texture that must not stream is saved whole.
+TEST(TextureStreaming, StreamableAssetSavesAsTiles)
+{
+	auto& manager = TextureStreaming::Manager::get();
+	manager.set_pool_tiles(400);
+
+	const auto path = std::filesystem::temp_directory_path() / "spectrum_texture_asset_test.temp";
+
+	auto data = make_pattern(2048, 12);
+	auto save_and_load = [&](std::shared_ptr<TextureAsset> asset) -> std::shared_ptr<TextureAsset>
+	{
+		asset->before_save();
+		{
+			FileDataStorage storage(path);
+			storage.start_save();
+			storage.put("asset", std::static_pointer_cast<Asset>(asset));
+			asset->save_partitions(storage);
+			storage.save();
+			asset->after_save(storage);
+		}
+
+		UniversalContext context;
+		context.get_context<HAL::Device*>() = &RenderSystem::get().device();
+
+		FileDataStorage storage(path);
+		Asset::ptr loaded;
+		ASSERT_TRUE(storage.get("asset", loaded, &context));
+		loaded->load_partitions(storage, &context);
+		return std::dynamic_pointer_cast<TextureAsset>(loaded);
+	};
+
+	// Streamable: loads as a streamed texture.
+	{
+		auto saved = std::make_shared<TextureAsset>(data, L"saved asset");
+		ASSERT_TRUE(saved->is_streamable());
+		auto loaded = save_and_load(saved);
+		ASSERT_TRUE(loaded != nullptr);
+		ASSERT_TRUE(loaded->is_streamable());
+
+		auto render = loaded->get_render_texture();
+		ASSERT_TRUE(render->get_desc().is_virtual());
+
+		{
+			auto list = RenderSystem::get().device().get_queue(HAL::CommandListType::DIRECT)->get_free_list();
+			list->begin(L"TextureStreaming");
+			manager.prepare(list);
+			list->execute_and_wait();
+		}
+		auto actual = read_back(*render);
+		for (uint32_t mip = 4; mip < 12; mip++)
+		{
+			const auto& e = *data->array[0]->mips[mip];
+			const auto& a = *actual->array[0]->mips[mip];
+			ASSERT_TRUE(std::memcmp(e.data.data(), a.data.data(), e.data.size()) == 0);
+		}
+
+		// The whole texture comes from the texels kept in the file, and is the original.
+		auto whole = loaded->get_texture();
+		ASSERT_TRUE(whole && !whole->get_desc().is_virtual());
+		auto whole_data = read_back(*whole);
+		for (uint32_t mip = 0; mip < 12; mip++)
+		{
+			const auto& e = *data->array[0]->mips[mip];
+			const auto& a = *whole_data->array[0]->mips[mip];
+			ASSERT_TRUE(std::memcmp(e.data.data(), a.data.data(), e.data.size()) == 0);
+		}
+
+		// Saved again from what it was loaded as: the file is read before it is written over.
+		auto again = save_and_load(loaded);
+		ASSERT_TRUE(again->get_render_texture()->get_desc().is_virtual());
+	}
+
+	// Not streamable: saved whole, and loads whole.
+	{
+		auto saved = std::make_shared<TextureAsset>(data, L"whole asset");
+		saved->set_streamable(false);
+		ASSERT_TRUE(saved->get_render_texture() == saved->get_texture());
+
+		auto loaded = save_and_load(saved);
+		ASSERT_TRUE(loaded != nullptr);
+		ASSERT_FALSE(loaded->is_streamable());
+		ASSERT_TRUE(!loaded->get_render_texture()->get_desc().is_virtual());
+		ASSERT_TRUE(loaded->get_render_texture() == loaded->get_texture());
+	}
+
+	std::filesystem::remove(path);
 }
 
 // A tile read back with CopyTiles and put in a file is what DirectStorage's tile destination loads into another texture:

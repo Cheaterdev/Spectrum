@@ -22,7 +22,7 @@ export namespace HAL
 		Transition,
 		Draw, DrawIndexed, DispatchMesh,
 		Dispatch, DispatchRays,
-		CopyResource, CopyBuffer, CopyTexture, UpdateTexture, ReadTexture, ReadTiles,
+		CopyResource, CopyBuffer, CopyTexture, UpdateTexture, ReadTexture, ReadTiles, WriteTiles,
 		BuildRAS,
 		SetPipeline, SetRTV, SetTopology, SetIndexBuffer,
 		SetScissor, SetViewport,
@@ -216,6 +216,7 @@ export namespace HAL
 		void update_texture(HAL::Resource* resource, ivec3 offset, ivec3 box, UINT sub_resource, ResourceAddress address, texture_layout layout);
 		void read_texture(const HAL::Resource* resource, ivec3 offset, ivec3 box, UINT sub_resource, ResourceAddress target, texture_layout layout);
 		void read_tiles(const HAL::Resource* resource, uint3 first_tile, uint3 tile_count, UINT sub_resource, ResourceAddress target);
+		void write_tiles(const HAL::Resource* resource, uint3 first_tile, uint3 tile_count, UINT sub_resource, ResourceAddress source);
 
 		void func_barrier(Barriers* barriers, uint op_index = 0, bool after_op = false,
 		                  HAL::BarrierSync op_type = HAL::BarrierSync::NONE);

@@ -6,11 +6,63 @@ namespace GUI
     namespace Elements
     {
         float_slider::float_slider()
-            : value([this](const float& v){ on_change(v); })
+            : value([this](const float& v){ update_value_label(v); on_change(v); })
         {
             clickable    = true;
             height_size  = size_type::FIXED;
             size         = {100, 14};
+            show_value();
+        }
+
+        void float_slider::show_value()
+        {
+            if (value_label)
+                return;
+
+            value_label = std::make_shared<label>();
+            value_label->docking     = dock::FILL;
+            value_label->magnet_text = FW1_CENTER | FW1_VCENTER | FW1_NOWORDWRAP;
+            value_label->font_size   = FontSizes::Small; // the 14 px track is shorter than a default line
+            add_child(value_label);
+            update_value_label(value);
+        }
+
+        void float_slider::update_value_label(float v)
+        {
+            if (!value_label)
+                return;
+
+            value_label->text = formatter ? formatter(v) : format_number(v);
+        }
+
+        void float_slider::set_formatter(std::function<std::string(float)> f)
+        {
+            formatter = std::move(f);
+            update_value_label(value);
+        }
+
+        std::string format_number(double v)
+        {
+            // %.3g switches to exponent notation from 1000 up, so large values print as integers.
+            char buf[32];
+            if (std::abs(v) >= 100.0)
+                snprintf(buf, sizeof(buf), "%.0f", v);
+            else
+                snprintf(buf, sizeof(buf), "%.3g", v);
+            return buf;
+        }
+
+        std::string format_bytes(double bytes)
+        {
+            static const char* units[] = { "B", "KB", "MB", "GB", "TB" };
+            double v = std::abs(bytes);
+            int unit = 0;
+            while (v >= 1024.0 && unit < 4)
+            {
+                v /= 1024.0;
+                unit++;
+            }
+            return (bytes < 0 ? "-" : "") + format_number(v) + " " + units[unit];
         }
 
         float float_slider::normalized() const

@@ -47,18 +47,28 @@ namespace Streaming
 		wake.notify_one();
 	}
 
-	void Streamer::ensure_pool(uint32_t count)
+	// `count` more slots with memory: the released ones come back first, then new numbers.
+	void Streamer::grow(uint32_t count)
 	{
-		if (count <= pool_size)
-			return;
-
-		const uint32_t first = static_cast<uint32_t>(pool_size);
-		backend.allocate_pool(count - first);
-		pool_size = count;
-
-		// The lowest new slot is taken first.
-		for (uint32_t slot = count; slot-- > first;)
+		while (count && !released_slots.empty())
+		{
+			const uint32_t slot = released_slots.back();
+			released_slots.pop_back();
+			backend.restore_slot(slot);
 			free_slots.push_back(slot);
+			count--;
+		}
+
+		if (count)
+		{
+			const uint32_t first = static_cast<uint32_t>(pool_size);
+			backend.allocate_pool(count);
+			pool_size += count;
+
+			// The lowest new slot is taken first.
+			for (uint32_t slot = static_cast<uint32_t>(pool_size); slot-- > first;)
+				free_slots.push_back(slot);
+		}
 
 		// The new slots' memory is mapped by the next prepare(); until that list is done DirectStorage must not write them.
 		pool_version++;
@@ -66,11 +76,44 @@ namespace Streaming
 		pool_mapped_flag = false;
 	}
 
+	void Streamer::ensure_pool(uint32_t count)
+	{
+		const uint32_t live = static_cast<uint32_t>(pool_size - released_slots.size());
+		if (count > live)
+			grow(count - live);
+	}
+
 	void Streamer::ensure_free(uint32_t count)
 	{
 		if (free_slots.size() < count)
-			ensure_pool(static_cast<uint32_t>(pool_size + (count - free_slots.size())));
+			grow(static_cast<uint32_t>(count - free_slots.size()));
 	}
+
+	// Free slots kept for the next loads, so a steady trickle of them does not make and free memory every frame.
+	static constexpr size_t SlotChunk = 16;
+	static constexpr size_t SlotSlack = 4 * SlotChunk;
+
+	void Streamer::trim_pool()
+	{
+		if (!on_demand)
+			return;
+
+		// What the budget can still take, up to the slack, is kept free; the rest of the free slots only hold memory.
+		const size_t room = std::min<size_t>(streamed_in_use < budget ? budget - streamed_in_use : 0, SlotSlack);
+		if (free_slots.size() <= room)
+			return;
+
+		// Highest numbers go: the pool's memory was taken in numbered order, so whole heap pages empty out.
+		std::sort(free_slots.begin(), free_slots.end(), std::greater<uint32_t>());
+		const size_t surplus = free_slots.size() - room;
+		for (size_t i = 0; i < surplus; i++)
+		{
+			backend.release_slot(free_slots[i]);
+			released_slots.push_back(free_slots[i]);
+		}
+		free_slots.erase(free_slots.begin(), free_slots.begin() + surplus);
+	}
+
 
 	void Streamer::add(Resource& resource)
 	{
@@ -141,7 +184,7 @@ namespace Streaming
 	{
 		std::lock_guard<std::mutex> g(m);
 		Stats out;
-		out.pool_pages = static_cast<uint32_t>(pool_size);
+		out.pool_pages = static_cast<uint32_t>(pool_size - released_slots.size());
 		out.free_pages = static_cast<uint32_t>(free_slots.size());
 		out.loading_pages = static_cast<uint32_t>(loading.size());
 		out.loads = loads;
@@ -191,6 +234,7 @@ namespace Streaming
 				std::lock_guard<std::mutex> g(self->m);
 				self->free_slots.insert(self->free_slots.end(), slots.begin(), slots.end());
 				self->retiring_inflight -= slots.size();
+				self->trim_pool();
 			});
 			retiring.clear();
 		}
@@ -275,9 +319,24 @@ namespace Streaming
 
 		// What streamed pages may still take. Slots already on their way back (hidden, waiting for their frames to
 		// finish) are no longer counted in it.
+		if (streamed_in_use > budget)
+			evict(streamed_in_use - budget, requests.epoch, true);
+
 		const size_t available = streamed_in_use < budget ? budget - streamed_in_use : 0;
 		if (order.size() > available)
 			evict(order.size() - available, requests.epoch);
+
+		if (on_demand)
+		{
+			// Memory for the loads about to start, a chunk at a time, never past what the budget allows.
+			const size_t room = streamed_in_use < budget ? budget - streamed_in_use : 0;
+			const size_t need = std::min(order.size(), room);
+			if (free_slots.size() < need)
+			{
+				const size_t chunks = (need - free_slots.size() + SlotChunk - 1) / SlotChunk;
+				grow(static_cast<uint32_t>(std::min(chunks * SlotChunk, room - free_slots.size())));
+			}
+		}
 
 		for (const PageRef& ref : order)
 		{
@@ -311,7 +370,7 @@ namespace Streaming
 				Loading item = loading[i];
 				PageState& state = item.resource->states[item.page];
 
-				if (item.load.from_file && !item.load.waiter.is_completed())
+				if (item.load.from_file && !(item.load.poll ? item.load.poll() : item.load.waiter.is_completed()))
 				{
 					i++;
 					continue;
@@ -346,7 +405,7 @@ namespace Streaming
 
 	// Hides up to `count` of the GPU's idle pages, least recently reached first, to make room. Their slots return to
 	// the pool once the frames that may still read them are done (prepare).
-	void Streamer::evict(size_t count, uint32_t epoch)
+	void Streamer::evict(size_t count, uint32_t epoch, bool any)
 	{
 		struct Candidate
 		{
@@ -355,10 +414,21 @@ namespace Streaming
 		};
 		std::vector<Candidate> candidates;
 
+		if (any)
+		{
+			for (Resource* resource : resources)
+				for (uint32_t page = 0; page < resource->states.size(); page++)
+				{
+					const PageState& state = resource->states[page];
+					if (state.status == PageState::Status::Resident && !resource->is_root(page) && state.resident_children == 0)
+						candidates.push_back({ state.last_touched, { resource, page } });
+				}
+		}
+
 		// The GPU decided from flags that may be a frame or two old, so each one is checked again.
 		for (const Victim& victim : victims)
 		{
-			if (victim.id >= page_refs.size() || !page_refs[victim.id].resource)
+			if (any || victim.id >= page_refs.size() || !page_refs[victim.id].resource)
 				continue;
 
 			const PageRef& ref = page_refs[victim.id];
@@ -393,6 +463,7 @@ namespace Streaming
 		}
 
 		// What was used is gone from the pool; the next request set brings fresh candidates.
-		victims.clear();
+		if (!any)
+			victims.clear();
 	}
 }

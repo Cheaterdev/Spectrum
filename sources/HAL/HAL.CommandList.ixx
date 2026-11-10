@@ -550,6 +550,9 @@ export{
 			// The tiles of a reserved texture's subresource, as CopyTiles lays them out (64 KB each, row by row): the layout
 			// DirectStorage's tile destination expects. The tiles must be mapped.
 			std::future<bool> read_tiles(const HAL::Resource* resource, uint3 first_tile, uint3 tile_count, UINT sub_resource, std::function<void(std::span<std::byte>)>);
+
+			// The reverse: tiles in that layout (a whole number of 64 KB tiles, x fastest) into mapped tiles of a reserved texture.
+			void write_tiles(const HAL::Resource* resource, uint3 first_tile, uint3 tile_count, UINT sub_resource, std::span<const std::byte> data);
 			std::future<bool> read_query(std::shared_ptr<QueryHeap>&, unsigned int offset, unsigned int count, std::function<void(std::span<std::byte>)>);
 
 

@@ -282,6 +282,11 @@ public:
 		// file lacks is simply absent (FileDataStorage::has), so adding one never breaks saved assets.
 		// Called by AssetStorage right after the asset itself is written / read.
 		virtual void save_partitions(FileDataStorage& storage) {}
+
+		// Around AssetStorage::save(). before_save() runs before the file is opened for writing, while what only the old
+		// file holds can still be read; after_save() runs once the new file is complete, to point at the data in it.
+		virtual void before_save() {}
+		virtual void after_save(FileDataStorage& storage) {}
 		virtual void load_partitions(FileDataStorage& storage, UniversalContext* context) {}
 
 		virtual void load(std::istream&& s);

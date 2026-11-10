@@ -745,6 +745,8 @@ void AssetStorage::save()
 		std::lock_guard<std::mutex> g(archive_mutex);
 		header->references = asset->get_reference_ids();
 
+		asset->before_save();
+
 		FileDataStorage storage(file_path);
 
 		storage.start_save();
@@ -754,6 +756,7 @@ void AssetStorage::save()
 		asset->save_partitions(storage);
 
 		storage.save();
+		asset->after_save(storage);
 		//auto archive = ZipArchive::Create();
 		//
 		//DataPacker::create_entry(archive, "header", Serializer::serialize(*header.get()));

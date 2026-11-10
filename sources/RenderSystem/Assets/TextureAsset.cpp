@@ -34,6 +34,23 @@ Asset_Type TextureAsset::get_type()
 
 HAL::Texture::ptr TextureAsset::get_texture()
 {
+	std::lock_guard<std::mutex> g(texture_mutex);
+
+	// Loaded as tiles: the whole texture is made from the texels the file keeps beside them.
+	if ((!texture || texture == HAL::Texture::null) && tiles && !tiles->path.empty() && RenderSystem::is_good())
+	{
+		FileDataStorage storage(tiles->path);
+		auto data = std::make_shared<HAL::texture_data>();
+		if (storage.has("texdata") && storage.get("texdata", *data))
+		{
+			texture = HAL::Texture::create(RenderSystem::get().device(), data);
+			if (texture && texture->resource)
+				texture->resource->set_name(convert(name));
+		}
+		if (!texture)
+			texture = HAL::Texture::null;
+	}
+
 	return texture;
 }
 
@@ -41,41 +58,168 @@ void TextureAsset::reset_streamed()
 {
 	streamed.reset();
 	stream_checked = false;
+	// The texture changed, so what the file holds is not it any more.
+	tiles.reset();
+}
+
+void TextureAsset::set_streamable(bool value)
+{
+	if (streamable == value)
+		return;
+
+	get_texture();   // the whole texture has to exist before the streamed one goes
+	streamable = value;
+	streamed.reset();
+	stream_checked = false;
+	mark_changed();
+}
+
+// Below this a texture has too few tiles to be worth streaming.
+static constexpr uint MinStreamedSize = 1024;
+
+bool TextureAsset::can_stream(const HAL::Texture::ptr& candidate) const
+{
+	if (!streamable || !TextureStreaming::Manager::supported() || !candidate || candidate == HAL::Texture::null || !candidate->resource)
+		return false;
+
+	const auto& desc = candidate->get_desc();
+	if (!desc.is_texture() || desc.is_virtual() || check(desc.Flags & HAL::ResFlags::RenderTarget))
+		return false;
+
+	const auto texture_desc = desc.as_texture();
+	return texture_desc.is2D() && texture_desc.ArraySize == 1 && std::max(texture_desc.Dimensions.x, texture_desc.Dimensions.y) >= MinStreamedSize
+		&& std::max(texture_desc.Dimensions.x, texture_desc.Dimensions.y) > static_cast<uint>(std::max(TextureStreaming::Manager::resident_size(), 0));
 }
 
 HAL::Texture::ptr TextureAsset::get_render_texture()
 {
+	if (!streamable)
+		return get_texture();
+
+	if (streamed)
+		return streamed->texture;
+
 	if (!stream_checked)
 	{
 		stream_checked = true;
 
-		// Below this a texture has too few tiles to be worth streaming.
-		constexpr uint MinStreamedSize = 1024;
-
-		if (TextureStreaming::Manager::supported() && texture && texture != HAL::Texture::null && texture->resource)
+		auto whole = get_texture();
+		if (can_stream(whole))
 		{
-			const auto& desc = texture->get_desc();
-			if (desc.is_texture() && !desc.is_virtual() && !check(desc.Flags & HAL::ResFlags::RenderTarget))
-			{
-				const auto texture_desc = desc.as_texture();
-				if (texture_desc.is2D() && texture_desc.ArraySize == 1 && std::max(texture_desc.Dimensions.x, texture_desc.Dimensions.y) >= MinStreamedSize)
-				{
-					auto data = texture->get_data();
-					auto candidate = TextureStreaming::Manager::get().create(data, name);
+			auto data = whole->get_data();
+			auto candidate = TextureStreaming::Manager::get().create(data, name);
 
-					// Worth it only if some standard mip is left to stream above the always-resident ones.
-					if (candidate->resident_floor_mip() >= 1)
-					{
-						streamed = candidate;
-						Log::get() << L"Streaming texture " << name << L" (" << texture_desc.Dimensions.x << L"x" << texture_desc.Dimensions.y
-							<< L", " << candidate->standard_mips() << L" streamed mips)" << Log::endl;
-					}
-				}
+			// Worth it only if some standard mip is left to stream above the always-resident ones.
+			if (candidate->resident_floor_mip() >= 1)
+			{
+				streamed = candidate;
+				const auto texture_desc = whole->get_desc().as_texture();
+				Log::get() << L"Streaming texture " << name << L" (" << texture_desc.Dimensions.x << L"x" << texture_desc.Dimensions.y
+					<< L", " << candidate->standard_mips() << L" streamed mips)" << Log::endl;
 			}
 		}
 	}
 
-	return streamed ? streamed->texture : texture;
+	return streamed ? streamed->texture : get_texture();
+}
+
+void TextureAsset::before_save()
+{
+	saving_tiled = false;
+	saving_data.reset();
+
+	if (!streamable)
+	{
+		get_texture();   // saved whole, even if the asset was loaded as tiles
+		return;
+	}
+
+	std::lock_guard<std::mutex> g(texture_mutex);
+
+	if (tiles && !tiles->path.empty())
+	{
+		// Loaded from a file that is about to be written over: its tiles and texels are read first.
+		saving_data = std::make_shared<HAL::texture_data>();
+		FileDataStorage storage(tiles->path);
+		if (!tiles->read_all() || !storage.has("texdata") || !storage.get("texdata", *saving_data))
+			throw std::runtime_error("texture asset " + convert(name) + ": cannot read its tiles back to save them");
+		saving_tiled = true;
+	}
+	else if (can_stream(texture))
+	{
+		saving_data = texture->get_data();
+		tiles = TextureStreaming::Manager::get().bake(saving_data);
+		saving_tiled = true;
+	}
+}
+
+void TextureAsset::save_partitions(FileDataStorage& storage)
+{
+	Flags flags;
+	flags.streamable = streamable;
+	flags.tiled = saving_tiled;
+	storage.put("texflags", flags);
+
+	if (saving_tiled)
+	{
+		storage.put("textiles", *tiles);
+		storage.put("texdata", *saving_data);
+	}
+}
+
+void TextureAsset::after_save(FileDataStorage& storage)
+{
+	std::lock_guard<std::mutex> g(texture_mutex);
+
+	if (saving_tiled)
+	{
+		// From here the tiles are ranges of the file just written, not bytes in memory.
+		auto fresh = std::make_shared<TextureStreaming::TileFile>();
+		if (storage.get("textiles", *fresh))
+		{
+			if (!tiles->path.empty())
+				tiles->relocate(*fresh);   // the streamed texture reads through this very object
+			else
+				tiles = fresh;
+		}
+		tiles->tile_bytes.clear();
+		tiles->tile_bytes.shrink_to_fit();
+		tiles->packed_bytes.clear();
+		tiles->packed_bytes.shrink_to_fit();
+	}
+	else
+	{
+		tiles.reset();
+	}
+
+	saving_data.reset();
+	saving_tiled = false;
+}
+
+void TextureAsset::load_partitions(FileDataStorage& storage, UniversalContext* context)
+{
+	if (!storage.has("texflags"))
+		return;
+
+	Flags flags;
+	storage.get("texflags", flags, context);
+	streamable = flags.streamable;
+
+	if (flags.tiled && storage.has("textiles"))
+	{
+		auto loaded = std::make_shared<TextureStreaming::TileFile>();
+		if (!storage.get("textiles", *loaded, context))
+			return;
+
+		tiles = loaded;
+
+		// Only the roots go to memory; a device without tiled textures makes the whole texture on demand (get_texture).
+		if (streamable && TextureStreaming::Manager::supported())
+		{
+			streamed = TextureStreaming::Manager::get().create(tiles, name);
+			stream_checked = true;
+		}
+	}
 }
 
 TextureAsset::TextureAsset(std::filesystem::path file_name)
@@ -138,7 +282,7 @@ bool TextureAsset::compress()
 
 	auto task = TaskInfoManager::get().create_task(std::wstring(L"compressing") + name);
 	Log::get() << std::wstring(L"compressing") + name << Log::endl;
-	auto new_texture = texture->compress();
+	auto new_texture = get_texture()->compress();
 
 	if (new_texture)
 	{

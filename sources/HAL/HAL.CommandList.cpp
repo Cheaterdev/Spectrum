@@ -975,6 +975,21 @@ namespace HAL
 		return result->get_future();
 	}
 
+	void CopyContext::write_tiles(const HAL::Resource* resource, uint3 first_tile, uint3 tile_count, UINT sub_resource, std::span<const std::byte> data)
+	{
+		constexpr uint64 TileBytes = 64 * 1024;
+		ASSERT(data.size() == uint64(tile_count.x) * tile_count.y * tile_count.z * TileBytes);
+
+		base.pre_command<false, false>(*this, BarrierSync::COPY);
+		base.add_resource_usage(resource, ResourceStates::COPY_DEST, sub_resource);
+
+		auto info = base.place_data(data.size(), TileBytes);
+		std::memcpy(info.get_cpu_data(), data.data(), data.size());
+		list->write_tiles(resource, first_tile, tile_count, sub_resource, info);
+
+		base.post_command<false, false>(*this, BarrierSync::COPY);
+	}
+
 	std::future<bool> CopyContext::read_buffer(Resource* resource, uint64 offset, uint64 size,
 	                                           std::function<void(std::span<std::byte>)> f)
 	{

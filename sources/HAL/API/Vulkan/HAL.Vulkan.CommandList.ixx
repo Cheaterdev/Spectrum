@@ -198,6 +198,8 @@ export namespace HAL
                               UINT sub_resource, ResourceAddress target, texture_layout layout);
             void read_tiles(const HAL::Resource* resource, uint3 first_tile, uint3 tile_count,
                             UINT sub_resource, ResourceAddress target);
+            void write_tiles(const HAL::Resource* resource, uint3 first_tile, uint3 tile_count,
+                             UINT sub_resource, ResourceAddress source);
             void transitions(const HAL::Barriers& barriers);
         };
     }

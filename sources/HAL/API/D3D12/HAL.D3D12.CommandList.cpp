@@ -480,6 +480,25 @@ namespace HAL
                 D3D12_TILE_COPY_FLAG_SWIZZLED_TILED_RESOURCE_TO_LINEAR_BUFFER);
         }
 
+        void CommandList::write_tiles(const HAL::Resource* resource, uint3 first_tile, uint3 tile_count, UINT sub_resource, ResourceAddress source)
+        {
+            D3D12_TILED_RESOURCE_COORDINATE start = {};
+            start.X = first_tile.x;
+            start.Y = first_tile.y;
+            start.Z = first_tile.z;
+            start.Subresource = sub_resource;
+
+            D3D12_TILE_REGION_SIZE region = {};
+            region.NumTiles = tile_count.x * tile_count.y * tile_count.z;
+            region.UseBox = TRUE;
+            region.Width = tile_count.x;
+            region.Height = static_cast<UINT16>(tile_count.y);
+            region.Depth = static_cast<UINT16>(tile_count.z);
+
+            m_commandList->CopyTiles(resource->get_dx(), &start, &region, source.resource->get_dx(), source.resource_offset,
+                D3D12_TILE_COPY_FLAG_LINEAR_BUFFER_TO_SWIZZLED_TILED_RESOURCE);
+        }
+
         void CommandList::dispatch_rays(uint hit_size, uint miss_size, uint raygen_sige, ivec3 size, HAL::ResourceAddress hit_buffer, UINT hit_count, HAL::ResourceAddress miss_buffer, UINT miss_count, HAL::ResourceAddress raygen_buffer)
         {
             D3D12_DISPATCH_RAYS_DESC dispatchDesc = {};

@@ -562,6 +562,16 @@ namespace HAL
 		});
 	}
 
+	void DelayedCommandList::write_tiles(const HAL::Resource* resource, uint3 first_tile, uint3 tile_count, UINT sub_resource, ResourceAddress source)
+	{
+		if constexpr (BuildOptions::Dev)
+			debug_recorder.push_back({CommandType::WriteTiles,
+				"WriteTiles subres=" + std::to_string(sub_resource)});
+		push_fn(CommandType::WriteTiles, [=](API::CommandList& list) {
+			list.write_tiles(resource, first_tile, tile_count, sub_resource, source);
+		});
+	}
+
 	void DelayedCommandList::discard(const HAL::Resource* resource)
 	{
 		if constexpr (BuildOptions::Dev)

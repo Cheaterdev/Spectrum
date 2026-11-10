@@ -74,6 +74,8 @@ export namespace GUI
 				slider->min = elem.get_min();
 				slider->max = elem.get_max();
 				slider->value = (float)elem;
+				if (elem.unit == VariableUnit::Bytes)
+					slider->set_formatter([](float v) { return GUI::Elements::format_bytes(v); });
 				slider->on_change = [&elem](float value) { elem = value; };
 				// Keep the thumb in sync if elem changes from elsewhere (revert
 				// button, other code) -- same reasoning as the bool row above.
@@ -120,6 +122,8 @@ export namespace GUI
 				slider->min = (float)elem.get_min();
 				slider->max = (float)elem.get_max();
 				slider->value = (float)(int)elem;
+				if (elem.unit == VariableUnit::Bytes)
+					slider->set_formatter([](float v) { return GUI::Elements::format_bytes(v); });
 				slider->on_change = [&elem](float value) { elem = (int)std::lround(value); };
 				// Keep the thumb in sync if elem changes from elsewhere (revert
 				// button, other code) -- same reasoning as Variable<float>'s own

@@ -38,6 +38,123 @@ export namespace TextureStreaming
 
 	class Manager;
 
+	// The tiles of a texture, as they sit in a partition of its asset file: every standard mip's tiles in CopyTiles layout
+	// (64 KB each, x fastest) one after the other, then the mips too small for a tile as plain rows. Any tile is one range of
+	// the file, so it can be read alone and handed to the GPU without cutting anything out of a CPU copy of the texture.
+	//
+	// The tile bytes are the GPU's own swizzle, which this assumes is the same on every GPU the asset is used on (see
+	// HAL::StorageRequest::Tiles). Asked for with Manager::bake(), which makes them on the GPU that saves the asset.
+	class TileFile : public HAL::texture_data_header
+	{
+	public:
+		struct Mip
+		{
+			uint32_t tiles_x = 0;
+			uint32_t tiles_y = 0;
+			uint64_t offset = 0;   // in the file, of the first tile; set by loading
+		};
+
+		struct Packed
+		{
+			uint32_t width = 0;
+			uint32_t height = 0;
+			uint32_t row_stride = 0;
+			uint64_t size = 0;
+			uint64_t offset = 0;   // set by loading
+		};
+
+		std::vector<Mip> mips;       // the standard mips, finest first
+		std::vector<Packed> packed;  // the mips below a tile
+
+		std::filesystem::path path;  // set by loading
+
+		// What is written, kept only until the asset is saved.
+		std::vector<std::vector<std::byte>> tile_bytes;     // per standard mip
+		std::vector<std::vector<uint8_t>> packed_bytes;
+
+		// Reads one tile (TileBytes) or bytes of the file the tiles were loaded from.
+		bool read_tile(uint32_t mip, uint32_t x, uint32_t y, void* destination);
+		bool read(uint64_t offset, void* destination, size_t size);
+
+		// Where one tile is: the file and the offset in it, for a read that does not go through this object (DirectStorage).
+		void locate_tile(uint32_t mip, uint32_t x, uint32_t y, std::filesystem::path& file, uint64_t& offset);
+
+		// The asset file was written again: `fresh` is the same tiles as loaded from the new file. Readers wait for it.
+		void relocate(const TileFile& fresh);
+
+		// Fills tile_bytes and packed_bytes from the file, to write them into another one.
+		bool read_all();
+
+	private:
+		std::mutex file_mutex;
+		std::fstream stream;
+
+		bool read_unlocked(uint64_t offset, void* destination, size_t size);
+
+		SERIALIZE()
+		{
+			SAVE_PARENT(texture_data_header);
+
+			uint32_t mip_count = static_cast<uint32_t>(mips.size());
+			uint32_t packed_count = static_cast<uint32_t>(packed.size());
+			ar& NVP(mip_count);
+			ar& NVP(packed_count);
+
+			if constexpr (Archive::is_loading::value)
+			{
+				mips.resize(mip_count);
+				packed.resize(packed_count);
+			}
+
+			for (auto& mip : mips)
+			{
+				ar& NVP(mip.tiles_x);
+				ar& NVP(mip.tiles_y);
+			}
+			for (auto& p : packed)
+			{
+				ar& NVP(p.width);
+				ar& NVP(p.height);
+				ar& NVP(p.row_stride);
+				ar& NVP(p.size);
+			}
+
+			if constexpr (Archive::is_loading::value)
+			{
+				UniversalContext& context = cereal::get_user_data<UniversalContext>(ar);
+				std::fstream* file = context.template get_context<std::fstream*>();
+				path = context.template get_context<std::filesystem::path>();
+
+				// The bytes stay in the file: only where they are is kept.
+				uint64_t at = file->tellg();
+				for (auto& mip : mips)
+				{
+					mip.offset = at;
+					at += uint64_t(mip.tiles_x) * mip.tiles_y * TileBytes;
+				}
+				for (auto& p : packed)
+				{
+					p.offset = at;
+					at += p.size;
+				}
+				file->seekg(static_cast<std::streamoff>(at), std::ios::beg);
+			}
+			else
+			{
+				for (size_t i = 0; i < mips.size(); i++)
+				{
+					ASSERT(tile_bytes[i].size() == uint64_t(mips[i].tiles_x) * mips[i].tiles_y * TileBytes);
+					ar& NVP(cereal::binary_data(tile_bytes[i].data(), tile_bytes[i].size()));
+				}
+				for (size_t i = 0; i < packed.size(); i++)
+				{
+					ASSERT(packed_bytes[i].size() == packed[i].size);
+					ar& NVP(cereal::binary_data(packed_bytes[i].data(), packed_bytes[i].size()));
+				}
+			}
+		}
+	};
+
 	class Streamed : public Streaming::Resource
 	{
 		friend class Manager;
@@ -68,7 +185,8 @@ export namespace TextureStreaming
 
 	public:
 		HAL::Texture::ptr texture;             // reserved
-		HAL::texture_data::ptr source;         // the texels the tiles are cut from
+		HAL::texture_data::ptr source;         // the texels the tiles are cut from, or null when `file` has them
+		std::shared_ptr<TileFile> file;        // the tiles, read from an asset file
 
 		uint32_t standard_mips() const { return static_cast<uint32_t>(mips.size()); }
 		uint32_t page_count() const { return static_cast<uint32_t>(states.size()); }
@@ -109,6 +227,7 @@ export namespace TextureStreaming
 			ivec3 offset;
 			ivec3 box;
 			uint32_t row_stride = 0;
+			bool tiles = false;   // `data` is one tile in CopyTiles layout, not rows of texels
 			std::vector<uint8_t> data;
 		};
 
@@ -123,6 +242,7 @@ export namespace TextureStreaming
 			uint32_t x = 0;
 			uint32_t y = 0;
 			uint32_t slot = 0;
+			bool premapped = false;   // a Map that begin_load already made (a DirectStorage tile load maps before it reads)
 			std::vector<Copy> copies;
 		};
 
@@ -154,12 +274,31 @@ export namespace TextureStreaming
 		uint32_t allocate_ids(uint32_t count);
 		void free_id_range(uint32_t first, uint32_t count);
 		void release(Streamed& streamed);
+		void apply_pool_size();
 
+		std::shared_ptr<Streamed> create_streamed(const HAL::texture_data_header& header, const HAL::texture_data::ptr& data, const std::shared_ptr<TileFile>& file, const std::wstring& name);
+
+		// A file tile on its way to its slot through DirectStorage (begin_direct_load).
+		struct DirectTileLoad
+		{
+			HAL::Resource::ptr resource;
+			HAL::StorageRequest request;
+			HAL::FenceWaiter mapped;
+			HAL::FenceWaiter done;
+			bool requested = false;
+
+			bool poll();
+			~DirectTileLoad();
+		};
+
+		Streaming::Backend::Load begin_direct_load(Streamed& streamed, uint32_t page, uint32_t slot);
 		Op make_map(Streamed& streamed, uint32_t page, uint32_t slot);
 		static void cut_tile(const Streamed& streamed, uint32_t mip, uint32_t x, uint32_t y, Copy& out);
 
 		// Streaming::Backend
 		void allocate_pool(uint32_t count) override;
+		void release_slot(uint32_t slot) override;
+		void restore_slot(uint32_t slot) override;
 		Streaming::Backend::Load begin_load(Streaming::Resource& resource, uint32_t page, uint32_t slot, bool allow_file) override;
 		void show(Streaming::Resource& resource, uint32_t page, uint32_t slot) override;
 		void hide(Streaming::Resource& resource, uint32_t page) override;
@@ -201,6 +340,14 @@ export namespace TextureStreaming
 
 		// A reserved texture made from `data`, with its coarsest mips resident and the rest to be asked for.
 		std::shared_ptr<Streamed> create(const HAL::texture_data::ptr& data, const std::wstring& name = L"streamed texture");
+
+		// The same from the tiles of an asset file: nothing of the texture stays in memory, and each tile is read from the file
+		// when it is wanted.
+		std::shared_ptr<Streamed> create(const std::shared_ptr<TileFile>& file, const std::wstring& name = L"streamed texture");
+
+		// The tiles of `data` in CopyTiles layout, ready to be saved: made on this GPU by filling a reserved texture and
+		// reading its tiles back. Slow, once per asset.
+		std::shared_ptr<TileFile> bake(const HAL::texture_data::ptr& data);
 
 		// What the draw needs of a texture: the mips from `mip` down to the coarsest. Its tiles are asked for; the tiles of
 		// finer mips are offered to the streamer for eviction, to be dropped only if something else needs their slots.

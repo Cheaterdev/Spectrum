@@ -236,11 +236,20 @@ virtual 	int calculate_depth()
 };
 
 
+// What a Variable's number means, so the Properties panel can show "64 MB" instead of 67108864.
+export enum class VariableUnit
+{
+	None,
+	Bytes,
+};
+
 export class VariableBase
 {
 	std::string name;
 
 public:
+	VariableUnit unit = VariableUnit::None;
+
 	VariableBase(std::string name);
 	virtual ~VariableBase() = default;
 	std::string get_name();
@@ -377,6 +386,12 @@ public:
 		context->add(this);
 	}
 
+	Variable(const T& def, std::string name, VariableContext* context, VariableUnit unit) :
+		Variable(def, name, context)
+	{
+		this->unit = unit;
+	}
+
 	// Constrained overload: value is clamped to [min, max] on construction and
 	// on every subsequent assignment (GUI slider drag or a plain `var = x` in
 	// code alike), so the constraint holds no matter which path writes it.
@@ -385,6 +400,12 @@ public:
 		range_min(min), range_max(max), constrained(true)
 	{
 		context->add(this);
+	}
+
+	Variable(const T& def, std::string name, VariableContext* context, T min, T max, VariableUnit unit) :
+		Variable(def, name, context, min, max)
+	{
+		this->unit = unit;
 	}
 
 	~Variable()

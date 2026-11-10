@@ -105,15 +105,6 @@ class LoadingWindow : public GUI::Elements::window
 {
 	MeshLoadingSettings settings;
 
-	GUI::Elements::label::ptr scale_value_label;
-
-	void update_scale_label()
-	{
-		char buf[16];
-		snprintf(buf, sizeof(buf), "%.3f", settings.scale);
-		scale_value_label->text = buf;
-	}
-
 public:
 	std::promise<MeshLoadingSettings> result;
 
@@ -150,13 +141,6 @@ public:
 		scale_lbl->magnet_text = FW1_LEFT | FW1_VCENTER | FW1_NOWORDWRAP;
 		scale_row->add_child(scale_lbl);
 
-		scale_value_label = std::make_shared<GUI::Elements::label>();
-		scale_value_label->docking     = GUI::dock::RIGHT;
-		scale_value_label->width_size  = GUI::size_type::FIXED;
-		scale_value_label->size        = {44, 0};
-		scale_value_label->magnet_text = FW1_RIGHT | FW1_VCENTER | FW1_NOWORDWRAP;
-		scale_row->add_child(scale_value_label);
-
 		auto scale_slider = std::make_shared<GUI::Elements::float_slider>();
 		scale_slider->min        = 0.01f;
 		scale_slider->max        = 100.0f;
@@ -168,11 +152,9 @@ public:
 		scale_slider->y_type     = GUI::pos_y_type::CENTER;
 		scale_row->add_child(scale_slider);
 
-		update_scale_label();
 		scale_slider->on_change = [this](float v)
 		{
 			settings.scale = v;
-			update_scale_label();
 		};
 
 		import_section->content->add_child(std::make_shared<GUI::Elements::separator>());

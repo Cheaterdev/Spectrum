@@ -105,12 +105,22 @@ export namespace Streaming
 		{
 			bool from_file = false;   // done when `waiter` is; otherwise the bytes are queued and show with the next prepare()
 			HAL::FenceWaiter waiter;
+
+			// For a load that needs a step of its own before its read can start (a tile mapped first): polled instead of
+			// `waiter`, true when the load is done. It runs with the streamer's mutex held.
+			std::function<bool()> poll;
 		};
 
 		virtual ~Backend() = default;
 
 		// Appends `count` slots to the pool; slot numbers continue from the last one.
 		virtual void allocate_pool(uint32_t count) = 0;
+
+		// A backend whose pool follows demand (Streamer::use_demand_pool) gets slots in small chunks as loads need them,
+		// gives a free slot's memory back, and takes memory for it again when the pool grows past the slots that are left.
+		// The slot number stays reserved meanwhile.
+		virtual void release_slot(uint32_t slot) { ASSERT(false); }
+		virtual void restore_slot(uint32_t slot) { ASSERT(false); }
 
 		// Starts putting a page's bytes into its slot. allow_file is false for a page that is shown at once.
 		virtual Load begin_load(Resource& resource, uint32_t page, uint32_t slot, bool allow_file) = 0;
@@ -147,7 +157,9 @@ export namespace Streaming
 
 		std::vector<PageRef> page_refs;           // by page id, streamed resources only
 		std::vector<Resource*> resources;
-		size_t pool_size = 0;
+		size_t pool_size = 0;                     // slot numbers handed out; released_slots are among them without memory
+		std::vector<uint32_t> released_slots;
+		bool on_demand = false;
 		std::vector<uint32_t> free_slots;
 		std::vector<uint32_t> retiring;           // hidden since the last prepare, free once the frames that may read them are done
 		size_t retiring_inflight = 0;             // slots handed to a list's completion callback
@@ -179,10 +191,12 @@ export namespace Streaming
 
 		void sync_flags(Resource& resource, uint32_t page);
 		uint32_t take_slot();
+		void grow(uint32_t count);
 		void run();
 		void process(const Requests& requests);
 		void publish();
-		void evict(size_t count, uint32_t epoch);
+		// `any` also takes pages the draw still wants: for a pool that is now over its budget (it was lowered).
+		void evict(size_t count, uint32_t epoch, bool any = false);
 
 	public:
 		Streamer(Backend& backend, uint32_t max_page_ids, Policy policy = {});
@@ -198,12 +212,18 @@ export namespace Streaming
 		void start();
 		bool running() const { return thread.joinable(); }
 
-		// The pool has at least `count` slots: it grows, and never shrinks.
+		// The pool has at least `count` slots with memory: it grows (shrinking is trim_pool()).
 		void ensure_pool(uint32_t count);
 
-		// How many slots streamed resources may hold: past it, wanted pages load only by evicting others. The pool
-		// itself can be larger (it only grows), so this is what makes a smaller setting take effect.
+		// How many slots streamed resources may hold: past it, wanted pages load only by evicting others.
 		void set_budget(uint32_t slots) { budget = slots; }
+
+		// The pool holds memory only for what is loaded, plus a little slack: slots are made in chunks when a load finds
+		// none free (up to the budget), and free slots beyond the slack are given back. Off by default, where the owner
+		// sizes the pool with ensure_pool(). Call trim_pool() after lowering the budget; it also runs by itself whenever
+		// evicted slots become free.
+		void use_demand_pool() { on_demand = true; }
+		void trim_pool();
 
 		// At least `count` slots are free now. Slots a released resource gave back are not, until the frames that may
 		// read them are done, so a resource arriving right after another may need the pool to grow past its budget.
