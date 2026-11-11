@@ -6,7 +6,7 @@ using namespace HAL;
 
 
 HAL::RaytracingAccelerationStructure::RaytracingAccelerationStructure(Device& device, std::vector<GeometryDesc> desc,
-	CommandList::ptr list)
+	CommandList::ptr list, BlasStorage* storage)
 {
 	HAL::RaytracingBuildDescBottomInputs inputs;
 	inputs.Flags = RaytracingBuildFlags::PREFER_FAST_TRACE;
@@ -21,11 +21,24 @@ HAL::RaytracingAccelerationStructure::RaytracingAccelerationStructure(Device& de
 	HAL::RaytracingBuildDescStructure bottomLevelBuildDesc;
 	{
 		PROFILE(L"blas_create_buffers");
-		scratch_buffer = StructuredBufferView<std::byte>(device, bottomLevelPrebuildInfo.ScratchDataSizeInBytes, counterType::NONE,  HAL::ResFlags::Raytracing | HAL::ResFlags::ShaderResource, HeapType::DEFAULT);
-		prev_buffer = StructuredBufferView<std::byte>(device, bottomLevelPrebuildInfo.ResultDataMaxSizeInBytes, counterType::NONE,  HAL::ResFlags::Raytracing | HAL::ResFlags::ShaderResource, HeapType::DEFAULT);
-		cur_buffer = &prev_buffer;
-		bottomLevelBuildDesc.DestAccelerationStructureData = prev_buffer.get_resource_address();
-		bottomLevelBuildDesc.ScratchAccelerationStructureData = scratch_buffer.get_resource_address();
+		if (storage && device.shares_blas_storage())
+		{
+			auto result = storage->allocate_result(bottomLevelPrebuildInfo.ResultDataMaxSizeInBytes);
+			auto scratch = storage->allocate_scratch(bottomLevelPrebuildInfo.ScratchDataSizeInBytes);
+			blas_result = result.buffer;
+			blas_scratch = scratch.buffer;
+			blas_address = blas_result->get_resource_address().offset(result.offset);
+			bottomLevelBuildDesc.DestAccelerationStructureData = blas_address;
+			bottomLevelBuildDesc.ScratchAccelerationStructureData = blas_scratch->get_resource_address().offset(scratch.offset);
+		}
+		else
+		{
+			scratch_buffer = StructuredBufferView<std::byte>(device, bottomLevelPrebuildInfo.ScratchDataSizeInBytes, counterType::NONE,  HAL::ResFlags::Raytracing | HAL::ResFlags::ShaderResource, HeapType::DEFAULT);
+			prev_buffer = StructuredBufferView<std::byte>(device, bottomLevelPrebuildInfo.ResultDataMaxSizeInBytes, counterType::NONE,  HAL::ResFlags::Raytracing | HAL::ResFlags::ShaderResource, HeapType::DEFAULT);
+			cur_buffer = &prev_buffer;
+			bottomLevelBuildDesc.DestAccelerationStructureData = prev_buffer.get_resource_address();
+			bottomLevelBuildDesc.ScratchAccelerationStructureData = scratch_buffer.get_resource_address();
+		}
 	}
 
 	{
@@ -134,8 +147,56 @@ void HAL::RaytracingAccelerationStructure::update(CommandList::ptr list, UINT si
 	list->get_compute().build_ras(topLevelBuildDesc, inputs);
 }
 
+HAL::RaytracingAccelerationStructure::BlasStorage::Range HAL::RaytracingAccelerationStructure::BlasStorage::allocate(
+	Chunk& chunk, uint64 size, uint64 chunk_size, const char* name)
+{
+	// The alignment D3D12 requires of an acceleration structure and of scratch memory.
+	constexpr uint64 alignment = 256;
+	size = std::max<uint64>((size + alignment - 1) / alignment * alignment, alignment);
+
+	auto create = [&](uint64 bytes)
+	{
+		auto buffer = std::make_shared<HAL::Buffer>(device,
+			HAL::ResourceDesc::Buffer(bytes, HAL::ResFlags::Raytracing | HAL::ResFlags::ShaderResource), HeapType::DEFAULT);
+		buffer->set_name(name);
+		return buffer;
+	};
+
+	// Bigger than a chunk: its own buffer, the chunk in use keeps its free tail.
+	if (size > chunk_size)
+		return { create(size), 0 };
+
+	if (!chunk.buffer || chunk.used + size > chunk.capacity)
+	{
+		// Chunks start small and double up to chunk_size: most assets have a few small parts, and a full-size chunk
+		// for each of them would hold tens of megabytes for nothing.
+		constexpr uint64 first_chunk = 1024 * 1024;
+		chunk.next_size = std::min(chunk_size, std::max(first_chunk, chunk.next_size * 2));
+		chunk.capacity = std::max(chunk.next_size, size);
+		chunk.buffer = create(chunk.capacity);
+		chunk.used = 0;
+	}
+
+	Range range{ chunk.buffer, chunk.used };
+	chunk.used += size;
+	return range;
+}
+
+HAL::RaytracingAccelerationStructure::BlasStorage::Range HAL::RaytracingAccelerationStructure::BlasStorage::allocate_result(uint64 size)
+{
+	return allocate(result, size, 64ull * 1024 * 1024, "BLAS storage");
+}
+
+HAL::RaytracingAccelerationStructure::BlasStorage::Range HAL::RaytracingAccelerationStructure::BlasStorage::allocate_scratch(uint64 size)
+{
+	return allocate(scratch, size, 32ull * 1024 * 1024, "BLAS scratch");
+}
+
 HAL::ResourceAddress HAL::RaytracingAccelerationStructure::get_gpu_address() const
 {
+	if (!cur_buffer)
+		return blas_address;
+
 	return cur_buffer->get_resource_address();
 }
 

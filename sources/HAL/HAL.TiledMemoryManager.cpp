@@ -10,7 +10,45 @@ namespace HAL {
 		size_t begin = Math::AlignDown(offset, 64 * 1024) / (64 * 1024);
 		size_t end = Math::roundUp(offset + size, 64 * 1024) / (64 * 1024) - 1;
 
-		load_tiles_internal(target, { begin,0,0 }, { end,0,0 }, 0, false);
+		PROFILE(L"map_buffer_part");
+
+		// Each run of unmapped tiles gets one heap allocation and one multi-tile entry in `target`, instead of an
+		// allocation and a region per 64 KB tile. tiles[0] still has a per-tile entry (the run's handle sits on its first).
+		auto& row = tiles[0];
+		size_t x = begin;
+		while (x <= end)
+		{
+			if (row[uint3(uint(x), 0, 0)].heap_position.heap)
+			{
+				x++;
+				continue;
+			}
+
+			size_t run_end = x;
+			while (run_end + 1 <= end && !row[uint3(uint(run_end + 1), 0, 0)].heap_position.heap)
+				run_end++;
+			const UINT count = UINT(run_end - x + 1);
+
+			TileHeapPosition run = resource->get_device().get_static_gpu_data().create_tile(tile_heap_type, count);
+
+			for (UINT i = 0; i < count; i++)
+			{
+				auto& tile = row[uint3(uint(x + i), 0, 0)];
+				tile.heap_position.heap = run.heap;
+				tile.heap_position.offset = run.offset + i;
+				tile.heap_position.count = 1;
+				if (i == 0)
+					tile.heap_position.handle = run.handle;
+				mark_tile_mapped(0);
+				on_load(ivec4(uint3(uint(x + i), 0, 0), 0u));
+			}
+
+			ResourceTile whole = row[uint3(uint(x), 0, 0)];
+			whole.heap_position = run;
+			target.add_tile(whole);
+
+			x = run_end + 1;
+		}
 	}
 
 	void TiledResourceManager::load_tile(update_tiling_info& target, uint3 pos, uint storage_index, bool recursive)
@@ -375,6 +413,18 @@ namespace HAL {
 				// the field that's actually meant to index gpu_tiles[].
 				if (tile.storage_index == gpu_tiles.size())
 					gpu_packed_tile = tile;
+				else if (tile.heap_position.count > 1 && tile.heap_position.heap)
+				{
+					// A run of buffer tiles (map_buffer_part): the per-tile entries the single-tile path would have left.
+					ResourceTile one = tile;
+					one.heap_position.count = 1;
+					for (UINT i = 0; i < tile.heap_position.count; i++)
+					{
+						one.pos = tile.pos + ivec3(int(i), 0, 0);
+						one.heap_position.offset = tile.heap_position.offset + i;
+						gpu_tiles[tile.storage_index][one.pos] = one;
+					}
+				}
 				else
 					gpu_tiles[tile.storage_index][tile.pos] = tile;
 			}

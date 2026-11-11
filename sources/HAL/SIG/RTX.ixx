@@ -108,21 +108,37 @@ struct SelectLocal<T>
 		HAL::virtual_gpu_buffer<hit_type>::ptr hitgroup_ids;
 
 
+		// Materials with the same hit library share one collection: the library is cached by its text and macros, so
+		// they differ only in the data their local_addr points at, and the hit record carries that separately.
+		struct library_group
+		{
+			HAL::library_shader::ptr library;	// keeps the `groups` key alive
+			std::wstring name;
+			HAL::StateObject::ptr collection;
+			UINT use_count = 0;
+			bool built = false;
+			bool in_state_object = false;
+		};
+		using group_ptr = std::shared_ptr<library_group>;
+
 		struct material_info
 		{
 			UINT index;
 			TypedHandle<hit_type> handle;
-			std::vector<HAL::StateObject::ptr> collections;
+			group_ptr group;
 		};
 
 
 		std::map< material*, material_info> materials;
 		std::map<material*, material_info> new_materials;
+		// Groups no material uses any more stay until the next full rebuild, so a material switching back finds its
+		// old library already linked.
+		std::map<HAL::library_shader*, group_ptr> groups;
 
-		bool need_recreate = false;
-		// A change that cannot be added to the state object: an export that is already in it was replaced (a material's
-		// hit shader reloaded). New materials alone are added to the existing object (add_pending_materials).
-		bool need_full_rebuild = false;
+		std::atomic<bool> need_recreate = false;
+		// A material already in the state object moved to a hit library that is not linked yet (its shader was
+		// regenerated). New materials alone are added to the existing object (add_pending_materials).
+		std::atomic<bool> need_full_rebuild = false;
 		std::mutex m;
 
 		void init_collection(HAL::StateObjectDesc& desc)
@@ -136,119 +152,141 @@ struct SelectLocal<T>
 		UINT get_index(material* mat)
 		{
 
-			material_info* info = nullptr;
-			//init_material(mat);
-			auto it = materials.find(mat);
+			std::lock_guard<std::mutex> g(m);
 
-			if (it == materials.end())
+			if (auto it = materials.find(mat); it != materials.end())
+				return static_cast<UINT>(it->second.handle.get_offset());
+			if (auto it = new_materials.find(mat); it != new_materials.end())
+				return static_cast<UINT>(it->second.handle.get_offset());
+			return 0;
+		}
+
+		// Under the lock.
+		group_ptr join_group(material* mat)
+		{
+			auto& group = groups[mat->raytracing_lib.operator->()];
+			if (!group)
 			{
-				
-				info = &new_materials[mat];
+				group = std::make_shared<library_group>();
+				group->library = mat->raytracing_lib;
+				group->name = std::wstring(L"lib_") + std::to_wstring(ids.get());
 			}
-			else
-				info = &materials[mat];
-
-			return static_cast<UINT>(info->handle.get_offset());
+			group->use_count++;
+			return group;
 		}
 
-		// (Re)build the per-material collections from the material's current
-		// raytracing_lib. Called on first init and again on every material change
-		// (shader hot-reload) so the rebuilt DXR state object binds the new hit shader.
-		// The collections themselves: a driver compile each, and no shared state touched, so several can be made at once.
-		std::vector<HAL::StateObject::ptr> make_material_collections(material* mat)
+		// Under the lock.
+		void leave_group(group_ptr& group)
 		{
-			std::vector<HAL::StateObject::ptr> result;
-
-			auto init_part = [&](auto& pass) {
-				auto collection = pass.init_for_material(*this, mat);
-
-				if (collection)
-				{
-					result.push_back(collection);
-				}
-			};
-
-			(init_part(std::get<Passes>(passes)), ...);
-			return result;
+			if (group)
+				group->use_count--;
+			group.reset();
 		}
 
-		void build_material_collections(material* mat, material_info& e)
+		// One collection with the exports and hit groups of every per-material pass. A driver compile, and only the
+		// group's library and name are read, which never change, so several are made at once without the lock.
+		HAL::StateObject::ptr make_group_collection(const library_group& group)
 		{
-			e.collections = make_material_collections(mat);
+			HAL::StateObjectDesc collection;
+			collection.type = StateObjectType::Collection;
+			init_collection(collection);
+
+			HAL::LibraryObject lib;
+			lib.library = group.library;
+
+			(std::get<Passes>(passes).add_library_exports(*this, lib, collection, group.name), ...);
+
+			if (collection.hit_groups.empty() || !lib.library)
+				return nullptr;
+
+			collection.libraries.emplace_back(lib);
+			return std::make_shared<HAL::StateObject>(collection);
 		}
 
-		// The collections of the materials added since the last update(), all at once on the thread pool. Done here,
+		// The collections of the groups created since the last update(), all at once on the thread pool. Done here,
 		// not in init_material(): that runs while a material loads, under this lock, so every material waited for the
 		// previous one's compile.
 		void build_pending_collections()
 		{
 			PROFILE(L"rtx_build_pending_collections");
 
-			std::vector<material*> pending;
+			std::vector<group_ptr> pending;
 			{
 				std::lock_guard<std::mutex> g(m);
-				for (auto& [mat, info] : new_materials)
-					if (info.collections.empty())
-						pending.push_back(mat);
+				for (auto& [lib, group] : groups)
+					if (!group->built && group->use_count > 0)
+						pending.push_back(group);
 			}
 
 			if (pending.empty())
 				return;
 
-			std::vector<std::vector<HAL::StateObject::ptr>> built(pending.size());
+			std::vector<HAL::StateObject::ptr> built(pending.size());
 			std::vector<std::future<void>> tasks;
 			tasks.reserve(pending.size());
 			for (size_t i = 0; i < pending.size(); i++)
 				tasks.emplace_back(thread_pool::get().enqueue(TaskOptions{ TaskPriority::HIGH }, [this, &pending, &built, i]()
 				{
-					built[i] = make_material_collections(pending[i]);
+					{
+						PROFILE(L"rtx_build_group");
+						built[i] = make_group_collection(*pending[i]);
+					}
 				}));
 			for (auto& task : tasks)
 				task.wait();
 
 			std::lock_guard<std::mutex> g(m);
 			for (size_t i = 0; i < pending.size(); i++)
-				if (auto it = new_materials.find(pending[i]); it != new_materials.end())
-					it->second.collections = std::move(built[i]);
+			{
+				pending[i]->collection = std::move(built[i]);
+				pending[i]->built = true;
+			}
 		}
 
 		void init_material(material* mat)
 		{
 			std::lock_guard<std::mutex> g(m);
-			auto it = materials.find(mat);
 
-			if (it == materials.end())
-			{
-				mat->wshader_name	=std::wstring(L"material_") + std::to_wstring(ids.get());
+			if (materials.contains(mat) || new_materials.contains(mat))
+				return;
 
-				auto& e = new_materials[mat];
-				e.handle = hitgroup_ids->allocate(sizeof...(Passes));
+			auto& e = new_materials[mat];
+			e.handle = hitgroup_ids->allocate(sizeof...(Passes));
+			// Its group's collection is built by update() (build_pending_collections), together with the others.
+			e.group = join_group(mat);
 
-				// Its collections are built by update() (build_pending_collections), together with the others.
+			need_recreate = true;
 
+			mat->on_change.register_handler(this, [this, mat]() {
+				std::lock_guard<std::mutex> g(m);
 
-				//	new_materials[mat] = (UINT)(materials.size() + new_materials.size());
+				const bool added = materials.contains(mat);
+				auto& owner = added ? materials : new_materials;
+				auto it = owner.find(mat);
+				if (it == owner.end())
+					return;
+				material_info& info = it->second;
+
+				// The same library is the same code (it is cached by text and macros), so the group stays. A regenerate
+				// can still move local_addr without going through update_material(), hence the rewrite below.
+				if (!info.group || info.group->library.operator->() != mat->raytracing_lib.operator->())
+				{
+					leave_group(info.group);
+					info.group = join_group(mat);
+				}
+
+				if (added && info.group->in_state_object)
+				{
+					write_material_ids(mat, info);
+					return;
+				}
+
+				// One already in the state object whose new library is not linked yet: that takes a full rebuild.
+				if (added)
+					need_full_rebuild = true;
 
 				need_recreate = true;
-
-				mat->on_change.register_handler(this, [this, mat]() {
-					std::lock_guard<std::mutex> g(m);
-
-					// Material may still be pending in new_materials or already merged into
-					// materials â rebuild its collections so the next compile() picks up the
-					// reloaded hit shader.
-					auto it = materials.find(mat);
-					material_info& info = (it != materials.end()) ? it->second : new_materials[mat];
-					build_material_collections(mat, info);
-
-					// One already in the state object cannot be replaced by adding, so that takes a full rebuild.
-					if (it != materials.end())
-						need_full_rebuild = true;
-
-					need_recreate = true;
-					});
-			}
-
+				});
 		}
 
 		void init()
@@ -284,10 +322,19 @@ struct SelectLocal<T>
 				(init_part(std::get<Raygens>(raygen)), ...);
 			}
 
-			for (auto& [mat, info] : materials)
+			for (auto it = groups.begin(); it != groups.end();)
 			{
-				for (auto& c : info.collections)
-					raytracingPipeline.collections.emplace_back(c);
+				if (it->second->use_count == 0)
+				{
+					it = groups.erase(it);
+					continue;
+				}
+
+				library_group& group = *it->second;
+				group.in_state_object = group.built && group.collection;
+				if (group.in_state_object)
+					raytracingPipeline.collections.emplace_back(group.collection);
+				++it;
 			}
 			m_dxrStateObject = std::make_shared<HAL::StateObject>(raytracingPipeline);
 			m_dxrStateObject->event_change.register_handler(this, [this]() {
@@ -301,20 +348,12 @@ struct SelectLocal<T>
 
 		void update_material(material* mat)
 		{
-			auto& info = materials[mat];
+			std::lock_guard<std::mutex> g(m);
 
-			auto elem = info.handle.map();
-			int i = 0;
-			auto init_part = [&](auto& e) {
-
-				e.init_material_ids(m_dxrStateObject, mat, elem[i]);
-				i++;;
-			};
-
-			(init_part(std::get<Passes>(passes)), ...);
-
-			info.handle.write(0, elem);
-
+			// One still in new_materials has nothing written yet: add_pending_materials() writes its records, with
+			// the local_addr it has then.
+			if (auto it = materials.find(mat); it != materials.end())
+				write_material_ids(mat, it->second);
 		}
 
 		void init_ids()
@@ -340,29 +379,19 @@ struct SelectLocal<T>
 
 
 			for (auto& [mat, info] : materials)
-			{
-				auto elem = info.handle.map();
-				int i = 0;
-				auto init_part = [&](auto& e) {
-
-					e.init_material_ids(m_dxrStateObject, mat, elem[i]);
-					//	elem[i].id = e.get_group_id(m_dxrStateObject, mat);
-					i++;;
-				};
-
-				(init_part(std::get<Passes>(passes)), ...);
-
-				info.handle.write(0, elem);
-			}
+				write_material_ids(mat, info);
 		}
 
+		// Under the lock.
 		void write_material_ids(material* mat, material_info& info)
 		{
+			const std::wstring* group_name = (info.group && info.group->in_state_object) ? &info.group->name : nullptr;
+
 			auto elem = info.handle.map();
 			int i = 0;
 			auto init_part = [&](auto& e) {
 
-				e.init_material_ids(m_dxrStateObject, mat, elem[i]);
+				e.init_material_ids(m_dxrStateObject, group_name, mat->local_addr, elem[i]);
 				i++;
 			};
 
@@ -371,22 +400,30 @@ struct SelectLocal<T>
 			info.handle.write(0, elem);
 		}
 
-		// The materials added since the last update() go into the existing state object (HAL::StateObject::add: only
+		// The groups built since the last update() go into the existing state object (HAL::StateObject::add: only
 		// their collections are compiled, and the identifiers already handed out stay valid), instead of building
-		// the passes' collections and every material's again.
+		// the passes' collections and every group's again. A material moves to `materials` once its group is built;
+		// one whose group is created while this update builds stays pending for the next.
 		void add_pending_materials()
 		{
 			PROFILE(L"rtx_add_pending_materials");
 
 			std::lock_guard<std::mutex> g(m);
 
-			std::vector<material*> added;
 			std::list<HAL::StateObject::ptr> collections;
-			for (auto& [mat, info] : new_materials)
+			std::set<library_group*> landed;
+			bool unbuilt = false;
+			for (auto& [lib, group] : groups)
 			{
-				added.push_back(mat);
-				for (auto& c : info.collections)
-					collections.push_back(c);
+				if (group->use_count == 0)
+					continue;
+				if (!group->built)
+					unbuilt = true;
+				else if (group->collection && !group->in_state_object)
+				{
+					collections.push_back(group->collection);
+					landed.insert(group.get());
+				}
 			}
 
 			if (!collections.empty())
@@ -397,15 +434,30 @@ struct SelectLocal<T>
 					std::lock_guard<std::mutex> g(m);
 					init_ids();
 					});
+				for (library_group* group : landed)
+					group->in_state_object = true;
 			}
 
-			materials.merge(new_materials);
-			new_materials.clear();
-			need_recreate = false;
+			std::set<material*> added;
+			for (auto it = new_materials.begin(); it != new_materials.end();)
+			{
+				if (it->second.group && !it->second.group->built)
+				{
+					++it;
+					continue;
+				}
+				added.insert(it->first);
+				materials.insert(new_materials.extract(it++));
+			}
 
-			PROFILE(L"rtx_write_material_ids");
-			for (material* mat : added)
-				write_material_ids(mat, materials[mat]);
+			need_recreate = unbuilt || !new_materials.empty();
+
+			{
+				PROFILE(L"rtx_write_material_ids");
+				for (auto& [mat, info] : materials)
+					if (added.contains(mat) || landed.contains(info.group.get()))
+						write_material_ids(mat, info);
+			}
 		}
 
 		 void update()
@@ -414,18 +466,14 @@ struct SelectLocal<T>
 			{
 				build_pending_collections();
 
-				if (need_full_rebuild)
+				if (need_full_rebuild.exchange(false))
 				{
-					materials.merge(new_materials);
-					new_materials.clear();
-					need_recreate = false;
-					need_full_rebuild = false;
-
 					PROFILE(L"rtx_full_rebuild");
 					init();
 				}
-				else
-					add_pending_materials();
+
+				// After a full rebuild this only moves the pending materials: compile() linked every built group.
+				add_pending_materials();
 			}
 
 		}
@@ -600,56 +648,44 @@ struct SelectLocal<T>
 			m_Collection = std::make_shared<HAL::StateObject>(raytracingPipeline);
 		}
 
+		// This pass's exports and hit group, into the one collection of a hit library shared by all per-material
+		// passes (RTXPSO::make_group_collection).
 		template<class RTX>
-		HAL::StateObject::ptr init_for_material(RTX& rtx, RTX::material* mat)
+		void add_library_exports(RTX& rtx, HAL::LibraryObject& lib, HAL::StateObjectDesc& collection, const std::wstring& prefix)
 		{
 			if constexpr (Desc::per_material)
 			{
-				HAL::StateObjectDesc raytracingPipeline;
-				raytracingPipeline.type = StateObjectType::Collection;
-				rtx.init_collection(raytracingPipeline);
-
-				HAL::LibraryObject lib;
-				lib.library = mat->raytracing_lib;
-
-				// Export name must be unique per (material, pass): several per-material
-				// passes (ColorPass, ColorShadowPass, ...) are separate collections all
-				// linked into MainRTX, so exporting each under the bare wshader_name
-				// would collide. Desc::hit_name differs per pass, so append it.
-				std::wstring hit_export = mat->wshader_name + std::wstring(Desc::hit_name);
+				// Export names must be unique per (library, pass): the group's exports are all linked into MainRTX
+				// next to the other groups', so the bare function names would collide. Desc::hit_name differs per
+				// pass, so append it.
+				std::wstring hit_export = prefix + std::wstring(Desc::hit_name);
 				lib.export_shader(/*new*/ hit_export, /*was*/ std::wstring(Desc::hit_name));
 
 				HAL::HitGroup group;
 
 				group.local_root = rtx.m_local_sig;
-				group.name = mat->wshader_name + std::wstring(Desc::name);
+				group.name = prefix + std::wstring(Desc::name);
 				group.closest_hit_shader = hit_export;
 				group.type = HAL::HitGroupType::TRIANGLES;
 
-				// Same per-(material,pass) rename as the closest-hit export above --
+				// Same per-(library,pass) rename as the closest-hit export above --
 				// empty when this pass doesn't declare an any_hit stage at all (see
 				// Desc::any_hit_name's own comment).
 				if (!Desc::any_hit_name.empty())
 				{
-					std::wstring any_hit_export = mat->wshader_name + std::wstring(Desc::any_hit_name);
+					std::wstring any_hit_export = prefix + std::wstring(Desc::any_hit_name);
 					lib.export_shader(/*new*/ any_hit_export, /*was*/ std::wstring(Desc::any_hit_name));
 					group.any_hit_shader = any_hit_export;
 				}
 
-				raytracingPipeline.hit_groups.emplace_back(group);
-
-				raytracingPipeline.libraries.emplace_back(lib);
-
-				return std::make_shared<HAL::StateObject>(raytracingPipeline);
-
-				//	get_material_id(mat);
+				collection.hit_groups.emplace_back(group);
 			}
-			else
-				return nullptr;
 		}
 
-		template<class M, class T>
-		void init_material_ids(HAL::StateObject::ptr& state, M* mat, T& hit)
+		// group_name is null while the material's hit library is not in `state`: a null identifier runs no shader,
+		// where looking up a name the object does not have fails (D3D12 returns no identifier at all).
+		template<class T>
+		void init_material_ids(HAL::StateObject::ptr& state, const std::wstring* group_name, uint local_addr, T& hit)
 		{
 			if constexpr (!Desc::per_material)
 			{
@@ -658,8 +694,8 @@ struct SelectLocal<T>
 			}
 			else
 			{
-				hit.id = state->get_shader_id(mat->wshader_name + std::wstring(Desc::name));
-				hit.local_addr = (mat->local_addr);// compiled_material_info;
+				hit.id = group_name ? state->get_shader_id(*group_name + std::wstring(Desc::name)) : HAL::shader_identifier{};
+				hit.local_addr = local_addr;
 			}
 
 		}

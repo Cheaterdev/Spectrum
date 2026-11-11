@@ -55,6 +55,9 @@ export namespace materials
 		virtual bool has_vertex_front_end() const { return false; }
 
         uint get_id();
+		// The id only means something within one run (the gather routes draws by it): a loaded pipeline is given a
+		// new one by PipelineManager, the id in its file was handed out in another session and can repeat.
+		void set_id(uint v) { id = v; }
 	private:
 
         SERIALIZE()

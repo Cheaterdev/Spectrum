@@ -477,6 +477,38 @@ Same two actions, same asset. These numbers replace the guesses made before the 
 - `asset_load_partitions`: 3.2 s of thread time over 536 assets (was 1.5 s). Texture assets create their streamed
   texture there and all take the texture streamer's mutex to load roots; the rise is contention, not wall time.
 
+## Batch 2 results (measured after tasks 1.5, 1.7, 1.8, L.5, revised L.2 were built)
+
+Same two actions, same asset, assets saved so the materials load without regenerating.
+
+| What | Batch 1 | Batch 2 | Verdict |
+|---|---|---|---|
+| `drop_load_asset` | 2464 ms | 1430 ms | L.2 works; target was 1200 ms |
+| PSO creations during the drop | 1734, 15.0 s of thread time | 431, 5.6 s | lazy variants; still about 13 ms each under load |
+| `mesh_init_gpu` | 397 ms | 430 ms | unchanged; `blas_create_buffers` is 404 ms of it (1591 × 0.25 ms): L.4b confirmed |
+| `quanta_acquire_many` | 539 ms | 504 ms | L.5 missed its target, see below |
+| `RTX update` after the drop | 298 ms | 207 ms | 396 collections, 5.3 s of thread time in `state_object_create` |
+| `mesh_load_quanta_partition` | 150 ms | 192 ms | unchanged (L.6 only added scopes) |
+
+**`acquire_many` (L.5): the two costs moved, they did not shrink.**
+- `quanta_read_stored_pages`: 253 ms. One task per file means one thread reads every root page of the asset.
+- `quanta_allocate_pool`: 177 ms for one range. The cost is in mapping the range's tiles, not in the allocator.
+- `update_tile_mappings`: 3277 calls in the add-instance capture and 4916 in the drop: still one native call per
+  small update.
+
+**Ray tracing (R.1 finished).** 132 pending materials have 69 distinct hit libraries (`workdir/rtx_libs.temp`). R.2
+takes the collections from 396 (132 × 3 passes) to 69.
+
+**New, from this capture.**
+- The mesh asset's own `asset_deserialize` is 620 ms on one thread, and it only starts 618 ms into the drop, after
+  its dependencies. Not split into scopes yet.
+
+**A regression found on the way (commit "fast mesh loading", fixed).** Loaded materials stopped regenerating, even
+with a stale saved pipeline: the decision compared header versions, and a freshly loaded header is at version 0 like
+a material that was never generated. Translucent thin meshes (wires, ropes, poles) vanished. `load_partitions` now
+sets `need_regenerate_material` unless both saved header hashes match. A material file saved before the hashes
+existed regenerates on every load until it is saved again.
+
 ## Phase L: asset loading time
 
 Independent of the streaming phases. Tasks L.1 to L.4 touch no streaming code and go first, because they are backed by

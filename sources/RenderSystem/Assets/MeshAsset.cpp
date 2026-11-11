@@ -92,6 +92,7 @@ void MeshAsset::init_gpu()
 
 		CommandList::ptr list;
 		size_t in_list = 0;
+		RaytracingAccelerationStructure::BlasStorage storage(RenderSystem::get().device());
 
 		auto flush = [&]()
 		{
@@ -125,7 +126,7 @@ void MeshAsset::init_gpu()
 			geometryDesc.Flags = HAL::GeometryFlags::OPAQUE;
 			std::vector<GeometryDesc > descs;
 			descs.push_back(geometryDesc);
-			mesh.ras = std::make_shared<RaytracingAccelerationStructure>(RenderSystem::get().device(), descs, list);
+			mesh.ras = std::make_shared<RaytracingAccelerationStructure>(RenderSystem::get().device(), descs, list, &storage);
 
 			if (++in_list >= BlasPerList)
 				flush();

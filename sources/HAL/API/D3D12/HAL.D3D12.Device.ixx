@@ -49,6 +49,9 @@ export namespace HAL {
             RaytracingPrebuildInfo calculateBuffers(const RaytracingBuildDescBottomInputs& desc);
             RaytracingPrebuildInfo calculateBuffers(const RaytracingBuildDescTopInputs& desc);
 
+            // A BLAS is addressed by a plain GPU address, so several can share one buffer.
+            static constexpr bool shares_blas_storage() noexcept { return true; }
+
         private:
             void dump_dred();
         };

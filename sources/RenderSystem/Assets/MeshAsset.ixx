@@ -239,14 +239,27 @@ export{
 		SERIALIZE()
 		{
 			SAVE_PARENT(Asset);
-			ar& NVP(primitive);
-			ar& NVP(meshes);
-			ar& NVP(materials);
-			ar& NVP(local_transform);
-			ar& NVP(root_node);
+			{
+				PROFILE(L"mesh_ser_primitive");
+				ar& NVP(primitive);
+			}
+			{
+				PROFILE(L"mesh_ser_parts");
+				ar& NVP(meshes);
+			}
+			{
+				PROFILE(L"mesh_ser_materials");
+				ar& NVP(materials);
+			}
+			{
+				PROFILE(L"mesh_ser_nodes");
+				ar& NVP(local_transform);
+				ar& NVP(root_node);
+			}
 
 
 			{
+				PROFILE(L"mesh_ser_gpu_buffers");
 				ar& NVP(buffer);
 				ar& NVP(vertex_buffer_view);
 				ar& NVP(index_buffer_view);
@@ -260,12 +273,15 @@ export{
 
 			IF_LOAD()
 			{
-				root_node.iterate([this](MeshNode* node)
-					{
-						nodes.push_back(node);
+				{
+					PROFILE(L"mesh_ser_collect_nodes");
+					root_node.iterate([this](MeshNode* node)
+						{
+							nodes.push_back(node);
 
-						return true;
-					});
+							return true;
+						});
+				}
 
 				init_gpu();
 			}

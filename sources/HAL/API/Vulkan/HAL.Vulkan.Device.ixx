@@ -221,6 +221,10 @@ export namespace HAL
 
             RaytracingPrebuildInfo calculateBuffers(const RaytracingBuildDescBottomInputs& desc);
             RaytracingPrebuildInfo calculateBuffers(const RaytracingBuildDescTopInputs& desc);
+
+            // The acceleration-structure object is made over [offset, end of the buffer) (acceleration_structure_at in
+            // HAL.Vulkan.CommandList.cpp), so structures cannot be cut out of a larger buffer.
+            static constexpr bool shares_blas_storage() noexcept { return false; }
         };
     }
 }

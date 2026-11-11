@@ -2372,8 +2372,13 @@ namespace HAL
 
 	void CommandList::update_tilings(HAL::update_tiling_info&& info)
 	{
+		// Every virtual buffer hands one in each frame, changed or not.
+		if (info.tiles.empty() && info.pending_free.empty() && !info.source)
+			return;
+
+		Resource* resource = info.resource;
 		tile_updates.emplace_back(std::move(info));
-		track_object(*(info.resource));
+		track_object(*resource);
 	}
 
 	void CommandList::clear_uav(const Handles::UAV& h, std::optional<vec4> ClearColor, bool whole_resource)

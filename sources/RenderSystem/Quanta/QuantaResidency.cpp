@@ -276,12 +276,52 @@ namespace Quanta
 				if (!fetch.mesh->file.empty())
 					by_file[fetch.mesh->file].push_back(&fetch);
 
-			std::vector<std::future<void>> tasks;
-			tasks.reserve(by_file.size());
+			// A file's pages, in file order, are cut into contiguous chunks that are read by tasks of their own (each
+			// opens the file itself): one thread was reading the whole asset.
+			constexpr uint64_t MinChunkBytes = 8ull * 1024 * 1024;
+			const uint64_t max_chunks = std::max(1u, std::thread::hardware_concurrency());
+
+			struct Chunk
+			{
+				const std::filesystem::path* file;
+				std::span<PageFetch* const> fetches;
+			};
+			std::vector<Chunk> chunks;
 			for (auto& entry : by_file)
-				tasks.emplace_back(thread_pool::get().enqueue(TaskOptions{ TaskPriority::HIGH }, [&entry]()
+			{
+				auto& list = entry.second;
+				std::sort(list.begin(), list.end(), [](const PageFetch* a, const PageFetch* b)
 				{
-					read_stored_pages(entry.first, entry.second);
+					return a->mesh->pages[a->page].file_offset < b->mesh->pages[b->page].file_offset;
+				});
+
+				uint64_t total = 0;
+				for (const PageFetch* fetch : list)
+					total += fetch->mesh->pages[fetch->page].file_size;
+
+				const uint64_t count = std::clamp<uint64_t>(total / MinChunkBytes, 1, std::min<uint64_t>(max_chunks, list.size()));
+				const uint64_t target = (total + count - 1) / count;
+
+				size_t begin = 0;
+				uint64_t bytes = 0;
+				for (size_t i = 0; i < list.size(); i++)
+				{
+					bytes += list[i]->mesh->pages[list[i]->page].file_size;
+					if (bytes >= target || i + 1 == list.size())
+					{
+						chunks.push_back({ &entry.first, std::span<PageFetch* const>(list.data() + begin, i + 1 - begin) });
+						begin = i + 1;
+						bytes = 0;
+					}
+				}
+			}
+
+			std::vector<std::future<void>> tasks;
+			tasks.reserve(chunks.size());
+			for (auto& chunk : chunks)
+				tasks.emplace_back(thread_pool::get().enqueue(TaskOptions{ TaskPriority::HIGH }, [&chunk]()
+				{
+					read_stored_pages(*chunk.file, chunk.fetches);
 				}));
 			for (auto& task : tasks)
 				task.wait();

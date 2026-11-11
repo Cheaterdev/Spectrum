@@ -287,7 +287,11 @@ materials::Pipeline::ptr materials::PipelineManager::get_pipeline(Pipeline::ptr 
 
 		auto& pip = pipelines[orig->hash];
 		if (!pip)
+		{
+			// Same numbering as the pipelines made in this run, below.
+			orig->set_id((UINT)pipelines.size());
 			pip = orig;
+		}
 
 		result = pip;
 	}
