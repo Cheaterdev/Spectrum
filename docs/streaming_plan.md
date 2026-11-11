@@ -509,6 +509,23 @@ a material that was never generated. Translucent thin meshes (wires, ropes, pole
 sets `need_regenerate_material` unless both saved header hashes match. A material file saved before the hashes
 existed regenerates on every load until it is saved again.
 
+## Batch 3 results (measured after R.2, L.4b, the `acquire_many` rework and run-based tile mapping were built)
+
+| What | Batch 2 | Batch 3 | Verdict |
+|---|---|---|---|
+| `drop_load_asset` | 1430 ms | 1252 ms | target 1200 ms |
+| RT collections built | 396, 5.3 s of thread time | 69, 2.2 s | R.2 works; `rtx_build_pending_collections` 198 ms → 82 ms, still inside the frame (R.3) |
+| `mesh_init_gpu` | 430 ms | 280 ms | recording is now about 47 ms; 232 ms is `mesh_init_gpu_wait`, the load thread waiting for the GPU builds |
+| `quanta_acquire_many` | 504 ms | 206 ms | target 150 ms; 10 read tasks of 85 to 100 ms each, so the read is now bound by per-page seeks and reads |
+| `update_tile_mappings` | 4916 calls, one of 154 ms | 1810 calls, one of 83 ms | run-based mapping works |
+| Mesh `asset_deserialize` | 620 ms | 470 ms | `mesh_ser_parts` is 185 ms of it (1591 parts) |
+| `mesh_load_quanta_partition` | 192 ms | 160 ms | unchanged |
+
+**Second regression from commit "fast mesh loading" (fixed).** A pipeline's `id` is saved in the material file and was
+reused on load. Ids are only unique within the run that handed them out, so loaded pipelines could share one, and the
+gather (which routes draws by pipeline id) dropped one material's draws: the "thin meshes missing, at random" bug.
+`PipelineManager::get_pipeline` now gives a loaded pipeline a fresh id.
+
 ## Phase L: asset loading time
 
 Independent of the streaming phases. Tasks L.1 to L.4 touch no streaming code and go first, because they are backed by

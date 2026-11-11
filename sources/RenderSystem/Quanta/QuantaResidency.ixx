@@ -113,16 +113,8 @@ export namespace Quanta
 		// file one page at a time. Sorted by (mesh, page) for lookup; guarded by m; empty outside an acquire_many().
 		std::vector<PageFetch> prefetched;
 
-		// The flags of page ids changed since the last prepare(). Ranges (a mesh's whole run of page ids, zeroed when it
-		// is acquired) are written first, then the single entries, so a single recorded after a range wins over it.
-		// A range drops the singles under it: they belong to whoever held those ids before.
-		struct FlagWrite
-		{
-			uint32_t first;
-			std::vector<uint32_t> dwords;   // two per page id
-		};
-		std::vector<FlagWrite> flag_writes;
-		std::vector<std::pair<uint32_t, std::array<uint32_t, 2>>> flag_singles;   // page id, its two dwords
+		// The feedback buffers and their compaction (shared with other streaming clients); guarded by m.
+		std::unique_ptr<Streaming::GpuFeedback> gpu_feedback;
 
 		void release(Resident& resident);
 		void find_parents(Resident& resident);
@@ -144,12 +136,8 @@ export namespace Quanta
 		HAL::virtual_gpu_buffer<uint> page_slots;
 
 		// What the Quanta draw reports (QuantaFeedback in meshrender.prism), two dwords per page id. It stays on the
-		// GPU: prepare() compacts it into stream_out, which is what is read back.
-		HAL::StructuredBufferView<uint> feedback;
-
-		// Per page id, two dwords the streamer writes: Streaming::Flag* bits, and the epoch the page was shown at.
-		HAL::StructuredBufferView<uint> page_flags;
-		HAL::StructuredBufferView<uint> stream_out;
+		// GPU: prepare() compacts it, and only the short lists are read back (Streaming::GpuFeedback).
+		HAL::StructuredBufferView<uint>& feedback() { return gpu_feedback->feedback(); }
 
 		Residency();
 		~Residency() override;

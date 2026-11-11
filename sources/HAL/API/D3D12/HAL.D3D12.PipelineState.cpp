@@ -197,6 +197,7 @@ namespace HAL
     void StateObject::on_change()
     {
         tracked_info.reset(new API::TrackedPipeline());
+        identifiers_kept = false;
 
         // Tier 1.1 can extend a state object (AddToStateObject), which needs this flag on it and, for an executable
         // one, on every collection it imports. So every state object is made with it where the device allows.
@@ -247,6 +248,7 @@ namespace HAL
                 IID_PPV_ARGS(&tracked_info->m_StateObject)));
             TEST(device, tracked_info->m_StateObject.As(&stateObjectProperties));
             ASSERT(stateObjectProperties);
+            identifiers_kept = true;
             event_change();
             return;
         }

@@ -242,6 +242,9 @@ export namespace HAL
 		static StateObjectDesc extended(const StateObjectDesc& base, const std::list<std::shared_ptr<StateObject>>& added);
 		StateObject(std::shared_ptr<StateObject> base, std::list<std::shared_ptr<StateObject>> added);
 
+		// Set by on_change() when it extended `base` in place, so the identifiers of what `base` exports are unchanged.
+		bool identifiers_kept = false;
+
 	public:
 
 		const StateObjectDesc desc;
@@ -254,10 +257,14 @@ export namespace HAL
 		HAL::shader_identifier get_shader_id(std::wstring_view name);
 
 		// A state object that is `base` plus these collections. `base` stays valid and in use, and the shader
-		// identifiers of everything already in it are the same in the result, so only the new exports' identifiers
-		// need fetching. D3D12 needs a raytracing pipeline (not a collection) made on a device with Tier 1.1; other
-		// cases build the whole object from the merged description.
+		// identifiers of everything already in it are the same in the result when keeps_identifiers(), so only the new
+		// exports' identifiers need fetching. D3D12 needs a raytracing pipeline (not a collection) made on a device
+		// with Tier 1.1; other cases build the whole object from the merged description.
 		static ptr add(const ptr& base, const std::list<ptr>& collections);
+
+		// False when add() built the whole object instead (Vulkan, or D3D12 without Tier 1.1): every identifier the
+		// base handed out must be fetched again from this object.
+		bool keeps_identifiers() const { return identifiers_kept; }
 	};
 
 	template<class T>

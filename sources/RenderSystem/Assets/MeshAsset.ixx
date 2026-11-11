@@ -110,6 +110,21 @@ export{
 
 	};
 
+	// What a part keeps of a range of the asset's buffer when nothing binds it: the buffer and the offsets, no descriptors.
+	// It saves exactly as the StructuredBufferView it replaces (resource, then desc), so files saved with a view still load.
+	struct BufferRange
+	{
+		HAL::Buffer::ptr resource;
+		HAL::StructuredBufferViewDesc desc = {};
+
+	private:
+		SERIALIZE()
+		{
+			ar& NVP(resource);
+			ar& NVP(desc);
+		}
+	};
+
 	class CompiledMeshInfo
 	{
 	public:
@@ -117,7 +132,8 @@ export{
 
 		HAL::StructuredBufferView<Table::Meshes::mesh_vertex_input> vertex_buffer_view;
 		HAL::StructuredBufferView<UINT32> index_buffer_view;
-	HAL::StructuredBufferView<Table::Meshes::Meshlet> meshet_view;
+	// Only its offsets are used (instance setup), so no descriptors are made for it on load.
+		BufferRange meshet_view;
 		// Original clusters at the front of meshet_view; the rest are LOD levels.
 		uint base_meshlet_count = 0;
 		// This mesh's MeshletGroup ranges within MeshAsset::meshlet_groups.
@@ -144,12 +160,24 @@ export{
 	private:
 		SERIALIZE()
 		{
-			ar& NVP(primitive);
+			{
+				PROFILE(L"mesh_part_primitive");
+				ar& NVP(primitive);
+			}
 			ar& NVP(material);
 			ar& NVP(node_index);
-			ar& NVP(vertex_buffer_view);
-			ar& NVP(index_buffer_view);
-			ar& NVP(meshet_view);
+			{
+				PROFILE(L"mesh_part_vertex_view");
+				ar& NVP(vertex_buffer_view);
+			}
+			{
+				PROFILE(L"mesh_part_index_view");
+				ar& NVP(index_buffer_view);
+			}
+			{
+				PROFILE(L"mesh_part_meshlet_range");
+				ar& NVP(meshet_view);
+			}
 			ar& NVP(base_meshlet_count);
 			ar& NVP(draw_arguments);
 			ar& NVP(dispatch_mesh_arguments);
@@ -232,10 +260,19 @@ export{
 
 		void init_gpu();
 
+		// The BLAS builds are submitted when the asset loads and not waited for there. Whatever hands a BLAS to a TLAS
+		// build (MeshAssetInstance::update_rtx_instance) waits here first, which is instant once the GPU is done.
+		void wait_for_blas();
+
 		// Replaces the BLAS of every part that has more triangles than Quanta::rt_triangle_budget() with one built from a
 		// cut of its Quanta data. Needs `quanta`, so it runs after that is filled (import, or load_partitions).
 		void build_rt_proxies();
 	private:
+		HAL::FenceWaiter blas_ready;
+		std::atomic<bool> blas_pending = false;
+		// Structures replaced by build_rt_proxies while their build may still run on the GPU.
+		std::vector<HAL::RaytracingAccelerationStructure::ptr> retired_ras;
+
 		SERIALIZE()
 		{
 			SAVE_PARENT(Asset);

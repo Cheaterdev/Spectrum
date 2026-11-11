@@ -133,10 +133,19 @@ void MeshAsset::init_gpu()
 		}
 		flush();
 	}
-	{
-		PROFILE(L"mesh_init_gpu_wait");
-		last.wait();
-	}
+	blas_ready = last;
+	blas_pending = !!last;
+}
+
+void MeshAsset::wait_for_blas()
+{
+	if (!blas_pending)
+		return;
+
+	PROFILE(L"mesh_wait_blas");
+	blas_ready.wait();
+	retired_ras.clear();
+	blas_pending = false;
 }
 
 void MeshAsset::build_rt_proxies()
@@ -208,6 +217,9 @@ void MeshAsset::build_rt_proxies()
 		descs.push_back(geometryDesc);
 		{
 			PROFILE(L"mesh_rt_proxy_blas");
+			// The full BLAS may still be building (the load does not wait), so it is kept until wait_for_blas().
+			if (mesh.ras)
+				retired_ras.push_back(std::move(mesh.ras));
 			mesh.ras = std::make_shared<RaytracingAccelerationStructure>(device, descs, list);
 			last = list->execute();
 		}
@@ -215,10 +227,11 @@ void MeshAsset::build_rt_proxies()
 		Log::get() << L"Quanta ray tracing: " << name << L" part " << uint32_t(i) << L" uses " << uint32_t(cut.indices.size() / 3) << L" of "
 			<< quanta[i]->original_triangle_count << L" triangles (error " << cut.error << L")" << Log::endl;
 	}
-	{
-		PROFILE(L"mesh_rt_proxy_wait");
-		last.wait();
-	}
+	// The proxies' BLASes are built on the same queue after the full ones, so this fence covers both.
+	blas_ready.combine(last);
+	blas_pending = !!blas_ready;
+	if (!blas_pending)
+		retired_ras.clear();
 }
 
 MeshAsset::MeshAsset(std::wstring file_name, AssetLoadingContext::ptr c)
@@ -433,13 +446,12 @@ MeshAsset::MeshAsset(std::wstring file_name, AssetLoadingContext::ptr c)
 					mesh.index_count * sizeof(UINT32),
 					counterType::NONE
 				});
-			compiled.meshet_view = buffer->create_view<HAL::StructuredBufferView<Table::Meshes::Meshlet>>(
-				RenderSystem::get().device().get_static_gpu_data(),
-				StructuredBufferViewDesc{
-					this->meshlets.desc.offset  + meshlets_offset* sizeof(Table::Meshes::Meshlet),
-					mesh.meshlets.size() * sizeof(Table::Meshes::Meshlet),
-					counterType::NONE
-				});
+			compiled.meshet_view.resource = buffer;
+			compiled.meshet_view.desc = StructuredBufferViewDesc{
+				this->meshlets.desc.offset  + meshlets_offset* sizeof(Table::Meshes::Meshlet),
+				mesh.meshlets.size() * sizeof(Table::Meshes::Meshlet),
+				counterType::NONE
+			};
 
 			compiled.draw_arguments.StartIndexLocation = static_cast<uint>(compiled.index_buffer_view.desc.offset/sizeof(UINT));
 			compiled.draw_arguments.IndexCountPerInstance = mesh.index_count;
@@ -741,6 +753,7 @@ void MeshAssetInstance::update_rtx_instance()
 	if (!RenderSystem::get().device().is_ray_query_supported()) return;
 
 	PROFILE(L"instance_update_rtx");
+	mesh_asset->wait_for_blas();
 	if (!ras_handle) scene->raytrace->allocate(ras_handle, rendering_count);
 
 	if (ras_handle)
@@ -1088,6 +1101,8 @@ void MeshAsset::shutdown()
 
 MeshAsset::~MeshAsset()
 {
+	// The GPU may still be building from this asset's buffers.
+	wait_for_blas();
 	materials.clear();
 }
 

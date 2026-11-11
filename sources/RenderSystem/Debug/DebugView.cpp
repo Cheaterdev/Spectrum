@@ -176,7 +176,7 @@ debug_view::debug_view() : VariableContext(L"Debug View")
 				graphics.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::LIST);
 				// The shader's cut functions take the feedback buffer but never write it here.
 				Slots::Meshes::QuantaShadowFeedback feedback;
-				feedback.GetPages() = Quanta::Residency::get().feedback;
+				feedback.GetPages() = Quanta::Residency::get().feedback();
 				feedback.GetEpoch() = Quanta::Residency::get().epoch();
 				graphics.set(feedback);
 				draw_buckets(bucket_count);

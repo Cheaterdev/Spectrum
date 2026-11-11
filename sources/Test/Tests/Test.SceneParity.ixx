@@ -565,7 +565,7 @@ export namespace Test
 			std::vector<std::future<bool>> pending;
 			std::vector<std::vector<uint>> feedback(residents.size());
 			for (size_t r = 0; r < residents.size(); r++)
-				pending.push_back(list->get_copy().read<uint>(residency.feedback, residents[r]->page_id_base() * 2,
+				pending.push_back(list->get_copy().read<uint>(residency.feedback(),residents[r]->page_id_base() * 2,
 					residents[r]->mesh->pages.size() * 2, [&, r](std::span<uint> s) { feedback[r].assign(s.begin(), s.end()); }));
 			list->execute_and_wait();
 			for (auto& p : pending)

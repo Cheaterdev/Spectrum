@@ -423,6 +423,7 @@ namespace Quanta
 				page.root = e.root != 0;
 				page.file_offset = base_file_offset + e.offset;
 				page.file_size = e.stored_size;
+				page.groups.reserve(e.group_count);
 				for (uint32_t i = 0; i < e.group_count; i++)
 				{
 					uint32_t g = group_ids[e.first_group_id + i];
@@ -446,6 +447,7 @@ namespace Quanta
 				if (at >= table.size() || at + 1 + table[at] > table.size())
 					return false;
 				const uint32_t count = table[at++];
+				mesh.pages[p].parents.reserve(count);
 				for (uint32_t i = 0; i < count; i++)
 				{
 					if (table[at] >= header.page_count)
@@ -520,21 +522,56 @@ namespace Quanta
 			return a->mesh->pages[a->page].file_offset < b->mesh->pages[b->page].file_offset;
 		});
 
-		for (PageFetch* fetch : order)
-		{
-			const Page& source = fetch->mesh->pages[fetch->page];
-			if (source.file_size == 0)
-				continue;
+		// Pages that follow each other closely in the file are read with one call into a scratch buffer and sliced out:
+		// a page at a time was a seek and a small read each. A gap larger than this is cheaper to seek over than to read.
+		constexpr uint64_t MaxGapBytes = 256 * 1024;
+		constexpr uint64_t MaxRunBytes = 64ull * 1024 * 1024;
 
-			fetch->bytes.resize(source.file_size);
-			file.seekg(static_cast<std::streamoff>(source.file_offset));
-			file.read(reinterpret_cast<char*>(fetch->bytes.data()), fetch->bytes.size());
+		std::vector<char> scratch;
+		size_t i = 0;
+		while (i < order.size())
+		{
+			const Page& first = order[i]->mesh->pages[order[i]->page];
+			if (first.file_size == 0)
+			{
+				i++;
+				continue;
+			}
+
+			const uint64_t begin = first.file_offset;
+			uint64_t end = begin + first.file_size;
+			size_t last = i;
+			for (size_t j = i + 1; j < order.size(); j++)
+			{
+				const Page& next = order[j]->mesh->pages[order[j]->page];
+				if (next.file_size == 0)
+					continue;
+				if (next.file_offset > end + MaxGapBytes || next.file_offset + next.file_size - begin > MaxRunBytes)
+					break;
+				end = std::max<uint64_t>(end, next.file_offset + next.file_size);
+				last = j;
+			}
+
+			scratch.resize(end - begin);
+			file.seekg(static_cast<std::streamoff>(begin));
+			file.read(scratch.data(), static_cast<std::streamsize>(scratch.size()));
 			if (!file)
 			{
 				file.clear();
+				i = last + 1;
 				continue;
 			}
-			fetch->ok = true;
+
+			for (size_t j = i; j <= last; j++)
+			{
+				const Page& source = order[j]->mesh->pages[order[j]->page];
+				if (source.file_size == 0)
+					continue;
+				const char* from = scratch.data() + (source.file_offset - begin);
+				order[j]->bytes.assign(reinterpret_cast<const uint8_t*>(from), reinterpret_cast<const uint8_t*>(from) + source.file_size);
+				order[j]->ok = true;
+			}
+			i = last + 1;
 		}
 	}
 

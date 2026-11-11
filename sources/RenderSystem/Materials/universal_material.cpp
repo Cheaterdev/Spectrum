@@ -856,6 +856,13 @@ materials::universal_material::universal_material(MaterialGraph::ptr graph) : in
 	generate_material();
 }
 
+materials::universal_material::~universal_material()
+{
+	// At shutdown RTX can be gone already, and with it every pointer RTXPSO held to this material.
+	if (RTX::is_good())
+		RTX::get().rtx.remove_material(this);
+}
+
 void materials::universal_material::update_rtx()
 {
 	if (!RenderSystem::get().device().is_rtx_supported()) return;

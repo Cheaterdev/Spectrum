@@ -615,4 +615,116 @@ namespace Streaming
 		if (!any)
 			victims.clear();
 	}
+
+	namespace
+	{
+		// The layout of the buffer the GPU compacts the feedback into; must match shaders/streaming/stream_compact.hlsl.
+		constexpr uint32_t RequestBuckets = 16;
+		constexpr uint32_t BucketCapacity = 32;
+		constexpr uint32_t EvictCapacity = 128;
+		constexpr uint32_t OutRequestOverflow = 16;
+		constexpr uint32_t OutEvictCount = 17;
+		constexpr uint32_t OutRequests = 32;
+		constexpr uint32_t OutEvicts = OutRequests + RequestBuckets * BucketCapacity * 2;
+		constexpr uint32_t OutDwords = OutEvicts + EvictCapacity * 2;
+	}
+
+	GpuFeedback::GpuFeedback(HAL::Device& device, uint32_t max_page_ids, std::weak_ptr<Streamer> streamer)
+		: streamer(std::move(streamer))
+		, wanted(device, size_t(max_page_ids) * 2, HAL::counterType::NONE, HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess)
+		, page_flags(device, size_t(max_page_ids) * 2, HAL::counterType::NONE, HAL::ResFlags::ShaderResource)
+		, stream_out(device, OutDwords, HAL::counterType::NONE, HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess)
+	{
+	}
+
+	void GpuFeedback::set_flags(uint32_t page_id, uint32_t flags, uint32_t shown_epoch)
+	{
+		flag_singles.push_back({ page_id, { flags, shown_epoch } });
+	}
+
+	void GpuFeedback::clear_range(uint32_t first, uint32_t count)
+	{
+		const uint32_t end = first + count;
+		std::erase_if(flag_singles, [&](const auto& single) { return single.first >= first && single.first < end; });
+		flag_writes.push_back({ first, std::vector<uint32_t>(size_t(count) * 2, 0) });
+	}
+
+	void GpuFeedback::prepare(HAL::CommandList::ptr& list, const HAL::StructuredBufferView<uint>& page_slots, uint32_t page_count,
+		uint32_t epoch, uint32_t eviction_age)
+	{
+		if (!flag_writes.empty() || !flag_singles.empty())
+		{
+			PROFILE(L"stream_flag_writes");
+
+			// Ranges first, then the singles recorded after them; for the same page id the last single wins, so keep only that.
+			std::stable_sort(flag_singles.begin(), flag_singles.end(), [](const auto& a, const auto& b) { return a.first < b.first; });
+			size_t kept = 0;
+			for (size_t i = 0; i < flag_singles.size(); i++)
+				if (i + 1 == flag_singles.size() || flag_singles[i + 1].first != flag_singles[i].first)
+					flag_singles[kept++] = flag_singles[i];
+			flag_singles.resize(kept);
+
+			const uint64_t base = page_flags.desc.offset;
+			std::vector<HAL::CopyContext::BufferWrite> writes;
+			writes.reserve(flag_writes.size() + flag_singles.size());
+			for (const FlagWrite& write : flag_writes)
+				writes.push_back({ base + uint64_t(write.first) * 2 * sizeof(uint32_t), std::as_bytes(std::span<const uint32_t>(write.dwords)) });
+			for (const auto& single : flag_singles)
+				writes.push_back({ base + uint64_t(single.first) * 2 * sizeof(uint32_t), std::as_bytes(std::span<const uint32_t>(single.second)) });
+			list->get_copy().update_buffer_batch(page_flags.resource.get(), writes);
+
+			flag_writes.clear();
+			flag_singles.clear();
+		}
+
+		auto owner = streamer.lock();
+		if (!owner || !owner->running() || page_count == 0)
+			return;
+
+		PROFILE(L"stream_compact");
+
+		// The feedback stays on the GPU: one thread per page id picks out the pages that were wanted and are
+		// missing, and the idle ones that can go, and only those lists are read back.
+		auto& compute = list->get_compute();
+		compute.set_signature(Layouts::DefaultLayout);
+		compute.clear(stream_out);
+
+		Slots::StreamGpu::StreamCompact compact;
+		compact.GetRequests() = wanted.structuredBuffer;
+		compact.GetPage_slots() = page_slots.structuredBuffer;
+		compact.GetPage_flags() = page_flags.structuredBuffer;
+		compact.GetResult() = stream_out;
+		compact.GetPage_count() = page_count;
+		compact.GetEpoch() = epoch;
+		compact.GetEviction_age() = eviction_age;
+		compute.set(compact);
+		compute.set_pipeline<PSOS::StreamGpu::StreamCompact>();
+		compute.dispatch((int)Math::DivideByMultiple(page_count, 64u), 1, 1);
+
+		list->get_copy().read_buffer(stream_out.resource.get(), 0, uint64_t(OutDwords) * sizeof(uint32_t),
+			[weak = streamer, epoch](std::span<std::byte> bytes)
+			{
+				auto owner = weak.lock();
+				if (!owner || bytes.size() < OutDwords * sizeof(uint32_t))
+					return;
+
+				const uint32_t* data = reinterpret_cast<const uint32_t*>(bytes.data());
+
+				Requests requests;
+				requests.epoch = epoch;
+				requests.dropped = data[OutRequestOverflow];
+				for (uint32_t bucket = 0; bucket < RequestBuckets; bucket++)
+					for (uint32_t i = 0, n = std::min(data[bucket], BucketCapacity); i < n; i++)
+					{
+						const uint32_t entry = OutRequests + (bucket * BucketCapacity + i) * 2;
+						requests.wanted.push_back({ data[entry], data[entry + 1] });
+					}
+				for (uint32_t i = 0, n = std::min(data[OutEvictCount], EvictCapacity); i < n; i++)
+				{
+					const uint32_t entry = OutEvicts + i * 2;
+					requests.victims.push_back({ data[entry], data[entry + 1] });
+				}
+				owner->submit(std::move(requests));
+			});
+	}
 }

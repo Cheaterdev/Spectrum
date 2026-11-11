@@ -272,7 +272,7 @@ static void set_draw_feedback(HAL::GraphicsContext& graphics, bool quanta_draw, 
 	Slots::Meshes::QuantaFeedback feedback;
 	if (quanta_draw)
 	{
-		feedback.GetPages() = Quanta::Residency::get().feedback;
+		feedback.GetPages() = Quanta::Residency::get().feedback();
 		feedback.GetEpoch() = Quanta::Residency::get().epoch();
 	}
 	else

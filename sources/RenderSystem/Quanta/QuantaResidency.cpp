@@ -25,16 +25,6 @@ namespace
 
 	// Pages of a mesh loaded from an asset file are read straight into their pool slot by DirectStorage.
 	Variable<bool> g_direct_storage = { true, "Direct storage", &streaming_context() };
-
-	// The layout of the buffer the GPU compacts the feedback into; must match shaders/streaming/stream_compact.hlsl.
-	constexpr uint32_t RequestBuckets = 16;
-	constexpr uint32_t BucketCapacity = 32;
-	constexpr uint32_t EvictCapacity = 128;
-	constexpr uint32_t OutRequestOverflow = 16;
-	constexpr uint32_t OutEvictCount = 17;
-	constexpr uint32_t OutRequests = 32;
-	constexpr uint32_t OutEvicts = OutRequests + RequestBuckets * BucketCapacity * 2;
-	constexpr uint32_t OutDwords = OutEvicts + EvictCapacity * 2;
 }
 
 namespace Quanta
@@ -54,15 +44,11 @@ namespace Quanta
 	Residency::Residency()
 		: streamer(std::make_shared<Streaming::Streamer>(static_cast<Streaming::Backend&>(*this), static_cast<uint32_t>(MaxPageIds)))
 		, m(streamer->mutex())
+		, gpu_feedback(std::make_unique<Streaming::GpuFeedback>(RenderSystem::get().device(), static_cast<uint32_t>(MaxPageIds), streamer))
 		, pages(RenderSystem::get().device(), MaxPageDwords)
 		, groups(RenderSystem::get().device(), MaxGroupDwords)
 		, nodes(RenderSystem::get().device(), MaxNodeDwords)
 		, page_slots(RenderSystem::get().device(), MaxPageIds)
-		, feedback(RenderSystem::get().device(), MaxPageIds * 2, HAL::counterType::NONE,
-			HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess)
-		, page_flags(RenderSystem::get().device(), MaxPageIds * 2, HAL::counterType::NONE, HAL::ResFlags::ShaderResource)
-		, stream_out(RenderSystem::get().device(), OutDwords, HAL::counterType::NONE,
-			HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess)
 	{
 	}
 
@@ -185,12 +171,7 @@ namespace Quanta
 		max_page_id = std::max<uint32_t>(max_page_id, static_cast<uint32_t>(page_id_base + mesh->pages.size()));
 
 		// The ids may have belonged to another mesh: nothing is loading or evictable until the streamer says so.
-		{
-			const uint32_t first_id = static_cast<uint32_t>(page_id_base);
-			const uint32_t end_id = first_id + static_cast<uint32_t>(mesh->pages.size());
-			std::erase_if(flag_singles, [&](const auto& single) { return single.first >= first_id && single.first < end_id; });
-			flag_writes.push_back({ first_id, std::vector<uint32_t>(mesh->pages.size() * 2, 0) });
-		}
+		gpu_feedback->clear_range(static_cast<uint32_t>(page_id_base), static_cast<uint32_t>(mesh->pages.size()));
 
 		std::vector<uint> slots(mesh->pages.size(), InvalidIndex);
 		resident->states.resize(mesh->pages.size());
@@ -552,7 +533,7 @@ namespace Quanta
 
 	void Residency::set_flags(Streaming::Resource& resource, uint32_t page, uint32_t flags, uint32_t shown_epoch)
 	{
-		flag_singles.push_back({ static_cast<uint32_t>(resource.page_id_base() + page), { flags, shown_epoch } });
+		gpu_feedback->set_flags(static_cast<uint32_t>(resource.page_id_base() + page), flags, shown_epoch);
 	}
 
 	void Residency::set_page_present(const Resident& resident, uint32_t page, bool present)
@@ -586,79 +567,9 @@ namespace Quanta
 		nodes.prepare(list);
 		page_slots.prepare(list);
 
-		if (!flag_writes.empty() || !flag_singles.empty())
-		{
-			PROFILE(L"quanta_flag_writes");
-
-			// Ranges first, then the singles recorded after them; for the same page id the last single wins, so keep only that.
-			std::stable_sort(flag_singles.begin(), flag_singles.end(), [](const auto& a, const auto& b) { return a.first < b.first; });
-			size_t kept = 0;
-			for (size_t i = 0; i < flag_singles.size(); i++)
-				if (i + 1 == flag_singles.size() || flag_singles[i + 1].first != flag_singles[i].first)
-					flag_singles[kept++] = flag_singles[i];
-			flag_singles.resize(kept);
-
-			const uint64_t base = page_flags.desc.offset;
-			std::vector<HAL::CopyContext::BufferWrite> writes;
-			writes.reserve(flag_writes.size() + flag_singles.size());
-			for (const FlagWrite& write : flag_writes)
-				writes.push_back({ base + uint64_t(write.first) * 2 * sizeof(uint32_t), std::as_bytes(std::span<const uint32_t>(write.dwords)) });
-			for (const auto& single : flag_singles)
-				writes.push_back({ base + uint64_t(single.first) * 2 * sizeof(uint32_t), std::as_bytes(std::span<const uint32_t>(single.second)) });
-			list->get_copy().update_buffer_batch(page_flags.resource.get(), writes);
-
-			flag_writes.clear();
-			flag_singles.clear();
-		}
-
 		streamer->prepare(list);
 
-		if (streamer->running() && max_page_id > 0)
-		{
-			const uint32_t epoch = streamer->epoch() - 1;   // the feedback holds the draws up to the previous frame
-
-			// The feedback stays on the GPU: one thread per page id picks out the pages that were wanted and are
-			// missing, and the idle ones that can go, and only those lists are read back.
-			auto& compute = list->get_compute();
-			compute.set_signature(Layouts::DefaultLayout);
-			compute.clear(stream_out);
-
-			Slots::StreamGpu::StreamCompact compact;
-			compact.GetRequests() = feedback.structuredBuffer;
-			compact.GetPage_slots() = page_slots.buffer.structuredBuffer;
-			compact.GetPage_flags() = page_flags.structuredBuffer;
-			compact.GetResult() = stream_out;
-			compact.GetPage_count() = max_page_id;
-			compact.GetEpoch() = epoch;
-			compact.GetEviction_age() = Streaming::Policy{}.eviction_age;
-			compute.set(compact);
-			compute.set_pipeline<PSOS::StreamGpu::StreamCompact>();
-			compute.dispatch((int)Math::DivideByMultiple(max_page_id, 64u), 1, 1);
-
-			list->get_copy().read_buffer(stream_out.resource.get(), 0, uint64_t(OutDwords) * sizeof(uint32_t),
-				[epoch](std::span<std::byte> bytes)
-				{
-					if (!Residency::is_good() || bytes.size() < OutDwords * sizeof(uint32_t))
-						return;
-
-					const uint32_t* data = reinterpret_cast<const uint32_t*>(bytes.data());
-
-					Streaming::Requests requests;
-					requests.epoch = epoch;
-					requests.dropped = data[OutRequestOverflow];
-					for (uint32_t bucket = 0; bucket < RequestBuckets; bucket++)
-						for (uint32_t i = 0, n = std::min(data[bucket], BucketCapacity); i < n; i++)
-						{
-							const uint32_t entry = OutRequests + (bucket * BucketCapacity + i) * 2;
-							requests.wanted.push_back({ data[entry], data[entry + 1] });
-						}
-					for (uint32_t i = 0, n = std::min(data[OutEvictCount], EvictCapacity); i < n; i++)
-					{
-						const uint32_t entry = OutEvicts + i * 2;
-						requests.victims.push_back({ data[entry], data[entry + 1] });
-					}
-					Residency::get().streamer->submit(std::move(requests));
-				});
-		}
+		// The feedback holds the draws up to the previous frame.
+		gpu_feedback->prepare(list, page_slots.buffer, max_page_id, streamer->epoch() - 1, streamer->get_policy().eviction_age);
 	}
 }

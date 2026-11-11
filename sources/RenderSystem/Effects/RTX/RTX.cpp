@@ -20,9 +20,12 @@ void RTX::update()
 			for (auto& [mat, info] : rtx.new_materials)
 				libs.push_back(mat->raytracing_lib.operator->());
 		}
-		if (!libs.empty())
+		// Materials now wait in new_materials over several updates while their groups build: log each count once.
+		static size_t last_pending = 0;
+		if (!libs.empty() && libs.size() != last_pending)
 		{
 			const size_t pending = libs.size();
+			last_pending = pending;
 			std::sort(libs.begin(), libs.end());
 			libs.erase(std::unique(libs.begin(), libs.end()), libs.end());
 

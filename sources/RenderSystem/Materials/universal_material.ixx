@@ -284,6 +284,7 @@ export namespace materials
 
 	//		HAL::library_shader::ptr raytracing_lib;
 		universal_material(MaterialGraph::ptr graph);
+		~universal_material() override;
 		Slots::Meshes::MaterialInfo::Compiled compiled_material_info;
 
 		bool is_ready_to_draw() const override { return pipeline && pipeline->is_built(); }

@@ -1020,7 +1020,7 @@ VSM::VSM() : VariableContext(L"VSM")
 			{
 				// The cut's page requests, to the same streamer as the main view's.
 				Slots::Meshes::QuantaShadowFeedback feedback;
-				feedback.GetPages() = Quanta::Residency::get().feedback;
+				feedback.GetPages() = Quanta::Residency::get().feedback();
 				feedback.GetEpoch() = Quanta::Residency::get().epoch();
 				graphics.set(feedback);
 			}

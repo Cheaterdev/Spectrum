@@ -398,7 +398,12 @@ namespace TextureStreaming
 			streamed->root_mip--;
 		}
 
-		std::lock_guard<std::mutex> g(m);
+		std::unique_lock<std::mutex> g(m, std::defer_lock);
+		{
+			PROFILE(L"texture_stream_add_lock_wait");
+			g.lock();
+		}
+		PROFILE(L"texture_stream_add_locked");
 
 		streamed->base_id = allocate_ids(pages);
 		streamed->states.resize(pages);
@@ -451,6 +456,7 @@ namespace TextureStreaming
 
 		if (pages)
 		{
+			PROFILE(L"texture_stream_add_roots");
 			streamer->add(*streamed);
 
 			uint32_t roots = 0;

@@ -289,5 +289,47 @@ export namespace Streaming
 		void prepare(HAL::CommandList::ptr& list);
 
 		Stats stats();
+
+		const Policy& get_policy() const { return policy; }
+	};
+
+	// The GPU side of the feedback, shared by the clients: the draws write what they wanted and reached per page id
+	// into feedback() (two dwords per page id, see shaders/streaming/stream_compact.hlsl), the streamer's flags per page
+	// go the other way, and prepare() compacts it on the GPU into the short lists that are read back and handed to the
+	// streamer. Everything but feedback() is guarded by the streamer's mutex, like the Backend calls that feed it.
+	class GpuFeedback
+	{
+		struct FlagWrite
+		{
+			uint32_t first;
+			std::vector<uint32_t> dwords;   // two per page id
+		};
+
+		std::weak_ptr<Streamer> streamer;
+		HAL::StructuredBufferView<uint> wanted;
+		HAL::StructuredBufferView<uint> page_flags;
+		HAL::StructuredBufferView<uint> stream_out;
+
+		// Ranges (zeroed when a resource gets its page ids) are written first, then the singles, so a single recorded
+		// after a range wins over it. A range drops the singles under it: they belong to whoever held those ids before.
+		std::vector<FlagWrite> flag_writes;
+		std::vector<std::pair<uint32_t, std::array<uint32_t, 2>>> flag_singles;   // page id, its two dwords
+
+	public:
+		GpuFeedback(HAL::Device& device, uint32_t max_page_ids, std::weak_ptr<Streamer> streamer);
+
+		// What the draws write into; stays on the GPU.
+		HAL::StructuredBufferView<uint>& feedback() { return wanted; }
+
+		// The Flag* bits of a page id and the epoch it was shown at (Backend::set_flags).
+		void set_flags(uint32_t page_id, uint32_t flags, uint32_t shown_epoch);
+
+		// Zeroes the flags and shown epochs of `count` page ids from `first`.
+		void clear_range(uint32_t first, uint32_t count);
+
+		// Records the queued flag writes, the compaction over the first `page_count` page ids and the readback that submits
+		// to the streamer. `epoch` is the latest one the feedback holds; `page_slots` is the client's page table.
+		void prepare(HAL::CommandList::ptr& list, const HAL::StructuredBufferView<uint>& page_slots, uint32_t page_count,
+			uint32_t epoch, uint32_t eviction_age);
 	};
 }
