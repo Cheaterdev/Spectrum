@@ -533,6 +533,16 @@ export{
 			void copy_texture(const HAL::Resource::ptr& dest, ivec3, const HAL::Resource::ptr& source, ivec3, ivec3);
 			void copy_buffer(HAL::Resource* dest, uint64 s_dest, HAL::Resource* source, uint64 s_source, uint64 size);
 
+			struct BufferWrite
+			{
+				uint64 offset;                       // bytes into the resource
+				std::span<const std::byte> bytes;
+			};
+
+			// Many small writes into one buffer with one upload allocation and one barrier pass. Writes adjacent in the
+			// destination become one copy. Writes that overlap keep the order they were given in (the last wins).
+			void update_buffer_batch(HAL::Resource* resource, std::span<const BufferWrite> writes);
+
 
 
 			//TODO: remove

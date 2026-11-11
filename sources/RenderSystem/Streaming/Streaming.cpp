@@ -7,6 +7,15 @@ import HAL;
 
 namespace Streaming
 {
+	// Erases element i in O(1); the order of `loading` and `orphans` does not matter.
+	template <class T>
+	static void swap_remove(std::vector<T>& v, size_t i)
+	{
+		if (i + 1 != v.size())
+			v[i] = std::move(v.back());
+		v.pop_back();
+	}
+
 	Streamer::Streamer(Backend& backend, uint32_t max_page_ids, Policy policy)
 		: backend(backend)
 		, policy(policy)
@@ -99,7 +108,7 @@ namespace Streaming
 			return;
 
 		// What the budget can still take, up to the slack, is kept free; the rest of the free slots only hold memory.
-		const size_t room = std::min<size_t>(streamed_in_use < budget ? budget - streamed_in_use : 0, SlotSlack);
+		const size_t room = std::min<size_t>(evictable_in_use() < budget ? budget - evictable_in_use() : 0, SlotSlack);
 		if (free_slots.size() <= room)
 			return;
 
@@ -132,20 +141,41 @@ namespace Streaming
 			return;
 		resources.erase(it);
 
+		// A loading page's read may still be on its way into the slot, or (between process()'s two locked steps) not
+		// even started: the slot waits for it as an orphan instead of retiring now.
+		if (resource.loading_pages)
+		{
+			for (size_t i = 0; i < loading.size();)
+			{
+				if (loading[i].resource != &resource)
+				{
+					i++;
+					continue;
+				}
+				Loading& l = loading[i];
+				orphans.push_back({ resource.states[l.page].slot, l.ticket, l.started, std::move(l.load) });
+				swap_remove(loading, i);
+			}
+			resource.loading_pages = 0;
+		}
+
 		const uint32_t base = static_cast<uint32_t>(resource.page_id_base());
 		for (uint32_t p = 0; p < resource.states.size(); p++)
 		{
 			PageState& state = resource.states[p];
 			if (state.slot != InvalidSlot)
 			{
-				retiring.push_back(state.slot);
+				if (state.status != PageState::Status::Loading)
+					retiring.push_back(state.slot);
 				if (resource.streamed)
+				{
 					streamed_in_use--;
+					if (resource.is_root(p))
+						streamed_roots--;
+				}
 			}
 			page_refs[base + p] = {};
 		}
-
-		loading.erase(std::remove_if(loading.begin(), loading.end(), [&](const Loading& l) { return l.resource == &resource; }), loading.end());
 	}
 
 	uint32_t Streamer::take_slot()
@@ -163,8 +193,18 @@ namespace Streaming
 		state.status = PageState::Status::Resident;
 		state.last_touched = current_epoch;
 		if (resource.streamed)
+		{
 			streamed_in_use++;
-		backend.begin_load(resource, page, state.slot, false);   // shown at once, so it cannot wait for a read
+			streamed_roots++;
+		}
+
+		// Shown at once, so it cannot wait for a read: all three steps here, under the caller's lock.
+		Backend::LoadPlan plan = backend.plan_load(resource, page, state.slot, false);
+		ASSERT(!plan.from_file);
+		std::span<Backend::LoadPlan> one(&plan, 1);
+		backend.start_loads(one);
+		backend.finish_loads(one);
+
 		sync_flags(resource, page);
 		return state.slot;
 	}
@@ -247,9 +287,15 @@ namespace Streaming
 			Requests requests;
 			bool have_requests = false;
 			{
-				// Wakes without requests too, to show pages whose DirectStorage reads have finished.
+				// While loads are in flight it wakes without requests too, to show pages whose reads have finished; idle,
+				// only a request or stop() wakes it. has_loading is an atomic because `m` must not be taken here (a
+				// holder of `m` may be calling submit(), which takes queue_mutex), and only this thread ever sets it true.
 				std::unique_lock<std::mutex> lock(queue_mutex);
-				wake.wait_for(lock, std::chrono::milliseconds(2), [&] { return stopping || !queue.empty(); });
+				const auto ready = [&] { return stopping || !queue.empty(); };
+				if (has_loading.load())
+					wake.wait_for(lock, std::chrono::milliseconds(2), ready);
+				else
+					wake.wait(lock, ready);
 				if (stopping)
 					return;
 				if (!queue.empty())
@@ -267,7 +313,7 @@ namespace Streaming
 			else
 			{
 				std::lock_guard<std::mutex> g(m);
-				if (!loading.empty())
+				if (!loading.empty() || !orphans.empty())
 					publish();
 			}
 		}
@@ -277,8 +323,34 @@ namespace Streaming
 	void Streamer::process(const Requests& requests)
 	{
 		PROFILE(L"streamer");
-		std::lock_guard<std::mutex> g(m);
 
+		std::vector<Backend::LoadPlan> plans;
+		uint64_t first_ticket = 0;
+		{
+			PROFILE(L"streamer_plan");
+			std::lock_guard<std::mutex> g(m);
+			if (!plan_loads(requests, plans, first_ticket))
+				return;
+		}
+
+		// The reads start with the mutex free, so prepare() on the render thread does not wait for the disk. remove()
+		// may run meanwhile: the plans own what their IO touches, and finish_loads() sorts out whose resource is gone.
+		{
+			PROFILE(L"streamer_start_loads");
+			backend.start_loads(plans);
+		}
+
+		{
+			PROFILE(L"streamer_finish_loads");
+			std::lock_guard<std::mutex> g(m);
+			finish_loads(plans, first_ticket);
+			publish();
+		}
+	}
+
+	// process() with the mutex held, up to the plans: false when there is nothing for start_loads (publish has run).
+	bool Streamer::plan_loads(const Requests& requests, std::vector<Backend::LoadPlan>& plans, uint64_t& first_ticket)
+	{
 		victims = requests.victims;
 		dropped_requests += requests.dropped;
 
@@ -319,17 +391,17 @@ namespace Streaming
 
 		// What streamed pages may still take. Slots already on their way back (hidden, waiting for their frames to
 		// finish) are no longer counted in it.
-		if (streamed_in_use > budget)
-			evict(streamed_in_use - budget, requests.epoch, true);
+		if (evictable_in_use() > budget)
+			evict(evictable_in_use() - budget, requests.epoch, true);
 
-		const size_t available = streamed_in_use < budget ? budget - streamed_in_use : 0;
+		const size_t available = evictable_in_use() < budget ? budget - evictable_in_use() : 0;
 		if (order.size() > available)
 			evict(order.size() - available, requests.epoch);
 
 		if (on_demand)
 		{
 			// Memory for the loads about to start, a chunk at a time, never past what the budget allows.
-			const size_t room = streamed_in_use < budget ? budget - streamed_in_use : 0;
+			const size_t room = evictable_in_use() < budget ? budget - evictable_in_use() : 0;
 			const size_t need = std::min(order.size(), room);
 			if (free_slots.size() < need)
 			{
@@ -338,39 +410,101 @@ namespace Streaming
 			}
 		}
 
+		first_ticket = next_ticket;
 		for (const PageRef& ref : order)
 		{
-			if (free_slots.empty() || streamed_in_use >= budget)
+			if (free_slots.empty() || evictable_in_use() >= budget)
 				break;
 
 			PageState& state = ref.resource->states[ref.page];
 			state.slot = take_slot();
 			streamed_in_use++;
 			state.status = PageState::Status::Loading;
-			Backend::Load load = backend.begin_load(*ref.resource, ref.page, state.slot, true);
-			if (load.from_file)
+			Backend::LoadPlan plan = backend.plan_load(*ref.resource, ref.page, state.slot, true);
+			if (plan.from_file)
 				file_loads++;
 			sync_flags(*ref.resource, ref.page);
-			loading.push_back({ ref.resource, ref.page, std::move(load) });
+			ref.resource->loading_pages++;
+			loading.push_back({ ref.resource, ref.page, next_ticket++, false, {} });
+			plans.push_back(std::move(plan));
 			loads++;
 		}
+		if (!plans.empty())
+			has_loading.store(true);
 
-		publish();
+		if (plans.empty())
+		{
+			publish();
+			return false;
+		}
+		return true;
+	}
+
+	// The plans are back from start_loads: each goes to its loading entry, or to its orphan when remove() let go of the
+	// resource meanwhile. Only the live ones are the backend's to finish.
+	void Streamer::finish_loads(std::vector<Backend::LoadPlan>& plans, uint64_t first_ticket)
+	{
+		std::vector<size_t> live_at;
+		std::vector<Backend::LoadPlan> live;
+		for (size_t i = 0; i < loading.size(); i++)
+		{
+			if (loading[i].started)
+				continue;
+			const uint64_t index = loading[i].ticket - first_ticket;
+			ASSERT(index < plans.size());
+			live_at.push_back(i);
+			live.push_back(std::move(plans[index]));
+		}
+
+		for (Orphan& orphan : orphans)
+		{
+			if (orphan.started)
+				continue;
+			const uint64_t index = orphan.ticket - first_ticket;
+			ASSERT(index < plans.size());
+			orphan.load = std::move(plans[index]);
+			orphan.started = true;
+		}
+
+		backend.finish_loads(live);
+
+		for (size_t k = 0; k < live_at.size(); k++)
+		{
+			loading[live_at[k]].load = std::move(live[k]);
+			loading[live_at[k]].started = true;
+		}
+	}
+
+	// Whether a started load's bytes are where they go.
+	static bool load_done(Backend::LoadPlan& load)
+	{
+		return !load.from_file || (load.poll ? load.poll() : load.waiter.is_completed());
 	}
 
 	// Shows every loaded page whose parents are shown, parents first.
 	void Streamer::publish()
 	{
+		for (size_t i = 0; i < orphans.size();)
+		{
+			if (!orphans[i].started || !load_done(orphans[i].load))
+			{
+				i++;
+				continue;
+			}
+			retiring.push_back(orphans[i].slot);
+			swap_remove(orphans, i);
+		}
+
 		bool progress = true;
 		while (progress)
 		{
 			progress = false;
 			for (size_t i = 0; i < loading.size();)
 			{
-				Loading item = loading[i];
+				Loading& item = loading[i];
 				PageState& state = item.resource->states[item.page];
 
-				if (item.load.from_file && !(item.load.poll ? item.load.poll() : item.load.waiter.is_completed()))
+				if (!item.started || !load_done(item.load))
 				{
 					i++;
 					continue;
@@ -386,21 +520,27 @@ namespace Streaming
 					continue;
 				}
 
-				backend.show(*item.resource, item.page, state.slot);
+				Resource& resource = *item.resource;
+				const uint32_t page = item.page;
+				resource.loading_pages--;
+				swap_remove(loading, i);
+
+				backend.show(resource, page, state.slot);
 				state.status = PageState::Status::Resident;
 				state.last_touched = current_epoch;
-				changed.insert(item.resource);
-				sync_flags(*item.resource, item.page);
+				changed.insert(&resource);
+				sync_flags(resource, page);
 				for (uint32_t parent : state.parents)
 				{
-					item.resource->states[parent].resident_children++;
-					sync_flags(*item.resource, parent);
+					resource.states[parent].resident_children++;
+					sync_flags(resource, parent);
 				}
 
-				loading.erase(loading.begin() + i);
 				progress = true;
 			}
 		}
+
+		has_loading.store(!loading.empty() || !orphans.empty());
 	}
 
 	// Hides up to `count` of the GPU's idle pages, least recently reached first, to make room. Their slots return to
@@ -414,10 +554,19 @@ namespace Streaming
 		};
 		std::vector<Candidate> candidates;
 
+		// Every slot the budget counts belongs to a page still loading: nothing resident could go, so a pool over its
+		// budget stays so without a scan of every page of every resource each request set.
+		if (evictable_in_use() <= loading.size())
+		{
+			if (!any)
+				victims.clear();
+			return;
+		}
+
 		if (any)
 		{
 			for (Resource* resource : resources)
-				for (uint32_t page = 0; page < resource->states.size(); page++)
+				for (uint32_t page = 0; resource->streamed && page < resource->states.size(); page++)
 				{
 					const PageState& state = resource->states[page];
 					if (state.status == PageState::Status::Resident && !resource->is_root(page) && state.resident_children == 0)

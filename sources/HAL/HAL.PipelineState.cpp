@@ -55,7 +55,11 @@ namespace HAL
 			}
 
 			//Log::get() << desc << Log::endl;
-			auto state = PipelineState::ptr(new PipelineState(this->device, desc, binary));
+			PipelineState::ptr state;
+			{
+				PROFILE(L"pso_create_graphics");
+				state = PipelineState::ptr(new PipelineState(this->device, desc, binary));
+			}
 
 			if (!desc.name.empty())
 			{
@@ -74,7 +78,11 @@ namespace HAL
 				}
 
 				//Log::get() << desc << Log::endl;
-				auto state = ComputePipelineState::ptr(new ComputePipelineState(this->device, desc, binary));
+				ComputePipelineState::ptr state;
+				{
+					PROFILE(L"pso_create_compute");
+					state = ComputePipelineState::ptr(new ComputePipelineState(this->device, desc, binary));
+				}
 
 				if (!desc.name.empty())
 				{

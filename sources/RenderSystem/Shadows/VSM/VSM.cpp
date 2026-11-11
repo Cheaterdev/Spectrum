@@ -64,6 +64,14 @@ namespace
 	// it and matches this file's own existing convention for shared helpers.
 	struct PageCameraUpdate { int slot; camera cam; };
 	struct RowUpdate { int level; std::vector<uint32_t> row; };
+
+	// Cutout draws skipped for a material PSO variant not created yet. Process-wide: with several VSM instances,
+	// only the first to plan after a creation redraws its pages.
+	PSOSkipRecord& material_variant_skips()
+	{
+		static PSOSkipRecord record;
+		return record;
+	}
 }
 
 void VSM::attach_scene(std::shared_ptr<Scene> scene)
@@ -316,6 +324,16 @@ void VSM::plan_frame(FrameGraph::Graph& graph)
 	if (hiz_culling_enabled && !hiz_culling_enabled_prev)
 		light_change_pending.fill(true);
 	hiz_culling_enabled_prev = hiz_culling_enabled;
+
+	// A cutout material skipped while its PSO variant was being created: once one has been created, redraw the
+	// rendered levels the way an added object does (its bounds are not known here).
+	if (material_variant_skips().take_redo())
+	{
+		PROFILE(L"vsm_material_variant_redo");
+		for (int level = 0; level < VSM::MaxLevels; level++)
+			if (level_initialized[level])
+				tracker.mark_level_full(level);
+	}
 
 	// The gather and the draw passes of this frame both follow this, so it is read once. Switching it, or the
 	// error it stops at, changes what every cached page holds: redraw them all.
@@ -1156,19 +1174,19 @@ VSM::VSM() : VariableContext(L"VSM")
 						if (!pso)
 							continue;
 
-						// High-level guard: GetPSO()'s own internal ASSERT
-						// (PSO_defines.h) fires on a map-lookup miss, but
-						// doesn't stop this code from going on to hand a
-						// null PSOState::ptr to set_pipeline() -> a null
-						// SetPipelineState1 crashes with an opaque D3D12
-						// error (and an access violation soon after) instead
-						// of a diagnosable engine-level failure. Assert here
-						// too and skip this pipeline's draw rather than
-						// crash the whole frame over one bad material.
+						// A material's set is lazy (PSOCreation::Lazy): GetPSO()
+						// is null until the variant is built, and this
+						// material casts no cutout shadow until then. Never
+						// hand a null or unbuilt PSO to set_pipeline(). The
+						// pages drawn without it are redrawn once it exists
+						// (see material_variant_skips()).
+						const auto seen = PSOSkipRecord::now();
 						auto real_pso = pso->GetPSO();
-						ASSERT(real_pso);
-						if (!real_pso)
+						if (!real_pso || !real_pso->is_built())
+						{
+							material_variant_skips().skipped(seen);
 							continue;
+						}
 
 						graphics.set_pipeline(real_pso);
 						{

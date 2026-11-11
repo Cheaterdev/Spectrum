@@ -23,8 +23,9 @@ namespace
 	// Textures made from now on keep every mip up to this size resident, so ray tracing never sees less than that.
 	Variable<int> g_resident_size = { 512, "Always-resident size (px)", &texture_streaming_context(), 0, 4096 };
 
-	// Most video memory the streamed tiles may take, in 64 KB tiles. Heap memory is taken only as tiles load; lowering it
-	// evicts tiles down to the new budget and gives the freed heap memory back.
+	// Most video memory the streamed tiles may take, in 64 KB tiles, on top of the always-resident ones (the roots, which
+	// are never evicted). Heap memory is taken only as tiles load; lowering it evicts tiles down to the new budget and
+	// gives the freed heap memory back.
 	Variable<int> g_pool_tiles = { 1024, "Pool size (64 KB tiles)", &texture_streaming_context(), 64, 65536 };
 }
 
@@ -130,7 +131,7 @@ namespace TextureStreaming
 
 	bool Manager::supported()
 	{
-		return std::string_view(HAL::get_backend_name()) == "d3d12";
+		return RenderSystem::is_good() && RenderSystem::get().device().get_properties().streamed_textures;
 	}
 
 	void Manager::set_pool_tiles(uint32_t tiles)
@@ -231,10 +232,19 @@ namespace TextureStreaming
 	void TileFile::relocate(const TileFile& fresh)
 	{
 		std::lock_guard<std::mutex> g(file_mutex);
+		if (RenderSystem::is_good() && !path.empty())
+			RenderSystem::get().device().get_ds_queue().close_file(path);
 		mips = fresh.mips;
 		packed = fresh.packed;
 		path = fresh.path;
 		stream.close();
+	}
+
+	TileFile::~TileFile()
+	{
+		// DirectStorage keeps the files it reads open: the asset file may be deleted or written over once nothing reads it.
+		if (RenderSystem::is_good() && !path.empty())
+			RenderSystem::get().device().get_ds_queue().close_file(path);
 	}
 
 	bool TileFile::read_all()
@@ -483,21 +493,11 @@ namespace TextureStreaming
 		texture_count--;
 	}
 
-	// The texels of one tile, as the rows of the box the copy writes (block rows for a compressed format).
+	// The texels of one tile, as the rows of the box the copy writes (block rows for a compressed format). Only for a
+	// texture with its texels in memory: a file texture's tiles are read by start_loads.
 	void Manager::cut_tile(const Streamed& streamed, uint32_t mip, uint32_t x, uint32_t y, Copy& out)
 	{
-		if (streamed.file)
-		{
-			// Already in the GPU's layout: the tile is one range of the file. offset holds the tile's coordinates.
-			out.subresource = mip;
-			out.offset = ivec3(int(x), int(y), 0);
-			out.box = ivec3(1, 1, 1);
-			out.tiles = true;
-			out.data.resize(TileBytes);
-			if (!streamed.file->read_tile(mip, x, y, out.data.data()))
-				throw std::runtime_error("texture asset file is shorter than its tile index says");
-			return;
-		}
+		ASSERT(!streamed.file);
 
 		const auto& source = *streamed.source->array[0]->mips[mip];
 		const uint3 shape = streamed.texture->resource->get_tiled_manager().get_tile_shape();
@@ -540,8 +540,9 @@ namespace TextureStreaming
 
 	// A tile of an asset file goes to the GPU without passing through the CPU: the tile is mapped to its slot first (on the
 	// copy queue, which is idle, so it is done within a poll or two), and once that has executed DirectStorage reads the
-	// file range into it. DirectStorage cannot write an unmapped tile, so the read cannot start with the map.
-	Streaming::Backend::Load Manager::begin_direct_load(Streamed& streamed, uint32_t page, uint32_t slot)
+	// file range into it. DirectStorage cannot write an unmapped tile, so the read cannot start with the map. The mapping
+	// is recorded here, under the lock (map_tile keeps the tiled manager's own state); start_loads executes it.
+	Streaming::Backend::LoadPlan Manager::plan_direct_load(Streamed& streamed, uint32_t page, uint32_t slot)
 	{
 		Op op;
 		op.kind = Op::Kind::Map;
@@ -555,63 +556,83 @@ namespace TextureStreaming
 		ops.erase(std::remove_if(ops.begin(), ops.end(), [&](const Op& other)
 			{ return other.kind == Op::Kind::Unmap && other.owner == &streamed && other.mip == op.mip && other.x == op.x && other.y == op.y; }), ops.end());
 
-		auto load = std::make_shared<DirectTileLoad>();
-		load->resource = streamed.texture->resource;
-		load->request.resource = load->resource;
-		streamed.file->locate_tile(op.mip, op.x, op.y, load->request.file, load->request.file_offset);
-		load->request.size = TileBytes;
-		load->request.uncompressed_size = TileBytes;
-		load->request.compressed = false;
-		load->request.operation = HAL::StorageRequest::Tiles{ op.mip, uint3(op.x, op.y, 0u), uint3(1u, 1u, 1u) };
+		auto data = std::make_shared<TilePlan>();
+		data->direct = true;
 
-		{
-			auto& tiled = load->resource->get_tiled_manager();
-			HAL::update_tiling_info info;
-			info.resource = load->resource.get();
-			tiled.map_tile(info, uint3(op.x, op.y, 0u), tiled.flat_index(0, op.mip), pool[slot]);
+		HAL::StorageRequest& request = data->request;
+		request.resource = streamed.texture->resource;
+		streamed.file->locate_tile(op.mip, op.x, op.y, request.file, request.file_offset);
+		request.size = TileBytes;
+		request.uncompressed_size = TileBytes;
+		request.compressed = false;
+		request.operation = HAL::StorageRequest::Tiles{ op.mip, uint3(op.x, op.y, 0u), uint3(1u, 1u, 1u) };
 
-			auto list = RenderSystem::get().device().get_queue(HAL::CommandListType::COPY)->get_free_list();
-			list->begin(L"TextureStreaming tile map");
-			list->update_tilings(std::move(info));
-			load->mapped = list->execute();
-		}
+		auto& tiled = request.resource->get_tiled_manager();
+		data->map.resource = request.resource.get();
+		tiled.map_tile(data->map, uint3(op.x, op.y, 0u), tiled.flat_index(0, op.mip), pool[slot]);
 
 		staged[static_cast<uint32_t>(streamed.base_id + page)] = std::move(op);
 
-		Backend::Load result;
-		result.from_file = true;
-		result.poll = [load]() { return load->poll(); };
-		return result;
+		Backend::LoadPlan plan;
+		plan.from_file = true;
+		plan.backend_data = std::move(data);
+		return plan;
 	}
 
-	bool Manager::DirectTileLoad::poll()
+	bool Manager::TileBatch::poll()
 	{
 		if (!requested)
 		{
 			if (!mapped.is_completed())
 				return false;
 
-			auto& queue = RenderSystem::get().device().get_ds_queue();
-			done = queue.execute(request);
-			queue.flush();
+			done = RenderSystem::get().device().get_ds_queue().execute(std::span<const HAL::StorageRequest>(requests));
 			requested = true;
 		}
 		return done.is_completed();
 	}
 
-	Manager::DirectTileLoad::~DirectTileLoad()
+	Manager::TileBatch::~TileBatch()
 	{
-		// The texture must outlive the read.
+		// The textures must outlive the mapping and the reads.
 		if (requested)
 			done.wait();
+		else
+			mapped.wait();
 	}
 
-	Streaming::Backend::Load Manager::begin_load(Streaming::Resource& resource, uint32_t page, uint32_t slot, bool allow_file)
+	Streaming::Backend::LoadPlan Manager::plan_load(Streaming::Resource& resource, uint32_t page, uint32_t slot, bool allow_file)
 	{
 		Streamed& streamed = static_cast<Streamed&>(resource);
 
 		if (allow_file && streamed.file)
-			return begin_direct_load(streamed, page, slot);
+			return plan_direct_load(streamed, page, slot);
+
+		if (streamed.file)
+		{
+			// A root of a file texture: the tile is already in the GPU's layout, one range of the file, read by start_loads.
+			// offset holds the tile's coordinates.
+			auto data = std::make_shared<TilePlan>();
+			data->file = streamed.file;
+
+			Op& op = data->op;
+			op.kind = Op::Kind::Map;
+			op.owner = &streamed;
+			op.texture = streamed.texture;
+			op.slot = slot;
+			streamed.locate(page, op.mip, op.x, op.y);
+
+			Copy& copy = op.copies.emplace_back();
+			copy.subresource = op.mip;
+			copy.offset = ivec3(int(op.x), int(op.y), 0);
+			copy.box = ivec3(1, 1, 1);
+			copy.tiles = true;
+			copy.data.resize(TileBytes);
+
+			Backend::LoadPlan plan;
+			plan.backend_data = std::move(data);
+			return plan;
+		}
 
 		Op op = make_map(streamed, page, slot);
 
@@ -627,6 +648,60 @@ namespace TextureStreaming
 			ops.push_back(std::move(op));
 		}
 		return {};
+	}
+
+	void Manager::start_loads(std::span<Streaming::Backend::LoadPlan> plans)
+	{
+		std::shared_ptr<TileBatch> batch;
+		HAL::CommandList::ptr list;
+
+		for (auto& plan : plans)
+		{
+			auto* data = static_cast<TilePlan*>(plan.backend_data.get());
+			if (!data)
+				continue;
+
+			if (data->direct)
+			{
+				if (!batch)
+				{
+					batch = std::make_shared<TileBatch>();
+					list = RenderSystem::get().device().get_queue(HAL::CommandListType::COPY)->get_free_list();
+					list->begin(L"TextureStreaming tile map");
+				}
+				list->update_tilings(std::move(data->map));
+				batch->requests.push_back(std::move(data->request));
+				plan.poll = [batch]() { return batch->poll(); };
+				plan.backend_data.reset();   // the batch holds what the map and the read need now
+				continue;
+			}
+
+			PROFILE(L"texture_stream_read_root");
+			const Op& op = data->op;
+			if (!data->file->read_tile(op.mip, op.x, op.y, data->op.copies.back().data.data()))
+				throw std::runtime_error("texture asset file is shorter than its tile index says");
+		}
+
+		if (batch)
+		{
+			PROFILE(L"texture_stream_map_batch");
+			batch->mapped = list->execute();
+		}
+	}
+
+	void Manager::finish_loads(std::span<Streaming::Backend::LoadPlan> plans)
+	{
+		for (auto& plan : plans)
+		{
+			auto* data = static_cast<TilePlan*>(plan.backend_data.get());
+			if (!data || data->direct || !data->file)
+				continue;
+
+			// A root: shown at once.
+			data->op.owner->mips[data->op.mip].resident++;
+			ops.push_back(std::move(data->op));
+			plan.backend_data.reset();
+		}
 	}
 
 	void Manager::show(Streaming::Resource& resource, uint32_t page, uint32_t slot)
@@ -764,48 +839,90 @@ namespace TextureStreaming
 
 		std::unordered_set<Streamed*> touched;
 
-		for (Op& op : ops)
+		// One update_tilings per texture: all its maps and unmaps of this frame go into one info (its tiles are keyed by
+		// heap, so several fit), the changes of a tile that appears more than once collapse into the last one, and
+		// then the copies of the texture follow. Textures keep the order of their first op.
 		{
-			PROFILE(L"texture_stream_op");
+			PROFILE(L"texture_stream_ops");
 
-			if (op.kind == Op::Kind::Map && op.premapped)
+			struct TextureOps
 			{
-				touched.insert(op.owner);
-				continue;
+				HAL::Resource* resource;
+				std::vector<size_t> indices;   // into `ops`, in order
+			};
+			std::vector<TextureOps> textures;
+			std::unordered_map<const HAL::Resource*, size_t> texture_of;
+			for (size_t i = 0; i < ops.size(); i++)
+			{
+				HAL::Resource* resource = ops[i].texture->resource.get();
+				auto [it, added] = texture_of.try_emplace(resource, textures.size());
+				if (added)
+					textures.push_back({ resource, {} });
+				textures[it->second].indices.push_back(i);
 			}
 
-			auto& resource = op.texture->resource;
-			auto& tiled = resource->get_tiled_manager();
+			const auto changes_tile = [](const Op& op) { return op.kind == Op::Kind::Unmap || (op.kind == Op::Kind::Map && !op.premapped); };
+			const auto tile_key = [](const Op& op) { return (uint64_t(op.mip) << 48) | (uint64_t(op.y) << 24) | op.x; };
 
-			HAL::update_tiling_info info;
-			info.resource = resource.get();
-
-			switch (op.kind)
+			for (const TextureOps& texture : textures)
 			{
-			case Op::Kind::Map:
-				tiled.map_tile(info, uint3(op.x, op.y, 0u), tiled.flat_index(0, op.mip), pool[op.slot]);
-				break;
-			case Op::Kind::Unmap:
-				tiled.unmap_tile(info, uint3(op.x, op.y, 0u), tiled.flat_index(0, op.mip));
-				break;
-			case Op::Kind::Packed:
-				tiled.load_packed(info);
-				break;
+				PROFILE(L"texture_stream_texture_ops");
+
+				auto& tiled = texture.resource->get_tiled_manager();
+
+				std::unordered_map<uint64_t, size_t> last;   // tile -> the op that decides its final state
+				for (size_t i : texture.indices)
+					if (changes_tile(ops[i]))
+						last[tile_key(ops[i])] = i;
+
+				HAL::update_tiling_info info;
+				info.resource = texture.resource;
+				bool recorded = false;
+
+				for (size_t i : texture.indices)
+				{
+					const Op& op = ops[i];
+					if (op.kind == Op::Kind::Packed)
+					{
+						tiled.load_packed(info);
+						recorded = true;
+					}
+					else if (changes_tile(op) && last[tile_key(op)] == i)
+					{
+						if (op.kind == Op::Kind::Map)
+							tiled.map_tile(info, uint3(op.x, op.y, 0u), tiled.flat_index(0, op.mip), pool[op.slot]);
+						else
+							tiled.unmap_tile(info, uint3(op.x, op.y, 0u), tiled.flat_index(0, op.mip));
+						recorded = true;
+					}
+				}
+
+				if (recorded)
+					list->update_tilings(std::move(info));
+
+				for (size_t i : texture.indices)
+				{
+					const Op& op = ops[i];
+					touched.insert(op.owner);
+
+					// A map that a later op of the same tile replaced: its tile never holds this data, and may not be mapped at all.
+					if (changes_tile(op) && last[tile_key(op)] != i)
+						continue;
+					if (op.kind == Op::Kind::Map && op.premapped)
+						continue;
+
+					for (const Copy& copy : op.copies)
+					{
+						auto& resource = op.texture->resource;
+						if (copy.tiles)
+							list->get_copy().write_tiles(resource.get(), uint3(uint32_t(copy.offset.x), uint32_t(copy.offset.y), 0), uint3(1, 1, 1), copy.subresource,
+								std::span<const std::byte>(reinterpret_cast<const std::byte*>(copy.data.data()), copy.data.size()));
+						else
+							list->get_copy().update_texture(resource, copy.offset, copy.box, copy.subresource,
+								reinterpret_cast<const char*>(copy.data.data()), copy.row_stride);
+					}
+				}
 			}
-
-			list->update_tilings(std::move(info));
-
-			for (const Copy& copy : op.copies)
-			{
-				if (copy.tiles)
-					list->get_copy().write_tiles(resource.get(), uint3(uint32_t(copy.offset.x), uint32_t(copy.offset.y), 0), uint3(1, 1, 1), copy.subresource,
-						std::span<const std::byte>(reinterpret_cast<const std::byte*>(copy.data.data()), copy.data.size()));
-				else
-					list->get_copy().update_texture(resource, copy.offset, copy.box, copy.subresource,
-						reinterpret_cast<const char*>(copy.data.data()), copy.row_stride);
-			}
-
-			touched.insert(op.owner);
 		}
 		ops.clear();
 
@@ -827,11 +944,24 @@ namespace TextureStreaming
 						info_writes.push_back({ view, streamed->shader_mip() + 1 });
 		}
 
-		for (const InfoWrite& write : info_writes)
+		if (!info_writes.empty())
 		{
-			uint value = write.value;
-			list->get_copy().update(stream_info, write.view, std::span{ &value, 1 });
+			PROFILE(L"texture_stream_info_writes");
+
+			// A view written more than once keeps its last value.
+			std::stable_sort(info_writes.begin(), info_writes.end(), [](const InfoWrite& a, const InfoWrite& b) { return a.view < b.view; });
+			size_t kept = 0;
+			for (size_t i = 0; i < info_writes.size(); i++)
+				if (i + 1 == info_writes.size() || info_writes[i + 1].view != info_writes[i].view)
+					info_writes[kept++] = info_writes[i];
+			info_writes.resize(kept);
+
+			std::vector<HAL::CopyContext::BufferWrite> writes;
+			writes.reserve(info_writes.size());
+			for (const InfoWrite& write : info_writes)
+				writes.push_back({ stream_info.desc.offset + uint64_t(write.view) * sizeof(uint32_t), std::as_bytes(std::span<const uint32_t>(&write.value, 1)) });
+			list->get_copy().update_buffer_batch(stream_info.resource.get(), writes);
+			info_writes.clear();
 		}
-		info_writes.clear();
 	}
 }

@@ -373,62 +373,69 @@ namespace Quanta
 			return false;
 
 		Mesh mesh;
-		mesh.groups.resize(header.group_count);
-		mesh.nodes.resize(header.node_count);
-		if (header.group_count)
-			std::memcpy(mesh.groups.data(), data + groups_at, header.group_count * sizeof(Group));
-		if (header.node_count)
-			std::memcpy(mesh.nodes.data(), data + nodes_at, header.node_count * sizeof(Node));
+		{
+			PROFILE(L"quanta_partition_tables");
+			mesh.groups.resize(header.group_count);
+			mesh.nodes.resize(header.node_count);
+			if (header.group_count)
+				std::memcpy(mesh.groups.data(), data + groups_at, header.group_count * sizeof(Group));
+			if (header.node_count)
+				std::memcpy(mesh.nodes.data(), data + nodes_at, header.node_count * sizeof(Node));
+		}
 		mesh.original_cluster_count = header.original_cluster_count;
 		mesh.original_triangle_count = header.original_triangle_count;
 		mesh.max_depth = header.max_depth;
 		mesh.root_page_count = header.root_page_count;
 
-		std::vector<PageEntry> entries(header.page_count);
-		if (header.page_count)
-			std::memcpy(entries.data(), data + entries_at, header.page_count * sizeof(PageEntry));
-		std::vector<uint32_t> group_ids(header.page_group_ids);
-		if (header.page_group_ids)
-			std::memcpy(group_ids.data(), data + ids_at, header.page_group_ids * sizeof(uint32_t));
-
-		mesh.pages.resize(header.page_count);
-		for (uint32_t p = 0; p < header.page_count; p++)
 		{
-			const PageEntry& e = entries[p];
-			if (e.size > PageBytes || e.stored_size > e.size || e.offset + e.stored_size > total)
-				return false;
-			if (uint64_t(e.first_group_id) + e.group_count > group_ids.size())
-				return false;
+			PROFILE(L"quanta_partition_pages");
+			std::vector<PageEntry> entries(header.page_count);
+			if (header.page_count)
+				std::memcpy(entries.data(), data + entries_at, header.page_count * sizeof(PageEntry));
+			std::vector<uint32_t> group_ids(header.page_group_ids);
+			if (header.page_group_ids)
+				std::memcpy(group_ids.data(), data + ids_at, header.page_group_ids * sizeof(uint32_t));
 
-			Page& page = mesh.pages[p];
-			page.size = e.size;
-			if (!read_bytes)
+			mesh.pages.resize(header.page_count);
+			for (uint32_t p = 0; p < header.page_count; p++)
 			{
-				// Left in the file: read_page() fetches it when it is loaded.
-			}
-			else if (e.stored_size == e.size)
-				page.data.assign(data + e.offset, data + e.offset + e.size);
-			else
-			{
-				// The memory copy stays raw: only the file (and DirectStorage's read of it) is compressed.
-				page.data.resize(e.size);
-				if (!HAL::gdeflate_decompress(data + e.offset, e.stored_size, page.data.data(), e.size))
+				const PageEntry& e = entries[p];
+				if (e.size > PageBytes || e.stored_size > e.size || e.offset + e.stored_size > total)
 					return false;
-			}
-			page.root = e.root != 0;
-			page.file_offset = base_file_offset + e.offset;
-			page.file_size = e.stored_size;
-			for (uint32_t i = 0; i < e.group_count; i++)
-			{
-				uint32_t g = group_ids[e.first_group_id + i];
-				if (g >= header.group_count)
+				if (uint64_t(e.first_group_id) + e.group_count > group_ids.size())
 					return false;
-				page.groups.push_back(g);
+
+				Page& page = mesh.pages[p];
+				page.size = e.size;
+				if (!read_bytes)
+				{
+					// Left in the file: read_page() fetches it when it is loaded.
+				}
+				else if (e.stored_size == e.size)
+					page.data.assign(data + e.offset, data + e.offset + e.size);
+				else
+				{
+					// The memory copy stays raw: only the file (and DirectStorage's read of it) is compressed.
+					page.data.resize(e.size);
+					if (!HAL::gdeflate_decompress(data + e.offset, e.stored_size, page.data.data(), e.size))
+						return false;
+				}
+				page.root = e.root != 0;
+				page.file_offset = base_file_offset + e.offset;
+				page.file_size = e.stored_size;
+				for (uint32_t i = 0; i < e.group_count; i++)
+				{
+					uint32_t g = group_ids[e.first_group_id + i];
+					if (g >= header.group_count)
+						return false;
+					page.groups.push_back(g);
+				}
 			}
 		}
 
 		if (has_parents)
 		{
+			PROFILE(L"quanta_partition_parents");
 			std::vector<uint32_t> table(header.parent_dwords);
 			if (header.parent_dwords)
 				std::memcpy(table.data(), data + parents_at, header.parent_dwords * sizeof(uint32_t));
@@ -450,6 +457,7 @@ namespace Quanta
 		}
 		else
 		{
+			PROFILE(L"quanta_partition_parents");
 			// Older file: the parents come from the page bytes, which were read for that.
 			build_page_parents(mesh);
 			if (!keep_pages)
@@ -493,6 +501,52 @@ namespace Quanta
 		}
 		out.resize(source.size);
 		return HAL::gdeflate_decompress(stored.data(), stored.size(), out.data(), out.size());
+	}
+
+	void read_stored_pages(const std::filesystem::path& path, std::span<PageFetch* const> fetches)
+	{
+		PROFILE(L"quanta_read_stored_pages");
+
+		std::vector<PageFetch*> order(fetches.begin(), fetches.end());
+		for (PageFetch* fetch : order)
+			fetch->ok = false;
+
+		std::ifstream file(path, std::ios::binary);
+		if (!file)
+			return;
+
+		std::sort(order.begin(), order.end(), [](const PageFetch* a, const PageFetch* b)
+		{
+			return a->mesh->pages[a->page].file_offset < b->mesh->pages[b->page].file_offset;
+		});
+
+		for (PageFetch* fetch : order)
+		{
+			const Page& source = fetch->mesh->pages[fetch->page];
+			if (source.file_size == 0)
+				continue;
+
+			fetch->bytes.resize(source.file_size);
+			file.seekg(static_cast<std::streamoff>(source.file_offset));
+			file.read(reinterpret_cast<char*>(fetch->bytes.data()), fetch->bytes.size());
+			if (!file)
+			{
+				file.clear();
+				continue;
+			}
+			fetch->ok = true;
+		}
+	}
+
+	void expand_page(PageFetch& fetch)
+	{
+		const Page& source = fetch.mesh->pages[fetch.page];
+		if (!fetch.ok || source.file_size == source.size)
+			return;
+
+		std::vector<uint8_t> expanded(source.size);
+		fetch.ok = HAL::gdeflate_decompress(fetch.bytes.data(), fetch.bytes.size(), expanded.data(), expanded.size());
+		fetch.bytes = std::move(expanded);
 	}
 
 	bool build_cut(const Mesh& mesh, uint32_t triangle_budget, CutGeometry& out)

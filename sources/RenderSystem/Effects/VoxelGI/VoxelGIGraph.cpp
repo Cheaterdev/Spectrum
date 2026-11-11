@@ -208,6 +208,11 @@ void VoxelGI::update_frame(FrameGraph::Graph& graph)
 		need_start_new = true;
 	prev = cur;
 
+	// The static voxels are drawn only in these regeneration frames: a mesh whose material's voxel PSO variant was
+	// not built then (it is created on first use) would be missing from them for good.
+	if (materials::PipelinePasses::skip_record(RENDER_TYPE::VOXEL, MESH_TYPE::STATIC).take_redo())
+		need_start_new = true;
+
 	if (need_start_new)
 		all_scene_regen_counter = 3;
 

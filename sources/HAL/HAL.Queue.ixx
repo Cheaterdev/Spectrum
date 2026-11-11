@@ -134,8 +134,15 @@ export namespace HAL
 		bool is_complete(UINT64 fence);
 
 
+		// Queued only: the caller flush()es.
 		HAL::FenceWaiter execute(StorageRequest request);
+		// The whole batch behind one signal, submitted: the waiter is done when every request is.
+		HAL::FenceWaiter execute(std::span<const StorageRequest> requests);
 		void flush();
 		FenceWaiter get_waiter();
+
+		// The queue keeps the files it reads open. Call this before a file is written over, moved or deleted: it
+		// waits for the requests already made of the file, then closes it; the next request opens it again.
+		void close_file(const std::filesystem::path& file);
 	};
 }

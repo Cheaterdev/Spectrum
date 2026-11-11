@@ -392,13 +392,23 @@ void  mesh_renderer::render_meshes(MeshRenderContext::ptr mesh_render_context, S
 						set_draw_feedback(graphics, quanta_draw, stream_feedback);
 				}
 
-			for (int i = 0; i < total; i++)
+			for (int i = 0; i < total; i++, current++)
 			{
+				bool bound = true;
 				{
 					PROFILE_GPU(L"flush");
 
-					batch_pipelines[batch_start + i]->set(mesh_render_context->render_type, mesh_render_context->render_mesh, graphics, hiz_occlusion, capture_stage.has_value(), walk_lod);
+					auto* pipeline = batch_pipelines[batch_start + i];
+					// A material's PSO variants are created on first use: until the one this draw needs is built, its
+					// meshes are left out of this pass (the gathered commands are dropped).
+					if (auto* passes = dynamic_cast<materials::PipelinePasses*>(pipeline))
+						bound = passes->bind(mesh_render_context->render_type, mesh_render_context->render_mesh, graphics, hiz_occlusion, capture_stage.has_value(), walk_lod);
+					else
+						pipeline->set(mesh_render_context->render_type, mesh_render_context->render_mesh, graphics, hiz_occlusion, capture_stage.has_value(), walk_lod);
 				}
+
+				if (!bound)
+					continue;
 
 				{
 					PROFILE_GPU(L"execute_indirect");
@@ -406,9 +416,6 @@ void  mesh_renderer::render_meshes(MeshRenderContext::ptr mesh_render_context, S
 					exec_draw_mesh_indirect(graphics, commands_buffer[current]->buffer, meshes_count);
 
 				}
-
-				current++;
-
 			}
 		}
 	}
@@ -603,14 +610,17 @@ void mesh_renderer::render_vertex_front_end(MeshRenderContext::ptr mesh_render_c
 				continue;
 
 			auto pipeline = material->get_pipeline();
-			if (!pipeline || !pipeline->has_vertex_front_end() || !pipeline->is_built())
+			if (!pipeline || !pipeline->has_vertex_front_end())
 				continue;
 
 			// Translucent materials are drawn by their own pass, not into the GBuffer.
 			if (pipeline->get_transparency_mode() == Meshes::TransparencyMode::Translucent)
 				continue;
 
-			pipeline->set_vertex_front_end(graphics);
+			// Skipped until its vertex-stage GBuffer variant is built (created on first use).
+			auto* passes = dynamic_cast<materials::PipelinePasses*>(pipeline.get());
+			if (!passes || !passes->bind_vertex_front_end(graphics))
+				continue;
 
 			// A direct draw reads this draw's tables from their slots (IndirectDraw == DRAW_ID_NONE).
 			graphics.set(material->compiled_material_info);

@@ -319,6 +319,7 @@ struct SelectLocal<T>
 
 		void init_ids()
 		{
+			PROFILE(L"rtx_init_ids");
 			std::vector<HAL::shader_identifier> miss_ids;
 			std::vector<raygen_type> raygen_ids;
 
@@ -420,6 +421,7 @@ struct SelectLocal<T>
 					need_recreate = false;
 					need_full_rebuild = false;
 
+					PROFILE(L"rtx_full_rebuild");
 					init();
 				}
 				else

@@ -46,6 +46,7 @@ export namespace HAL
 		bool mesh_shader            = false;
 		bool tiled_3d               = false;   // Tiled Resources Tier 3
 		bool tiled_depth            = false;   // tiled depth textures (VSM atlas)
+		bool streamed_textures      = false;   // TextureStreaming: reserved textures filled tile by tile, DirectStorage tile reads
 		bool full_bindless          = false;
 		bool direct_gpu_upload_heap = false;
 		bool dlss                   = false;   // NVIDIA DLSS Super Resolution

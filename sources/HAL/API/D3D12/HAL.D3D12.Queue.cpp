@@ -21,16 +21,43 @@ namespace HAL
     void Queue::update_tile_mappings(const update_tiling_info& infos)
     {
         PROFILE(L"update_tile_mappings");
+        std::vector<D3D12_TILED_RESOURCE_COORDINATE> startCoordinates;
+        std::vector<D3D12_TILE_REGION_SIZE> regionSizes;
+        std::vector<D3D12_TILE_RANGE_FLAGS> rangeFlags;
+        std::vector<UINT> heapRangeStartOffsets;
+        std::vector<UINT> rangeTileCounts;
+
         for (auto& [heap, tiles] : infos.tiles)
         {
-            std::vector<D3D12_TILED_RESOURCE_COORDINATE> startCoordinates;
-            std::vector<D3D12_TILE_REGION_SIZE> regionSizes;
-            std::vector<D3D12_TILE_RANGE_FLAGS> rangeFlags;
-            std::vector<UINT> heapRangeStartOffsets;
-            std::vector<UINT> rangeTileCounts;
+            startCoordinates.clear();
+            regionSizes.clear();
+            rangeFlags.clear();
+            heapRangeStartOffsets.clear();
+            rangeTileCounts.clear();
+            startCoordinates.reserve(tiles.size());
+            regionSizes.reserve(tiles.size());
+            rangeFlags.reserve(tiles.size());
+            heapRangeStartOffsets.reserve(tiles.size());
+            rangeTileCounts.reserve(tiles.size());
+
+            const ResourceTile* previous = nullptr;   // the tile the last region ends with, while that region can still grow
 
             for (const ResourceTile& tile : tiles)
             {
+                // A tile that follows the previous one in the same row of the same subresource, in the next tile of the
+                // heap, extends its region: the region is NumTiles tiles in the subresource's x-then-y order, so
+                // a neighbour in x is the next one. Only single tiles are merged (a longer one may wrap onto the next
+                // row), and never unmaps: they have no heap tile to be consecutive in.
+                if (previous && heap && previous->heap_position.count == 1 && tile.heap_position.count == 1
+                    && tile.subresource == previous->subresource && tile.pos.y == previous->pos.y && tile.pos.z == previous->pos.z
+                    && tile.pos.x == previous->pos.x + int(regionSizes.back().NumTiles)
+                    && tile.heap_position.offset == previous->heap_position.offset + regionSizes.back().NumTiles)
+                {
+                    regionSizes.back().NumTiles++;
+                    rangeTileCounts.back()++;
+                    continue;
+                }
+
                 D3D12_TILED_RESOURCE_COORDINATE TRC;
                 TRC.X = tile.pos.x;
                 TRC.Y = tile.pos.y;
@@ -54,18 +81,19 @@ namespace HAL
 
                 heapRangeStartOffsets.push_back((UINT)tile.heap_position.offset);
                 rangeTileCounts.push_back((UINT)TRS.NumTiles);
+                previous = &tile;
             }
 
             native->UpdateTileMappings(
                 (infos.resource)->get_dx(),
                 UINT(startCoordinates.size()),
-                &startCoordinates[0],
-                &regionSizes[0],
+                startCoordinates.data(),
+                regionSizes.data(),
                 heap ? heap->native_heap.Get() : nullptr,
                 UINT(rangeFlags.size()),
-                &rangeFlags[0],
-                &heapRangeStartOffsets[0],
-                &rangeTileCounts[0],
+                rangeFlags.data(),
+                heapRangeStartOffsets.data(),
+                rangeTileCounts.data(),
                 D3D12_TILE_MAPPING_FLAG_NONE
             );
         }
@@ -170,14 +198,37 @@ namespace HAL
         return FenceWaiter{ &requestCounter, 0 };
     }
 
-    HAL::FenceWaiter DirectStorageQueue::execute(StorageRequest srequest)
+    // One spelling per file, so close_file() finds what a request opened.
+    static std::wstring storage_file_key(const std::filesystem::path& path)
     {
-        PROFILE(L"DirectStorageQueue::execute");
+        std::error_code ec;
+        auto absolute = std::filesystem::absolute(path, ec);
+        return (ec ? path : absolute).lexically_normal().wstring();
+    }
 
-        D3D::StorageFile file;
+    namespace API
+    {
+        D3D::StorageFile DirectStorageQueue::cached_file(const std::filesystem::path& path)
+        {
+            const std::wstring key = storage_file_key(path);
+            if (auto it = files.find(key); it != files.end())
+                return it->second;
 
-        HRESULT hr = factory->OpenFile(srequest.file.wstring().c_str(), IID_PPV_ARGS(&file));
+            D3D::StorageFile file;
+            HRESULT hr = factory->OpenFile(key.c_str(), IID_PPV_ARGS(&file));
+            if (FAILED(hr))
+            {
+                Log::get() << "DirectStorage: cannot open " << path.string() << " (hr " << static_cast<uint32_t>(hr) << ")" << Log::endl;
+                return {};
+            }
+            files.emplace(key, file);
+            return file;
+        }
+    }
 
+    // Builds and enqueues one request; queue_mutex held. Nothing is signalled or submitted.
+    static void enqueue_storage_request(Device& device, IDStorageQueue2* queue, IDStorageFile* file, const StorageRequest& srequest)
+    {
         DSTORAGE_REQUEST request = {};
         request.Options.SourceType = DSTORAGE_REQUEST_SOURCE_FILE;
 
@@ -186,7 +237,7 @@ namespace HAL
             request.Options.CompressionFormat = DSTORAGE_COMPRESSION_FORMAT_GDEFLATE;
         }
 
-        request.Source.File.Source = file.Get();
+        request.Source.File.Source = file;
         request.Source.File.Offset = srequest.file_offset;
         request.Source.File.Size = static_cast<uint>(srequest.size);
         request.UncompressedSize = static_cast<uint>(srequest.uncompressed_size);
@@ -249,18 +300,66 @@ namespace HAL
             }
         }, srequest.operation);
 
+        queue->EnqueueRequest(&request);
+    }
+
+    HAL::FenceWaiter DirectStorageQueue::execute(StorageRequest srequest)
+    {
+        PROFILE(L"DirectStorageQueue::execute");
+
+        // Not through the file cache: this path loads whole resources from the texture and shader cache files, which are
+        // read once and may be rewritten at any time (hot reload). Only the batched path, which reads the same asset
+        // file page after page, keeps its files open.
+        D3D::StorageFile file;
+        HRESULT hr = factory->OpenFile(srequest.file.wstring().c_str(), IID_PPV_ARGS(&file));
+        if (FAILED(hr))
+            Log::get() << "DirectStorage: cannot open " << srequest.file.string() << " (hr " << static_cast<uint32_t>(hr) << ")" << Log::endl;
+
         std::lock_guard<std::mutex> g(queue_mutex);
-
-        native->EnqueueRequest(&request);
-
+        enqueue_storage_request(device, native.Get(), file.Get(), srequest);
         auto waiter = signal();
 
         executor.enqueue([waiter, f = file]() {
             waiter.wait();
-            f->Close();
+            if (f)
+                f->Close();
         });
 
         return waiter;
+    }
+
+    HAL::FenceWaiter DirectStorageQueue::execute(std::span<const StorageRequest> requests)
+    {
+        PROFILE(L"DirectStorageQueue::execute_batch");
+
+        std::lock_guard<std::mutex> g(queue_mutex);
+        for (const StorageRequest& srequest : requests)
+            enqueue_storage_request(device, native.Get(), cached_file(srequest.file).Get(), srequest);
+
+        auto waiter = signal();
+        native->Submit();
+        return waiter;
+    }
+
+    void DirectStorageQueue::close_file(const std::filesystem::path& path)
+    {
+        D3D::StorageFile file;
+        FenceWaiter waiter;
+        {
+            std::lock_guard<std::mutex> g(queue_mutex);
+            auto it = files.find(storage_file_key(path));
+            if (it == files.end())
+                return;
+
+            file = std::move(it->second);
+            files.erase(it);
+
+            // Requests made of it may be queued or in flight still: it closes once they are done.
+            waiter = signal();
+            native->Submit();
+        }
+        waiter.wait();
+        file->Close();
     }
 
     namespace API

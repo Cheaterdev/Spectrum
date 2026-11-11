@@ -203,6 +203,22 @@ export namespace Quanta
 	// The page's expanded bytes: from memory, or read (and expanded) from the asset file the mesh came from.
 	bool read_page(const Mesh& mesh, uint32_t page, std::vector<uint8_t>& out);
 
+	// One page to read ahead. `bytes` is as stored in the file until expand_page() turns it into the expanded page.
+	struct PageFetch
+	{
+		const Mesh* mesh = nullptr;
+		uint32_t page = 0;
+		std::vector<uint8_t> bytes;
+		bool ok = false;
+	};
+
+	// read_page() for many pages of the meshes that share one asset file: opens `file` once and reads the pages in
+	// ascending file order, leaving them as stored (see expand_page). Sets `ok` on each; a page that cannot be read is not ok.
+	void read_stored_pages(const std::filesystem::path& file, std::span<PageFetch* const> fetches);
+
+	// Expands what read_stored_pages left in `fetch.bytes` (a no-op for a page stored raw); clears `ok` on failure.
+	void expand_page(PageFetch& fetch);
+
 	// Triangles for ray tracing: one level of detail for the whole mesh.
 	struct CutGeometry
 	{

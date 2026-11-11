@@ -383,9 +383,12 @@ namespace HAL
             slots.merge(c->slots);
         }
 
-        TEST(desc.global_root->get_device(),
-            desc.global_root->get_device().get_native_device()->CreateStateObject(raytracingPipeline, IID_PPV_ARGS(&
-                tracked_info->m_StateObject)));
+        {
+            PROFILE(L"state_object_create");
+            TEST(desc.global_root->get_device(),
+                desc.global_root->get_device().get_native_device()->CreateStateObject(raytracingPipeline, IID_PPV_ARGS(&
+                    tracked_info->m_StateObject)));
+        }
         TEST(desc.global_root->get_device(), tracked_info->m_StateObject.As(&stateObjectProperties));
         ASSERT(stateObjectProperties);
         event_change();

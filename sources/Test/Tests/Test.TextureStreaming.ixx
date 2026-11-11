@@ -177,7 +177,7 @@ TEST(TextureStreaming, KeepsTheResidentSizeLoaded)
 TEST(TextureStreaming, EvictsWhatIsNoLongerWanted)
 {
 	auto& manager = TextureStreaming::Manager::get();
-	manager.set_pool_tiles(400);
+	manager.set_pool_tiles(398);   // 400 tiles with the two textures' roots, which are outside the budget
 
 	auto texture = manager.create(make_pattern(2048, 12), L"pattern");
 	ASSERT_TRUE(settle(manager, { { texture.get(), 1 } }));   // 64 + 16 + 4 + 1 tiles
@@ -207,7 +207,7 @@ TEST(TextureStreaming, ShrinkingThePoolEvictsWantedTiles)
 
 	const uint64_t evictions_before = manager.stats().evictions;
 	const uint32_t pool_before = manager.stats().pool_pages;
-	manager.set_pool_tiles(10);
+	manager.set_pool_tiles(9);   // 10 tiles with the one root, which is outside the budget
 
 	for (uint32_t frame = 0; frame < 200; frame++)
 	{
@@ -461,7 +461,7 @@ TEST(TextureStreaming, TilesStreamFromAnAssetFile)
 	ASSERT_TRUE(settle(manager, { { texture.get(), 0 } }));
 	check_mips_match(*texture, 0, data.get());
 
-	// The tiles came through DirectStorage, mapped by begin_load, not cut on the CPU.
+	// The tiles came through DirectStorage, mapped by start_loads, not cut on the CPU.
 	ASSERT_TRUE(manager.stats().file_loads > 0);
 
 	texture.reset();

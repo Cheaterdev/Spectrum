@@ -80,7 +80,11 @@ export namespace TextureStreaming
 		void locate_tile(uint32_t mip, uint32_t x, uint32_t y, std::filesystem::path& file, uint64_t& offset);
 
 		// The asset file was written again: `fresh` is the same tiles as loaded from the new file. Readers wait for it.
+		// DirectStorage lets go of the file too, so its next tile read opens the new one.
 		void relocate(const TileFile& fresh);
+
+		TileFile() = default;
+		~TileFile();
 
 		// Fills tile_bytes and packed_bytes from the file, to write them into another one.
 		bool read_all();
@@ -242,7 +246,7 @@ export namespace TextureStreaming
 			uint32_t x = 0;
 			uint32_t y = 0;
 			uint32_t slot = 0;
-			bool premapped = false;   // a Map that begin_load already made (a DirectStorage tile load maps before it reads)
+			bool premapped = false;   // a Map that start_loads already made (a DirectStorage tile load maps before it reads)
 			std::vector<Copy> copies;
 		};
 
@@ -278,20 +282,34 @@ export namespace TextureStreaming
 
 		std::shared_ptr<Streamed> create_streamed(const HAL::texture_data_header& header, const HAL::texture_data::ptr& data, const std::shared_ptr<TileFile>& file, const std::wstring& name);
 
-		// A file tile on its way to its slot through DirectStorage (begin_direct_load).
-		struct DirectTileLoad
+		// The file tiles of one start_loads on their way to their slots: mapped by one copy-queue list, then read by
+		// DirectStorage in one batch once that list has executed (it cannot write an unmapped tile). Every tile's poll
+		// polls the batch.
+		struct TileBatch
 		{
-			HAL::Resource::ptr resource;
-			HAL::StorageRequest request;
+			std::vector<HAL::StorageRequest> requests;   // their resources keep the textures alive for the map and the reads
 			HAL::FenceWaiter mapped;
 			HAL::FenceWaiter done;
 			bool requested = false;
 
 			bool poll();
-			~DirectTileLoad();
+			~TileBatch();
 		};
 
-		Streaming::Backend::Load begin_direct_load(Streamed& streamed, uint32_t page, uint32_t slot);
+		// What plan_load hands start_loads for one tile.
+		struct TilePlan
+		{
+			// A file tile read by DirectStorage: mapped to its slot first.
+			bool direct = false;
+			HAL::update_tiling_info map;
+			HAL::StorageRequest request;
+
+			// A root of a file texture: start_loads reads the tile into `op`, finish_loads shows it.
+			std::shared_ptr<TileFile> file;
+			Op op;
+		};
+
+		Streaming::Backend::LoadPlan plan_direct_load(Streamed& streamed, uint32_t page, uint32_t slot);
 		Op make_map(Streamed& streamed, uint32_t page, uint32_t slot);
 		static void cut_tile(const Streamed& streamed, uint32_t mip, uint32_t x, uint32_t y, Copy& out);
 
@@ -299,7 +317,9 @@ export namespace TextureStreaming
 		void allocate_pool(uint32_t count) override;
 		void release_slot(uint32_t slot) override;
 		void restore_slot(uint32_t slot) override;
-		Streaming::Backend::Load begin_load(Streaming::Resource& resource, uint32_t page, uint32_t slot, bool allow_file) override;
+		Streaming::Backend::LoadPlan plan_load(Streaming::Resource& resource, uint32_t page, uint32_t slot, bool allow_file) override;
+		void start_loads(std::span<Streaming::Backend::LoadPlan> plans) override;
+		void finish_loads(std::span<Streaming::Backend::LoadPlan> plans) override;
 		void show(Streaming::Resource& resource, uint32_t page, uint32_t slot) override;
 		void hide(Streaming::Resource& resource, uint32_t page) override;
 		void set_flags(Streaming::Resource& resource, uint32_t page, uint32_t flags, uint32_t shown_epoch) override;
@@ -335,7 +355,8 @@ export namespace TextureStreaming
 		static int resident_size();
 		static void set_resident_size(int texels);
 
-		// The most tiles the streamed textures hold together (roots included). Takes effect from the next texture.
+		// The most tiles the streamed textures' non-root tiles hold together; the always-resident ones are on top of it.
+		// Takes effect from the next texture.
 		void set_pool_tiles(uint32_t tiles);
 
 		// A reserved texture made from `data`, with its coarsest mips resident and the rest to be asked for.

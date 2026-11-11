@@ -1,6 +1,7 @@
-# Streaming rework plan (Quanta pages + texture tiles)
+# Streaming and asset loading plan (Quanta pages, texture tiles, load time)
 
-This is a work order for an implementing model. Do the tasks in order. Each task is small enough to build and test on
+This is a work order for an implementing model. Do the tasks in the order of the table under "Order and checkpoints"
+(phase L is written after phase 3 but most of it runs first). Each task is small enough to build and test on
 its own; do not start the next one until the user has confirmed the previous one builds and its tests pass.
 
 ## 0. Rules that apply to every task
@@ -64,6 +65,89 @@ of `process()`, including every `Backend::begin_load`. The render thread takes i
 
 Target: D3D12 on a modern PC is the fast path. Vulkan (PC, Android) must run correctly through a simple fallback; it
 does not need to be fast.
+
+## 3. All findings, by code area
+
+Everything found so far, including small items no task covers yet. When a task takes you into one of these files, fix
+the other items listed for that file in the same change if they are marked **fold in**, and mention them in the report.
+Items marked **ask** need a decision first. "Read" means found by reading code; "measured" means seen in a capture.
+
+### `sources/RenderSystem/Streaming/Streaming.ixx/.cpp`
+| Id | Finding | Evidence | Task |
+|---|---|---|---|
+| S1 | `process()` holds `m` across every `begin_load` (disk, decompress, list execute) | read | 1.4 |
+| S2 | Root pages count inside the budget (texture pool starves) | read | 1.1 |
+| S3 | Thread wakes every 2 ms when idle | read | 1.8 |
+| S4 | `loading.erase(begin()+i)` in `publish()` and the `remove_if` in `remove()` are O(n²) for large batches | read | fold in with 1.4 |
+| S5 | `evict(any=true)` scans every page of every resource | read | fold in with 1.1: keep a count, scan only when over budget (already the case; just early-out when nothing is evictable) |
+| S6 | `submit()` keeps the last 2 request sets and drops older ones silently | read | leave; note in a comment why 2 |
+| S7 | `page_refs` is sized to `max_page_ids` up front (1M entries × 16 bytes for Quanta) | read | leave |
+
+### `sources/RenderSystem/Quanta/QuantaResidency.ixx/.cpp`, `Quanta.cpp`
+| Id | Finding | Evidence | Task |
+|---|---|---|---|
+| Q1 | `acquire_many`: one file open per root page, main thread waits | measured, 304 ms | L.5 |
+| Q2 | `allocate_pool`: one `pages.allocate` per slot | measured, 195 ms | L.5 |
+| Q3 | CPU fallback `read_page` under the streamer mutex when `pool_mapped()` is false | read | 1.4 |
+| Q4 | One `StorageRequest`, `flush()` per page | measured, 673 calls / 140 ms | 1.3, 1.4 |
+| Q5 | Page bytes copied three times on the CPU path | read | 1.5 |
+| Q6 | `show`/`hide`/`set_flags`: heap vector + copy command per entry | read | 1.5 |
+| Q7 | Compaction passes `Policy{}.eviction_age`, not the streamer's | read | 2.1 |
+| Q8 | `acquire_many` is synchronous on the main thread | measured, 534 ms | **ask** (after L.5) |
+| Q9 | `prefetched` is a `std::map` keyed by pair, cleared per batch | read | fold in with L.5 (vector indexed by fetch) |
+| Q10 | `acquire()` builds `group_dwords` / `node_dwords` by per-record `memcpy` into fresh vectors, then `write` copies again | read | fold in with 1.5 |
+
+### `sources/RenderSystem/Streaming/TextureStreaming.ixx/.cpp`
+| Id | Finding | Evidence | Task |
+|---|---|---|---|
+| T1 | 2 MB feedback readback + clear every frame | measured, ~1 ms/frame, 23 ms worst | 2.2 |
+| T2 | `request()` walks every tile of every texture under the mutex | read | 2.2 |
+| T3 | Whole-mip granularity: one sample pulls a full mip | read | phase 3 |
+| T4 | One copy-queue list per tile to map it before DirectStorage | read | 1.4 |
+| T5 | One `update_tilings` per op | measured, 2860 calls, 62 ms worst | 1.7 |
+| T6 | `info_writes`: one copy per dword | read | 1.5 |
+| T7 | Tile file is uncompressed and the asset also stores full `texdata` (about 2x on disk) | read | phase 3 |
+| T8 | `supported()` is a string compare | read | 1.2 |
+| T9 | `free_ids` ranges are never merged | read | fold in with 2.2 (merge adjacent on free) |
+| T10 | `TileFile` reads through one `fstream` behind a mutex | read | fold in with 1.4 (roots only use it afterwards) |
+| T11 | `collect_feedback` callback walks `by_resource` under the mutex on the GPU-wait thread | read | removed by 2.2 |
+
+### `sources/HAL` (queue, DirectStorage, copies, virtual buffer)
+| Id | Finding | Evidence | Task |
+|---|---|---|---|
+| H1 | `DirectStorageQueue::execute`: `OpenFile`, signal and a blocking executor task per request | measured, up to 12 ms per call | 1.3 |
+| H2 | `update_tile_mappings`: one native call per tile, vectors reallocated per heap | measured | 1.7 |
+| H3 | No batched small-write API on `CopyContext` | read | 1.5 |
+| H4 | `virtual_gpu_buffer::write` copies its vector; `aquire()` is `ASSERT(false)` | read | 1.5 |
+| H5 | Vulkan DirectStorage stand-in is synchronous and ignores `compressed` | read | 1.6 |
+| H6 | `HAL::gdeflate_decompress` returns false on Vulkan | read | 1.6 (**ask**) |
+| H7 | `Cache::operator[]` (`Core/Data/Data.ixx`) spins on `yield()` and hangs if the creator throws | read | L.2 |
+| H8 | `PipelineStateCache` writes `pso.bin` only in its destructor: a crash loses the session's PSO blobs | read | fold in with L.2 only if trivial, else leave and report |
+
+### `sources/RenderSystem/Materials/universal_material.*`, `Assets/*`
+| Id | Finding | Evidence | Task |
+|---|---|---|---|
+| M1 | Full pipeline deserialized per material before the hash dedupe | measured, 18.7 s thread time (cause read) | L.1, L.2 |
+| M2 | `compile()` creates the whole texture via `get_texture()` | measured, 1636 ms | L.3 |
+| M3 | BLAS built one command list each | measured, 503 ms | L.4 |
+| M4 | Mesh deserialize starts only after all its materials finish | measured, starts at 1654 ms | **ask** (needs a change to how `AssetStorage::load_asset_task` orders work) |
+| M5 | Mesh deserialize waits on ~14 fences one after another | measured, 186 ms | fold in with L.4: collect the waiters, wait once |
+| M6 | Mesh `load_partitions` 154 ms | measured | not investigated; add a scope inside in L.1 |
+| M7 | Engine PSO init about 2 s at startup (`pso init:1957` in the log) | measured | not investigated |
+| M8 | Asset lane has 14 of 32 workers | measured | revisit after L.2 |
+
+### `sources/HAL/SIG/RTX.ixx`, `HAL.PipelineState.*` (ray tracing state object)
+See phase R below for the details.
+| Id | Finding | Evidence | Task |
+|---|---|---|---|
+| R1 | The update is not in either capture | measured (absent) | R.1 |
+| R2 | One set of collections per material, even when materials share one hit library | read | R.2 |
+| R3 | One collection per per-material pass, each compiling the same library again | read | R.2 |
+| R4 | Collections are built in `update()` while the frame waits | read | R.3 |
+| R5 | A material edit rebuilds every engine pass and raygen collection | read | R.4 |
+| R6 | `init_ids()` recreates two buffers and `execute_and_wait`s under the lock | read | R.4 |
+| R7 | Materials are never removed from the state object or the hit table | read | R.5 |
+| R8 | `update_material` / `get_index` touch `materials` without the lock; `materials[mat]` inserts an empty entry for a material still pending | read | R.5 |
 
 ---
 
@@ -352,11 +436,409 @@ Outline, to be turned into tasks at that point:
 
 ---
 
+## Batch 1 results (measured after tasks 1.1–1.4, L.1, R.1, L.3, L.4 were built)
+
+Same two actions, same asset. These numbers replace the guesses made before the instrumentation existed.
+
+| What | Before | After | Verdict |
+|---|---|---|---|
+| Drop asset, until usable | 2498 ms | 2464 ms | unchanged, as expected: the material stage (L.2) is not done yet |
+| `material_compile_get_texture` | 1636 ms | 0.1 ms | L.3 done |
+| `mesh_init_gpu` | 503 ms | 397 ms | L.4 missed its target, see below |
+| `DirectStorageQueue::execute` in the add-instance capture | 673 calls, 140 ms | 27 batched calls, 12 ms | 1.3 and 1.4 work |
+| `quanta_acquire_many` | 534 ms | 539 ms | unchanged, L.5 not done |
+| `RTX update` on the frame after the drop | not captured | 298 ms, once | measured, see below |
+
+**Material pipeline load (M1): the cause was not what this plan assumed.**
+- Of 132 materials, 56 load their pipeline in under 1 ms and create nothing. The other 76 take about 250 ms each.
+- In those 76, `pso_create_graphics` is 15.0 s of the 19.0 s (1734 creations, 22 to 27 per material, median 10.7 ms),
+  `shader_ser_load` is 2.4 s (70 to 73 shaders per material).
+- The spinning `Cache` wait accounts for at most the 2 s that is left. It is not the main cost.
+- A PSO creation takes about 1 ms when few threads are creating and about 10 ms when all 14 asset workers are, so the
+  driver or the PSO cache serializes them. `cache/d3d12/pso.bin` exists (98 MB), so blobs are being used.
+- Conclusion: the cost is **creating every key variant of every PSO set at load** (GBuffer, depth, voxel, each with
+  all its key combinations), most of which a session never draws with.
+
+**Ray tracing state object (R1): measured.**
+- One `RTX update` of 298 ms on the frame after the drop; the frame waits for it.
+- 289 ms of that is `rtx_build_pending_collections`: 396 collections (132 materials × 3 passes), 7.7 s of thread time
+  on 30 threads. 305 of them take under 20 ms, 91 take 20 to 190 ms.
+- `AddToStateObject` is 8 ms. The add path itself is cheap; compiling the collections is the cost.
+- The count of distinct hit libraries is still missing (the first temporary log did not compile; it now lives in
+  `RTX::update()` in `Effects/RTX/RTX.cpp` and writes `workdir/rtx_libs.temp`).
+
+**BLAS (M3): batching was not the bottleneck.**
+- 25 lists instead of 1591, and `mesh_init_gpu_blas_execute` is 13 ms in total. The 381 ms is inside the recording:
+  about 0.16 ms median per structure in `RaytracingAccelerationStructure`'s constructor (its own scratch and result
+  buffers) and `build_ras`.
+
+**New, from this capture.**
+- `mesh_load_quanta_partition`: 150 ms on one thread (M6 measured).
+- `asset_load_partitions`: 3.2 s of thread time over 536 assets (was 1.5 s). Texture assets create their streamed
+  texture there and all take the texture streamer's mutex to load roots; the rise is contention, not wall time.
+
+## Phase L: asset loading time
+
+Independent of the streaming phases. Tasks L.1 to L.4 touch no streaming code and go first, because they are backed by
+measurements. L.5 edits `QuantaResidency.cpp` and goes after task 1.1.
+
+**Measured baseline** (traces in `workdir/captures/`, one run each, build configuration not recorded):
+
+- `drop_asset_0.json`: 2498 ms for 536 assets (132 materials, one mesh of 1591 parts).
+  - 0–1650 ms: all 14 asset-lane workers inside `material_ser_pipeline`, 18.7 s of thread time, median 206 ms each.
+  - `material_compile_get_texture`: 405 calls, 1636 ms.
+  - 1840–2343 ms: `mesh_init_gpu`, 1591 BLAS builds on one thread.
+- `add_mesh_instance_1.json`: `quanta_acquire_many` 534 ms on the main thread: `quanta_prefetch_roots` 304 ms,
+  `quanta_acquire_many_grow_pool` 195 ms, everything else about 35 ms.
+
+The captures are made by the profiler capture feature added in commit "fast mesh loading" (`Profiling.ixx/.cpp`); read
+it to see how a capture is started and where the summary is logged. After each task ask the user to repeat the same
+action (drop the same asset, add the same instance) and paste the new `capture '...'` lines from `workdir/log.txt`.
+Compare against the numbers above in your report. You do not run the app yourself.
+
+### Task L.1 Find out what `material_ser_pipeline` spends its time on
+
+**Why:** the trace has no scopes inside it, so the two causes below are read from code, not measured. Confirm before
+fixing.
+
+**Change (instrumentation only, permanent `PROFILE` scopes, no `.temp` logging needed):**
+- `sources/HAL/SIG/PSO.ixx`: a scope around the PSO set's deserialize and around each variant's creation. Find the
+  `SERIALIZE()` of the generated PSO classes (`PSOS::Meshes::GBufferDraw` and friends derive from the templates in this
+  file) and where the key variants are built (`shuffle_pairs`).
+- `sources/HAL/HAL.PipelineState.cpp`: scopes in the two `PipelineStateCache` creation lambdas, named
+  `pso_create_graphics` and `pso_create_compute`.
+- `sources/Core/Data/Data.ixx` `Cache::operator[]`: a scope named `cache_wait_other_thread` around the
+  `while (!elem) yield()` loop only.
+- `sources/HAL/HAL.Shader.ixx`: a scope around the shader `SERIALIZE()` load branch (`ShaderType::get_resource`).
+
+`Core/Data/Data.ixx` is in Core: check that `PROFILE` is usable there (the macro is forced-included through
+`Core/Defines.h`; if the profiling module is not importable from that file, skip that one scope and say so).
+
+**Done when:** the user's new capture shows where the 18.7 s goes. Report the split and stop. L.2 depends on it.
+
+### Task L.2 Create PSO variants when they are first used (REVISED after measuring)
+
+**Read "Batch 1 results" first.** The original L.2 below this task (hash-first dedupe, `Cache` spin) is kept as
+**L.2b**, lower priority: it removes at most about 2 s of the 19 s of thread time.
+
+**Why:** a material's pipeline holds PSO sets (`PSOS::Meshes::GBufferDraw`, `DepthDraw`, `GI::Voxel::Voxelization`,
+`VSMDepthDrawMaterial`, `GBufferDrawVS`). Constructing or deserializing a set creates the PSO for **every** key
+combination (22 to 27 per material, about 10 ms each under load). A session draws with a handful of them.
+
+**Change:**
+- Read `sources/HAL/SIG/PSO.ixx` (`PSOBase`, `shuffle_pairs`, `GetPSO`) and one generated set under
+  `sources/HAL/autogen/pso/` to see where the variants are created and stored. The generated code comes from Prism
+  templates in `sources/Prism/`: if the eager loop is in generated code, change the template and regenerate (see the
+  `prism-regen` skill), never the generated file.
+- Make variant creation lazy: the set keeps the description needed to build any variant, and `GetPSO(keys)` creates
+  the variant on first request. The first request must not stall a frame: start the creation on the thread pool and
+  have callers treat the variant as not built until it is. `PipelinePasses::is_built()` already exists for exactly
+  this and `mesh_renderer` already skips pipelines that are not built; read both and extend them to "the variant this
+  draw needs is built", not "all variants are built".
+- Warm the variants that are certainly needed (the default keys of GBuffer and depth for the current device) right
+  after load, on the asset lane at low priority, so the first frame with the material is not empty for long.
+- Serialization must keep working in both directions: what is saved per variant today (shader references, the PSO
+  description) must still be saved for all variants, so a device build without a shader compiler can create any of
+  them later. Only the D3D12 object creation moves.
+- `spectrum_tool shaders` uses `PSOBuildObserver` to see every PSO and key combination: that path must still visit
+  all variants. Keep an explicit "build everything" entry point for it and for tests.
+
+**Stop and ask** before coding if making `GetPSO` able to return "not ready" touches more than the mesh draw paths
+(search for `GetPSO(` across `sources/`); list the call sites and propose how each handles a missing variant.
+
+**Tests:** all tests (PSO sets are used everywhere). User check: drop the asset; materials appear within a few frames,
+nothing stays invisible, shadows and voxel GI still include the new mesh.
+
+**Done when:** `material_ser_pipeline` thread time in the drop capture falls below 4 s and `drop_load_asset` below
+1.2 s.
+
+### Task L.2b Pipeline dedupe before deserialize, and the `Cache` wait (was L.2)
+
+**Expected cause 1: the dedupe runs after the work.** `universal_material`'s `SERIALIZE()`
+(`sources/RenderSystem/Materials/universal_material.ixx`) does `ar & NVP(pipeline)`, which deserializes a complete
+`PipelinePasses` with all its PSO variants, and only then calls `PipelineManager::get_pipeline(pipeline)`, which throws
+the new one away if another material already registered the same `hash`.
+
+**Expected cause 2: waiters spin.** `Cache::operator[]` (`sources/Core/Data/Data.ixx`): a thread that misses on a key
+another thread is creating loops on `std::this_thread::yield()`, and loops forever if the creator throws.
+
+**Change:**
+- `Cache`: store `std::shared_future<V>` per key, the way `resource_manager_base::get_resource`
+  (`sources/Core/FileSystem/ResourceManager.ixx`) does. The first thread creates outside the lock and sets the promise
+  (set the exception on throw, then erase the entry so a later call retries); others wait on the future. `Cache` has a
+  public `table` member: find every user of `table` and `size()` first and keep them working.
+- Pipeline dedupe before the PSOs are read. On save, write `pipeline->hash` ahead of the pipeline. On load, read the
+  hash, ask `PipelineManager` for an existing pipeline with it, and only deserialize into a new one on a miss.
+  The archive is sequential, so on a hit the stored pipeline bytes still have to be consumed: the simplest correct
+  form is to move the pipeline into its own partition (`save_partitions` / `load_partitions`, like the existing
+  `material_build` partition in `universal_material.cpp`), which is only opened on a miss. Keep reading the old inline
+  layout for files saved before the change: gate on a version field or on the presence of the new partition, and say
+  in the report which you used.
+- Two threads missing on the same hash at once must not both build: `PipelineManager` needs a "being loaded" entry
+  (a shared future per hash) so the second waits for the first.
+
+**Do not change** what a pipeline hash covers (`crc32(pixel + tess + mode)`), nor `PipelinePasses::is_built`.
+
+**Tests:** `Test.MaterialX`, `Test.Serialization`, the scene-parity tests. Then the user repeats the drop-asset capture.
+Visual check by the user: the dropped scene's materials look the same as before (no missing or swapped materials).
+
+**Done when:** `material_ser_pipeline` thread time drops by at least 5x in the new capture, or you can show from L.1's
+scopes that the remaining time is real PSO creation.
+
+### Task L.3 Materials must not create the whole texture
+
+**Why:** `universal_material::compile()` (`universal_material.cpp`, scope `material_compile_get_texture`) calls
+`tex->get_texture()->texture_2d()` only to learn whether a usable 2D texture exists. For an asset loaded as tiles,
+`TextureAsset::get_texture()` (`sources/RenderSystem/Assets/TextureAsset.cpp`) then reads the full `texdata` partition
+and creates the complete texture, which is exactly what streaming is meant to avoid.
+
+**Change:**
+- Add `bool TextureAsset::has_texture_2d()` that answers without creating anything: true if `streamed` exists; else if
+  `tiles` exists, from the `TileFile` header (it derives `HAL::texture_data_header`: 2D means `array_size == 1` and
+  `depth <= 1`); else fall back to today's `get_texture()` test.
+- `compile()` uses it, then calls `get_render_texture()` as it already does.
+- Search for other `get_texture()` callers on load paths (`Grep` for `->get_texture()` under
+  `sources/RenderSystem`). List them in your report. Change only ones that clearly just test for existence; ray tracing
+  and editor previews may really need the whole texture, so leave those and name them.
+
+**Tests:** `Test.TextureStreaming`, `Test.MaterialX`. User check: with "Texture streaming" → "Debug view" =
+`SampledMip`, streamed textures still refine near the camera; and the whole-texture count in memory should drop (the
+user can compare video memory before and after loading the same scene).
+
+**Done when:** `material_compile_get_texture` is under 50 ms total in the drop-asset capture.
+
+### Task L.4 Batch the BLAS builds
+
+**Why:** `MeshAsset::init_gpu()` (`sources/RenderSystem/Assets/MeshAsset.cpp`) takes a command list, builds one BLAS
+and executes, 1591 times in a row on one thread: 503 ms.
+
+**Change:**
+- Build `BlasPerList` (start with 64, a named constant with a one-line comment that it is a tuning value) acceleration
+  structures per command list, then execute and start the next list. Keep only the last waiter and wait once at the
+  end, as now.
+- Check `RaytracingAccelerationStructure`'s constructor (search `sources/HAL` for the class) for anything that assumes
+  one structure per list, such as scratch buffers taken from the list's per-list allocator or a resource-state change
+  that must be flushed between builds. If scratch memory per list would grow too large, lower the batch size, do not
+  restructure the class.
+- Do not parallelize across threads in this task.
+
+**Tests:** scene-parity tests (they cover ray tracing on both backends), `Test.Quanta`. User check: ray traced shadows
+and reflections on the dropped mesh look as before (toggle "Shadow Src" to the ray traced reference if available and
+compare).
+
+**Done when:** `mesh_init_gpu` is under 150 ms in the drop-asset capture.
+
+### Task L.4b BLAS recording cost (follow-up to L.4)
+
+L.4 is in and correct but saved only 100 ms: the time is in recording, not in list execution (see "Batch 1 results").
+- Add scopes inside `RaytracingAccelerationStructure`'s constructor: buffer creation, `build_ras`, anything else.
+- Expected fix once confirmed: one scratch buffer per command list reused by every build in it (builds in one list
+  run in order, so they can share scratch only if a UAV barrier separates them: check what `build_ras` emits), and
+  result buffers sub-allocated from a few large buffers instead of one resource per structure.
+- Alternative worth measuring: split the parts across the asset-lane workers, one list each.
+
+**Done when:** `mesh_init_gpu` is under 150 ms.
+
+### Task L.6 Quanta partition load (M6)
+
+`mesh_load_quanta_partition` is 150 ms on one thread. Add scopes inside `Quanta::AssetPartition`'s deserialize
+(`sources/RenderSystem/Quanta/QuantaAsset.ixx`, `Quanta.cpp`) to split header, group/node tables and the parents
+table, then report. No fix until the split is known.
+
+### Task L.5 `acquire_many`: one read, one pool growth (after task 1.1)
+
+**Why:** 534 ms on the main thread when an instance is added.
+
+**Change** (`sources/RenderSystem/Quanta/QuantaResidency.cpp`, `Quanta.cpp`):
+- **Root page reads.** `read_page` opens the file anew for each page. Add
+  `bool read_pages(const Mesh&, std::span<const uint32_t> pages, std::vector<std::vector<uint8_t>>& out)` in
+  `Quanta.cpp` that opens the file once, reads the requested pages in ascending `file_offset` order, and decompresses
+  each. In `acquire_many`, group the fetches by mesh file and run one task per file (not one per page) for the reads;
+  decompression of the pages read may still fan out on the pool.
+- **Pool growth.** `Residency::allocate_pool(count)` calls `pages.allocate(pool[i], PageDwords)` per slot. Allocate one
+  range of `count * PageDwords` and carve the slots out of it. `pool` holds `TypedHandle<uint>` per slot and slots are
+  freed individually only by the demand-pool path, which Quanta does not use (`use_demand_pool` is texture-only):
+  confirm that by reading `Residency`, then store the range handles separately and make `pool[i]` a plain dword offset.
+  Every `pool[slot].get_offset()` call site changes accordingly.
+- **One batch.** Remove the `BatchSize = 128` loop unless the prefetched bytes of a whole instance would be too large
+  to hold at once; if you keep batching, grow the pool once for the whole call, before the loop.
+- Keep the behaviour that a refused mesh comes back null and is logged.
+- Do **not** move the call off the main thread in this task. That changes when an instance becomes visible and needs a
+  design decision from the user; mention it under Planned in your report.
+
+**Tests:** `Test.Quanta`, streamed and pinned cases in `Test.SceneParity`. Then the user repeats the add-instance
+capture.
+
+**Done when:** `quanta_acquire_many` is under 150 ms in the new capture.
+
+---
+
+## Phase R: ray tracing state object
+
+Files: `sources/HAL/SIG/RTX.ixx` (`RTXPSO`, `RaytracePass`, `RaytraceRaygen`), `sources/HAL/HAL.PipelineState.ixx/.cpp`
+and `sources/HAL/API/D3D12/HAL.D3D12.PipelineState.cpp` (`StateObject`), `sources/RenderSystem/Effects/RTX/RTX.ixx/.cpp`,
+`sources/RenderSystem/Materials/universal_material.cpp` (`init_material`, `update_rtx`, `generate_material`).
+
+**How it works now.**
+- `RTXPSO` owns one executable state object, `m_dxrStateObject`, linked from collections: one per engine pass, one per
+  raygen, and for every material one collection per per-material pass (`RaytracePass::init_for_material`). Each
+  collection is a `CreateStateObject` call, which is where the driver compiles DXIL to native code.
+- A material registers with `init_material()` during `compile()`. `RTXPSO::update()` runs once per frame from a pool
+  task started in `main.cpp` ("RTX update") that the frame waits for.
+- New materials: `build_pending_collections()` compiles all their collections on the pool and waits, then
+  `add_pending_materials()` calls `HAL::StateObject::add` (D3D12 `AddToStateObject`), then writes the new hit records.
+  This path was added in commit "fast mesh loading".
+- A changed material (shader edited or reloaded): its `on_change` handler rebuilds its collections under the lock and
+  sets `need_full_rebuild`. `update()` then calls `init()`, which rebuilds **every** pass and raygen collection, links
+  everything again and runs `init_ids()`.
+- Hit records are `{shader identifier, local_addr}` in `hitgroup_ids`; `local_addr` is per material, the identifier
+  comes from the hit group's export name (`material_<n>` + pass name).
+
+**What is slow or wrong.**
+- **R2/R3, duplicate compiles.** The collections are keyed by material pointer. Materials that share one
+  `raytracing_lib` (same generated hit shader, different textures and uniforms, which is most of a scene like the one
+  in the captures: 132 materials) each compile their own copies, differing only in export name. On top of that the same
+  library is compiled once per per-material pass. Since the hit record already carries `local_addr` separately, the
+  identifier can be shared.
+- **R4, the frame waits.** All pending collections are compiled inside `update()`; the frame blocks on the task.
+- **R5/R6, edits rebuild everything.** One edited material recompiles all engine ray tracing shaders, recreates the
+  miss and raygen id buffers and blocks on an upload.
+- **R7/R8, lifetime and locking.** Nothing ever erases from `materials`; a destroyed material leaves a dangling key
+  that `init_ids()` dereferences on the next full rebuild, and its hit-table range and collections are never freed.
+  `update_material()` and `get_index()` use the maps without the lock.
+
+### Task R.1 Measure it
+
+Neither existing capture contains the update (it runs on the frame after the drop finishes).
+- Scopes already exist: `rtx_build_pending_collections`, `rtx_add_pending_materials`, `rtx_add_to_state_object`,
+  `rtx_write_material_ids`, `d3d12_add_to_state_object`. Add `rtx_full_rebuild` around the `init()` branch in
+  `update()`, `rtx_init_ids` in `init_ids()`, and `state_object_create` around the `CreateStateObject` call in
+  `StateObject::on_change` (`HAL.D3D12.PipelineState.cpp`).
+- Find how the "drop asset" capture is started and stopped (search `main.cpp` for the capture name) and extend it, or
+  add a second capture, so it covers the frames up to the first `RTX update` that does work. Ask the user to drop the
+  same asset, and also to edit one material's graph once (that exercises the full rebuild).
+
+**Done when:** the report gives ms for: collections build, add, full rebuild, per-`CreateStateObject` average, and how
+many distinct `raytracing_lib` pointers the 132 materials have (log the count once from `build_pending_collections`
+into a `.temp` file, and list it for removal).
+
+### Task R.2 Share collections between materials with the same library
+
+**Change** (`RTX.ixx`):
+- Key the collections by `HAL::library_shader*`, not by `material*`: a `std::map<library_shader*, shared_group>` where
+  `shared_group` holds the collections, a use count, and a name `lib_<n>` that replaces `mat->wshader_name` in export
+  and hit-group names. `material_info` keeps a pointer to its group.
+- `init_for_material` becomes `init_for_library(rtx, library, name)`; `init_material_ids` looks the identifier up by
+  the group's name and still writes `mat->local_addr`.
+- Build **one** collection per library containing the exports and hit groups of all per-material passes, instead of
+  one collection per pass. Check first that the passes export different functions of the same library
+  (`Desc::hit_name`, `Desc::any_hit_name`); if two passes export the same function under different names, DXIL allows
+  that with two `DefineExport` entries: keep it in one collection.
+- `material::wshader_name` stays only if something outside `RTX.ixx` reads it (search); otherwise remove it.
+
+**Risk to check before coding:** `local_addr` must be the only per-material input a hit shader has. Read how
+`local_addr` reaches the shader (see the memory of the earlier bug: the local root signature's register is taken from
+`T::Slot::ID`) and confirm nothing per-material is baked into the library through macros other than what already makes
+the library text differ.
+
+**Tests:** scene-parity tests on both backends. User check: ray traced reflections show the correct, different
+materials on neighbouring objects (a shared identifier with a wrong `local_addr` shows as every object wearing one
+material).
+
+**Done when:** the number of per-material collections built equals the number of distinct libraries.
+
+### Task R.3 Build collections when the material loads, not in the frame
+
+- Start the group's collection build as a pool task when the first material with that library registers
+  (`init_material`), outside the lock; store a `std::shared_future`. Use the asset lane for it during loads.
+- `update()` adds only the groups whose future is ready (no waiting). Materials whose group is not in the state object
+  yet must still be safe to hit: until then write a **fallback** identifier into their hit records. Use the
+  non-per-material hit group of the same pass if one exists; if none does, **stop and ask**, since the alternatives
+  (a tiny built-in "pending material" hit shader, or keeping such instances out of the TLAS) are a design choice.
+- When a group lands, rewrite the hit records of all its materials (`write_material_ids`).
+
+**Done when:** `RTX update` stays under 2 ms in frames where materials are loading, except the frame that calls
+`AddToStateObject`, and that call's time is reported.
+
+### Task R.4 A material edit is an add, not a rebuild
+
+- On a material's `on_change` with a new library: release its old group (use count), take or create the group of the
+  new library, and go through the add path of R.3. No `need_full_rebuild`.
+- Keep the full rebuild only for engine shader hot-reload (a pass or raygen library changed; that already arrives
+  through `StateObject`'s own `event_change`), and make that path rebuild only the collection whose library changed
+  (`init()` currently re-inits every pass and raygen).
+- Groups with use count 0 stay in the state object (it cannot shrink). Count them; when they exceed a threshold
+  (start at 64, a named constant), schedule one background relink from the live collections and swap it in. The swap
+  must rewrite **all** hit, miss and raygen ids, because identifiers from the old object are not valid in the new one.
+- `init_ids()`: create `miss_ids` / `raygen_ids` once (their counts are fixed by the template arguments), and update
+  their contents through the frame's list in `prepare()` like `hitgroup_ids`, not with `execute_and_wait`.
+
+**Tests:** scene-parity. User check: open a material graph, change a node, confirm the ray traced result updates and
+the edit no longer hitches (compare the `RTX update` time from R.1).
+
+### Task R.5 Lifetime and locking
+
+- Add `RTXPSO::remove_material(material*)`: unregister the `on_change` handler, free the `hitgroup_ids` range, drop the
+  group's use count, erase from `materials` / `new_materials`. Call it from the material's teardown. There is no
+  `~universal_material` today: find where a material asset is destroyed or unloaded and whether `RTX` can already be
+  gone at that point (`RTX::is_good()`), as `Streamed::~Streamed` does for its manager.
+- A hit-table range must not be reused while frames in flight can still index it: free it through the same deferred
+  path other per-frame GPU data uses (look at how `universal_rtx_manager` or `virtual_gpu_buffer::free` users handle
+  this; if nothing defers, **ask**).
+- Take the lock in `update_material()` and `get_index()`, and make `update_material()` look in `new_materials` too
+  instead of inserting an empty entry.
+
+---
+
+## What needs a measurement first, and what does not
+
+Do not hold the whole plan back for instrumentation. Only two groups of tasks wait on numbers.
+
+**Start without measuring.**
+- Already measured in the existing captures: L.3 (whole texture in `compile()`), L.4 (BLAS), L.5 (`acquire_many`),
+  1.3 (per-request DirectStorage), 1.7 (per-tile mapping), 2.2 (texture feedback readback).
+- Wrong regardless of how long they take: 1.1 (root budget), 1.4 (loads under the streamer lock), R.5 (materials never
+  removed, unlocked map access).
+
+**Wait on a measurement.**
+- **L.2** waits on L.1. The capture shows 18.7 s inside `material_ser_pipeline` with no scopes inside it; the two
+  suspected causes (duplicate PSO builds, the spinning `Cache` wait) cannot be told apart yet.
+- **R.2, R.3, R.4** wait on R.1. The state object update runs on the frame after the drop finishes, outside the
+  existing capture window.
+
+**The measuring steps are small and change no behaviour:** a few `PROFILE` scopes (L.1) and a longer capture window
+(R.1). Do both in one change so the user builds and captures once.
+
+**Shortcuts the user may take; offer them, do not decide for them.**
+- For R.1, the scopes `rtx_build_pending_collections` and `rtx_add_to_state_object` already exist. If the user reads
+  the `RTX update` time from the live profiler on the frame after a drop and reports it, treat that as R.1's timing
+  result and skip the capture change. The count of distinct hit libraries is still needed before R.2; get it with the
+  one-off `.temp` log R.1 describes.
+- L.2 may be done without L.1 if the user says so. Both of its fixes are correct on their own (the spin wait can hang
+  when the creator throws; deduping before deserializing is strictly less work). If you skip L.1, say in the report
+  that the expected gain is unconfirmed, and still add L.1's scopes in the same change so the next capture shows where
+  any remaining time goes.
+
+---
+
 ## Order and checkpoints
+
+The table is one valid order, not the only one: anything in the "start without measuring" list above can be pulled
+forward, as long as L.5 stays after 1.1 and each task's own "after task X" note is respected.
 
 | Step | Task | Risk | Needs regen / project gen |
 |---|---|---|---|
+| L1 | L.1 instrument pipeline load, together with R.1 | low | no |
+| L2 | L.2 pipeline dedupe + cache wait | medium (asset format) | no |
+| L3 | L.3 no whole texture in `compile()` | low | no |
+| L4 | L.4 batched BLAS | medium | no |
+| R1 | R.1 measure the state object update | low | no |
+| R2 | R.2 share collections per library | medium | no |
+| R3 | R.3 build collections at load (**may ask**) | high | no |
+| R4 | R.4 edit is an add | high | no |
+| R5 | R.5 lifetime and locking (**may ask**) | medium | no |
 | 1 | 1.1 root budget | low | no |
+| L5 | L.5 `acquire_many` | medium | no |
 | 2 | 1.2 capability bit | low | no |
 | 3 | 1.3 batched DirectStorage | medium | no |
 | 4 | 1.4 loads off the lock | high | no |

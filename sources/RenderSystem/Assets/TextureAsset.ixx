@@ -72,6 +72,10 @@ export{
 		// them in video memory from then on), so prefer get_render_texture() wherever a streamed one will do.
 		HAL::Texture::ptr get_texture();
 
+		// Whether get_texture() would be a usable 2D texture, answered without creating the whole texture of an asset
+		// that streams or is loaded as tiles.
+		bool has_texture_2d();
+
 		// What the materials bind: a streamed texture when the asset is streamable and large, so only the mips the draws
 		// sample take memory from the streaming pool; any other texture as it is. Use get_texture() for everything that
 		// wants all the texels.

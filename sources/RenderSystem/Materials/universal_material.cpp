@@ -71,7 +71,12 @@ materials::PipelinePasses::PipelinePasses(UINT id, std::string pixel, std::strin
 	if (TextureStreaming::Manager::supported())
 		gbuffer_macros.emplace_back("STREAM_FEEDBACK", "1");
 
-	depth_draw = std::make_shared<PSOS::Meshes::DepthDraw>(RenderSystem::get().device(),[&](SimpleGraphicsPSO& target, PSOS::Meshes::DepthDraw::Keys& )
+	// Lazy sets resolve every variant's description (and so load or compile its shaders) here, while the
+	// lambdas' by-reference captures are alive; only the pipeline objects wait for a draw.
+	eager = eager_variants();
+	const auto creation = eager ? PSOCreation::Eager : PSOCreation::Lazy;
+
+	depth_draw = std::make_shared<PSOS::Meshes::DepthDraw>(RenderSystem::get().device(), creation, [&](SimpleGraphicsPSO& target, PSOS::Meshes::DepthDraw::Keys& )
 	{
 		target.name += std::to_string(id);
 		target.pixel = { pixel, "PS", HAL::ShaderOptions::None, pixel_macros, true };
@@ -87,7 +92,7 @@ materials::PipelinePasses::PipelinePasses(UINT id, std::string pixel, std::strin
 		}
 	});
 
-	gbuffer = std::make_shared<PSOS::Meshes::GBufferDraw>(RenderSystem::get().device(),[&](SimpleGraphicsPSO& target, PSOS::Meshes::GBufferDraw::Keys& )
+	gbuffer = std::make_shared<PSOS::Meshes::GBufferDraw>(RenderSystem::get().device(), creation, [&](SimpleGraphicsPSO& target, PSOS::Meshes::GBufferDraw::Keys& )
 	{
 		target.name += std::to_string(id);
 		target.pixel = { pixel, "PS", HAL::ShaderOptions::None, gbuffer_macros, true };
@@ -103,7 +108,7 @@ materials::PipelinePasses::PipelinePasses(UINT id, std::string pixel, std::strin
 		}
 	});
 
-	voxelization = std::make_shared<PSOS::GI::Voxel::Voxelization>(RenderSystem::get().device(),[&](SimpleGraphicsPSO& target, PSOS::GI::Voxel::Voxelization::Keys& )
+	voxelization = std::make_shared<PSOS::GI::Voxel::Voxelization>(RenderSystem::get().device(), creation, [&](SimpleGraphicsPSO& target, PSOS::GI::Voxel::Voxelization::Keys& )
 	{
 		target.name += std::to_string(id);
 		target.pixel = { pixel, "PS_VOXEL", HAL::ShaderOptions::None, voxel_macros, true };
@@ -128,7 +133,7 @@ materials::PipelinePasses::PipelinePasses(UINT id, std::string pixel, std::strin
 	// plain VSMDepthDraw PSO.
 	if (mode == Meshes::TransparencyMode::Masked)
 	{
-		vsm_depth_draw = std::make_shared<PSOS::Shadows::VSM::VSMDepthDrawMaterial>(RenderSystem::get().device(), [&](SimpleGraphicsPSO& target, PSOS::Shadows::VSM::VSMDepthDrawMaterial::Keys&)
+		vsm_depth_draw = std::make_shared<PSOS::Shadows::VSM::VSMDepthDrawMaterial>(RenderSystem::get().device(), creation, [&](SimpleGraphicsPSO& target, PSOS::Shadows::VSM::VSMDepthDrawMaterial::Keys&)
 		{
 			target.name += std::to_string(id);
 			// PS_VSM_DEPTH, not PS -- mesh_shader_vsm.hlsl's vertex output is
@@ -147,7 +152,7 @@ materials::PipelinePasses::PipelinePasses(UINT id, std::string pixel, std::strin
 		auto vertex_macros = gbuffer_macros;
 		vertex_macros.emplace_back("VERTEX_FRONT_END", "1");   // draw id as a flat input (draw_data.hlsl)
 
-		gbuffer_vs = std::make_shared<PSOS::Meshes::GBufferDrawVS>(RenderSystem::get().device(), [&](SimpleGraphicsPSO& target, PSOS::Meshes::GBufferDrawVS::Keys&)
+		gbuffer_vs = std::make_shared<PSOS::Meshes::GBufferDrawVS>(RenderSystem::get().device(), creation, [&](SimpleGraphicsPSO& target, PSOS::Meshes::GBufferDrawVS::Keys&)
 		{
 			target.name += std::to_string(id);
 			target.pixel = { pixel, "PS", HAL::ShaderOptions::None, vertex_macros, true };
@@ -159,54 +164,114 @@ materials::PipelinePasses::PipelinePasses(UINT id, std::string pixel, std::strin
 		raytrace_lib = HAL::library_shader::get_resource({ raytracing, "" , HAL::ShaderOptions::None, context->hit_shader.macros, true });
 }
 
-bool materials::PipelinePasses::is_built() const
+namespace
 {
-	if (RenderSystem::get().device().is_mesh_shader_supported())
+	VariableContext& pso_variant_context()
 	{
-		for (auto& [key, pso] : gbuffer->psos)
-			if (!pso || !pso->is_built()) return false;
-		for (auto& [key, pso] : depth_draw->psos)
-			if (!pso || !pso->is_built()) return false;
+		static auto ctx = VariableContext::create(L"PSO variants");
+		return *ctx;
 	}
 
-	if (gbuffer_vs)
-		for (auto& [key, pso] : gbuffer_vs->psos)
-			if (!pso || !pso->is_built()) return false;
+	Variable<bool> g_eager_pso_variants = { false, "Eager PSO variants", &pso_variant_context() };
+}
 
-	return true;
+bool materials::PipelinePasses::eager_variants()
+{
+	// Tools save every variant's shaders after waiting for is_built(), and tests compare frames that assume every
+	// variant exists: both keep the old behaviour.
+	return g_eager_pso_variants || Application::test_mode;
+}
+
+void materials::PipelinePasses::warm_variants() const
+{
+	PROFILE(L"pso_variant_warm");
+	gbuffer->psos.warm(true);
+	depth_draw->psos.warm(true);
+	// All of them (two and one): their passes cache what they draw (static voxels, shadow pages), so a first
+	// draw that finds them missing is costly to make up.
+	voxelization->psos.all_settled();
+	if (vsm_depth_draw)
+		vsm_depth_draw->psos.all_settled();
+	if (gbuffer_vs)
+		gbuffer_vs->psos.warm(true);
+}
+
+bool materials::PipelinePasses::is_built() const
+{
+	auto ready = [this](const auto& set) {
+		if (!set)
+			return true;
+		return eager ? set->psos.all_settled() : set->psos.warm(true);
+	};
+
+	// Not short-circuited: each call also starts what its set is missing.
+	const bool g = ready(gbuffer);
+	const bool d = ready(depth_draw);
+	const bool v = ready(gbuffer_vs);
+	return g && d && v;
 }
 
 void materials::PipelinePasses::set_vertex_front_end(HAL::GraphicsContext& graphics)
 {
-	graphics.set_pipeline(gbuffer_vs->GetPSO());
+	bind_vertex_front_end(graphics);
+}
+
+bool materials::PipelinePasses::bind_vertex_front_end(HAL::GraphicsContext& graphics)
+{
+	auto pso = gbuffer_vs ? gbuffer_vs->GetPSO() : nullptr;
+	if (!pso || !pso->is_built())
+		return false;
+	graphics.set_pipeline(pso);
+	return true;
 }
 
 void materials::PipelinePasses::set(RENDER_TYPE render_type, MESH_TYPE type, HAL::GraphicsContext& graphics, bool hiz_occlusion, bool capture_meshlets, bool cluster_lod)
 {
+	bind(render_type, type, graphics, hiz_occlusion, capture_meshlets, cluster_lod);
+}
+
+PSOSkipRecord& materials::PipelinePasses::skip_record(RENDER_TYPE render_type, MESH_TYPE type)
+{
+	static PSOSkipRecord records[3][8];
+	return records[(int)render_type][(int)type & 7];
+}
+
+bool materials::PipelinePasses::bind(RENDER_TYPE render_type, MESH_TYPE type, HAL::GraphicsContext& graphics, bool hiz_occlusion, bool capture_meshlets, bool cluster_lod)
+{
+	const auto seen = PSOSkipRecord::now();
+	HAL::PipelineState::ptr pso;
 	if (render_type == RENDER_TYPE::DEPTH)
 	{
 		// Must agree with mesh_renderer::render_meshes (only a context with a LOD threshold walks the clusters).
 		const bool quanta = cluster_lod && Quanta::draw_enabled();
-		graphics.set_pipeline(depth_draw->GetPSO(
+		pso = depth_draw->GetPSO(
 			PSOS::Meshes::DepthDraw::HiZOcclusion.Use(hiz_occlusion) |
 			PSOS::Meshes::DepthDraw::ClusterLod.Use(cluster_lod) |
-			PSOS::Meshes::DepthDraw::Quanta.Use(quanta)));
+			PSOS::Meshes::DepthDraw::Quanta.Use(quanta));
 	}
 	else
 		if (render_type == RENDER_TYPE::PIXEL)
 		{
 			// Must agree with mesh_renderer::render_meshes, whose gather hands out the matching arguments.
 			const bool quanta = cluster_lod && Quanta::draw_enabled();
-			graphics.set_pipeline(gbuffer->GetPSO(
+			pso = gbuffer->GetPSO(
 				PSOS::Meshes::GBufferDraw::HiZOcclusion.Use(hiz_occlusion) |
 				PSOS::Meshes::GBufferDraw::CaptureMeshlets.Use(capture_meshlets) |
 				PSOS::Meshes::GBufferDraw::ClusterLod.Use(cluster_lod) |
-				PSOS::Meshes::GBufferDraw::Quanta.Use(quanta)));
+				PSOS::Meshes::GBufferDraw::Quanta.Use(quanta));
 		}
 		else
 		{
-			graphics.set_pipeline(voxelization->GetPSO(PSOS::GI::Voxel::Voxelization::Dynamic.Use(type == MESH_TYPE::DYNAMIC)));
+			pso = voxelization->GetPSO(PSOS::GI::Voxel::Voxelization::Dynamic.Use(type == MESH_TYPE::DYNAMIC));
 		}
+
+	if (!pso || !pso->is_built())
+	{
+		skip_record(render_type, type).skipped(seen);
+		return false;
+	}
+	graphics.set_pipeline(pso);
+	return true;
 }
 
 
@@ -216,32 +281,50 @@ void materials::PipelinePasses::set(RENDER_TYPE render_type, MESH_TYPE type, HAL
 
 materials::Pipeline::ptr materials::PipelineManager::get_pipeline(Pipeline::ptr orig)
 {
-	std::lock_guard<std::mutex> g(m);
+	Pipeline::ptr result;
+	{
+		std::lock_guard<std::mutex> g(m);
 
-	auto& pip = pipelines[orig->hash];
-	if (!pip)
-		pip = orig;
+		auto& pip = pipelines[orig->hash];
+		if (!pip)
+			pip = orig;
 
-	return pip;
+		result = pip;
+	}
+
+	// The kept one only: a duplicate that lost the dedupe above is thrown away without creating anything.
+	if (auto passes = std::dynamic_pointer_cast<PipelinePasses>(result))
+		passes->warm_variants();
+
+	return result;
 }
 
 materials::Pipeline::ptr materials::PipelineManager::get_pipeline(std::string pixel, std::string tess, std::string voxel, std::string raytracing, MaterialContext::ptr context, Meshes::TransparencyMode mode)
 {
-	std::lock_guard<std::mutex> g(m);
-	// The mode is part of the key: the GPU gather routes draws per pipeline,
-	// so two materials with identical shader text but different modes must
-	// not share one.
-	auto hash = crc32(pixel + tess + std::to_string((uint)mode));
-	auto&& pip = pipelines[hash];
-
-	if (!pip)
+	std::shared_ptr<PipelinePasses> created;
+	Pipeline::ptr result;
 	{
-		auto pipeline = std::make_shared<PipelinePasses>((UINT)pipelines.size(), pixel,tess,voxel,raytracing,context,mode);
-		pipeline->hash = hash;
-		pip = pipeline;
+		std::lock_guard<std::mutex> g(m);
+		// The mode is part of the key: the GPU gather routes draws per pipeline,
+		// so two materials with identical shader text but different modes must
+		// not share one.
+		auto hash = crc32(pixel + tess + std::to_string((uint)mode));
+		auto&& pip = pipelines[hash];
+
+		if (!pip)
+		{
+			created = std::make_shared<PipelinePasses>((UINT)pipelines.size(), pixel,tess,voxel,raytracing,context,mode);
+			created->hash = hash;
+			pip = created;
+		}
+
+		result = pip;
 	}
 
-	return pip;
+	if (created)
+		created->warm_variants();
+
+	return result;
 }
 
 
@@ -341,30 +424,44 @@ void materials::universal_material::save_partitions(FileDataStorage& storage)
 
 void materials::universal_material::load_partitions(FileDataStorage& storage, UniversalContext* context)
 {
-	if (!storage.has("material_build"))
-		return;
+	// A device file has no graph or headers to regenerate from: its pipeline stands as saved.
+	const bool can_regenerate = graph.get() && include_file && include_file_raytacing;
 
 	BuildInfo info;
-	try
+	bool has_info = storage.has("material_build");
+	if (has_info)
 	{
-		storage.get("material_build", info, context);
-	}
-	catch (const std::exception& e)
-	{
-		Log::get() << "material build info not loaded: " << e.what() << Log::endl;
-		return;
+		try
+		{
+			storage.get("material_build", info, context);
+		}
+		catch (const std::exception& e)
+		{
+			Log::get() << "material build info not loaded: " << e.what() << Log::endl;
+			has_info = false;
+		}
 	}
 
-	ps_header_hash = info.ps_header_hash;
-	rt_header_hash = info.rt_header_hash;
+	if (has_info)
+	{
+		ps_header_hash = info.ps_header_hash;
+		rt_header_hash = info.rt_header_hash;
+	}
 
-	// The pipeline in the file was generated from these header texts. Where the headers are still those, the
-	// material is current: its versions are brought up to theirs, so update() does not regenerate it. A header that
-	// changed since leaves the version at 0, and the first update() regenerates.
-	if (include_file && info.ps_header_hash == header_content_hash(include_file->get_data()))
+	// The pipeline in the file was generated from the header texts these hashes are of. Only where both headers are
+	// still those is the material current. Asked for explicitly: the header versions cannot tell, a freshly loaded
+	// header is at version 0 like a material that was never generated against it.
+	const bool current = has_info
+		&& info.ps_header_hash == header_content_hash(include_file ? include_file->get_data() : std::string())
+		&& info.rt_header_hash == header_content_hash(include_file_raytacing ? include_file_raytacing->get_data() : std::string());
+
+	if (include_file)
 		ps_header_version = include_file->get_version();
-	if (include_file_raytacing && info.rt_header_hash == header_content_hash(include_file_raytacing->get_data()))
+	if (include_file_raytacing)
 		rt_header_version = include_file_raytacing->get_version();
+
+	if (can_regenerate && !current)
+		need_regenerate_material = true;
 }
 
 void materials::universal_material::update()
@@ -507,7 +604,7 @@ void materials::universal_material::compile()
 			bool has_texture;
 			{
 				PROFILE(L"material_compile_get_texture");
-				has_texture = tex && tex->get_texture()->texture_2d();
+				has_texture = tex && tex->has_texture_2d();
 			}
 			if (has_texture)
 			{

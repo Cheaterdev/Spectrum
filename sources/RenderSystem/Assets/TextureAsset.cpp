@@ -54,6 +54,18 @@ HAL::Texture::ptr TextureAsset::get_texture()
 	return texture;
 }
 
+bool TextureAsset::has_texture_2d()
+{
+	if (streamed)
+		return true;
+
+	if (tiles)
+		return tiles->array_size == 1 && tiles->depth <= 1;
+
+	auto whole = get_texture();
+	return whole && whole->texture_2d();
+}
+
 void TextureAsset::reset_streamed()
 {
 	streamed.reset();

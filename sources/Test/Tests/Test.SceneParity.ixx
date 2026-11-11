@@ -764,6 +764,7 @@ export namespace Test
 		bool settled = true;
 		auto resident = render(false, &resident_stats, &settled);
 		auto streamed = render(true, &streamed_stats, &settled);
+		RenderSystem::get().device().get_ds_queue().close_file(path);   // DirectStorage keeps the files it read open
 		std::filesystem::remove(path);
 
 		Log::get() << "Quanta streaming from file: " << streamed_stats.loads << " loads, " << streamed_stats.file_loads
@@ -859,8 +860,9 @@ export namespace Test
 			Quanta::set_draw_enabled(false);
 		}
 
-		// Roots plus a few more pages than the view needs (about 21 of the 130): a tight pool, a fifth of the mesh.
-		const uint32_t pool = roots + 26;
+		// A few more pages than the view needs (about 21 of the 130) on top of the roots, which are outside the pool
+		// budget: a tight pool, a fifth of the mesh.
+		const uint32_t pool = 26;
 
 		auto render = [&](bool streamed, Quanta::StreamStats* stats, bool* settled) {
 			Quanta::set_streaming(streamed, pool);
@@ -892,6 +894,7 @@ export namespace Test
 		bool settled = true;
 		auto resident = render(false, &resident_stats, &settled);
 		auto streamed = render(true, &streamed_stats, &settled);
+		RenderSystem::get().device().get_ds_queue().close_file(path);   // DirectStorage keeps the files it read open
 		std::filesystem::remove(path);
 
 		Log::get() << "Quanta stress: " << total << " pages (" << roots << " roots), pool " << streamed_stats.pool_pages << ", "
@@ -1014,8 +1017,9 @@ export namespace Test
 		}
 		ASSERT_TRUE(detail_pages > 0);
 
-		// Roots of both and the detail of one, nothing to spare: the other's detail only fits by evicting.
-		Quanta::set_streaming(true, 2 * roots + static_cast<uint32_t>(detail_pages));
+		// The detail of one, nothing to spare (the roots of both are outside the pool budget): the other's detail only
+		// fits by evicting.
+		Quanta::set_streaming(true, static_cast<uint32_t>(detail_pages));
 
 		HAL::texture_data::ptr last;
 		Quanta::StreamStats stats;

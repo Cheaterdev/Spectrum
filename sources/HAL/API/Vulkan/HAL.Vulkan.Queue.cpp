@@ -134,6 +134,18 @@ namespace HAL
     bool DirectStorageQueue::is_complete(UINT64 fence) { return requestCounter.get_completed_value() >= fence; }
     FenceWaiter DirectStorageQueue::get_waiter() { return FenceWaiter{ &requestCounter, 0 }; }
 
+    // Each request is read and uploaded before the next starts: the last waiter covers the batch.
+    HAL::FenceWaiter DirectStorageQueue::execute(std::span<const StorageRequest> requests)
+    {
+        HAL::FenceWaiter waiter = get_waiter();
+        for (const StorageRequest& request : requests)
+            waiter = execute(request);
+        return waiter;
+    }
+
+    // Every request opens and closes its file itself.
+    void DirectStorageQueue::close_file(const std::filesystem::path&) {}
+
     HAL::FenceWaiter DirectStorageQueue::execute(StorageRequest srequest)
     {
         // Vulkan has no DirectStorage — read the cache file and upload via a

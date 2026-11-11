@@ -323,7 +323,8 @@ bool stencil_renderer::on_drop(GUI::drag_n_drop_package::ptr p, vec2 m)
 	if (!item)
 		return false;
 
-	PROFILE_CAPTURE("drop asset");
+	// The frames after it too: the ray tracing state object takes the new materials in on the next RTX update.
+	PROFILE_CAPTURE("drop asset", 120);
 	Asset::ptr asset;
 	{
 		PROFILE(L"drop_load_asset");

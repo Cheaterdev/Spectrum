@@ -33,16 +33,25 @@
        using PSOState = HAL::PipelineState;                                           \
        using SimplePSO = SimpleGraphicsPSO;                                           \
        static const PSO ID = PSO::name;                                               \
-       std::map<Keys, PSOState::ptr> psos = {};                                       \
+       PSOVariantMap<Keys> psos = {};                                                 \
        PSOState::ptr GetPSO(KeyPair<Keys> key = KeyPair<Keys>()) {                    \
-           ASSERT(psos[key.GetKey()]); return psos[key.GetKey()];                     \
+           return psos.get(key.GetKey());                                             \
        };                                                                             \
        name(HAL::Device& device,                                                      \
             std::function<void(SimplePSO&, Keys&)> modifier = nullptr)                \
+           : name(device, PSOCreation::Eager, modifier)                               \
        {                                                                              \
+       }                                                                              \
+       name(HAL::Device& device, PSOCreation creation,                                \
+            std::function<void(SimplePSO&, Keys&)> modifier = nullptr)                \
+       {                                                                              \
+           const bool eager = creation == PSOCreation::Eager                          \
+               || PSOBuildObserver::graphics();                                       \
+           if (!eager) psos.make_lazy(device);                                        \
            PSOBase::shuffle_pairs<name>([&](Keys& key) {                              \
                auto pso = init_pso(key, modifier);                                    \
-               psos[key] = pso.create(device);                                        \
+               if (eager) psos[key] = pso.create(device);                             \
+               else psos.add_lazy(key, pso.make_desc(device));                        \
            } , ##__VA_ARGS__);                                                        \
        }                                                                              \
        name() = default;

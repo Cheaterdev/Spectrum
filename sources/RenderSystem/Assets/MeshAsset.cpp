@@ -85,13 +85,32 @@ void MeshAsset::init_gpu()
 {
 	PROFILE(L"mesh_init_gpu");
 	FenceWaiter last;
-	int i = 0;
 	if (RenderSystem::get().device().is_ray_query_supported())
+	{
+		// Tuning value: structures recorded into one command list before it is executed.
+		constexpr size_t BlasPerList = 64;
+
+		CommandList::ptr list;
+		size_t in_list = 0;
+
+		auto flush = [&]()
+		{
+			if (!list)
+				return;
+			PROFILE(L"mesh_init_gpu_blas_execute");
+			last = list->execute();
+			list = nullptr;
+			in_list = 0;
+		};
+
 		for (auto& mesh : meshes)
 		{
 			PROFILE(L"mesh_init_gpu_blas_part");
-			auto list = (RenderSystem::get().device().get_queue(CommandListType::DIRECT)->get_free_list());
-			list->begin(L"RTX");
+			if (!list)
+			{
+				list = (RenderSystem::get().device().get_queue(CommandListType::DIRECT)->get_free_list());
+				list->begin(L"RTX");
+			}
 			auto mat = list->place_raw(to_transform3x4(nodes[mesh.node_index]->mesh_matrix));
 			GeometryDesc geometryDesc = {};
 			geometryDesc.Type = HAL::GeometryType::TRIANGLES;
@@ -107,9 +126,12 @@ void MeshAsset::init_gpu()
 			std::vector<GeometryDesc > descs;
 			descs.push_back(geometryDesc);
 			mesh.ras = std::make_shared<RaytracingAccelerationStructure>(RenderSystem::get().device(), descs, list);
-			last=list->execute();
-			i++;
+
+			if (++in_list >= BlasPerList)
+				flush();
 		}
+		flush();
+	}
 	{
 		PROFILE(L"mesh_init_gpu_wait");
 		last.wait();
@@ -476,8 +498,12 @@ void MeshAsset::load_partitions(FileDataStorage& storage, UniversalContext* cont
 	// The mesh still renders from its meshlets without Quanta, so a damaged entry is not worth failing the load.
 	try
 	{
+		PROFILE(L"mesh_load_partitions");
 		Quanta::AssetPartition partition;
-		storage.get("quanta", partition, context);
+		{
+			PROFILE(L"mesh_load_quanta_partition");
+			storage.get("quanta", partition, context);
+		}
 		quanta = std::move(partition.meshes);
 		build_rt_proxies();
 	}

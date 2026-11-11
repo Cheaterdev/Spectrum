@@ -146,6 +146,7 @@ export
 
 						if (has_header)
 						{
+							PROFILE(L"shader_ser_load");
 							HAL::shader_header header;
 							ar& NVP(header);
 

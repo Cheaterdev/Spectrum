@@ -40,6 +40,16 @@ export
 					size = data.size();
 				}
 
+				update_data(size_t offset, std::vector<T>&& v) :offset(offset), data(std::move(v))
+				{
+					size = data.size();
+				}
+
+				update_data(size_t offset, std::span<const T> v) :offset(offset), data(v.begin(), v.end())
+				{
+					size = data.size();
+				}
+
 				size_t offset;
 				size_t size;
 			};
@@ -63,6 +73,20 @@ export
 			virtual	void write(size_t offset, std::vector<T>& v)  override {
 				std::lock_guard<std::mutex> g(m);
 				update_list.emplace_back(offset, v);
+			}
+
+			// Overloads of the above that skip a copy of the caller's vector (the one above must keep its signature:
+			// DataAllocator declares it). The span form copies once, from wherever it points (a stack value is fine).
+			void write(size_t offset, std::span<const T> v)
+			{
+				std::lock_guard<std::mutex> g(m);
+				update_list.emplace_back(offset, v);
+			}
+
+			void write(size_t offset, std::vector<T>&& v)
+			{
+				std::lock_guard<std::mutex> g(m);
+				update_list.emplace_back(offset, std::move(v));
 			}
 
 
@@ -138,12 +162,14 @@ export
 					updates.resource = buffer.resource.get();
 					list->update_tilings(std::move(updates));
 				}
-				for (auto& elems : update_list)
+				if (!update_list.empty())
 				{
-
-					list->get_copy().update(buffer, buffer.get_data_offset() + elems.offset, elems.data);
-				//	buffer->set_data(list, static_cast<UINT>(elems.offset * sizeof(T)), elems.data);
-					//buffer->set_data(list, (UINT)elems.offset * sizeof(T), elems.data.data(), (UINT)elems.size);
+					std::vector<CopyContext::BufferWrite> writes;
+					writes.reserve(update_list.size());
+					for (auto& elems : update_list)
+						writes.push_back({ buffer.desc.offset + (buffer.get_data_offset() + elems.offset) * sizeof(T),
+							std::as_bytes(std::span<const T>(elems.data)) });
+					list->get_copy().update_buffer_batch(buffer.resource.get(), writes);
 				}
 
 				update_list.clear();

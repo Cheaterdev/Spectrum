@@ -803,6 +803,10 @@ void AssetStorage::save()
 
 		asset->before_save();
 
+		// DirectStorage keeps the asset files its streamed reads use open: it has to let go before the file is rewritten.
+		if (RenderSystem::is_good())
+			RenderSystem::get().device().get_ds_queue().close_file(file_path);
+
 		FileDataStorage storage(file_path);
 
 		storage.start_save();

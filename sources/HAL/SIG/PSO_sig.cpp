@@ -78,6 +78,17 @@ HAL::ComputePipelineState::ptr SimpleComputePSO::create(HAL::Device& device)
 
 HAL::PipelineState::ptr SimpleGraphicsPSO::create(HAL::Device&device)
 {
+	auto desc = make_desc(device);
+	if (!desc)
+		return nullptr;
+
+	auto result = HAL::PipelineState::create(device, *desc, name);
+	if (auto& f = PSOBuildObserver::graphics()) f(*this, result ? PSOBuildResult::Created : PSOBuildResult::Failed);
+	return result;
+}
+
+std::optional<HAL::PipelineStateDesc> SimpleGraphicsPSO::make_desc(HAL::Device& device)
+{
 	auto report = [this](PSOBuildResult r) {
 		if (auto& f = PSOBuildObserver::graphics()) f(*this, r);
 	};
@@ -104,7 +115,7 @@ HAL::PipelineState::ptr SimpleGraphicsPSO::create(HAL::Device&device)
 		if (PSOBuildObserver::compile_unsupported())
 			load_shaders();
 		report(PSOBuildResult::Unsupported);
-		return nullptr;
+		return std::nullopt;
 	}
 
 	load_shaders();
@@ -133,9 +144,96 @@ HAL::PipelineState::ptr SimpleGraphicsPSO::create(HAL::Device&device)
 	desc.blend.render_target[i] = blend[i];
 
 	desc.blend.independ_blend = rtv_formats.size() == blend.size();
-	auto result = HAL::PipelineState::create(device, desc, name);
-	report(result ? PSOBuildResult::Created : PSOBuildResult::Failed);
-	return result;
+	desc.name = name;
+	return desc;
+}
+
+// A variant saved by a device with mesh shaders keeps its description on one without (it is saved again as it was
+// loaded), but is never created there.
+static bool can_create(HAL::Device& device, const HAL::PipelineStateDesc& desc)
+{
+	return !((desc.mesh || desc.amplification) && !device.is_mesh_shader_supported());
+}
+
+PSOVariant::PSOVariant(HAL::Device& device, std::optional<HAL::PipelineStateDesc> desc) : device(device), desc(std::move(desc))
+{
+	if (!this->desc || !can_create(device, *this->desc))
+		status.store(Status::Unavailable, std::memory_order_release);
+}
+
+void PSOVariant::create()
+{
+	HAL::PipelineState::ptr result;
+	{
+		PROFILE(L"pso_variant_create");
+		try
+		{
+			auto d = *desc;
+			result = HAL::PipelineState::create(device, d, d.name);
+		}
+		catch (const std::exception& e)
+		{
+			Log::get() << Log::LEVEL_ERROR << "PSO variant " << desc->name << " creation threw: " << e.what() << Log::endl;
+		}
+	}
+	pso = result;
+	status.store(result ? Status::Created : Status::Unavailable, std::memory_order_release);
+	// After the status: a consumer that saw the old count and then found the variant not created is told to redo.
+	created_count().fetch_add(1, std::memory_order_acq_rel);
+}
+
+bool PSOVariant::start()
+{
+	auto expected = Status::Idle;
+	if (!status.compare_exchange_strong(expected, Status::Queued, std::memory_order_acq_rel))
+		return false;
+
+	thread_pool::get().enqueue_detached(TaskOptions{ TaskPriority::LOW, TaskLane::Asset }, [self = shared_from_this()]()
+	{
+		auto queued = Status::Queued;
+		if (self->status.compare_exchange_strong(queued, Status::Creating, std::memory_order_acq_rel))
+			self->create();
+	});
+	return true;
+}
+
+void PSOVariant::create_now()
+{
+	while (true)
+	{
+		auto s = status.load(std::memory_order_acquire);
+		if (s == Status::Idle || s == Status::Queued)
+		{
+			// A queued task is not waited for: it may sit behind this very thread's lane. Whoever wins the exchange
+			// creates it; the queued task then finds nothing to do.
+			if (status.compare_exchange_weak(s, Status::Creating, std::memory_order_acq_rel))
+			{
+				create();
+				return;
+			}
+		}
+		else if (s == Status::Creating)
+			std::this_thread::yield();
+		else
+			return;
+	}
+}
+
+HAL::PipelineState::ptr PSOVariant::get_built() const
+{
+	if (status.load(std::memory_order_acquire) != Status::Created)
+		return nullptr;
+	return pso->is_built() ? pso : nullptr;
+}
+
+bool PSOVariant::settled() const
+{
+	switch (status.load(std::memory_order_acquire))
+	{
+	case Status::Created:     return pso->is_built();
+	case Status::Unavailable: return true;
+	default:                  return false;
+	}
 }
 
 void EngineRootLayoutHolder::init(HAL::Device& device)

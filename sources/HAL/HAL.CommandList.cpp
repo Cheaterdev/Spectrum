@@ -833,6 +833,76 @@ namespace HAL
 	}
 
 
+	void CopyContext::update_buffer_batch(Resource* resource, std::span<const BufferWrite> writes)
+	{
+		std::vector<const BufferWrite*> order;
+		order.reserve(writes.size());
+		for (const BufferWrite& write : writes)
+			if (!write.bytes.empty())
+				order.push_back(&write);
+		if (order.empty())
+			return;
+
+		// Sorted by destination so neighbours can merge; but a copy order only matters when writes overlap, and then the
+		// given order is the one that decides, so such a batch is copied as given, unmerged.
+		std::vector<const BufferWrite*> sorted = order;
+		std::stable_sort(sorted.begin(), sorted.end(), [](const BufferWrite* a, const BufferWrite* b) { return a->offset < b->offset; });
+		bool overlap = false;
+		for (size_t i = 1; i < sorted.size() && !overlap; i++)
+			overlap = sorted[i]->offset < sorted[i - 1]->offset + sorted[i - 1]->bytes.size();
+		if (!overlap)
+			order = std::move(sorted);
+
+		base.pre_command<false, false>(*this, BarrierSync::COPY);
+		base.add_resource_usage(resource, ResourceStates::COPY_DEST);
+
+		// One upload allocation per chunk, not per batch: a batch can be every page of a freshly loaded scene, and the
+		// upload allocator sizes are 32-bit and meant for per-frame amounts.
+		constexpr uint64 ChunkBytes = 16ull * 1024 * 1024;
+
+		for (size_t first = 0; first < order.size();)
+		{
+			size_t last = first;
+			uint64 chunk = 0;
+			do
+				chunk += order[last++]->bytes.size();
+			while (last < order.size() && chunk + order[last]->bytes.size() <= ChunkBytes);
+
+			auto info = base.place_data(chunk);
+			std::byte* cpu = info.get_cpu_data();
+
+			uint64 run_dest = 0, run_source = 0, run_size = 0, used = 0;
+			auto flush = [&]
+			{
+				if (run_size)
+					list->copy_buffer(resource, run_dest, info.resource, info.resource_offset + run_source, run_size);
+				run_size = 0;
+			};
+			for (size_t i = first; i < last; i++)
+			{
+				const BufferWrite* write = order[i];
+				std::memcpy(cpu + used, write->bytes.data(), write->bytes.size());
+				if (run_size && !overlap && run_dest + run_size == write->offset)
+				{
+					run_size += write->bytes.size();
+				}
+				else
+				{
+					flush();
+					run_dest = write->offset;
+					run_source = used;
+					run_size = write->bytes.size();
+				}
+				used += write->bytes.size();
+			}
+			flush();
+
+			first = last;
+		}
+
+		base.post_command<false, false>(*this, BarrierSync::COPY);
+	}
+
 	void CopyContext::update_texture(Resource::ptr resource, ivec3 offset, ivec3 box, UINT sub_resource,
 	                                 const char* data, UINT row_stride, UINT slice_stride)
 	{

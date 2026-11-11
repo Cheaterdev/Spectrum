@@ -89,42 +89,50 @@ export namespace Quanta
 
 		uint32_t max_page_id = 0;                 // one past the highest page id handed out: the feedback to read back
 
-		std::vector<TypedHandle<uint>> pool;      // the slots; the streamer grows it as pinned and streamed meshes arrive
+		// The slots, as dword offsets into `pages`; the streamer grows it as pinned and streamed meshes arrive. Each growth
+		// is one range of `pages` (kept in pool_ranges) cut into PageDwords-sized slots. Slots are never freed one by one:
+		// that is the demand pool, which only the texture backend uses (release_slot / restore_slot are not overridden here).
+		std::vector<uint64_t> pool;
+		std::vector<TypedHandle<uint>> pool_ranges;
 
-		// What the pool has to hold: every page of the pinned meshes, plus the budget the streamed ones share.
+		// What the pool has to hold: every page of the pinned meshes, the streamed meshes' roots (Streamer::root_slots),
+		// plus the budget the streamed ones share for the rest of their pages.
 		uint32_t pinned_pages = 0;
 		uint32_t streamed_meshes = 0;
-		// Root pages of the streamed meshes: never evictable, yet the streamer counts them in its budget, so the budget
-		// is "Pool pages" on top of them. Without that, a scene with enough roots leaves no room for any other page.
-		uint32_t streamed_root_pages = 0;
 
 		// What the shared tables hold now, against the caps above: a mesh that does not fit is refused before anything changes.
 		uint64_t page_ids_in_use = 0;
 		uint64_t groups_in_use = 0;
 		uint64_t nodes_in_use = 0;
 
-		// The streamed meshes' share of the pool: the setting, cut to what the pages buffer has left after the pinned ones.
-		// extra_roots: root pages of meshes about to be acquired, counted as if they already were.
-		uint32_t streaming_budget(uint32_t extra_roots = 0) const;
+		// The slots the streamed meshes' non-root pages share: the setting, cut to what the pages buffer has left after
+		// the pinned pages and the streamed roots.
+		uint32_t streaming_budget() const;
 
-		// Root pages that acquire_many() read ahead, in parallel, for begin_load() to take instead of reading the
-		// file one page at a time. Guarded by m; empty outside an acquire_many().
-		std::map<std::pair<const Mesh*, uint32_t>, std::vector<uint8_t>> prefetched;
+		// Root pages that acquire_many() read ahead, in parallel, for plan_load() to take instead of reading the
+		// file one page at a time. Sorted by (mesh, page) for lookup; guarded by m; empty outside an acquire_many().
+		std::vector<PageFetch> prefetched;
 
-		// The flags of page ids changed since the last prepare(): from `first`, two dwords per page id.
+		// The flags of page ids changed since the last prepare(). Ranges (a mesh's whole run of page ids, zeroed when it
+		// is acquired) are written first, then the single entries, so a single recorded after a range wins over it.
+		// A range drops the singles under it: they belong to whoever held those ids before.
 		struct FlagWrite
 		{
 			uint32_t first;
-			std::vector<uint32_t> dwords;
+			std::vector<uint32_t> dwords;   // two per page id
 		};
 		std::vector<FlagWrite> flag_writes;
+		std::vector<std::pair<uint32_t, std::array<uint32_t, 2>>> flag_singles;   // page id, its two dwords
 
 		void release(Resident& resident);
 		void find_parents(Resident& resident);
 
 		// Streaming::Backend
 		void allocate_pool(uint32_t count) override;
-		Streaming::Backend::Load begin_load(Streaming::Resource& resource, uint32_t page, uint32_t slot, bool allow_file) override;
+		Streaming::Backend::LoadPlan plan_load(Streaming::Resource& resource, uint32_t page, uint32_t slot, bool allow_file) override;
+		void start_loads(std::span<Streaming::Backend::LoadPlan> plans) override;
+		void finish_loads(std::span<Streaming::Backend::LoadPlan> plans) override;
+		void write_page(uint64_t dword_offset, const std::vector<uint8_t>& bytes);
 		void show(Streaming::Resource& resource, uint32_t page, uint32_t slot) override;
 		void hide(Streaming::Resource& resource, uint32_t page) override;
 		void set_flags(Streaming::Resource& resource, uint32_t page, uint32_t flags, uint32_t shown_epoch) override;
@@ -150,7 +158,7 @@ export namespace Quanta
 		std::shared_ptr<Resident> acquire(const std::shared_ptr<Mesh>& mesh);
 
 		// acquire() for a whole set (an instance's parts), much cheaper than one call each: the root pages are read
-		// and decompressed in parallel on the thread pool, and the page pool grows once for each batch. Aligned with
+		// with one file open per asset file, decompressed in parallel on the thread pool, and the page pool grows once. Aligned with
 		// `meshes`; a mesh that is refused (out of room, as acquire() throws for it) comes back null and is logged.
 		std::vector<std::shared_ptr<Resident>> acquire_many(const std::vector<std::shared_ptr<Mesh>>& meshes);
 

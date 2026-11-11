@@ -39,6 +39,7 @@ export namespace Quanta
 					size_t have = 0;
 					if (!Quanta::keep_page_data() && size >= Quanta::FileHeaderBytes)
 					{
+						PROFILE(L"quanta_partition_header");
 						bytes.resize(Quanta::FileHeaderBytes);
 						ar& NVP(cereal::binary_data(bytes.data(), bytes.size()));
 						have = bytes.size();
@@ -52,12 +53,18 @@ export namespace Quanta
 							metadata = meta;
 					}
 
-					bytes.resize(metadata);
-					if (metadata > have)
-						ar& NVP(cereal::binary_data(bytes.data() + have, metadata - have));
+					{
+						PROFILE(L"quanta_partition_read_metadata");
+						bytes.resize(metadata);
+						if (metadata > have)
+							ar& NVP(cereal::binary_data(bytes.data() + have, metadata - have));
+					}
 
-					if (!Quanta::deserialize(bytes.data(), bytes.size(), *mesh, offset, Quanta::keep_page_data(), size))
-						throw std::runtime_error("corrupt Quanta data in asset file");
+					{
+						PROFILE(L"quanta_partition_deserialize");
+						if (!Quanta::deserialize(bytes.data(), bytes.size(), *mesh, offset, Quanta::keep_page_data(), size))
+							throw std::runtime_error("corrupt Quanta data in asset file");
+					}
 
 					stream->seekg(static_cast<std::streamoff>(offset + size));
 

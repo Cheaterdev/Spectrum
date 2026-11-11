@@ -12,18 +12,26 @@ HAL::RaytracingAccelerationStructure::RaytracingAccelerationStructure(Device& de
 	inputs.Flags = RaytracingBuildFlags::PREFER_FAST_TRACE;
 	inputs.geometry = desc;
 
-	auto bottomLevelPrebuildInfo = device.calculateBuffers(inputs);
+	auto bottomLevelPrebuildInfo = [&]
+	{
+		PROFILE(L"blas_prebuild_info");
+		return device.calculateBuffers(inputs);
+	}();
 
-	scratch_buffer = StructuredBufferView<std::byte>(device, bottomLevelPrebuildInfo.ScratchDataSizeInBytes, counterType::NONE,  HAL::ResFlags::Raytracing | HAL::ResFlags::ShaderResource, HeapType::DEFAULT);
-	prev_buffer = StructuredBufferView<std::byte>(device, bottomLevelPrebuildInfo.ResultDataMaxSizeInBytes, counterType::NONE,  HAL::ResFlags::Raytracing | HAL::ResFlags::ShaderResource, HeapType::DEFAULT);
-	cur_buffer = &prev_buffer;
 	HAL::RaytracingBuildDescStructure bottomLevelBuildDesc;
 	{
+		PROFILE(L"blas_create_buffers");
+		scratch_buffer = StructuredBufferView<std::byte>(device, bottomLevelPrebuildInfo.ScratchDataSizeInBytes, counterType::NONE,  HAL::ResFlags::Raytracing | HAL::ResFlags::ShaderResource, HeapType::DEFAULT);
+		prev_buffer = StructuredBufferView<std::byte>(device, bottomLevelPrebuildInfo.ResultDataMaxSizeInBytes, counterType::NONE,  HAL::ResFlags::Raytracing | HAL::ResFlags::ShaderResource, HeapType::DEFAULT);
+		cur_buffer = &prev_buffer;
 		bottomLevelBuildDesc.DestAccelerationStructureData = prev_buffer.get_resource_address();
 		bottomLevelBuildDesc.ScratchAccelerationStructureData = scratch_buffer.get_resource_address();
 	}
 
-	list->get_compute().build_ras(bottomLevelBuildDesc, inputs);
+	{
+		PROFILE(L"blas_build_record");
+		list->get_compute().build_ras(bottomLevelBuildDesc, inputs);
+	}
 }
 
 HAL::RaytracingAccelerationStructure::RaytracingAccelerationStructure(Device& device, std::vector<InstanceDesc> instances)

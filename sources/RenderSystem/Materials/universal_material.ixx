@@ -82,21 +82,48 @@ export namespace materials
 		// not built.
 		PSOS::Meshes::GBufferDrawVS::ptr gbuffer_vs;
 		Meshes::TransparencyMode transparency_mode = Meshes::TransparencyMode::Opaque;
+		// Every variant was created up front (eager_variants() at construction or load), so is_built() waits for all.
+		bool eager = false;
+
+		template<class Set>
+		void build_all(Set& set)
+		{
+			if (set)
+				set->psos.build_all();
+		}
 	public:
 		using ptr = std::shared_ptr<PipelinePasses>;
+
+		// A/B and offline: create every key variant when the pipeline is made or loaded (the old behaviour), not
+		// when a draw first needs it. Always on in tools and tests.
+		static bool eager_variants();
 		PipelinePasses() = default;
 		PipelinePasses(UINT id, std::string pixel, std::string tess, std::string voxel, std::string raytracing, MaterialContext::ptr context, Meshes::TransparencyMode mode);
 
 		HAL::library_shader::ptr  raytrace_lib;
 
 		void set(RENDER_TYPE render_type, MESH_TYPE type, HAL::GraphicsContext& graphics, bool hiz_occlusion, bool capture_meshlets, bool cluster_lod) override;
+		// set() that says whether it bound anything: false while the variant this draw needs is not built (its
+		// creation is started), and the caller then skips the draw.
+		bool bind(RENDER_TYPE render_type, MESH_TYPE type, HAL::GraphicsContext& graphics, bool hiz_occlusion, bool capture_meshlets, bool cluster_lod);
+		bool bind_vertex_front_end(HAL::GraphicsContext& graphics);
+
+		// Process-wide, per pass kind: bind() returned false here. A pass that caches what it draws (static
+		// voxelization) asks take_redo() on it to know when to draw again.
+		static PSOSkipRecord& skip_record(RENDER_TYPE render_type, MESH_TYPE type);
+
+		// Starts creating, in the background, the variants a draw will certainly ask for: the default keys of the
+		// GBuffer, depth and vertex-stage GBuffer sets, every voxelization and VSM variant, and every key any
+		// material's draws have asked for so far.
+		void warm_variants() const;
+
 		Meshes::TransparencyMode get_transparency_mode() const override { return transparency_mode; }
 		// nullptr unless Masked -- callers (VSM.cpp) must check the mode
 		// first, or just null-check this directly.
 		PSOS::Shadows::VSM::VSMDepthDrawMaterial::ptr get_vsm_depth_draw() const override { return vsm_depth_draw; }
 
-		// The raster passes a preview or main view draws: every depth and GBuffer variant the device can build
-		// (the mesh-shader ones only exist where mesh shaders do), and the vertex-stage GBuffer draw when built.
+		// The raster passes a preview or main view draws, depth and GBuffer (mesh-shader and vertex-stage): the
+		// variants warm_variants() starts, or every variant the device can build when eager. Starts what is missing.
 		bool is_built() const override;
 
 		void set_vertex_front_end(HAL::GraphicsContext& graphics) override;
@@ -107,13 +134,42 @@ export namespace materials
 		{
 			SAVE_PARENT(Pipeline);
 
-			ar& NVP(gbuffer);
-			ar& NVP(depth_draw);
-			ar& NVP(voxelization);
-			ar& NVP(vsm_depth_draw);
-			ar& NVP(gbuffer_vs);
+			{
+				PROFILE(L"pso_set_gbuffer");
+				ar& NVP(gbuffer);
+			}
+			{
+				PROFILE(L"pso_set_depth_draw");
+				ar& NVP(depth_draw);
+			}
+			{
+				PROFILE(L"pso_set_voxelization");
+				ar& NVP(voxelization);
+			}
+			{
+				PROFILE(L"pso_set_vsm_depth_draw");
+				ar& NVP(vsm_depth_draw);
+			}
+			{
+				PROFILE(L"pso_set_gbuffer_vs");
+				ar& NVP(gbuffer_vs);
+			}
 			ar& NVP(transparency_mode);
 
+			// Loading leaves every variant uncreated.
+			IF_LOAD()
+			{
+				if (eager_variants())
+				{
+					PROFILE(L"pso_variant_build_all");
+					eager = true;
+					build_all(gbuffer);
+					build_all(depth_draw);
+					build_all(voxelization);
+					build_all(vsm_depth_draw);
+					build_all(gbuffer_vs);
+				}
+			}
 		}
 	};
 
