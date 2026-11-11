@@ -3,6 +3,7 @@ export module Graphics:Asset;
 import HAL;
 import :Texture;
 import Core;
+import ppl;
 
 
 export
@@ -239,7 +240,9 @@ class Asset : public SharedObject<Asset>, public AssetHolder, public EditObject,
 		uint32_t version = 0;
 
 		void start_changing_contents();
-		void end_changing_contents();
+		// notify = false leaves the change unannounced: for a rebuild that is not an edit (a deserialized asset
+		// building its runtime state), which must not bump the version or wake the consumers.
+		void end_changing_contents(bool notify = true);
 
 
 public:
@@ -364,6 +367,9 @@ class AssetStorage : public SharedObject<AssetStorage>, public EditObject
 		std::mutex m;
 		std::mutex archive_mutex;
 
+		// The load in flight (guarded by m): a second request for the same asset waits on it instead of loading again.
+		std::shared_ptr<concurrency::task<Asset::ptr>> loading;
+
 	  //  std::shared_ptr<std::istream> stream;
 	//file::ptr my_file;
 		AssetStorage(file::ptr f);
@@ -396,6 +402,9 @@ class AssetStorage : public SharedObject<AssetStorage>, public EditObject
 
 		Asset::ptr get_asset();
 		std::future<Asset::ptr> load_asset();
+		// The same load without a thread waiting on it: references are chained, so loading a big asset does not
+		// park one pool thread per dependency (the pool only grows slowly, which starved it).
+		concurrency::task<Asset::ptr> load_asset_task();
 
 		void get_asset(std::function<void(Asset::ptr)>);
 		void save() override;

@@ -1692,7 +1692,7 @@ public:
 
 
 
-			render_task = thread_pool::get().enqueue([this, &frame, graph](){
+			render_task = thread_pool::get().enqueue(TaskOptions{ TaskPriority::HIGH }, [this, &frame, graph](){
 				context.begin(const_cast<Graph*>(graph), this, frame);
 				render_func(data, context);
 				context.end();

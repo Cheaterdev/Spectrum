@@ -401,11 +401,6 @@ namespace Spectrum
                     "sl.dlss_d.dll",       // Ray Reconstruction
                     "nvngx_dlssd.dll",     //   ...its NGX model
                 };
-                if (target.Mode == Mode.Debug)
-                {
-                    slDlls.Add("sl.imgui.dll");
-                    slDlls.Add("WinPixEventRuntime.dll");
-                }
 
                 foreach (var dll in slDlls)
                     conf.TargetCopyFilesToSubDirectory.Add(

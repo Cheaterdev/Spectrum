@@ -34,10 +34,11 @@ void materials::universal_material::test()
 materials::universal_material::universal_material() : include_file(this), include_file_raytacing(this)
 {
 	wshader_name = std::wstring(L"material_") + std::to_wstring(ids.get());
+	// Runs when the graph is first built from its saved data, which happens during compile() on a load. The
+	// material only starts listening: that is not a change, and flagging it would regenerate every loaded material.
 	graph.on_create = [this](MaterialGraph::ptr g)
 	{
 		g->add_listener(this, false);
-		on_graph_changed();
 	};
 }
 

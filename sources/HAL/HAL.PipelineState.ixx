@@ -233,6 +233,14 @@ export namespace HAL
 
 		static HAL::shader_identifier identify(void* data);
 
+		// Set only while the extension constructor below runs: on_change() then adds `added_collections` to `base`
+		// (D3D12: AddToStateObject, which compiles only what is new) instead of building everything again. A
+		// backend without that ignores them and builds `desc`, which already holds both.
+		std::shared_ptr<StateObject> base;
+		std::list<std::shared_ptr<StateObject>> added_collections;
+
+		static StateObjectDesc extended(const StateObjectDesc& base, const std::list<std::shared_ptr<StateObject>>& added);
+		StateObject(std::shared_ptr<StateObject> base, std::list<std::shared_ptr<StateObject>> added);
 
 	public:
 
@@ -244,6 +252,12 @@ export namespace HAL
 
 		virtual ~StateObject() = default;
 		HAL::shader_identifier get_shader_id(std::wstring_view name);
+
+		// A state object that is `base` plus these collections. `base` stays valid and in use, and the shader
+		// identifiers of everything already in it are the same in the result, so only the new exports' identifiers
+		// need fetching. D3D12 needs a raytracing pipeline (not a collection) made on a device with Tier 1.1; other
+		// cases build the whole object from the merged description.
+		static ptr add(const ptr& base, const std::list<ptr>& collections);
 	};
 
 	template<class T>

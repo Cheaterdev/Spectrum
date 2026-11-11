@@ -120,6 +120,9 @@ struct SelectLocal<T>
 		std::map<material*, material_info> new_materials;
 
 		bool need_recreate = false;
+		// A change that cannot be added to the state object: an export that is already in it was replaced (a material's
+		// hit shader reloaded). New materials alone are added to the existing object (add_pending_materials).
+		bool need_full_rebuild = false;
 		std::mutex m;
 
 		void init_collection(HAL::StateObjectDesc& desc)
@@ -151,20 +154,62 @@ struct SelectLocal<T>
 		// (Re)build the per-material collections from the material's current
 		// raytracing_lib. Called on first init and again on every material change
 		// (shader hot-reload) so the rebuilt DXR state object binds the new hit shader.
-		void build_material_collections(material* mat, material_info& e)
+		// The collections themselves: a driver compile each, and no shared state touched, so several can be made at once.
+		std::vector<HAL::StateObject::ptr> make_material_collections(material* mat)
 		{
-			e.collections.clear();
+			std::vector<HAL::StateObject::ptr> result;
 
 			auto init_part = [&](auto& pass) {
 				auto collection = pass.init_for_material(*this, mat);
 
 				if (collection)
 				{
-					e.collections.push_back(collection);
+					result.push_back(collection);
 				}
 			};
 
 			(init_part(std::get<Passes>(passes)), ...);
+			return result;
+		}
+
+		void build_material_collections(material* mat, material_info& e)
+		{
+			e.collections = make_material_collections(mat);
+		}
+
+		// The collections of the materials added since the last update(), all at once on the thread pool. Done here,
+		// not in init_material(): that runs while a material loads, under this lock, so every material waited for the
+		// previous one's compile.
+		void build_pending_collections()
+		{
+			PROFILE(L"rtx_build_pending_collections");
+
+			std::vector<material*> pending;
+			{
+				std::lock_guard<std::mutex> g(m);
+				for (auto& [mat, info] : new_materials)
+					if (info.collections.empty())
+						pending.push_back(mat);
+			}
+
+			if (pending.empty())
+				return;
+
+			std::vector<std::vector<HAL::StateObject::ptr>> built(pending.size());
+			std::vector<std::future<void>> tasks;
+			tasks.reserve(pending.size());
+			for (size_t i = 0; i < pending.size(); i++)
+				tasks.emplace_back(thread_pool::get().enqueue(TaskOptions{ TaskPriority::HIGH }, [this, &pending, &built, i]()
+				{
+					built[i] = make_material_collections(pending[i]);
+				}));
+			for (auto& task : tasks)
+				task.wait();
+
+			std::lock_guard<std::mutex> g(m);
+			for (size_t i = 0; i < pending.size(); i++)
+				if (auto it = new_materials.find(pending[i]); it != new_materials.end())
+					it->second.collections = std::move(built[i]);
 		}
 
 		void init_material(material* mat)
@@ -179,7 +224,7 @@ struct SelectLocal<T>
 				auto& e = new_materials[mat];
 				e.handle = hitgroup_ids->allocate(sizeof...(Passes));
 
-				build_material_collections(mat, e);
+				// Its collections are built by update() (build_pending_collections), together with the others.
 
 
 				//	new_materials[mat] = (UINT)(materials.size() + new_materials.size());
@@ -195,6 +240,10 @@ struct SelectLocal<T>
 					auto it = materials.find(mat);
 					material_info& info = (it != materials.end()) ? it->second : new_materials[mat];
 					build_material_collections(mat, info);
+
+					// One already in the state object cannot be replaced by adding, so that takes a full rebuild.
+					if (it != materials.end())
+						need_full_rebuild = true;
 
 					need_recreate = true;
 					});
@@ -306,15 +355,75 @@ struct SelectLocal<T>
 			}
 		}
 
+		void write_material_ids(material* mat, material_info& info)
+		{
+			auto elem = info.handle.map();
+			int i = 0;
+			auto init_part = [&](auto& e) {
+
+				e.init_material_ids(m_dxrStateObject, mat, elem[i]);
+				i++;
+			};
+
+			(init_part(std::get<Passes>(passes)), ...);
+
+			info.handle.write(0, elem);
+		}
+
+		// The materials added since the last update() go into the existing state object (HAL::StateObject::add: only
+		// their collections are compiled, and the identifiers already handed out stay valid), instead of building
+		// the passes' collections and every material's again.
+		void add_pending_materials()
+		{
+			PROFILE(L"rtx_add_pending_materials");
+
+			std::lock_guard<std::mutex> g(m);
+
+			std::vector<material*> added;
+			std::list<HAL::StateObject::ptr> collections;
+			for (auto& [mat, info] : new_materials)
+			{
+				added.push_back(mat);
+				for (auto& c : info.collections)
+					collections.push_back(c);
+			}
+
+			if (!collections.empty())
+			{
+				PROFILE(L"rtx_add_to_state_object");
+				m_dxrStateObject = HAL::StateObject::add(m_dxrStateObject, collections);
+				m_dxrStateObject->event_change.register_handler(this, [this]() {
+					std::lock_guard<std::mutex> g(m);
+					init_ids();
+					});
+			}
+
+			materials.merge(new_materials);
+			new_materials.clear();
+			need_recreate = false;
+
+			PROFILE(L"rtx_write_material_ids");
+			for (material* mat : added)
+				write_material_ids(mat, materials[mat]);
+		}
+
 		 void update()
 		{
 			if (need_recreate)
 			{
-				materials.merge(new_materials);
-				new_materials.clear();
-				need_recreate = false;
+				build_pending_collections();
 
-				init();
+				if (need_full_rebuild)
+				{
+					materials.merge(new_materials);
+					new_materials.clear();
+					need_recreate = false;
+					need_full_rebuild = false;
+
+					init();
+				}
+				else
+					add_pending_materials();
 			}
 
 		}

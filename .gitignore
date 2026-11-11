@@ -8,6 +8,10 @@ log.txt
 # Temporary debug logging — see "Temporary debug logging" in CLAUDE.md
 *.temp
 
+# Chrome traces written by TimingCapture (PROFILE_CAPTURE)
+captures/
+workdir/captures/
+
 projects/
 
 workdir/cache/

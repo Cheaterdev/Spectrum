@@ -355,11 +355,12 @@ void  Asset::start_changing_contents()
 {
 	changing_state = true;
 }
-void  Asset::end_changing_contents()
+void  Asset::end_changing_contents(bool notify)
 {
 	changing_state = false;
 
-	mark_contents_changed();
+	if (notify)
+		mark_contents_changed();
 }
 
 
@@ -598,28 +599,68 @@ void  AssetStorage::get_asset(std::function<void(Asset::ptr)> f)
 		return;
 	}
 
-	create_task([this, f]()
+	load_asset_task().then([f](Asset::ptr loaded)
 		{
-			f(load_asset().get());
+			f(loaded);
 		});
 }
+
 std::future<Asset::ptr> AssetStorage::load_asset()
 {
-	if (asset)
-	{
-		std::promise<Asset::ptr> p;
-		p.set_value(asset);
-		return p.get_future();
-	}
+	auto promise = std::make_shared<std::promise<Asset::ptr>>();
+	auto result = promise->get_future();
 
-	std::lock_guard<std::mutex> g(m);
-
-	if (asset)
+	try
 	{
-		std::promise<Asset::ptr> p;
-		p.set_value(asset);
-		return p.get_future();
+		load_asset_task().then([promise](task<Asset::ptr> finished)
+			{
+				try
+				{
+					promise->set_value(finished.get());
+				}
+				catch (...)
+				{
+					promise->set_exception(std::current_exception());
+				}
+			});
 	}
+	catch (...)
+	{
+		promise->set_exception(std::current_exception());
+	}
+	return result;
+}
+
+task<Asset::ptr> AssetStorage::load_asset_task()
+{
+	// Whoever asks first loads; the others wait for that load. `loading` is checked before `asset`, so an asset that
+	// is already set but still being finished (partitions, holder) is not handed out early.
+	task_completion_event<Asset::ptr> done;
+	{
+		std::lock_guard<std::mutex> g(m);
+
+		if (loading)
+			return *loading;
+
+		if (asset)
+			return task_from_result(asset);
+
+		// As a failed task, not a throw: a caller chaining dependencies would otherwise leave its own load half-started.
+		if (!get_archive())
+			return task_from_exception<Asset::ptr>(std::make_exception_ptr(std::exception()));
+
+		loading = std::make_shared<task<Asset::ptr>>(done);
+	}
+	auto in_flight = *loading;
+
+	auto finish = [this, done](Asset::ptr result)
+	{
+		{
+			std::lock_guard<std::mutex> g(m);
+			loading.reset();
+		}
+		done.set(result);
+	};
 
 	auto archive = get_archive();
 
@@ -636,24 +677,26 @@ std::future<Asset::ptr> AssetStorage::load_asset()
 			if (!storage)
 			{
 				Log::get() << Log::LEVEL_ERROR << "asset " << convert(header->name) << " references " << r << ", which does not exist" << Log::endl;
-				tasks.emplace_back(create_task([]() { return false; }));
+				tasks.emplace_back(task_from_result(false));
 				continue;
 			}
 
 			if(!storage->is_loaded())
-			tasks.emplace_back(create_task([r,storage]()
+			// Chained, not waited on: a thread blocked per dependency starves the pool, which only adds threads slowly.
+			tasks.emplace_back(storage->load_asset_task().then([r, storage](task<Asset::ptr> finished)
 				{
 					try
 					{
 						std::stringstream s;
 						s << "loading " << r;
 						auto task = TaskInfoManager::get().create_task(convert(s.str()));
-					
+
 
 						if (!storage)
 							return false;
 
-						storage->load_asset().get();
+						PROFILE(L"asset_load_reference");
+						finished.get();
 								Log::get() << "asset loaded " << storage->get_name()<<" " << r <<Log::endl;
 					}
 
@@ -666,8 +709,11 @@ std::future<Asset::ptr> AssetStorage::load_asset()
 				}));
 		}
 
-		std::shared_ptr<std::promise<Asset::ptr>> p(new std::promise<Asset::ptr>);
-		when_all(begin(tasks), end(tasks)).then([this, p, archive](const std::vector<bool>& results)
+		when_all(begin(tasks), end(tasks)).then([this, finish, archive](const std::vector<bool>& dependencies)
+			{
+			// The dependencies are in. The work itself runs on the Asset lane, low priority: as many loads at once as that
+			// lane has workers, and never the workers the frame needs.
+			thread_pool::get().enqueue_detached(TaskOptions{ TaskPriority::LOW, TaskLane::Asset, L"asset_load" }, [this, finish, archive, results = dependencies]()
 			{
 				bool refresh_header = false;
 				{
@@ -678,7 +724,7 @@ std::future<Asset::ptr> AssetStorage::load_asset()
 						for (auto r : results)
 							if (!r)
 							{
-								p->set_value(nullptr);
+								finish(nullptr);
 								return;
 							}
 
@@ -688,8 +734,14 @@ std::future<Asset::ptr> AssetStorage::load_asset()
 						UniversalContext load_ctx;
 						if (RenderSystem::is_good())
 							load_ctx.get_context<HAL::Device*>() = &RenderSystem::get().device();
-						asset = archive->get<Asset::ptr>("asset", &load_ctx);
-						asset->load_partitions(*archive, &load_ctx);
+						{
+							PROFILE(L"asset_deserialize");
+							asset = archive->get<Asset::ptr>("asset", &load_ctx);
+						}
+						{
+							PROFILE(L"asset_load_partitions");
+							asset->load_partitions(*archive, &load_ctx);
+						}
 
 						asset->holder = this;
 
@@ -701,7 +753,7 @@ std::future<Asset::ptr> AssetStorage::load_asset()
 						Log::get() << "asset loading fail" << e.what() << Log::endl;
 					}
 
-					p->set_value(asset);
+					finish(asset);
 				}
 
 				// save() takes archive_mutex itself. Only when the header differs, so the next load is a no-op.
@@ -709,6 +761,7 @@ std::future<Asset::ptr> AssetStorage::load_asset()
 				{
 					try
 					{
+						PROFILE(L"asset_refresh_header_save");
 						save();
 					}
 					catch (const std::exception& e)
@@ -717,9 +770,11 @@ std::future<Asset::ptr> AssetStorage::load_asset()
 					}
 				}
 			});
-		return p->get_future();
+			});
+		return in_flight;
 	}
 
+	finish(nullptr);
 	throw std::exception();
 }
 
@@ -733,6 +788,7 @@ Asset::ptr AssetStorage::get_asset()
 	if (asset)
 		return asset;
 
+	PROFILE(L"asset_get_asset_wait");
 	return load_asset().get();
 }
 

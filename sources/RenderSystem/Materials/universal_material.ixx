@@ -187,6 +187,24 @@ export namespace materials
 		uint32_t ps_header_version = 0;
 		uint32_t rt_header_version = 0;
 
+		// The same by content, which unlike a version means something in the next session: a hash of the header text
+		// the pipeline was generated from, saved with the material ("material_build" partition). A loaded material
+		// whose headers still hash the same is current, so its first update() does not regenerate it.
+		uint64_t ps_header_hash = 0;
+		uint64_t rt_header_hash = 0;
+
+		struct BuildInfo
+		{
+			uint64_t ps_header_hash = 0;
+			uint64_t rt_header_hash = 0;
+		private:
+			SERIALIZE()
+			{
+				ar& NVP(ps_header_hash);
+				ar& NVP(rt_header_hash);
+			}
+		};
+
 		// From the graph's wiring (see resolve_transparency_mode()); it picks
 		// PSOs, raster passes and RT instance flags, so it is per material,
 		// unlike the per-pixel graph values it is derived from.
@@ -221,6 +239,11 @@ export namespace materials
 		void test();
 
 		void update();
+
+		// The header hashes (see ps_header_hash). A file without the partition (saved before it existed) loads as
+		// before and regenerates once; saving it again writes the partition.
+		void save_partitions(FileDataStorage& storage) override;
+		void load_partitions(FileDataStorage& storage, UniversalContext* context) override;
 
 		UINT get_material_id();
 
@@ -303,8 +326,11 @@ export namespace materials
 	private:
 		SERIALIZE() {
 			SAVE_PARENT(MaterialAsset);
-			ar& NVP(textures);
-			ar& NVP(texture_to_linear);
+			{
+				PROFILE(L"material_ser_textures");
+				ar& NVP(textures);
+				ar& NVP(texture_to_linear);
+			}
 
 			// Editing data (the graph and the shader-include assets it is generated from) only goes into
 			// Editor files; a Device file is the same material without it (see AssetTarget).
@@ -312,23 +338,33 @@ export namespace materials
 			ar& NVP(editor_data);
 			if (editor_data)
 			{
+				PROFILE(L"material_ser_editor_data");
 				ar& NVP(graph);
 				ar& NVP(include_file);
 				ar& NVP(include_file_raytacing);
 			}
 
-			ar& NVP(ps_uniforms);
-			ar& NVP(tess_uniforms);
-			ar& NVP(transparency_mode);
-			ar& NVP(opacity_texture_slot);
-			ar& NVP(pipeline);
+			{
+				PROFILE(L"material_ser_uniforms");
+				ar& NVP(ps_uniforms);
+				ar& NVP(tess_uniforms);
+				ar& NVP(transparency_mode);
+				ar& NVP(opacity_texture_slot);
+			}
+			{
+				PROFILE(L"material_ser_pipeline");
+				ar& NVP(pipeline);
+			}
 
-
-			ar& NVP(raytracing_lib);
+			{
+				PROFILE(L"material_ser_raytracing_lib");
+				ar& NVP(raytracing_lib);
+			}
 
 
 			IF_LOAD()
 			{
+				PROFILE(L"material_load_pipeline_resolve");
 				auto new_pip = PipelineManager::get().get_pipeline(pipeline);
 
 				pipeline = nullptr;

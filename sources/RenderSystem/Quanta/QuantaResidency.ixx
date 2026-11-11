@@ -94,6 +94,9 @@ export namespace Quanta
 		// What the pool has to hold: every page of the pinned meshes, plus the budget the streamed ones share.
 		uint32_t pinned_pages = 0;
 		uint32_t streamed_meshes = 0;
+		// Root pages of the streamed meshes: never evictable, yet the streamer counts them in its budget, so the budget
+		// is "Pool pages" on top of them. Without that, a scene with enough roots leaves no room for any other page.
+		uint32_t streamed_root_pages = 0;
 
 		// What the shared tables hold now, against the caps above: a mesh that does not fit is refused before anything changes.
 		uint64_t page_ids_in_use = 0;
@@ -101,7 +104,12 @@ export namespace Quanta
 		uint64_t nodes_in_use = 0;
 
 		// The streamed meshes' share of the pool: the setting, cut to what the pages buffer has left after the pinned ones.
-		uint32_t streaming_budget() const;
+		// extra_roots: root pages of meshes about to be acquired, counted as if they already were.
+		uint32_t streaming_budget(uint32_t extra_roots = 0) const;
+
+		// Root pages that acquire_many() read ahead, in parallel, for begin_load() to take instead of reading the
+		// file one page at a time. Guarded by m; empty outside an acquire_many().
+		std::map<std::pair<const Mesh*, uint32_t>, std::vector<uint8_t>> prefetched;
 
 		// The flags of page ids changed since the last prepare(): from `first`, two dwords per page id.
 		struct FlagWrite
@@ -140,6 +148,11 @@ export namespace Quanta
 
 		// The mesh's GPU copy, uploading it on first use. The upload is queued: prepare() records it.
 		std::shared_ptr<Resident> acquire(const std::shared_ptr<Mesh>& mesh);
+
+		// acquire() for a whole set (an instance's parts), much cheaper than one call each: the root pages are read
+		// and decompressed in parallel on the thread pool, and the page pool grows once for each batch. Aligned with
+		// `meshes`; a mesh that is refused (out of room, as acquire() throws for it) comes back null and is logged.
+		std::vector<std::shared_ptr<Resident>> acquire_many(const std::vector<std::shared_ptr<Mesh>>& meshes);
 
 		// acquire(), kept alive until the singleton goes: for a user (a render pass) with no object of its own
 		// to own the copy, so it is not freed and re-uploaded every frame.

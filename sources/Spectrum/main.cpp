@@ -1025,7 +1025,7 @@ public:
 ////				HAL::Texture::reload_all();
 //			}
 
-			auto f_gc = thread_pool::get().enqueue([]()
+			auto f_gc = thread_pool::get().enqueue(TaskOptions{ TaskPriority::HIGH }, []()
 			{
 				PROFILE(L"GarbageCollect");
 				RenderSystem::get().device().get_heap_factory().GarbageCollect();
@@ -1057,13 +1057,13 @@ public:
 			float frame_dt = (float)main_timer.tick();
 
 			// fire independent work onto thread pool
-			auto f_asset = thread_pool::get().enqueue([]()
+			auto f_asset = thread_pool::get().enqueue(TaskOptions{ TaskPriority::HIGH }, []()
 			{
 				PROFILE(L"AssetManager");
 				AssetManager::get().tact();
 			});
 
-			auto f_rtx = thread_pool::get().enqueue([]()
+			auto f_rtx = thread_pool::get().enqueue(TaskOptions{ TaskPriority::HIGH }, []()
 			{
 				PROFILE(L"RTX update");
 				// RTX::get() lazily constructs the singleton, which builds the DXR state object.
@@ -1071,7 +1071,7 @@ public:
 					RTX::get().update();
 			});
 
-			auto f_times = thread_pool::get().enqueue([this, frame_dt]()
+			auto f_times = thread_pool::get().enqueue(TaskOptions{ TaskPriority::HIGH }, [this, frame_dt]()
 			{
 				PROFILE(L"push_times");
 				auto& dev = RenderSystem::get().device();
@@ -1092,20 +1092,6 @@ public:
 					{
 						static uint64_t previous_loads = 0, previous_evictions = 0;
 						const Quanta::StreamStats s = Quanta::Residency::get().stats();
-						{   // TEMP quanta-graph debugging: remove with quanta_stats.temp
-							static float temp_accum = 0.0f;
-							static uint64_t temp_frames = 0;
-							temp_frames++;
-							temp_accum += frame_dt;
-							if (temp_accum >= 1.0f)
-							{
-								temp_accum = 0.0f;
-								std::ofstream temp("quanta_stats.temp", std::ios::app);
-								temp << "frames " << temp_frames << " epoch " << Quanta::Residency::get().epoch() << " pool " << s.pool_pages << " free " << s.free_pages << " loading " << s.loading_pages << " wanted " << s.wanted
-									<< " loads " << s.loads << " evictions " << s.evictions << " snapshots " << s.snapshots << " dropped " << s.dropped << "\n";
-							}
-						}
-
 						graph_quanta_loaded->push((float)(s.loads - previous_loads), frame_dt);
 						graph_quanta_evicted->push((float)(s.evictions - previous_evictions), frame_dt);
 						graph_quanta_requests->push((float)s.wanted, frame_dt);
@@ -1295,7 +1281,7 @@ public:
 		if (alive)
 		{
 
-			task_future = thread_pool::get().enqueue([this]()
+			task_future = thread_pool::get().enqueue(TaskOptions{ TaskPriority::HIGH }, [this]()
 				{
 					render();
 				});
@@ -3136,6 +3122,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hinst,
 	SetupDebug();
 
 	EVENT("start");
+	Log::get() << thread_pool::get().describe() << Log::endl;
 	Application::create<RenderApplication>();
 	EVENT("create");
 

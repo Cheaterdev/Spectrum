@@ -323,9 +323,12 @@ bool stencil_renderer::on_drop(GUI::drag_n_drop_package::ptr p, vec2 m)
 	if (!item)
 		return false;
 
-	EVENT("start");
-	auto asset = item->asset->get_asset();
-	EVENT("end");
+	PROFILE_CAPTURE("drop asset");
+	Asset::ptr asset;
+	{
+		PROFILE(L"drop_load_asset");
+		asset = item->asset->get_asset();
+	}
 	if (!asset) return false;
 
 	if (asset->get_type() == Asset_Type::MESH)
@@ -336,9 +339,18 @@ bool stencil_renderer::on_drop(GUI::drag_n_drop_package::ptr p, vec2 m)
 
 
 		user_ui->message_box("static?", "static?", [this, mesh](bool v) {
-			auto instance = mesh->create_instance();
+			// 60 frames on: what the add queues for the render thread (scene caches, VSM, GI, uploads) lands in the capture.
+			PROFILE_CAPTURE("add mesh instance", 60);
+			std::shared_ptr<MeshAssetInstance> instance;
+			{
+				PROFILE(L"add_create_instance");
+				instance = mesh->create_instance();
+			}
 			instance->type = v ? MESH_TYPE::STATIC : MESH_TYPE::DYNAMIC;
-			scene->add_child(instance);
+			{
+				PROFILE(L"add_scene_add_child");
+				scene->add_child(instance);
+			}
 			});
 
 

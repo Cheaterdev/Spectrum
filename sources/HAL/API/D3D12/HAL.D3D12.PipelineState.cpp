@@ -198,11 +198,70 @@ namespace HAL
     {
         tracked_info.reset(new API::TrackedPipeline());
 
+        // Tier 1.1 can extend a state object (AddToStateObject), which needs this flag on it and, for an executable
+        // one, on every collection it imports. So every state object is made with it where the device allows.
+        auto& device = desc.global_root->get_device();
+        const bool additions = device.is_ray_query_supported();
+
+        if (base && additions && desc.type == StateObjectType::Raytracing)
+        {
+            // `base` plus the new collections: only what is new is compiled, and the identifiers of what `base`
+            // exports stay valid. The addition repeats the global subobjects, which must match the existing object's.
+            PROFILE(L"d3d12_add_to_state_object");
+
+            CD3DX12_STATE_OBJECT_DESC addition{ D3D12_STATE_OBJECT_TYPE_RAYTRACING_PIPELINE };
+
+            auto config = addition.CreateSubobject<CD3DX12_STATE_OBJECT_CONFIG_SUBOBJECT>();
+            config->SetFlags(D3D12_STATE_OBJECT_FLAG_ALLOW_STATE_OBJECT_ADDITIONS);
+
+            if (desc.global_root)
+            {
+                auto globalRootSignature = addition.CreateSubobject<CD3DX12_GLOBAL_ROOT_SIGNATURE_SUBOBJECT>();
+                globalRootSignature->SetRootSignature(desc.global_root->get_native().Get());
+            }
+
+            if (desc.MaxTraceRecursionDepth)
+            {
+                auto pipelineConfig = addition.CreateSubobject<CD3DX12_RAYTRACING_PIPELINE_CONFIG_SUBOBJECT>();
+                pipelineConfig->Config(desc.MaxTraceRecursionDepth);
+            }
+
+            if (desc.MaxPayloadSizeInBytes)
+            {
+                auto shaderConfig = addition.CreateSubobject<CD3DX12_RAYTRACING_SHADER_CONFIG_SUBOBJECT>();
+                shaderConfig->Config(desc.MaxPayloadSizeInBytes, desc.MaxAttributeSizeInBytes);
+            }
+
+            slots = base->slots;
+            debuggable = base->debuggable;
+
+            for (auto& c : added_collections)
+            {
+                auto sharedCollection = addition.CreateSubobject<CD3DX12_EXISTING_COLLECTION_SUBOBJECT>();
+                sharedCollection->SetExistingCollection(c->get_native_state().Get());
+                debuggable |= c->debuggable;
+                slots.merge(c->slots);
+            }
+
+            TEST(device, device.get_native_device()->AddToStateObject(addition, base->get_native_state().Get(),
+                IID_PPV_ARGS(&tracked_info->m_StateObject)));
+            TEST(device, tracked_info->m_StateObject.As(&stateObjectProperties));
+            ASSERT(stateObjectProperties);
+            event_change();
+            return;
+        }
+
         D3D12_STATE_OBJECT_TYPE type = D3D12_STATE_OBJECT_TYPE_RAYTRACING_PIPELINE;
 
         if (desc.type == StateObjectType::Collection) type = D3D12_STATE_OBJECT_TYPE_COLLECTION;
 
         CD3DX12_STATE_OBJECT_DESC raytracingPipeline{ type };
+
+        if (additions)
+        {
+            auto config = raytracingPipeline.CreateSubobject<CD3DX12_STATE_OBJECT_CONFIG_SUBOBJECT>();
+            config->SetFlags(D3D12_STATE_OBJECT_FLAG_ALLOW_STATE_OBJECT_ADDITIONS);
+        }
 
         for (auto& l : desc.libraries)
         {

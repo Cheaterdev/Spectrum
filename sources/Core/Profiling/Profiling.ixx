@@ -123,7 +123,8 @@ public:
 };
 
 // Lock-free listener interface for the CPU timer hot path.
-// At most one listener is supported; set/clear from any thread before/after recording.
+// Set/clear from any thread before/after recording. A listener's callbacks run on whichever thread
+// owns the timer, so they must be thread-safe.
 struct CPUTimerListener
 {
 	virtual void on_cpu_start(TimedBlock*) = 0;
@@ -136,7 +137,10 @@ class Profiler : public Singleton<Profiler>,public TimedRoot
 	std::mutex m;
 	static thread_local unsigned    pool_head;
 
-	std::atomic<CPUTimerListener*> cpu_listener{nullptr};
+	// Slot 0 is the profiler window's (set_cpu_listener); the others are add_cpu_listener's, so a capture
+	// (TimingCapture) can run while the window is open.
+	static constexpr size_t MaxCpuListeners = 4;
+	std::array<std::atomic<CPUTimerListener*>, MaxCpuListeners> cpu_listeners{};
 
 public:
 	static thread_local TimedBlock* current_block;
@@ -145,7 +149,9 @@ public:
 	Events::Event<std::pair<TimedBlock*, GPUTimerInterface*>> on_gpu_timer;
 	Events::Event<std::uint64_t> on_frame;
 
-	void set_cpu_listener(CPUTimerListener* l) { cpu_listener.store(l, std::memory_order_release); }
+	void set_cpu_listener(CPUTimerListener* l) { cpu_listeners[0].store(l, std::memory_order_release); }
+	bool add_cpu_listener(CPUTimerListener* l);
+	void remove_cpu_listener(CPUTimerListener* l);
 
 	Profiler() {}
 
@@ -168,6 +174,79 @@ class ScopedCounter
 public:
 	ScopedCounter(std::string name);
 	~ScopedCounter();
+};
+
+
+// Records every PROFILE(...) scope on every thread between begin() and end(), then writes
+//   captures/<label>_<n>.json   a Chrome trace (chrome://tracing or ui.perfetto.dev), one row per thread
+//   and a summary in the log: the scopes ordered by self time, then the longest single ones.
+// Nothing runs outside a capture. It needs PROFILING (Debug / Profile builds), like PROFILE itself.
+//
+//   PROFILE_CAPTURE("drop asset");            // the rest of this scope
+//   PROFILE_CAPTURE("add asset", 30);         // the rest of this scope and the next 30 frames: the work the scope
+//                                             // queues for the render thread lands in the capture too
+// A capture started while another is running is ignored (the outer one keeps going).
+class TimingCapture : public Singleton<TimingCapture>, public CPUTimerListener, public Events::prop_handler
+{
+public:
+	struct Event
+	{
+		const wchar_t* name;
+		int64_t start_ns;   // steady clock
+		int64_t end_ns;
+	};
+
+	TimingCapture();
+	~TimingCapture();
+
+	bool active() const { return running.load(std::memory_order_acquire); }
+
+	// False when a capture is already running.
+	bool begin(std::string label);
+	void end();
+	// Ends once `frames` frames (Profiler::on_frame) have passed; 0 ends now.
+	void end_after_frames(uint frames);
+
+	class Scope
+	{
+		bool owner;
+		uint frames_after;
+	public:
+		Scope(std::string label, uint frames_after = 0);
+		~Scope();
+	};
+
+	void on_cpu_start(TimedBlock*) override {}
+	void on_cpu_end(TimedBlock*) override;
+
+private:
+	struct ThreadBuffer
+	{
+		std::mutex mutex;
+		std::vector<Event> events;
+		uint64_t generation = 0;
+		uint32_t id = 0;
+		uint64_t dropped = 0;
+		std::thread::id owner;
+	};
+
+	ThreadBuffer& local_buffer();
+	void write_report(const std::string& label, int64_t begin_ns, int64_t end_ns, std::thread::id begin_thread);
+
+	std::atomic<bool> running{false};
+	std::atomic<uint64_t> generation{0};
+	std::atomic<int> frames_left{-1};   // -1: the capture ends by end()
+
+	std::mutex state;   // label, times, the previous Profiler::enabled
+	std::string label;
+	int64_t begin_ns = 0;
+	std::thread::id begin_thread;
+	bool previous_enabled = false;
+
+	std::mutex registry;
+	std::vector<std::shared_ptr<ThreadBuffer>> buffers;
+	uint32_t next_thread_id = 1;
+	uint32_t capture_count = 0;
 };
 
 

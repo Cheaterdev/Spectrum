@@ -2852,7 +2852,7 @@ namespace HAL
 		tasks.reserve(lists.size());
 
 		for (auto& list : lists)
-			tasks.emplace_back(thread_pool::get().enqueue([list]()
+			tasks.emplace_back(thread_pool::get().enqueue(TaskOptions{ TaskPriority::HIGH }, [list]()
 			{
 					PROFILE(static_cast<CommandListBase*>(list.get())->get_name());
 				auto ca = list->frame_resources->get_ca(list->get_type());

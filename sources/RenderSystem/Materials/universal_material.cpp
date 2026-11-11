@@ -313,6 +313,60 @@ DynamicData generate_data(std::vector<Uniform::ptr>& un)
 // universal_material — heavy rendering logic
 // ---------------------------------------------------------------------------
 
+namespace
+{
+	// FNV-1a 64: saved in files, so it must give the same value in every run and build (std::hash does not promise that).
+	uint64_t header_content_hash(const std::string& text)
+	{
+		uint64_t hash = 14695981039346656037ull;
+		for (unsigned char c : text)
+		{
+			hash ^= c;
+			hash *= 1099511628211ull;
+		}
+		return hash;
+	}
+}
+
+void materials::universal_material::save_partitions(FileDataStorage& storage)
+{
+	if (!ps_header_hash && !rt_header_hash)
+		return;
+
+	BuildInfo info;
+	info.ps_header_hash = ps_header_hash;
+	info.rt_header_hash = rt_header_hash;
+	storage.put("material_build", info);
+}
+
+void materials::universal_material::load_partitions(FileDataStorage& storage, UniversalContext* context)
+{
+	if (!storage.has("material_build"))
+		return;
+
+	BuildInfo info;
+	try
+	{
+		storage.get("material_build", info, context);
+	}
+	catch (const std::exception& e)
+	{
+		Log::get() << "material build info not loaded: " << e.what() << Log::endl;
+		return;
+	}
+
+	ps_header_hash = info.ps_header_hash;
+	rt_header_hash = info.rt_header_hash;
+
+	// The pipeline in the file was generated from these header texts. Where the headers are still those, the
+	// material is current: its versions are brought up to theirs, so update() does not regenerate it. A header that
+	// changed since leaves the version at 0, and the first update() regenerates.
+	if (include_file && info.ps_header_hash == header_content_hash(include_file->get_data()))
+		ps_header_version = include_file->get_version();
+	if (include_file_raytacing && info.rt_header_hash == header_content_hash(include_file_raytacing->get_data()))
+		rt_header_version = include_file_raytacing->get_version();
+}
+
 void materials::universal_material::update()
 {
 	//std::lock_guard<std::mutex> g(m);
@@ -327,12 +381,18 @@ void materials::universal_material::update()
 
 	if (need_regenerate_material)
 	{
+		PROFILE(L"material_generate");
 		generate_material();
 		need_regenerate_material = false;
+
+		// A regenerated pipeline and its header hashes are not what is on disk: flagged, so the Asset Explorer's SAVE
+		// writes them (a file saved before the hashes existed regenerates on every load until it is saved again).
+		mark_changed();
 	}
 
 	if (need_update_uniforms)
 	{
+		PROFILE(L"material_update_uniforms");
 		auto generate = [this](std::vector<Uniform::ptr>& un)
 		{
 			pixel_data = generate_data(un);
@@ -347,6 +407,7 @@ void materials::universal_material::update()
 
 	if (need_update_compiled)
 	{
+		PROFILE(L"material_update_compiled");
 		material_info.GetStream_info() = TextureStreaming::Manager::get().stream_info.structuredBuffer;
 		material_info.GetTextures() = texture_srvs;// textures_handle ? (UINT)textures_handle.get_offset() : 0;
 		material_info.GetData() = pixel_data;
@@ -364,7 +425,10 @@ void materials::universal_material::update()
 
 		}
 
-		update_rtx();
+		{
+			PROFILE(L"material_update_rtx");
+			update_rtx();
+		}
 
 		// pixel_data just changed (e.g. a slider drag) -- let any attached
 		// MaterialPreviewSession know its cached preview PSO/dispatch is stale.
@@ -372,7 +436,10 @@ void materials::universal_material::update()
 	}
 
 	if (need_update_uniforms || need_update_compiled)
+	{
+		PROFILE(L"material_mark_contents_changed");
 		mark_contents_changed();
+	}
 
 	need_update_uniforms = false;
 	need_update_compiled = false;
@@ -419,31 +486,44 @@ static TextureSRVParams::ptr find_opacity_texture(MaterialGraph* graph)
 
 void materials::universal_material::compile()
 {
+	PROFILE(L"material_compile");
 	start_changing_contents();
 
 	// Also the load path: generate_material() doesn't run for a deserialized material.
-	resolve_transparency_mode();
+	{
+		PROFILE(L"material_compile_resolve_transparency");
+		resolve_transparency_mode();
+	}
 
 	handlers.clear();
 
 	texture_srvs.resize(textures.size());
 
-	for (int i = 0; i < textures.size(); i++)
 	{
-			TextureAsset::ptr tex = *textures[i];
-		if (tex && tex->get_texture()->texture_2d())
+		PROFILE(L"material_compile_textures");
+		for (int i = 0; i < textures.size(); i++)
 		{
-			auto render_texture = tex->get_render_texture();
-			// texture_to_linear may be shorter than textures for a material
-			// serialized before this field existed -- default to false (the
-			// plain linear view) rather than indexing out of bounds.
-			bool to_linear = i < (int)texture_to_linear.size() && texture_to_linear[i];
-			texture_srvs[i] = to_linear ? render_texture->texture_2d_srgb().texture2D : render_texture->texture_2d().texture2D;
-			TextureStreaming::Manager::get().bind_view(render_texture->resource.get(), texture_srvs[i].get_offset());
-		}
+			TextureAsset::ptr tex = *textures[i];
+			bool has_texture;
+			{
+				PROFILE(L"material_compile_get_texture");
+				has_texture = tex && tex->get_texture()->texture_2d();
+			}
+			if (has_texture)
+			{
+				PROFILE(L"material_compile_render_texture");
+				auto render_texture = tex->get_render_texture();
+				// texture_to_linear may be shorter than textures for a material
+				// serialized before this field existed -- default to false (the
+				// plain linear view) rather than indexing out of bounds.
+				bool to_linear = i < (int)texture_to_linear.size() && texture_to_linear[i];
+				texture_srvs[i] = to_linear ? render_texture->texture_2d_srgb().texture2D : render_texture->texture_2d().texture2D;
+				TextureStreaming::Manager::get().bind_view(render_texture->resource.get(), texture_srvs[i].get_offset());
+			}
 
-		else
-			texture_srvs[i] = EngineAssets::missing_texture.get_asset()->get_texture()->texture_2d().texture2D;
+			else
+				texture_srvs[i] = EngineAssets::missing_texture.get_asset()->get_texture()->texture_2d().texture2D;
+		}
 	}
 
 
@@ -466,7 +546,10 @@ void materials::universal_material::compile()
 	material_info.GetStream_info() = TextureStreaming::Manager::get().stream_info.structuredBuffer;
 	material_info.GetTextures() = texture_srvs;// textures_handle ? (UINT)textures_handle.get_offset() : 0;
 	material_info.GetData() = pixel_data;
-	compiled_material_info = material_info.compile(RenderSystem::get().device().get_static_gpu_data());
+	{
+		PROFILE(L"material_compile_info");
+		compiled_material_info = material_info.compile(RenderSystem::get().device().get_static_gpu_data());
+	}
 
 	local_addr = compiled_material_info.compiled().get_offset();
 	//local_addr_ids = to_native(compiled_material_info.offsets_cb);
@@ -516,8 +599,13 @@ void materials::universal_material::compile()
 	need_update_uniforms = false;
 
 	if (RenderSystem::get().device().is_rtx_supported())
+	{
+		PROFILE(L"material_compile_rtx_init");
 		RTX::get().rtx.init_material(this);
-	end_changing_contents();
+	}
+	// Quiet: compile() also runs when a material is deserialized, and a load is not a change. An edit goes through
+	// generate_material(), which announces it once after this returns.
+	end_changing_contents(false);
 }
 
 void materials::universal_material::generate_texture_handles()
@@ -609,8 +697,16 @@ void materials::universal_material::generate_material()
 	ps_uniforms = context->uniforms_ps;
 
 	// Remember which header revisions this generation baked in.
-	if (include_file)           ps_header_version = include_file->get_version();
-	if (include_file_raytacing) rt_header_version = include_file_raytacing->get_version();
+	if (include_file)
+	{
+		ps_header_version = include_file->get_version();
+		ps_header_hash = header_content_hash(include_file->get_data());
+	}
+	if (include_file_raytacing)
+	{
+		rt_header_version = include_file_raytacing->get_version();
+		rt_header_hash = header_content_hash(include_file_raytacing->get_data());
+	}
 
 
 	//	tess_uniforms = context->uniforms_tess;

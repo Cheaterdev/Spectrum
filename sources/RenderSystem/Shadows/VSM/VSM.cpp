@@ -91,6 +91,7 @@ void VSM::attach_scene(std::shared_ptr<Scene> scene)
 		// never gets a correcting on_moved at all. Rather than trust a
 		// possibly-default (0,0,0) AABB, just mark every currently-active
 		// level fully dirty -- object adds are rare, not a per-frame cost.
+		PROFILE(L"vsm_on_element_add");
 		for (int level = 0; level < VSM::MaxLevels; level++)
 			if (level_initialized[level])
 				tracker.mark_level_full(level);

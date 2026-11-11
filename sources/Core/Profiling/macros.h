@@ -12,8 +12,11 @@
          auto SPECTRUM_UNIQUE_NAME = HAL::Eventer::thread_current \
              ? HAL::Eventer::thread_current->start(x) \
              : Timer();
+#    define PROFILE_CAPTURE(...) \
+         TimingCapture::Scope SPECTRUM_UNIQUE_NAME(__VA_ARGS__);
 #  else
 #    define PROFILE(x)     ((void)0)
 #    define PROFILE_GPU(x) ((void)0)
+#    define PROFILE_CAPTURE(...) ((void)0)
 #  endif
 #endif

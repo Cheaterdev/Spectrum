@@ -147,6 +147,40 @@ namespace HAL
 		return result;
 	}
 
+	StateObjectDesc StateObject::extended(const StateObjectDesc& base, const std::list<std::shared_ptr<StateObject>>& added)
+	{
+		StateObjectDesc result = base;
+		result.collections.insert(result.collections.end(), added.begin(), added.end());
+		return result;
+	}
+
+	StateObject::StateObject(std::shared_ptr<StateObject> parent, std::list<std::shared_ptr<StateObject>> added)
+		// Members are initialized in declaration order: base and added_collections, then desc from them.
+		: base(std::move(parent)), added_collections(std::move(added)), desc(extended(base->desc, added_collections))
+	{
+		for (auto& l : desc.libraries)
+		{
+			register_shader(l.library);
+		}
+		for (auto& c : desc.collections)
+		{
+			c->event_change.register_handler(this, [this]()
+				{
+					on_change();
+				});
+		}
+		on_change();
+
+		// Later rebuilds (a collection or shader changed) build everything from `desc`.
+		base.reset();
+		added_collections.clear();
+	}
+
+	StateObject::ptr StateObject::add(const ptr& base, const std::list<ptr>& collections)
+	{
+		return ptr(new StateObject(base, collections));
+	}
+
 	StateObject::StateObject(StateObjectDesc& _desc) : desc(_desc)
 	{
 		for (auto& l : desc.libraries)

@@ -83,11 +83,13 @@ Asset_Type MeshAsset::get_type()
 
 void MeshAsset::init_gpu()
 {
+	PROFILE(L"mesh_init_gpu");
 	FenceWaiter last;
 	int i = 0;
 	if (RenderSystem::get().device().is_ray_query_supported())
 		for (auto& mesh : meshes)
 		{
+			PROFILE(L"mesh_init_gpu_blas_part");
 			auto list = (RenderSystem::get().device().get_queue(CommandListType::DIRECT)->get_free_list());
 			list->begin(L"RTX");
 			auto mat = list->place_raw(to_transform3x4(nodes[mesh.node_index]->mesh_matrix));
@@ -108,7 +110,10 @@ void MeshAsset::init_gpu()
 			last=list->execute();
 			i++;
 		}
-	last.wait();
+	{
+		PROFILE(L"mesh_init_gpu_wait");
+		last.wait();
+	}
 }
 
 void MeshAsset::build_rt_proxies()
@@ -117,6 +122,7 @@ void MeshAsset::build_rt_proxies()
 	if (!device.is_ray_query_supported() || !Quanta::rt_proxy_enabled())
 		return;
 
+	PROFILE(L"mesh_build_rt_proxies");
 	const uint32_t budget = Quanta::rt_triangle_budget();
 
 	FenceWaiter last;
@@ -127,7 +133,12 @@ void MeshAsset::build_rt_proxies()
 			continue;
 
 		Quanta::CutGeometry cut;
-		if (!Quanta::build_cut(*quanta[i], budget, cut))
+		bool has_cut;
+		{
+			PROFILE(L"mesh_rt_proxy_build_cut");
+			has_cut = Quanta::build_cut(*quanta[i], budget, cut);
+		}
+		if (!has_cut)
 		{
 			Log::get() << L"Quanta ray tracing: no cut for mesh " << name << L" part " << uint32_t(i) << L", using its full geometry" << Log::endl;
 			continue;
@@ -149,6 +160,7 @@ void MeshAsset::build_rt_proxies()
 		std::memcpy(vertices.data(), cut.vertices.data(), cut.vertices.size() * sizeof(Quanta::Vertex));
 
 		{
+			PROFILE(L"mesh_rt_proxy_upload_wait");
 			auto upload = device.get_upload_list();
 			upload->get_copy().update<Table::Meshes::mesh_vertex_input>(mesh.rt_vertex_buffer_view, 0, vertices);
 			upload->get_copy().update<UINT32>(mesh.rt_index_buffer_view, 0, cut.indices);
@@ -171,13 +183,19 @@ void MeshAsset::build_rt_proxies()
 		geometryDesc.Flags = HAL::GeometryFlags::OPAQUE;
 		std::vector<GeometryDesc> descs;
 		descs.push_back(geometryDesc);
-		mesh.ras = std::make_shared<RaytracingAccelerationStructure>(device, descs, list);
-		last = list->execute();
+		{
+			PROFILE(L"mesh_rt_proxy_blas");
+			mesh.ras = std::make_shared<RaytracingAccelerationStructure>(device, descs, list);
+			last = list->execute();
+		}
 
 		Log::get() << L"Quanta ray tracing: " << name << L" part " << uint32_t(i) << L" uses " << uint32_t(cut.indices.size() / 3) << L" of "
 			<< quanta[i]->original_triangle_count << L" triangles (error " << cut.error << L")" << Log::endl;
 	}
-	last.wait();
+	{
+		PROFILE(L"mesh_rt_proxy_wait");
+		last.wait();
+	}
 }
 
 MeshAsset::MeshAsset(std::wstring file_name, AssetLoadingContext::ptr c)
@@ -525,11 +543,15 @@ void MeshAssetInstance::serialize(Archive& ar)
 
 MeshAssetInstance::MeshAssetInstance(MeshAsset::ptr asset) : mesh_asset(this)
 {
+	PROFILE(L"instance_ctor");
 	mesh_asset = register_asset(asset);
 	this->overrided_material.clear();// = mesh_asset->get_mesh()->materials;
 
-	for (auto& m : mesh_asset->materials)
-		this->overrided_material.push_back(register_asset(*m));
+	{
+		PROFILE(L"instance_register_materials");
+		for (auto& m : mesh_asset->materials)
+			this->overrided_material.push_back(register_asset(*m));
+	}
 
 	init_asset();
 	name = asset->get_name();
@@ -581,28 +603,18 @@ void MeshAssetInstance::override_material(size_t i, MaterialAsset::ptr mat)
 
 void MeshAssetInstance::on_asset_change(Asset::ptr asset)
 {
+	PROFILE(L"instance_on_asset_change");
 	if (asset->get_type() == Asset_Type::MATERIAL)
 	{
-
-		std::vector<MaterialAsset::ptr> changed;
-		changed.reserve(overrided_material.size());
-
-		auto material = asset->get_ptr<MaterialAsset>();
-		for (auto& ref : overrided_material)
-		{
-
-			if (ref->get_ptr<MaterialAsset>() == material)
-				changed.push_back(material);
-			else
-				changed.push_back(nullptr);
-		}
-
 		// A transparency-mode change alters this instance's TLAS mask/flags.
 		if (scene)
 			update_rtx_instance();
 	}
 	if (scene)
+	{
+		PROFILE(L"instance_on_asset_change_scene_event");
 		scene->on_changed(this);
+	}
 }
 
 MeshAssetInstance::~MeshAssetInstance()
@@ -610,6 +622,7 @@ MeshAssetInstance::~MeshAssetInstance()
 }
 void MeshAssetInstance::on_add(scene_object* parent)
 {
+	PROFILE(L"instance_on_add");
 
 	auto old_scene = scene;
 
@@ -628,13 +641,19 @@ void MeshAssetInstance::on_add(scene_object* parent)
 	{
 		this->parent = parent;
 		this->scene  = parent->scene;
+		PROFILE(L"instance_on_add_update_transforms");
 		update_transforms();
 	}
 
-	scene_object::on_add(parent);
+	{
+		// Fires Scene::on_element_add: the scene caches, the VSM tracker, VoxelGI and any other listener.
+		PROFILE(L"instance_on_add_scene_events");
+		scene_object::on_add(parent);
+	}
 
 	if (!old_scene && scene)
 	{
+		PROFILE(L"instance_on_add_register_parts");
 
 		Scene* render_scene = dynamic_cast<Scene*>(scene);
 
@@ -694,6 +713,7 @@ void MeshAssetInstance::update_rtx_instance()
 {
 	if (!RenderSystem::get().device().is_ray_query_supported()) return;
 
+	PROFILE(L"instance_update_rtx");
 	if (!ras_handle) scene->raytrace->allocate(ras_handle, rendering_count);
 
 	if (ras_handle)
@@ -807,6 +827,7 @@ bool MeshAssetInstance::init_ras(HAL::CommandList::ptr list)
 
 void MeshAssetInstance::update_nodes()
 {
+	PROFILE(L"instance_update_nodes");
 	//	primitive.reset(new AABB());
 
 	nodes_count = 0;
@@ -871,19 +892,24 @@ void MeshAssetInstance::update_nodes()
 	instance_info.GetQuanta_page_slots() = quanta_residency.page_slots.buffer.structuredBuffer;
 
 	quanta_residents.assign(mesh_asset->quanta.size(), nullptr);
-	for (size_t q = 0; q < mesh_asset->quanta.size(); q++)
-		if (mesh_asset->quanta[q])
-		{
-			try
+	{
+		// All the parts at once. One that does not fit (out of room in the shared tables) comes back null and stays
+		// on its regular meshlets.
+		PROFILE(L"instance_quanta_acquire");
+
+		std::vector<std::shared_ptr<Quanta::Mesh>> to_acquire;
+		std::vector<size_t> part_of;
+		for (size_t q = 0; q < mesh_asset->quanta.size(); q++)
+			if (mesh_asset->quanta[q])
 			{
-				quanta_residents[q] = quanta_residency.acquire(mesh_asset->quanta[q]);
+				to_acquire.push_back(mesh_asset->quanta[q]);
+				part_of.push_back(q);
 			}
-			catch (const std::exception& e)
-			{
-				// Out of room in the shared tables: this mesh stays on its regular meshlets.
-				Log::get() << e.what() << Log::endl;
-			}
-		}
+
+		auto acquired = quanta_residency.acquire_many(to_acquire);
+		for (size_t i = 0; i < acquired.size(); i++)
+			quanta_residents[part_of[i]] = std::move(acquired[i]);
+	}
 
 	mesh_instance_info = instance_info.compile(RenderSystem::get().device().get_static_gpu_data());
 	auto gpu_nodes = nodes_handle.map();

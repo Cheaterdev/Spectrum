@@ -90,7 +90,11 @@ namespace Quanta
 		streamer->remove(resident);
 
 		if (resident.streamed)
+		{
 			streamed_meshes--;
+			for (uint32_t p = 0; p < resident.states.size(); p++)
+				streamed_root_pages -= resident.is_root(p);
+		}
 		else
 			pinned_pages -= static_cast<uint32_t>(resident.states.size());
 
@@ -99,10 +103,11 @@ namespace Quanta
 		nodes_in_use -= resident.mesh->nodes.size();
 	}
 
-	uint32_t Residency::streaming_budget() const
+	uint32_t Residency::streaming_budget(uint32_t extra_roots) const
 	{
 		const uint32_t room = pinned_pages < MaxPoolPages ? static_cast<uint32_t>(MaxPoolPages) - pinned_pages : 0;
-		return std::max(2u, std::min(static_cast<uint32_t>(std::max(2, int(g_pool_pages))), room));
+		const uint32_t wanted = static_cast<uint32_t>(std::max(2, int(g_pool_pages))) + streamed_root_pages + extra_roots;
+		return std::max(2u, std::min(wanted, room));
 	}
 
 	void Residency::allocate_pool(uint32_t count)
@@ -115,6 +120,7 @@ namespace Quanta
 
 	std::shared_ptr<Resident> Residency::acquire(const std::shared_ptr<Mesh>& mesh)
 	{
+		PROFILE(L"quanta_acquire");
 		std::lock_guard<std::mutex> g(m);
 
 		if (auto it = residents.find(mesh.get()); it != residents.end())
@@ -151,15 +157,20 @@ namespace Quanta
 			streamed_meshes++;
 		else
 			pinned_pages += static_cast<uint32_t>(mesh->pages.size());
-		const uint32_t budget = streaming_budget();
-		streamer->set_budget(budget);
-		streamer->ensure_pool(std::max(2u, pinned_pages + (streamed_meshes ? budget : 0)));
-
 		// The roots go into slots right below.
 		uint32_t root_pages = 0;
 		for (uint32_t p = 0; p < mesh->pages.size(); p++)
 			root_pages += resident->is_root(p);
-		streamer->ensure_free(root_pages);
+		if (stream)
+			streamed_root_pages += root_pages;
+
+		const uint32_t budget = streaming_budget();
+		streamer->set_budget(budget);
+		{
+			PROFILE(L"quanta_acquire_grow_pool");
+			streamer->ensure_pool(std::max(2u, pinned_pages + (streamed_meshes ? budget : 0)));
+			streamer->ensure_free(root_pages);
+		}
 
 		page_slots.allocate(resident->page_id_handle, mesh->pages.size());
 		groups.allocate(resident->group_handle, mesh->groups.size() * GroupDwords);
@@ -182,9 +193,12 @@ namespace Quanta
 		streamer->add(*resident);
 
 		// Roots are always there: they are what a missing page falls back to. A pinned mesh has nothing but roots.
-		for (uint32_t p = 0; p < mesh->pages.size(); p++)
-			if (resident->is_root(p))
-				slots[p] = static_cast<uint32_t>(pool[streamer->load_root(*resident, p)].get_offset());
+		{
+			PROFILE(L"quanta_acquire_load_roots");
+			for (uint32_t p = 0; p < mesh->pages.size(); p++)
+				if (resident->is_root(p))
+					slots[p] = static_cast<uint32_t>(pool[streamer->load_root(*resident, p)].get_offset());
+		}
 		page_slots.write(page_id_base, slots);
 
 		std::vector<uint> group_dwords(mesh->groups.size() * GroupDwords);
@@ -211,6 +225,106 @@ namespace Quanta
 
 		residents[mesh.get()] = resident;
 		return resident;
+	}
+
+	std::vector<std::shared_ptr<Resident>> Residency::acquire_many(const std::vector<std::shared_ptr<Mesh>>& meshes)
+	{
+		PROFILE(L"quanta_acquire_many");
+
+		std::vector<std::shared_ptr<Resident>> result(meshes.size());
+
+		// A batch at a time: the root pages read ahead are held in memory until the batch is registered.
+		constexpr size_t BatchSize = 128;
+
+		for (size_t first = 0; first < meshes.size(); first += BatchSize)
+		{
+			const size_t last = std::min(meshes.size(), first + BatchSize);
+
+			struct Fetch
+			{
+				const Mesh* mesh;
+				uint32_t page;
+				std::vector<uint8_t> bytes;
+				bool ok = false;
+			};
+			std::vector<Fetch> fetches;
+			uint32_t new_roots = 0;
+			const bool stream = streaming_enabled();
+
+			{
+				std::lock_guard<std::mutex> g(m);
+				for (size_t i = first; i < last; i++)
+				{
+					const Mesh& mesh = *meshes[i];
+					if (auto it = residents.find(&mesh); it != residents.end() && !it->second.expired())
+						continue;
+
+					for (uint32_t p = 0; p < mesh.pages.size(); p++)
+						if (!stream || mesh.pages[p].root)
+						{
+							new_roots++;
+							if (mesh.pages[p].data.empty() && mesh.pages[p].size != 0)
+								fetches.push_back({ &mesh, p });
+						}
+				}
+			}
+
+			{
+				PROFILE(L"quanta_prefetch_roots");
+
+				// Read and decompressed on the pool, not one page at a time on this thread.
+				std::vector<std::future<void>> tasks;
+				tasks.reserve(fetches.size());
+				for (auto& fetch : fetches)
+					tasks.emplace_back(thread_pool::get().enqueue(TaskOptions{ TaskPriority::HIGH }, [&fetch]()
+					{
+						fetch.ok = read_page(*fetch.mesh, fetch.page, fetch.bytes);
+					}));
+				for (auto& task : tasks)
+					task.wait();
+			}
+
+			{
+				std::lock_guard<std::mutex> g(m);
+
+				for (auto& fetch : fetches)
+					if (fetch.ok)
+						prefetched[{ fetch.mesh, fetch.page }] = std::move(fetch.bytes);
+
+				// The pool for the whole batch at once: acquire() below then finds it already large enough, instead of
+				// growing it by a page or two for each mesh.
+				if (new_roots)
+				{
+					PROFILE(L"quanta_acquire_many_grow_pool");
+					if (stream)
+					{
+						const uint32_t budget = streaming_budget(new_roots);
+						streamer->set_budget(budget);
+						streamer->ensure_pool(std::max(2u, pinned_pages + budget));
+					}
+					else
+						streamer->ensure_pool(std::max(2u, pinned_pages + new_roots));
+					streamer->ensure_free(new_roots);
+				}
+			}
+
+			for (size_t i = first; i < last; i++)
+			{
+				try
+				{
+					result[i] = acquire(meshes[i]);
+				}
+				catch (const std::exception& e)
+				{
+					Log::get() << e.what() << Log::endl;
+				}
+			}
+
+			std::lock_guard<std::mutex> g(m);
+			prefetched.clear();
+		}
+
+		return result;
 	}
 
 	std::shared_ptr<Resident> Residency::pin(const std::shared_ptr<Mesh>& mesh)
@@ -270,13 +384,18 @@ namespace Quanta
 		const std::vector<uint8_t>* bytes = &source.data;
 		if (source.data.empty() && source.size != 0)
 		{
-			if (!read_page(*resident.mesh, page, fetched))
+			if (auto ahead = prefetched.find({ resident.mesh.get(), page }); ahead != prefetched.end())
+				bytes = &ahead->second;   // read in parallel by acquire_many()
+			else
 			{
-				// Runs on the streamer thread too: an empty page is better than a thrown exception there.
-				Log::get() << "Quanta: cannot read page " << page << " from " << resident.mesh->file.string() << Log::endl;
-				fetched.assign(source.size, 0);
+				if (!read_page(*resident.mesh, page, fetched))
+				{
+					// Runs on the streamer thread too: an empty page is better than a thrown exception there.
+					Log::get() << "Quanta: cannot read page " << page << " from " << resident.mesh->file.string() << Log::endl;
+					fetched.assign(source.size, 0);
+				}
+				bytes = &fetched;
 			}
-			bytes = &fetched;
 		}
 
 		std::vector<uint> dwords((bytes->size() + 3) / 4, 0);

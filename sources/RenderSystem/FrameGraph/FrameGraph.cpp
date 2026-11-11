@@ -1321,7 +1321,7 @@ namespace FrameGraph
 			tasks.reserve(submits.size());
 
 			for (auto& submit : submits)
-				tasks.emplace_back(thread_pool::get().enqueue([&submit]()
+				tasks.emplace_back(thread_pool::get().enqueue(TaskOptions{ TaskPriority::HIGH }, [&submit]()
 				{
 					submit.group.compile_transitions();
 					submit.group.compile();
@@ -1566,7 +1566,7 @@ namespace FrameGraph
 		PROFILE(L"compile");
 
 
-		descriptor_commit_task = thread_pool::get().enqueue([this]()
+		descriptor_commit_task = thread_pool::get().enqueue(TaskOptions{ TaskPriority::HIGH }, [this]()
 			{
 				current_frame->commit_descriptors_to_gpu();
 			});
@@ -2725,7 +2725,7 @@ namespace FrameGraph
 
 	void ExternalPass::render(Graph* graph, HAL::FrameResources::ptr& frame)
 	{
-		render_task = thread_pool::get().enqueue([this, &frame, graph]()
+		render_task = thread_pool::get().enqueue(TaskOptions{ TaskPriority::HIGH }, [this, &frame, graph]()
 			{
 				context.begin(graph, this, frame);
 				// No GPU work — context.end() fires process_debug_resource for each

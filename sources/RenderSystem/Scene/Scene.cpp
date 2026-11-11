@@ -28,6 +28,7 @@ Scene::Scene()
 	scene = this;
 	// controller = this;
 	on_element_add.register_handler(this, [this](scene_object* object) {
+		PROFILE(L"scene_on_element_add");
 
 		auto render_object = dynamic_cast<MeshAssetInstance*>(object);
 
