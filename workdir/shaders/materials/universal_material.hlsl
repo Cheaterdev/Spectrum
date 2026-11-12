@@ -335,7 +335,7 @@ float stream_min_mip(uint i)
 {
     StructuredBuffer<uint> indirection = ResourceDescriptorHeap[GetMaterialInfo().textures];
     uint view = indirection[NonUniformResourceIndex(i)];
-    return float(max(GetMaterialInfo().GetStream_info()[NonUniformResourceIndex(view)], 1u) - 1u);
+    return float(max(GetMaterialInfo().GetStream_info()[NonUniformResourceIndex(view * 2)], 1u) - 1u);
 }
 
 #ifdef BUILD_FUNC_PS
@@ -347,9 +347,9 @@ float4 ps_sample(uint tex, SamplerState s, float2 tc)
     StructuredBuffer<uint> indirection = ResourceDescriptorHeap[GetMaterialInfo().textures];
     const uint view = indirection[NonUniformResourceIndex(tex)];
     const float lod = max(t.CalculateLevelOfDetailUnclamped(s, tc) + GetFrameInfo().GetMipBias(), 0.0);
-    stream_report(GetMaterialInfo().GetStream_info(), GetQuantaFeedback().GetTextures(), view, lod);
+    stream_report(GetMaterialInfo().GetStream_info(), GetQuantaFeedback().GetTextures(), view, lod, GetQuantaFeedback().GetTexture_epoch());
 
-    const uint resident = GetMaterialInfo().GetStream_info()[NonUniformResourceIndex(view)];
+    const uint resident = GetMaterialInfo().GetStream_info()[NonUniformResourceIndex(view * 2)];
     if (resident != 0)
     {
         stream_sampled_mip = max(stream_sampled_mip, max(lod, float(resident - 1)));

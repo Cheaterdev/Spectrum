@@ -744,6 +744,8 @@ task<Asset::ptr> AssetStorage::load_asset_task()
 						}
 
 						asset->holder = this;
+						if (asset->resave_after_load)
+							mark_changed();
 
 						// Files saved before references were tracked, or edited since, carry a stale header.
 						refresh_header = asset->get_reference_ids() != header->references;
@@ -815,7 +817,8 @@ void AssetStorage::save()
 		storage.put("asset", asset);
 		asset->save_partitions(storage);
 
-		storage.save();
+		if (!storage.save())
+			throw std::runtime_error("the file was not written");
 		asset->after_save(storage);
 		//auto archive = ZipArchive::Create();
 		//

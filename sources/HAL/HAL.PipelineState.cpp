@@ -46,12 +46,42 @@ namespace HAL
 		storage.save();
 	}
 
+	// What a driver blob is stored under: the name plus the hashes of the shader bytecode. The name alone is not enough:
+	// the key variants of one PSO set share it, and a material pipeline's name ends in an id that is handed out per
+	// run, so by name a blob was usually another pipeline's, which the driver rejects (an internal _com_error) before
+	// the pipeline is compiled from scratch. A wrong match here still only costs that fallback.
+	template<class... Shaders>
+	static std::string blob_key(const std::string& name, const Shaders&... shaders)
+	{
+		if (name.empty())
+			return {};
+
+		std::string key = name;
+		auto add = [&](const auto& shader)
+		{
+			key += '#';
+			if (shader)
+				key += std::to_string(shader->get_hash());
+		};
+		(add(shaders), ...);
+		return key;
+	}
+
+	static std::string blob_key(const PipelineStateDesc& desc)
+	{
+		std::string key = blob_key(desc.name, desc.vertex, desc.pixel, desc.geometry, desc.hull, desc.domain, desc.mesh, desc.amplification);
+		if (!key.empty())
+			key += '#' + std::to_string(static_cast<int>(desc.topology));
+		return key;
+	}
+
 	PipelineStateCache::PipelineStateCache(Device& device) :device(device), cache([this](const PipelineStateDesc& desc)
 		{
+			const std::string key = blob_key(desc);
 			std::string binary;
 			{
 				std::lock_guard<std::mutex> g(m);
-				binary = desc.name.empty() ? "" : binary_cache[desc.name];
+				binary = key.empty() ? "" : binary_cache[key];
 			}
 
 			//Log::get() << desc << Log::endl;
@@ -61,20 +91,21 @@ namespace HAL
 				state = PipelineState::ptr(new PipelineState(this->device, desc, binary));
 			}
 
-			if (!desc.name.empty())
+			if (!key.empty())
 			{
 				std::lock_guard<std::mutex> g(m);
-				binary_cache[desc.name] = state->get_cache();
+				binary_cache[key] = state->get_cache();
 			}
 
 			return state;
 
 		}), compute_cache([this](const ComputePipelineStateDesc& desc)
 			{
+				const std::string key = blob_key(desc.name, desc.shader);
 				std::string binary;
 				{
 					std::lock_guard<std::mutex> g(m);
-					binary = desc.name.empty() ? "" : binary_cache[desc.name];
+					binary = key.empty() ? "" : binary_cache[key];
 				}
 
 				//Log::get() << desc << Log::endl;
@@ -84,10 +115,10 @@ namespace HAL
 					state = ComputePipelineState::ptr(new ComputePipelineState(this->device, desc, binary));
 				}
 
-				if (!desc.name.empty())
+				if (!key.empty())
 				{
 					std::lock_guard<std::mutex> g(m);
-					binary_cache[desc.name] = state->get_cache();
+					binary_cache[key] = state->get_cache();
 				}
 
 				return state;
@@ -98,20 +129,39 @@ namespace HAL
 		std::lock_guard<std::mutex> g(m);
 
 
-		
+
 		FileDataStorage storage(std::filesystem::path("cache") / get_backend_name() / "pso.bin");
 		storage.get("cache",binary_cache);
+
+		// Entries from before blob_key(): stored by name alone, never looked up again.
+		std::erase_if(binary_cache, [](const auto& entry) { return entry.first.find('#') == std::string::npos; });
+	}
+
+	// A loaded description's shaders resolve on first access, and comparing them does that: resolve before the cache
+	// lookup, or the shader loads run inside the cache's lock.
+	static void resolve(const auto& shader)
+	{
+		if (shader)
+			(void)shader.operator->();
 	}
 
 	PipelineState::ptr PipelineStateCache::get_cache(PipelineStateDesc& desc, std::string name)
 	{
 		desc.name = name;
+		resolve(desc.vertex);
+		resolve(desc.pixel);
+		resolve(desc.geometry);
+		resolve(desc.domain);
+		resolve(desc.hull);
+		resolve(desc.mesh);
+		resolve(desc.amplification);
 		return cache[desc];
 	}
 
 	ComputePipelineState::ptr PipelineStateCache::get_cache(ComputePipelineStateDesc& desc, std::string name)
 	{
 		desc.name = name;
+		resolve(desc.shader);
 		return compute_cache[desc];
 	}
 

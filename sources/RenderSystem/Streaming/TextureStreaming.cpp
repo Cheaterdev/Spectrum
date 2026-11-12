@@ -91,17 +91,19 @@ namespace TextureStreaming
 	Manager::Manager()
 		: streamer(std::make_shared<Streaming::Streamer>(static_cast<Streaming::Backend&>(*this), MaxPageIds))
 		, m(streamer->mutex())
-		, stream_info(RenderSystem::get().device(), ViewCapacity, HAL::counterType::NONE, HAL::ResFlags::ShaderResource)
-		, wanted(RenderSystem::get().device(), ViewCapacity, HAL::counterType::NONE, HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess)
+		, mip_feedback(std::make_unique<Streaming::GpuFeedback>(RenderSystem::get().device(), MaxMipIds, streamer))
+		, mip_present(RenderSystem::get().device(), MaxMipIds, HAL::counterType::NONE, HAL::ResFlags::ShaderResource)
+		, stream_info(RenderSystem::get().device(), ViewCapacity * 2, HAL::counterType::NONE, HAL::ResFlags::ShaderResource)
 	{
 		// Heap memory is taken as tiles load and given back as they go, up to the pool size.
 		streamer->use_demand_pool();
+		mip_refs.resize(MaxMipIds);
 
 		// Every shader may read it from the first draw on, so it holds defined values before anything is recorded.
 		auto list = RenderSystem::get().device().get_upload_list();
-		std::vector<uint> zeros(ViewCapacity, 0);
+		std::vector<uint> zeros(ViewCapacity * 2, 0);
 		list->get_copy().update(stream_info, 0, std::span<uint>(zeros));
-		list->get_copy().update(wanted, 0, std::span<uint>(zeros));
+		list->get_copy().update(mip_present, 0, std::span<uint>(zeros.data(), MaxMipIds));
 		list->execute_and_wait();
 	}
 
@@ -117,7 +119,8 @@ namespace TextureStreaming
 		if (std::find(streamed.views.begin(), streamed.views.end(), view_index) == streamed.views.end())
 			streamed.views.push_back(view_index);
 
-		info_writes.push_back({ view_index, streamed.shader_mip() + 1 });
+		info_writes.push_back({ view_index * 2, streamed.shader_mip() + 1 });
+		info_writes.push_back({ view_index * 2 + 1, streamed.mip_id_base | ((std::max(streamed.standard_mips(), 1u) - 1) << 24) });
 	}
 
 	Manager::~Manager()
@@ -168,39 +171,49 @@ namespace TextureStreaming
 		pool[slot] = RenderSystem::get().device().get_static_gpu_data().create_tile(HAL::HeapType::DEFAULT);
 	}
 
-	uint32_t Manager::allocate_ids(uint32_t count)
+	uint32_t Manager::allocate_from(std::vector<IdRange>& free_list, uint32_t& next, uint32_t limit, uint32_t count)
 	{
-		for (size_t i = 0; i < free_ids.size(); i++)
+		for (size_t i = 0; i < free_list.size(); i++)
 		{
-			if (free_ids[i].count < count)
+			if (free_list[i].count < count)
 				continue;
 
-			const uint32_t first = free_ids[i].first;
-			free_ids[i].first += count;
-			free_ids[i].count -= count;
-			if (free_ids[i].count == 0)
-				free_ids.erase(free_ids.begin() + i);
+			const uint32_t first = free_list[i].first;
+			free_list[i].first += count;
+			free_list[i].count -= count;
+			if (free_list[i].count == 0)
+				free_list.erase(free_list.begin() + i);
 			return first;
 		}
 
-		ASSERT(next_id + count <= MaxPageIds);
-		const uint32_t first = next_id;
-		next_id += count;
+		ASSERT(next + count <= limit);
+		const uint32_t first = next;
+		next += count;
 		return first;
 	}
 
-	void Manager::free_id_range(uint32_t first, uint32_t count)
+	void Manager::free_to(std::vector<IdRange>& free_list, uint32_t& next, uint32_t first, uint32_t count)
 	{
 		if (count == 0)
 			return;
 
-		if (first + count == next_id)
+		if (first + count == next)
 		{
-			next_id = first;
+			next = first;
 			return;
 		}
 
-		free_ids.push_back({ first, count });
+		free_list.push_back({ first, count });
+	}
+
+	uint32_t Manager::allocate_ids(uint32_t count)
+	{
+		return allocate_from(free_ids, next_id, MaxPageIds, count);
+	}
+
+	void Manager::free_id_range(uint32_t first, uint32_t count)
+	{
+		free_to(free_ids, next_id, first, count);
 	}
 
 	void Manager::allocate_pool(uint32_t count)
@@ -452,6 +465,24 @@ namespace TextureStreaming
 			packed_op = std::move(op);
 		}
 
+		// The roots of a file texture are read here so that nothing under the lock touches the file.
+		std::vector<RootRead> root_reads;
+		if (file)
+		{
+			PROFILE(L"texture_stream_read_root");
+			for (uint32_t p = 0; p < pages; p++)
+				if (streamed->is_root(p))
+				{
+					uint32_t mip, x, y;
+					streamed->locate(p, mip, x, y);
+					RootRead& read = root_reads.emplace_back();
+					read.page = p;
+					read.bytes.resize(TileBytes);
+					if (!file->read_tile(mip, x, y, read.bytes.data()))
+						throw std::runtime_error("texture asset file is shorter than its tile index says");
+				}
+		}
+
 		std::unique_lock<std::mutex> g(m, std::defer_lock);
 		{
 			PROFILE(L"texture_stream_add_lock_wait");
@@ -460,6 +491,11 @@ namespace TextureStreaming
 		PROFILE(L"texture_stream_add_locked");
 
 		streamed->base_id = allocate_ids(pages);
+		streamed->mip_id_base = allocate_from(free_mip_ids, next_mip_id, MaxMipIds, standard);
+		for (uint32_t mip = 0; mip < standard; mip++)
+			mip_refs[streamed->mip_id_base + mip] = { streamed.get(), mip };
+		if (standard)
+			mip_feedback->clear_range(streamed->mip_id_base, standard);
 		if (packed_op)
 			ops.push_back(std::move(*packed_op));
 
@@ -478,6 +514,18 @@ namespace TextureStreaming
 			streamer->set_budget(pool_tiles);
 			streamer->ensure_free(roots);
 
+			prefetch_owner = streamed.get();
+			prefetched_roots = std::move(root_reads);
+			struct PrefetchGuard
+			{
+				Manager& manager;
+				~PrefetchGuard()
+				{
+					manager.prefetch_owner = nullptr;
+					manager.prefetched_roots.clear();
+				}
+			} prefetch_guard{ *this };
+
 			for (uint32_t p = 0; p < pages; p++)
 				if (streamed->is_root(p))
 					streamer->load_root(*streamed, p);
@@ -486,6 +534,9 @@ namespace TextureStreaming
 		}
 
 		streamed->published_mip = streamed->complete_mip();
+		for (uint32_t mip = 0; mip < standard; mip++)
+			present_writes.push_back({ streamed->mip_id_base + mip, mip >= streamed->published_mip ? 0u : MipInvalid });
+		dirty.insert(streamed.get());
 		by_resource[streamed->texture->resource.get()] = streamed.get();
 		return streamed;
 	}
@@ -499,7 +550,17 @@ namespace TextureStreaming
 		// The descriptors may be reused by another texture: until then nothing is clamped through them.
 		by_resource.erase(streamed.texture->resource.get());
 		for (uint32_t view : streamed.views)
-			info_writes.push_back({ view, 0 });
+		{
+			info_writes.push_back({ view * 2, 0 });
+			info_writes.push_back({ view * 2 + 1, 0 });
+		}
+
+		dirty.erase(&streamed);
+		for (uint32_t mip = 0; mip < streamed.standard_mips(); mip++)
+			mip_refs[streamed.mip_id_base + mip] = {};
+		if (streamed.standard_mips())
+			mip_feedback->clear_range(streamed.mip_id_base, streamed.standard_mips());
+		free_to(free_mip_ids, next_mip_id, streamed.mip_id_base, streamed.standard_mips());
 
 		const uint32_t count = streamed.page_count();
 		for (uint32_t p = 0; p < count; p++)
@@ -644,7 +705,18 @@ namespace TextureStreaming
 			copy.offset = ivec3(int(op.x), int(op.y), 0);
 			copy.box = ivec3(1, 1, 1);
 			copy.tiles = true;
-			copy.data.resize(TileBytes);
+
+			if (prefetch_owner == &streamed)
+			{
+				const auto ahead = std::find_if(prefetched_roots.begin(), prefetched_roots.end(), [&](const RootRead& read) { return read.page == page; });
+				if (ahead != prefetched_roots.end())
+				{
+					copy.data = std::move(ahead->bytes);
+					data->filled = true;
+				}
+			}
+			if (!data->filled)
+				copy.data.resize(TileBytes);
 
 			Backend::LoadPlan plan;
 			plan.backend_data = std::move(data);
@@ -692,6 +764,9 @@ namespace TextureStreaming
 				plan.backend_data.reset();   // the batch holds what the map and the read need now
 				continue;
 			}
+
+			if (data->filled)
+				continue;
 
 			PROFILE(L"texture_stream_read_root");
 			const Op& op = data->op;
@@ -746,9 +821,10 @@ namespace TextureStreaming
 		ops.push_back(std::move(op));
 	}
 
-	void Manager::set_flags(Streaming::Resource&, uint32_t, uint32_t, uint32_t)
+	void Manager::set_flags(Streaming::Resource& resource, uint32_t, uint32_t, uint32_t)
 	{
-		// The GPU does not compact this client's feedback: the tile flags have no reader.
+		// The GPU reads flags per mip, not per tile: prepare() rebuilds those of the textures whose tiles changed.
+		dirty.insert(static_cast<Streamed*>(&resource));
 	}
 
 	void Manager::request(std::span<const Demand> demands)
@@ -782,64 +858,55 @@ namespace TextureStreaming
 		streamer->submit(std::move(requests));
 	}
 
-	void Manager::collect_feedback(HAL::CommandList::ptr& list)
+	// What the compaction found, per mip id, becomes what the streamer works on, per tile page id: a mip the draws wanted
+	// that is not complete asks for its missing tiles (the streamer loads the coarser tiles they stand on first, so those
+	// need no request of their own), and a mip that sat idle offers its resident tiles for eviction.
+	void Manager::expand_mip_requests(Streaming::Requests&& found)
 	{
-		PROFILE(L"texture_stream_collect");
+		PROFILE(L"texture_stream_expand");
 
-		uint64_t frame;
+		Streaming::Requests requests;
+		requests.epoch = found.epoch;
+		requests.dropped = found.dropped;
+
 		{
 			std::lock_guard<std::mutex> g(m);
-			frame = ++feedback_frame;
-		}
 
-		list->get_copy().read_buffer(wanted.resource.get(), 0, uint64_t(ViewCapacity) * sizeof(uint32_t),
-			[frame](std::span<std::byte> bytes)
+			const uint32_t limit = static_cast<uint32_t>(std::max(mip_limit(), 0));
+			for (const Streaming::Want& want : found.wanted)
 			{
-				if (!Manager::is_good() || bytes.size() < ViewCapacity * sizeof(uint32_t))
-					return;
+				if (want.id >= MaxMipIds || !mip_refs[want.id].texture)
+					continue;
 
-				const uint32_t* data = reinterpret_cast<const uint32_t*>(bytes.data());
-
-				Manager& manager = Manager::get();
-				std::lock_guard<std::mutex> g(manager.m);
-				for (auto& [resource, streamed] : manager.by_resource)
+				const Streamed& streamed = *mip_refs[want.id].texture;
+				// A mip finer than the limit is never wanted: the shaders cannot sample it.
+				const uint32_t mip = std::min(std::max(mip_refs[want.id].mip, limit), streamed.standard_mips() - 1);
+				for (uint32_t i = 0; i < streamed.tiles_in_mip(mip); i++)
 				{
-					uint32_t value = 0;
-					for (uint32_t view : streamed->views)
-						value = std::max(value, data[view]);
-
-					if (value)
-					{
-						streamed->wanted_mip = 16u - std::min(value, 16u);
-						streamed->last_seen = frame;
-					}
+					const uint32_t page = streamed.mips[mip].first_page + i;
+					if (streamed.states[page].status == Streaming::PageState::Status::Missing)
+						requests.wanted.push_back({ streamed.base_id + page, mip });
 				}
-			});
+			}
 
-		// Cleared after the copy above in this list, so the draws that follow report into a fresh buffer.
-		list->clear_uav(wanted.rwRAW, vec4(0, 0, 0, 0));
-	}
-
-	void Manager::request_from_feedback()
-	{
-		PROFILE(L"texture_stream_request");
-
-		apply_pool_size();
-
-		std::vector<Demand> demands;
-		{
-			std::lock_guard<std::mutex> g(m);
-			for (auto& [resource, streamed] : by_resource)
+			for (const Streaming::Victim& victim : found.victims)
 			{
-				const uint32_t coarsest = streamed->standard_mips() - 1;
-				const bool seen = streamed->last_seen && feedback_frame - streamed->last_seen < HoldFrames;
-				const uint32_t wanted_mip = std::max(streamed->wanted_mip, static_cast<uint32_t>(std::max(mip_limit(), 0)));
-				demands.push_back({ streamed, seen ? std::min(wanted_mip, coarsest) : coarsest });
+				if (victim.id >= MaxMipIds || !mip_refs[victim.id].texture)
+					continue;
+
+				const Streamed& streamed = *mip_refs[victim.id].texture;
+				const uint32_t mip = mip_refs[victim.id].mip;
+				for (uint32_t i = 0; i < streamed.tiles_in_mip(mip); i++)
+				{
+					const uint32_t page = streamed.mips[mip].first_page + i;
+					const auto& state = streamed.states[page];
+					if (state.status == Streaming::PageState::Status::Resident && !streamed.is_root(page))
+						requests.victims.push_back({ streamed.base_id + page, std::max(state.last_touched, victim.last_touched) });
+				}
 			}
 		}
 
-		if (!demands.empty())
-			request(demands);
+		streamer->submit(std::move(requests));
 	}
 
 	Manager::Stats Manager::stats()
@@ -849,6 +916,8 @@ namespace TextureStreaming
 
 	void Manager::prepare(HAL::CommandList::ptr& list)
 	{
+		apply_pool_size();
+
 		std::lock_guard<std::mutex> g(m);
 
 		streamer->advance_epoch();
@@ -946,9 +1015,14 @@ namespace TextureStreaming
 		// The changes are in this list: draws recorded after it may use what they made resident.
 		for (Streamed* streamed : touched)
 		{
+			const uint32_t before = streamed->published_mip;
 			streamed->published_mip = streamed->complete_mip();
 			for (uint32_t view : streamed->views)
-				info_writes.push_back({ view, streamed->shader_mip() + 1 });
+				info_writes.push_back({ view * 2, streamed->shader_mip() + 1 });
+
+			if (streamed->published_mip != before)
+				for (uint32_t mip = 0; mip < streamed->standard_mips(); mip++)
+					present_writes.push_back({ streamed->mip_id_base + mip, mip >= streamed->published_mip ? 0u : MipInvalid });
 		}
 
 		// A new limit applies to every streamed texture at once, not as their tiles change.
@@ -958,7 +1032,7 @@ namespace TextureStreaming
 			for (auto& [resource, streamed] : by_resource)
 				if (!touched.count(streamed))
 					for (uint32_t view : streamed->views)
-						info_writes.push_back({ view, streamed->shader_mip() + 1 });
+						info_writes.push_back({ view * 2, streamed->shader_mip() + 1 });
 		}
 
 		if (!info_writes.empty())
@@ -980,5 +1054,64 @@ namespace TextureStreaming
 			list->get_copy().update_buffer_batch(stream_info.resource.get(), writes);
 			info_writes.clear();
 		}
+
+		{
+			PROFILE(L"texture_stream_mip_flags");
+
+			// A mip is loading while some of its tiles are on their way and none is left to ask for (so it is not asked
+			// for again), and evictable while it is finer than the root and has tiles shown. Only the textures whose tiles
+			// changed state since the last frame are looked at.
+			const uint32_t shown_epoch = streamer->epoch();
+			for (Streamed* streamed : dirty)
+			{
+				const uint32_t standard = streamed->standard_mips();
+				for (uint32_t mip = 0; mip < standard; mip++)
+				{
+					uint32_t missing = 0, loading = 0, resident = 0;
+					for (uint32_t i = 0; i < streamed->tiles_in_mip(mip); i++)
+					{
+						switch (streamed->states[streamed->mips[mip].first_page + i].status)
+						{
+						case Streaming::PageState::Status::Missing: missing++; break;
+						case Streaming::PageState::Status::Loading: loading++; break;
+						case Streaming::PageState::Status::Resident: resident++; break;
+						}
+					}
+
+					uint32_t flags = 0;
+					if (loading && !missing)
+						flags |= Streaming::FlagLoading;
+					if (mip < streamed->root_mip && resident)
+						flags |= Streaming::FlagEvictable;
+					mip_feedback->set_flags(streamed->mip_id_base + mip, flags, shown_epoch);
+				}
+			}
+			dirty.clear();
+
+			if (!present_writes.empty())
+			{
+				std::stable_sort(present_writes.begin(), present_writes.end(), [](const MipPresent& a, const MipPresent& b) { return a.id < b.id; });
+				size_t kept = 0;
+				for (size_t i = 0; i < present_writes.size(); i++)
+					if (i + 1 == present_writes.size() || present_writes[i + 1].id != present_writes[i].id)
+						present_writes[kept++] = present_writes[i];
+				present_writes.resize(kept);
+
+				std::vector<HAL::CopyContext::BufferWrite> writes;
+				writes.reserve(present_writes.size());
+				for (const MipPresent& write : present_writes)
+					writes.push_back({ mip_present.desc.offset + uint64_t(write.id) * sizeof(uint32_t), std::as_bytes(std::span<const uint32_t>(&write.value, 1)) });
+				list->get_copy().update_buffer_batch(mip_present.resource.get(), writes);
+				present_writes.clear();
+			}
+		}
+
+		// The feedback holds the draws up to the previous frame, whose epoch is the one before this prepare's.
+		mip_feedback->prepare(list, mip_present, next_mip_id, streamer->epoch() - 1, streamer->get_policy().eviction_age,
+			[](Streaming::Requests&& found)
+			{
+				if (Manager::is_good())
+					Manager::get().expand_mip_requests(std::move(found));
+			});
 	}
 }

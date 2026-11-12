@@ -36,11 +36,15 @@ export
 				return;
 
 			// Assets load on several threads and share shaders: the file must appear complete or not at all
-			// (a reader that finds it half written fails), and one thread writes it.
+			// (a reader that finds it half written fails), and one thread writes it. It appears by rename, so the
+			// check before the lock is safe; only a writer takes the lock.
+			const auto path = cache_file(header);
+			if (std::filesystem::exists(path))
+				return;
+
 			static std::mutex mutex;
 			std::lock_guard<std::mutex> lock(mutex);
 
-			const auto path = cache_file(header);
 			if (std::filesystem::exists(path))
 				return;
 			std::error_code ec;
@@ -56,10 +60,42 @@ export
 		}
 	};
 
+	// A loaded shader is not looked up while its archive is read: that runs on every asset worker at once and most
+	// of what a material saves (its lazy PSO variants) is never created. It is resolved on first access instead,
+	// once for all copies of this handle, and the shader resource map still gives one object per header.
 	template<class T>
 	class shader_with_id
 	{
+		struct Pending
+		{
+			HAL::shader_header header;
+			std::string compiled;
+			std::once_flag once;
+			std::shared_ptr<T> shader;   // written only inside `once`
+		};
+
 		std::shared_ptr<T> shader;
+		std::shared_ptr<Pending> pending;
+
+		T* get() const
+		{
+			if (shader || !pending)
+				return shader.get();
+
+			std::call_once(pending->once, [p = pending.get()]()
+			{
+				PROFILE(L"shader_resolve");
+				ShaderEmbedding::restore(p->header, p->compiled);
+				p->shader = T::get_resource(p->header);
+				p->compiled = {};
+			});
+			return pending->shader.get();
+		}
+
+		const HAL::shader_header& header() const
+		{
+			return shader ? shader->get_header() : pending->header;
+		}
 	public:
 		using ShaderType = T;
 		shader_with_id() = default;
@@ -78,43 +114,36 @@ export
 
 		}
 
-		T* operator->()
-		{
-			return shader.get();
-		}
-
-		T& operator*()
-		{
-			return *shader;
-		}
-
-
 		T* operator->() const
 		{
-			return shader.get();
+			return get();
 		}
 
 		T& operator*() const
 		{
-			return *shader;
+			return *get();
 		}
 
 		operator bool() const
 		{
-			return !!shader;
+			return shader || pending;
 		}
 
 		bool operator==(const shader_with_id<T>& r) const
 		{
-			size_t my = shader ? shader->id : -5;
-			size_t other = r.shader ? r.shader->id : -5;
+			auto a = get();
+			auto b = r.get();
+			size_t my = a ? a->id : -5;
+			size_t other = b ? b->id : -5;
 
 			return my == other;
 		}
 		std::strong_ordering  operator<=>(const  shader_with_id<T>& r)  const
 		{
-			size_t my = shader ? shader->id : -5;
-			size_t other = r.shader ? r.shader->id : -5;
+			auto a = get();
+			auto b = r.get();
+			size_t my = a ? a->id : -5;
+			size_t other = b ? b->id : -5;
 
 			return my <=> other;
 		}
@@ -126,14 +155,23 @@ export
 				{
 
 		
-						bool has_header = !!shader;
+						bool has_header = !!*this;
 						ar& NVP(has_header);
 
 						if (has_header)
 						{
-							ar& NVP(shader->get_header());
+							// From the handle, so saving a variant that was never created does not resolve its shaders.
+							const HAL::shader_header& header = this->header();
+							ar& NP("shader->get_header()", header);   // the name it was always saved under
 
-							std::string compiled = ShaderEmbedding::enabled() ? ShaderEmbedding::read(shader->get_header()) : std::string();
+							std::string compiled;
+							if (ShaderEmbedding::enabled())
+							{
+								// An unresolved handle has not put its blob in the shader cache yet.
+								if (!shader)
+									get();
+								compiled = ShaderEmbedding::read(header);
+							}
 							ar& NVP(compiled);
 						}
 				}
@@ -152,9 +190,17 @@ export
 
 							std::string compiled;
 							ar& NVP(compiled);
-							ShaderEmbedding::restore(header, compiled);
 
-							shader = ShaderType::get_resource(header);
+							auto p = std::make_shared<Pending>();
+							p->header = std::move(header);
+							p->compiled = std::move(compiled);
+							shader = nullptr;
+							pending = std::move(p);
+						}
+						else
+						{
+							shader = nullptr;
+							pending = nullptr;
 						}
 
 				

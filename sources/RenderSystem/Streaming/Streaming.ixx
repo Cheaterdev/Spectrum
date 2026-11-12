@@ -329,7 +329,10 @@ export namespace Streaming
 
 		// Records the queued flag writes, the compaction over the first `page_count` page ids and the readback that submits
 		// to the streamer. `epoch` is the latest one the feedback holds; `page_slots` is the client's page table.
+		// The compacted lists go to `sink` when one is given (on the thread that completes the readback; it must be
+		// callable after the caller is gone), otherwise straight to Streamer::submit. A client whose ids are not the
+		// streamer's page ids (see TextureStreaming) turns them into page ids in its sink.
 		void prepare(HAL::CommandList::ptr& list, const HAL::StructuredBufferView<uint>& page_slots, uint32_t page_count,
-			uint32_t epoch, uint32_t eviction_age);
+			uint32_t epoch, uint32_t eviction_age, std::function<void(Requests&&)> sink = {});
 	};
 }

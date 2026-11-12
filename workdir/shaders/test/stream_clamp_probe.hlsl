@@ -18,7 +18,7 @@ void CS(uint3 dispatchID : SV_DispatchThreadID)
 
     // The same value the material shaders compute: stream_info holds the finest resident mip plus one, 0 for a
     // texture that is not streamed.
-    const float min_mip = float(max(data.GetStream_info()[data.GetView()], 1u) - 1u);
+    const float min_mip = float(max(data.GetStream_info()[data.GetView() * 2], 1u) - 1u);
 
     const float4 raised = source.SampleLevel(pointClampSampler, data.GetUv(), max(float(level), min_mip));
 
@@ -27,7 +27,7 @@ void CS(uint3 dispatchID : SV_DispatchThreadID)
     const float4 clamped = source.SampleGrad(pointClampSampler, data.GetUv(), float2(step.x, 0), float2(0, step.y), int2(0, 0), min_mip);
 
     if (level >= data.GetReport_level() && level < data.GetReport_level() + 3)
-        stream_report(data.GetStream_info(), data.GetWanted(), data.GetView(), float(level));
+        stream_report(data.GetStream_info(), data.GetWanted(), data.GetView(), float(level), data.GetEpoch());
 
     data.GetResult()[level * 2] = uint(raised.r * 255.0 + 0.5);
     data.GetResult()[level * 2 + 1] = uint(clamped.r * 255.0 + 0.5);

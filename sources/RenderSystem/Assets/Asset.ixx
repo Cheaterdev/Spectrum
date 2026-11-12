@@ -239,6 +239,11 @@ class Asset : public SharedObject<Asset>, public AssetHolder, public EditObject,
 		// consumers that exist at change time.
 		uint32_t version = 0;
 
+		// Set while loading by an asset whose file is in an older layout it can still read: the storage then flags it
+		// changed once the load is done, so the next save rewrites it. (mark_changed() during the load does nothing:
+		// the asset has no holder yet.)
+		bool resave_after_load = false;
+
 		void start_changing_contents();
 		// notify = false leaves the change unannounced: for a rebuild that is not an edit (a deserialized asset
 		// building its runtime state), which must not bump the version or wake the consumers.

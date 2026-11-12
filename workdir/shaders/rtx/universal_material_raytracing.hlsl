@@ -60,7 +60,7 @@ float stream_min_mip(uint i)
 {
 	StructuredBuffer<uint> indirection = ResourceDescriptorHeap[GetMaterialInfo().textures];
 	uint view = indirection[NonUniformResourceIndex(i)];
-	return float(max(GetMaterialInfo().GetStream_info()[NonUniformResourceIndex(view)], 1u) - 1u);
+	return float(max(GetMaterialInfo().GetStream_info()[NonUniformResourceIndex(view * 2)], 1u) - 1u);
 }
 
 #ifdef BUILD_FUNC_PS

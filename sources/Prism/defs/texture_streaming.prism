@@ -10,8 +10,10 @@ namespace TextureStreamingTests
 		Texture2D<float4> source;
 		StructuredBuffer<uint> stream_info;
 		RWStructuredBuffer<uint> result;
-		# What stream_report writes (stream_feedback.hlsl), at the descriptor-heap index `view`.
+		# What stream_report writes (stream_feedback.hlsl): two dwords per mip id, the ids from stream_info[2 * view + 1].
 		RWStructuredBuffer<uint> wanted;
+		# The epoch stream_report stamps its reports with.
+		uint epoch;
 		# The three levels from here on report what they sampled.
 		uint report_level;
 		# The descriptor-heap index of `source`, which is where stream_info holds its entry.

@@ -21,18 +21,21 @@ export namespace Table
 			static constexpr SlotID ID = SlotID::QuantaFeedback;
 			uint epoch;
 			uint stream_debug;
+			uint texture_epoch;
 			HLSL::RWStructuredBuffer<uint> pages;
 			HLSL::RWStructuredBuffer<uint> textures;
 			HLSL::RWStructuredBuffer<uint>& GetPages() { return pages; }
 			uint& GetEpoch() { return epoch; }
 			HLSL::RWStructuredBuffer<uint>& GetTextures() { return textures; }
 			uint& GetStream_debug() { return stream_debug; }
+			uint& GetTexture_epoch() { return texture_epoch; }
 			static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 			template<class Compiler>
 			void compile(Compiler& compiler) const
 			{
 				compiler.compile(epoch, "QuantaFeedback::epoch");
 				compiler.compile(stream_debug, "QuantaFeedback::stream_debug");
+				compiler.compile(texture_epoch, "QuantaFeedback::texture_epoch");
 				compiler.compile(pages, "QuantaFeedback::pages");
 				compiler.compile(textures, "QuantaFeedback::textures");
 			}
@@ -40,6 +43,7 @@ export namespace Table
 			{
 				uint epoch; // uint
 				uint stream_debug; // uint
+				uint texture_epoch; // uint
 				uint pages; // RWStructuredBuffer<uint>
 				uint textures; // RWStructuredBuffer<uint>
 
@@ -49,6 +53,7 @@ export namespace Table
 				{
 					ar& NVP(epoch);
 					ar& NVP(stream_debug);
+					ar& NVP(texture_epoch);
 				}
 
 
@@ -63,6 +68,7 @@ export namespace Table
 			{
 				ar& NVP(epoch);
 				ar& NVP(stream_debug);
+				ar& NVP(texture_epoch);
 			}
 
 		};

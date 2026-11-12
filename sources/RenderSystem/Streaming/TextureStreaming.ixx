@@ -180,9 +180,8 @@ export namespace TextureStreaming
 		// quality ray tracing is guaranteed, since its samples report nothing to the streamer.
 		uint32_t root_mip = 0;
 
-		// What the draws last sampled (Manager::wanted), guarded by the streamer's mutex.
-		uint32_t wanted_mip = 0;
-		uint64_t last_seen = 0;   // the feedback frame it was reported in, 0 = never
+		// The first of its standard mips' ids in the feedback's id space (Manager::mip_feedback): one id per standard mip.
+		uint32_t mip_id_base = 0;
 
 		// The finest mip complete together with every coarser one, counting what is shown now.
 		uint32_t complete_mip() const;
@@ -205,6 +204,9 @@ export namespace TextureStreaming
 
 		uint32_t min_mip() const { return published_mip.load(std::memory_order_relaxed); }
 
+		// The first of its mips' ids in the feedback (stream_info[2 * view + 1], stream_feedback.hlsl).
+		uint32_t mip_id() const { return mip_id_base; }
+
 		// The mip the shaders are told to stay at or above: min_mip(), or the Manager's mip limit if that is coarser.
 		// Never coarser than the root, which is always resident.
 		uint32_t shader_mip() const;
@@ -221,6 +223,9 @@ export namespace TextureStreaming
 		friend class Streamed;
 
 		static constexpr uint32_t MaxPageIds = 1u << 18;
+		// The draws report per mip of a texture, not per tile: one id for each standard mip (Streamed::mip_id_base).
+		static constexpr uint32_t MaxMipIds = 1u << 17;
+		static constexpr uint32_t MipInvalid = 0xFFFFFFFFu;   // mip_present of a mip that is not complete (stream_compact.hlsl's INVALID)
 		// One entry per descriptor of the shader-visible heap (HAL.DescriptorHeap.cpp).
 		static constexpr uint32_t ViewCapacity = 65536 * 8;
 
@@ -261,6 +266,24 @@ export namespace TextureStreaming
 		std::vector<IdRange> free_ids;
 		uint32_t next_id = 0;
 
+		// The same for the mip ids. All of this is guarded by the streamer's mutex.
+		std::vector<IdRange> free_mip_ids;
+		uint32_t next_mip_id = 0;
+		struct MipRef
+		{
+			Streamed* texture = nullptr;
+			uint32_t mip = 0;
+		};
+		std::vector<MipRef> mip_refs;                              // by mip id
+		struct MipPresent { uint32_t id; uint32_t value; };
+		std::vector<MipPresent> present_writes;                    // mip_present values for the next prepare()
+		std::unordered_set<Streamed*> dirty;                       // textures whose tiles changed state: their mips' flags are rewritten
+
+		// What the GPU compacts the draws' per-mip report into, and the table it tests it against: a mip is "resident" (0)
+		// once all its tiles are shown and coarser ones with it, otherwise MipInvalid.
+		std::unique_ptr<Streaming::GpuFeedback> mip_feedback;
+		HAL::StructuredBufferView<uint> mip_present;
+
 		// The values stream_info is to get, in order, recorded by the next prepare().
 		struct InfoWrite
 		{
@@ -273,10 +296,14 @@ export namespace TextureStreaming
 		uint32_t pool_tiles = 1024;
 		int applied_limit = 0;   // the mip limit stream_info was last written for
 		uint64_t texture_count = 0;
-		uint64_t feedback_frame = 0;   // counts collect_feedback() calls, guarded by the streamer's mutex
 
+		static uint32_t allocate_from(std::vector<IdRange>& free_list, uint32_t& next, uint32_t limit, uint32_t count);
+		static void free_to(std::vector<IdRange>& free_list, uint32_t& next, uint32_t first, uint32_t count);
 		uint32_t allocate_ids(uint32_t count);
 		void free_id_range(uint32_t first, uint32_t count);
+
+		// The compacted per-mip lists as the GPU found them, turned into the tile requests the streamer takes (under the lock).
+		void expand_mip_requests(Streaming::Requests&& requests);
 		void release(Streamed& streamed);
 		void apply_pool_size();
 
@@ -306,8 +333,19 @@ export namespace TextureStreaming
 
 			// A root of a file texture: start_loads reads the tile into `op`, finish_loads shows it.
 			std::shared_ptr<TileFile> file;
+			bool filled = false;   // op's tile bytes came from a prefetch: start_loads reads nothing
 			Op op;
 		};
+
+		// The root tiles of the file texture create_streamed is adding, read before it took the lock, for plan_load to take
+		// instead of reading the file under it. Guarded by m; empty (owner null) outside the root loads of create_streamed.
+		struct RootRead
+		{
+			uint32_t page;
+			std::vector<uint8_t> bytes;
+		};
+		const Streamed* prefetch_owner = nullptr;
+		std::vector<RootRead> prefetched_roots;
 
 		Streaming::Backend::LoadPlan plan_direct_load(Streamed& streamed, uint32_t page, uint32_t slot);
 		Op make_map(Streamed& streamed, uint32_t page, uint32_t slot);
@@ -325,14 +363,19 @@ export namespace TextureStreaming
 		void set_flags(Streaming::Resource& resource, uint32_t page, uint32_t flags, uint32_t shown_epoch) override;
 
 	public:
-		// One dword per descriptor-heap index, read by the material shaders (MaterialInfo::stream_info): 0 for a texture
-		// that is not streamed, otherwise min_mip() + 1 of the streamed texture whose SRV sits at that index. A shader
-		// samples no finer than that.
+		// Two dwords per descriptor-heap index, read by the material shaders (MaterialInfo::stream_info) of the streamed
+		// texture whose SRV sits at that index:
+		//   [2 * view]      0 for a texture that is not streamed, otherwise min_mip() + 1; a shader samples no finer;
+		//   [2 * view + 1]  where to report what was sampled: the texture's first mip id in the low 24 bits, its coarsest
+		//                   standard mip in the bits above (so a lod past it cannot spill into another texture's ids).
 		HAL::StructuredBufferView<uint> stream_info;
 
-		// Written by the main view's material pixel shaders (QuantaFeedback::textures, stream_feedback.hlsl): per
-		// descriptor-heap index, 16 minus the finest mip a sample asked for this frame, 0 = not sampled.
-		HAL::StructuredBufferView<uint> wanted;
+		// Written by the main view's material pixel shaders (QuantaFeedback::textures, stream_feedback.hlsl), two dwords per
+		// mip id, the way the Quanta draw writes per page id. It stays on the GPU; the compaction reads it.
+		HAL::StructuredBufferView<uint>& feedback() { return mip_feedback->feedback(); }
+
+		// Identifies the frame the draws record (QuantaFeedback::texture_epoch); advanced by prepare().
+		uint32_t epoch() const { return streamer->epoch(); }
 
 		Manager();
 		~Manager() override;
@@ -386,18 +429,8 @@ export namespace TextureStreaming
 		using Stats = Streaming::Stats;
 		Stats stats();
 
-		// Frames a texture keeps the mip it was last seen at after the draws stop sampling it; then only its roots are wanted.
-		static constexpr uint64_t HoldFrames = 120;
-
-		// Reads and clears what the draws reported (recorded in `list`, which runs before this frame's draws, so it holds
-		// the previous frame's), to be applied by request_from_feedback() once it has come back from the GPU.
-		void collect_feedback(HAL::CommandList::ptr& list);
-
-		// One request set from what the draws reported: each seen texture at the finest mip they sampled, the others at
-		// their roots. Offered mips above that are the streamer's to evict.
-		void request_from_feedback();
-
-		// Once per frame: records the tile mappings and texel copies of what the streamer shown or hid since the last call.
+		// Once per frame: records the tile mappings and texel copies of what the streamer shown or hid since the last call,
+		// the GPU's compaction of what the draws reported, and the readback that turns it into requests.
 		void prepare(HAL::CommandList::ptr& list);
 	};
 }

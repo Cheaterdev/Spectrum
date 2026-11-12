@@ -545,6 +545,76 @@ D3D12 only; Vulkan was not run.
   also runs the 431 PSO variant creations (4.8 s of thread time, about 11 ms each) and the 69 collection builds, so
   they compete with the loads they were moved out of.
 
+## Batch 5 results (measured after the PSO mutex removal, IDLE priority, one-copy page read, parallel buffer chunks)
+
+D3D12 only; Vulkan was not run.
+
+| What | Batch 4 | Batch 5 | Verdict |
+|---|---|---|---|
+| `drop_load_asset` | 961 ms | 805 ms | |
+| `pso_create_graphics` | 431 calls, 4.8 s of thread time | 431 calls, 0.9 s | the global mutex was the cost: about 2 ms a call now |
+| Mesh `asset_deserialize` | starts at 590 ms, takes 232 ms | starts at 478 ms, takes 186 ms | `resource_finish_writes` (the shared buffer) is 98 ms of it |
+| `quanta_acquire_many` | 267 ms | 197 ms | back to the pre-regression figure, no better |
+| `mesh_load_quanta_partition` | 139 ms | 140 ms | 97 ms is self time of `quanta_partition_serialize`, outside its sub-scopes |
+
+**The page read is not bound by copies or seeks.** The new log line: 1851 root pages, 82 MB, in 10 chunks, 144 ms of
+wall time, each task about 95 ms for about 8 MB. Three different read loops (per page, coalesced, sequential with a
+4 MiB buffer) all gave 85 to 100 ms a task, so the time is in something they share: opening the file ten times, or
+the storage itself.
+
+**With creations out of the way, the loads contend with each other.**
+- `texture_stream_add_lock_wait`: 2.2 s of thread time (was 0.75 s), max 22 ms a call.
+- `shader_ser_load`: 3.3 s of thread time (was 1.2 s) for 9480 shaders, 72 a material. A lazy variant still loads
+  every shader of every variant when the material is deserialized.
+- The mesh asset still waits 478 ms for its 535 dependencies before its own load starts.
+
+## Batch 6 results (measured after 2.2, shaders resolved on demand, the partition buffer reuse, PSO blob keys)
+
+D3D12 only; Vulkan was not run. This capture is the run that refilled the PSO blob cache under its new keys, so the
+creation times are without blob hits.
+
+| What | Batch 5 | Batch 6 | Verdict |
+|---|---|---|---|
+| `drop_load_asset` | 805 ms | 485 ms | started at 2498 ms |
+| Mesh `asset_deserialize` | starts at 478 ms, takes 186 ms | starts at 175 ms, takes 171 ms | the dependencies no longer hold it back |
+| `shader_ser_load` | 3.3 s of thread time | 0.13 s | 9480 shaders read, 1230 resolved (`shader_resolve`, 1.2 s, on the idle creations) |
+| `texture_stream_add_lock_wait` | 2.2 s of thread time | 0.73 s | still the manager mutex |
+| `mesh_load_quanta_partition` | 140 ms | 139 ms | not the allocation: `quanta_partition_read` is 135 ms, 1591 archive reads of metadata |
+| `quanta_acquire_many` | 197 ms | 193 ms | `quanta_read_rest`: 1835 reads, 833 ms of thread time, 0.45 ms a read; the open is 45 ms in total |
+
+**Page read: it is the reads themselves.** About 45 KB a read at about 100 MB/s per thread, ten threads on one file,
+about 580 MB/s together. Not the open, not the copies. Either the storage, or ten `ifstream`s on one file contending.
+Loading pinned roots through DirectStorage is the remaining lever (a decision: an instance then appears later).
+
+**PSO driver blobs were stored by name alone (fixed).** The key variants of a set share a name, and a material
+pipeline's name ends in a per-run id, so a lookup usually returned another pipeline's blob, the driver rejected it
+(a first-chance `_com_error`) and compiled from scratch. Blobs are now keyed by name plus shader bytecode hashes.
+
+**A stale saved material was compiled before it was regenerated (fixed).** A saved pipeline carries its shader text,
+but its `#include`s resolve from disk; after a header change the old text failed to compile. Loaded pipelines are now
+warmed only once `load_partitions` knows the material is current.
+
+**Tooling:** every built `prismc.exe` (both `bin` copies and the VS extension's) predated `[ClearValue]`; the `Prism`
+project had to be rebuilt before the 2.2 regenerate.
+
+## Batch 7 results (texture roots read before the lock, windowed partition read, measuring scopes removed)
+
+D3D12 only. The PSO blob cache was filled under its new keys before this run (no `Creating New PSO` lines).
+
+| What | Batch 6 | Batch 7 | Verdict |
+|---|---|---|---|
+| `drop_load_asset` | 485 ms | 477 ms | unchanged |
+| `texture_stream_add_lock_wait` | 0.73 s of thread time | not in the capture's top scopes | fixed |
+| `pso_create_graphics` | 386 calls, 764 ms | 386 calls, 458 ms | blob hits: 1.2 ms a call, was 2 ms |
+| `quanta_acquire_many` | 193 ms | 144 ms | under the 150 ms target; `quanta_prefetch_roots` 141 ms → 81 ms |
+| `mesh_load_quanta_partition` | 139 ms | 166 ms | worse, see below |
+
+**The partition load is bound by the number of separate places read, not by stream calls.** Two stream operations
+per mesh with a 16 KB window (166 ms) are slower than the old five or six small ones (139 ms): each mesh's metadata
+sits behind the previous mesh's pages, so it is 1591 scattered reads either way, about 0.1 ms each, and the window
+only made each one bigger. Fewer calls cannot fix it. What can: the metadata of all meshes stored together at the
+front of the partition (a format change, assets re-saved), so the load is one read.
+
 ## Phase L: asset loading time
 
 Independent of the streaming phases. Tasks L.1 to L.4 touch no streaming code and go first, because they are backed by

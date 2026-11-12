@@ -11,6 +11,7 @@ namespace TextureStreamingTests
 {
 	struct StreamClampProbe
 	{
+		uint epoch; // uint
 		uint report_level; // uint
 		uint view; // uint
 		float2 uv; // float2
@@ -18,6 +19,7 @@ namespace TextureStreamingTests
 		uint stream_info; // StructuredBuffer<uint>
 		uint result; // RWStructuredBuffer<uint>
 		uint wanted; // RWStructuredBuffer<uint>
+		uint GetEpoch() { return epoch; }
 		uint GetReport_level() { return report_level; }
 		uint GetView() { return view; }
 		float2 GetUv() { return uv; }

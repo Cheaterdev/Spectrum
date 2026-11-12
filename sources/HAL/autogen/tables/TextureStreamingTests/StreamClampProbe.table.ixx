@@ -19,6 +19,7 @@ export namespace Table
 		struct StreamClampProbe
 		{
 			static constexpr SlotID ID = SlotID::StreamClampProbe;
+			uint epoch;
 			uint report_level;
 			uint view;
 			float2 uv;
@@ -30,6 +31,7 @@ export namespace Table
 			HLSL::StructuredBuffer<uint>& GetStream_info() { return stream_info; }
 			HLSL::RWStructuredBuffer<uint>& GetResult() { return result; }
 			HLSL::RWStructuredBuffer<uint>& GetWanted() { return wanted; }
+			uint& GetEpoch() { return epoch; }
 			uint& GetReport_level() { return report_level; }
 			uint& GetView() { return view; }
 			float2& GetUv() { return uv; }
@@ -37,6 +39,7 @@ export namespace Table
 			template<class Compiler>
 			void compile(Compiler& compiler) const
 			{
+				compiler.compile(epoch, "StreamClampProbe::epoch");
 				compiler.compile(report_level, "StreamClampProbe::report_level");
 				compiler.compile(view, "StreamClampProbe::view");
 				compiler.compile(uv, "StreamClampProbe::uv");
@@ -47,6 +50,7 @@ export namespace Table
 			}
 			struct Compiled
 			{
+				uint epoch; // uint
 				uint report_level; // uint
 				uint view; // uint
 				float2 uv; // float2
@@ -59,6 +63,7 @@ export namespace Table
 				private:
 				SERIALIZE()
 				{
+					ar& NVP(epoch);
 					ar& NVP(report_level);
 					ar& NVP(view);
 					ar& NVP(uv);
@@ -74,6 +79,7 @@ export namespace Table
 			private:
 			SERIALIZE()
 			{
+				ar& NVP(epoch);
 				ar& NVP(report_level);
 				ar& NVP(view);
 				ar& NVP(uv);

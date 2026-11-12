@@ -248,15 +248,18 @@ namespace Quanta
 
 	std::vector<uint8_t> serialize(const Mesh& mesh)
 	{
-		// A loaded asset does not keep its page bytes: writing it back needs them from the file it came from.
-		if (std::any_of(mesh.pages.begin(), mesh.pages.end(), [](const Page& p) { return p.data.empty() && p.size != 0; }))
-		{
-			Mesh full = mesh;
-			for (uint32_t p = 0; p < full.pages.size(); p++)
-				if (full.pages[p].data.empty() && full.pages[p].size != 0 && !read_page(mesh, p, full.pages[p].data))
-					throw std::runtime_error("Quanta page cannot be read back from its asset file");
-			return serialize(full);
-		}
+		BlobPlan plan = plan_blob(mesh);
+		std::vector<uint8_t> out = std::move(plan.metadata);
+		out.reserve(plan.size);
+		plan.metadata.resize(out.size());   // write_blob_pages only needs to know where the metadata ends
+		write_blob_pages(mesh, plan, [&](const uint8_t* bytes, size_t count) { out.insert(out.end(), bytes, bytes + count); });
+		return out;
+	}
+
+	BlobPlan plan_blob(const Mesh& mesh)
+	{
+		BlobPlan plan;
+		plan.pages.resize(mesh.pages.size());
 
 		FileHeader header{};
 		header.magic = FileMagic;
@@ -272,19 +275,28 @@ namespace Quanta
 
 		std::vector<uint32_t> group_ids;
 		std::vector<PageEntry> entries(mesh.pages.size());
-		std::vector<std::vector<uint8_t>> compressed(mesh.pages.size());   // empty where the raw bytes are stored
 		for (size_t p = 0; p < mesh.pages.size(); p++)
 		{
-			const auto& data = mesh.pages[p].data;
-			if (!data.empty())
+			const Page& page = mesh.pages[p];
+			BlobPlan::PagePart& part = plan.pages[p];
+			if (!page.data.empty())
 			{
-				auto packed = HAL::gdeflate_compress(data.data(), data.size());
-				if (!packed.empty() && packed.size() < data.size())
-					compressed[p] = std::move(packed);
+				auto packed = HAL::gdeflate_compress(page.data.data(), page.data.size());
+				part.bytes = (!packed.empty() && packed.size() < page.data.size()) ? std::move(packed) : page.data;
+				entries[p].size = static_cast<uint32_t>(page.data.size());
+				part.stored_size = static_cast<uint32_t>(part.bytes.size());
+			}
+			else if (page.size != 0)
+			{
+				// Still in the file it was loaded from: copied as stored.
+				if (mesh.file.empty() || page.file_size == 0)
+					throw std::runtime_error("Quanta page has neither its bytes nor a place in an asset file");
+				entries[p].size = page.size;
+				part.stored_size = page.file_size;
+				part.file_offset = page.file_offset;
 			}
 
-			entries[p].size = static_cast<uint32_t>(data.size());
-			entries[p].stored_size = compressed[p].empty() ? entries[p].size : static_cast<uint32_t>(compressed[p].size());
+			entries[p].stored_size = part.stored_size;
 			entries[p].root = mesh.pages[p].root ? 1 : 0;
 			entries[p].group_count = static_cast<uint32_t>(mesh.pages[p].groups.size());
 			entries[p].first_group_id = static_cast<uint32_t>(group_ids.size());
@@ -306,24 +318,65 @@ namespace Quanta
 		{
 			cursor = align_up(static_cast<uint32_t>(cursor), BlobAlignment);
 			entries[p].offset = cursor;
+			plan.pages[p].blob_offset = cursor;
 			cursor += entries[p].stored_size;
 		}
+		plan.size = cursor;
 
-		std::vector<uint8_t> out;
-		out.reserve(cursor);
+		std::vector<uint8_t>& out = plan.metadata;
 		append(out, &header, 1);
 		append(out, mesh.groups.data(), mesh.groups.size());
 		append(out, mesh.nodes.data(), mesh.nodes.size());
 		append(out, entries.data(), entries.size());
 		append(out, group_ids.data(), group_ids.size());
 		append(out, parent_table.data(), parent_table.size());
-		for (size_t p = 0; p < entries.size(); p++)
+		return plan;
+	}
+
+	void write_blob_pages(const Mesh& mesh, const BlobPlan& plan, const std::function<void(const uint8_t*, size_t)>& write)
+	{
+		static const uint8_t padding[BlobAlignment] = {};
+
+		std::ifstream file;
+		std::vector<uint8_t> stored;
+		uint64_t cursor = plan.metadata.size();
+
+		auto pad_to = [&](uint64_t offset)
 		{
-			out.resize(entries[p].offset, 0);
-			const auto& stored = compressed[p].empty() ? mesh.pages[p].data : compressed[p];
-			out.insert(out.end(), stored.begin(), stored.end());
+			while (cursor < offset)
+			{
+				const size_t count = static_cast<size_t>(std::min<uint64_t>(offset - cursor, sizeof(padding)));
+				write(padding, count);
+				cursor += count;
+			}
+		};
+
+		for (const BlobPlan::PagePart& part : plan.pages)
+		{
+			if (part.stored_size == 0)
+				continue;
+
+			pad_to(part.blob_offset);
+			if (!part.bytes.empty())
+				write(part.bytes.data(), part.bytes.size());
+			else
+			{
+				if (!file.is_open())
+				{
+					file.open(mesh.file, std::ios::binary);
+					if (!file)
+						throw std::runtime_error("Quanta page cannot be read back from its asset file");
+				}
+				stored.resize(part.stored_size);
+				file.seekg(static_cast<std::streamoff>(part.file_offset));
+				file.read(reinterpret_cast<char*>(stored.data()), static_cast<std::streamsize>(stored.size()));
+				if (!file)
+					throw std::runtime_error("Quanta page cannot be read back from its asset file");
+				write(stored.data(), stored.size());
+			}
+			cursor += part.stored_size;
 		}
-		return out;
+		pad_to(plan.size);
 	}
 
 	bool metadata_size(const uint8_t* header_bytes, uint64_t& bytes, bool& needs_pages)
@@ -374,7 +427,6 @@ namespace Quanta
 
 		Mesh mesh;
 		{
-			PROFILE(L"quanta_partition_tables");
 			mesh.groups.resize(header.group_count);
 			mesh.nodes.resize(header.node_count);
 			if (header.group_count)
@@ -388,7 +440,6 @@ namespace Quanta
 		mesh.root_page_count = header.root_page_count;
 
 		{
-			PROFILE(L"quanta_partition_pages");
 			std::vector<PageEntry> entries(header.page_count);
 			if (header.page_count)
 				std::memcpy(entries.data(), data + entries_at, header.page_count * sizeof(PageEntry));
@@ -436,7 +487,6 @@ namespace Quanta
 
 		if (has_parents)
 		{
-			PROFILE(L"quanta_partition_parents");
 			std::vector<uint32_t> table(header.parent_dwords);
 			if (header.parent_dwords)
 				std::memcpy(table.data(), data + parents_at, header.parent_dwords * sizeof(uint32_t));
@@ -459,7 +509,6 @@ namespace Quanta
 		}
 		else
 		{
-			PROFILE(L"quanta_partition_parents");
 			// Older file: the parents come from the page bytes, which were read for that.
 			build_page_parents(mesh);
 			if (!keep_pages)
@@ -513,13 +562,14 @@ namespace Quanta
 		for (PageFetch* fetch : order)
 			fetch->ok = false;
 
-		// Pages are small next to a system call: a big stream buffer lets the stream read ahead in large blocks. It has to be
-		// set before the file is opened.
-		constexpr size_t StreamBufferBytes = 4 * 1024 * 1024;
-		std::vector<char> stream_buffer(StreamBufferBytes);
+		// No stream buffer is set: a page is tens of KB, which the C runtime reads straight into the destination. A
+		// pubsetbuf before open() is ignored by MSVC's filebuf (it needs an open file); if it did take effect, every
+		// non-contiguous seek would drop and refill the whole buffer.
 		std::ifstream file;
-		file.rdbuf()->pubsetbuf(stream_buffer.data(), static_cast<std::streamsize>(stream_buffer.size()));
-		file.open(path, std::ios::binary);
+		{
+			PROFILE(L"quanta_read_open");
+			file.open(path, std::ios::binary);
+		}
 		if (!file)
 			return;
 

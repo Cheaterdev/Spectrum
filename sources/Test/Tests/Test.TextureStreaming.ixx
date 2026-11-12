@@ -279,7 +279,8 @@ TEST(TextureStreaming, ShaderClampsToTheResidentMip)
 	data.GetSource() = view.texture2D;
 	data.GetStream_info() = manager.stream_info.structuredBuffer;
 	data.GetResult() = result.rwStructuredBuffer;
-	data.GetWanted() = manager.wanted.rwStructuredBuffer;
+	data.GetWanted() = manager.feedback().rwStructuredBuffer;
+	data.GetEpoch() = manager.epoch();
 	data.GetReport_level() = 100;   // no thread reports
 	data.GetView() = view.texture2D.get_offset();
 	data.GetUv() = float2(0.37f, 0.61f);
@@ -374,7 +375,8 @@ TEST(TextureStreaming, ReportedMipsAreStreamedIn)
 		data.GetSource() = view.texture2D;
 		data.GetStream_info() = manager.stream_info.structuredBuffer;
 		data.GetResult() = result.rwStructuredBuffer;
-		data.GetWanted() = manager.wanted.rwStructuredBuffer;
+		data.GetWanted() = manager.feedback().rwStructuredBuffer;
+		data.GetEpoch() = manager.epoch();
 		data.GetReport_level() = reported_mip;
 		data.GetView() = view.texture2D.get_offset();
 		data.GetUv() = float2(0.5f, 0.5f);
@@ -383,23 +385,30 @@ TEST(TextureStreaming, ReportedMipsAreStreamedIn)
 		compute.set_pipeline<PSOS::TextureStreamingTests::StreamClampProbe>();
 		compute.dispatch(ivec2(16, 1), ivec2(16, 1));
 
-		uint32_t reported = 0;
-		auto pending = list->get_copy().read<uint>(manager.wanted, view.texture2D.get_offset(), 1, [&](std::span<uint> r) { reported = r[0]; });
+		// One id per mip of the texture: each of the three levels stamped its own, with this frame's epoch.
+		uint32_t stamps[6] = {};
+		auto pending = list->get_copy().read<uint>(manager.feedback(), uint64_t(texture->mip_id()) * 2 + reported_mip * 2, 6,
+			[&](std::span<uint> r) { std::copy(r.begin(), r.end(), stamps); });
+		const uint32_t epoch = manager.epoch();
 		list->execute_and_wait();
 		pending.wait();
 
-		ASSERT_EQ(16u - reported_mip, reported);
+		for (uint32_t i = 0; i < 3; i++)
+		{
+			ASSERT_EQ(epoch & 0xFFFFu, stamps[i * 2] >> 16);
+			ASSERT_TRUE((stamps[i * 2] & 0xFFFFu) != 0);
+			ASSERT_EQ(epoch, stamps[i * 2 + 1]);
+		}
+		// Coarser mips are more urgent.
+		ASSERT_TRUE((stamps[2] & 0xFFFFu) > (stamps[0] & 0xFFFFu));
 	}
 
-	// Frames the way the engine runs them: requests from what came back, then this frame's collection and tile changes.
+	// Frames the way the engine runs them: each prepare compacts the previous frame's report and turns it into requests.
 	bool streamed = false;
 	for (uint32_t frame = 0; frame < 2000 && !streamed; frame++)
 	{
-		manager.request_from_feedback();
-
 		auto list = device.get_queue(HAL::CommandListType::DIRECT)->get_free_list();
 		list->begin(L"TextureStreaming frame");
-		manager.collect_feedback(list);
 		manager.prepare(list);
 		list->execute_and_wait();
 

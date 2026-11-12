@@ -277,11 +277,12 @@ static void set_draw_feedback(HAL::GraphicsContext& graphics, bool quanta_draw, 
 	}
 	else
 	{
-		feedback.GetPages() = TextureStreaming::Manager::get().wanted.rwStructuredBuffer;
+		feedback.GetPages() = TextureStreaming::Manager::get().feedback().rwStructuredBuffer;
 	}
 
-	feedback.GetTextures() = stream_feedback ? TextureStreaming::Manager::get().wanted.rwStructuredBuffer : feedback.GetPages();
+	feedback.GetTextures() = stream_feedback ? TextureStreaming::Manager::get().feedback().rwStructuredBuffer : feedback.GetPages();
 	feedback.GetStream_debug() = stream_feedback ? static_cast<uint32_t>(TextureStreaming::Manager::debug_view()) : 0u;
+	feedback.GetTexture_epoch() = stream_feedback ? TextureStreaming::Manager::get().epoch() : 0u;
 	graphics.set(feedback);
 }
 

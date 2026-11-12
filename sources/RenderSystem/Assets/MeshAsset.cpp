@@ -499,8 +499,76 @@ void MeshAsset::save_partitions(FileDataStorage& storage)
 		return;
 
 	Quanta::AssetPartition partition;
-	partition.meshes = quanta;
+	partition.meshes = saving_quanta.empty() ? quanta : saving_quanta;
 	storage.put("quanta", partition);
+}
+
+void MeshAsset::before_save()
+{
+	saving_quanta.clear();
+
+	// Copies, not the live meshes: the streamer reads those from other threads and tells a page in the file from one
+	// in memory by whether its bytes are there.
+	std::vector<std::shared_ptr<Quanta::Mesh>> full;
+	full.reserve(quanta.size());
+	bool any = false;
+	for (auto& mesh : quanta)
+	{
+		if (!mesh)
+		{
+			full.push_back(nullptr);
+			continue;
+		}
+
+		auto copy = std::make_shared<Quanta::Mesh>(*mesh);
+		for (uint32_t p = 0; p < copy->pages.size(); p++)
+		{
+			Quanta::Page& page = copy->pages[p];
+			if (!page.data.empty() || page.size == 0)
+				continue;
+			if (!Quanta::read_page(*mesh, p, page.data))
+				throw std::runtime_error("mesh asset " + convert(name) + ": cannot read its Quanta pages back to save them");
+			any = true;
+		}
+		full.push_back(std::move(copy));
+	}
+
+	if (any)
+		saving_quanta = std::move(full);
+}
+
+void MeshAsset::after_save(FileDataStorage& storage)
+{
+	const bool relocate = !saving_quanta.empty();
+	saving_quanta.clear();
+	saving_quanta.shrink_to_fit();
+
+	if (!relocate || !storage.has("quanta"))
+		return;
+
+	// The pages moved with the rewrite: the live meshes take their new positions from the file just written.
+	Quanta::AssetPartition fresh;
+	if (!storage.get("quanta", fresh) || fresh.meshes.size() != quanta.size())
+	{
+		Log::get() << Log::LEVEL_ERROR << "mesh asset " << convert(name) << ": Quanta pages not found in the saved file" << Log::endl;
+		return;
+	}
+
+	for (size_t i = 0; i < quanta.size(); i++)
+	{
+		if (!quanta[i] || !fresh.meshes[i])
+			continue;
+
+		auto& live = quanta[i]->pages;
+		const auto& saved = fresh.meshes[i]->pages;
+		if (live.size() != saved.size())
+			continue;
+		for (size_t p = 0; p < live.size(); p++)
+		{
+			live[p].file_offset = saved[p].file_offset;
+			live[p].file_size = saved[p].file_size;
+		}
+	}
 }
 
 void MeshAsset::load_partitions(FileDataStorage& storage, UniversalContext* context)
@@ -518,6 +586,7 @@ void MeshAsset::load_partitions(FileDataStorage& storage, UniversalContext* cont
 			storage.get("quanta", partition, context);
 		}
 		quanta = std::move(partition.meshes);
+		resave_after_load = partition.old_layout;
 		build_rt_proxies();
 	}
 	catch (const std::exception& e)
@@ -1148,10 +1217,7 @@ void SceneFrameManager::prepare(HAL::CommandList::ptr& command_list, Scene& scen
 	Quanta::Residency::get().prepare(command_list);
 	if (TextureStreaming::Manager::supported())
 	{
-		auto& textures = TextureStreaming::Manager::get();
-		textures.request_from_feedback();
-		textures.collect_feedback(command_list);
-		textures.prepare(command_list);
+		TextureStreaming::Manager::get().prepare(command_list);
 	}
 	//	universal_mesh_info_part_manager::get().prepare(command_list);
 	universal_material_info_part_manager::get().prepare(command_list);

@@ -296,10 +296,9 @@ materials::Pipeline::ptr materials::PipelineManager::get_pipeline(Pipeline::ptr 
 		result = pip;
 	}
 
-	// The kept one only: a duplicate that lost the dedupe above is thrown away without creating anything.
-	if (auto passes = std::dynamic_pointer_cast<PipelinePasses>(result))
-		passes->warm_variants();
-
+	// Not warmed here: this is a pipeline as saved, and its shader text may have been generated from headers that
+	// changed since. universal_material::load_partitions() warms it once it knows the material is current; a stale
+	// one is replaced by the first update() and must not be compiled against today's includes.
 	return result;
 }
 
@@ -466,6 +465,8 @@ void materials::universal_material::load_partitions(FileDataStorage& storage, Un
 
 	if (can_regenerate && !current)
 		need_regenerate_material = true;
+	else if (auto passes = std::dynamic_pointer_cast<PipelinePasses>(pipeline))
+		passes->warm_variants();
 }
 
 void materials::universal_material::update()

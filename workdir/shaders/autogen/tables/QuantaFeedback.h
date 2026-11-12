@@ -13,10 +13,12 @@ namespace Meshes
 	{
 		uint epoch; // uint
 		uint stream_debug; // uint
+		uint texture_epoch; // uint
 		uint pages; // RWStructuredBuffer<uint>
 		uint textures; // RWStructuredBuffer<uint>
 		uint GetEpoch() { return epoch; }
 		uint GetStream_debug() { return stream_debug; }
+		uint GetTexture_epoch() { return texture_epoch; }
 		RWStructuredBuffer<uint> GetPages() { return ResourceDescriptorHeap[pages]; }
 		RWStructuredBuffer<uint> GetTextures() { return ResourceDescriptorHeap[textures]; }
 	};

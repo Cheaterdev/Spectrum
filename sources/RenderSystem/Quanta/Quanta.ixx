@@ -182,6 +182,29 @@ export namespace Quanta
 	// position from it.
 	std::vector<uint8_t> serialize(const Mesh& mesh);
 
+	// serialize() in two steps, for a writer that does not want the whole blob in memory: the metadata now, the pages
+	// later through write_blob_pages(). A page whose bytes are still in the asset file the mesh was loaded from is not
+	// read here at all: it is copied as stored (compressed or not), so saving a loaded asset neither expands nor
+	// compresses anything. That file must stay readable until write_blob_pages() has run.
+	struct BlobPlan
+	{
+		std::vector<uint8_t> metadata;   // the blob's leading bytes, up to its first page
+		uint64_t size = 0;               // the whole blob
+
+		struct PagePart
+		{
+			uint64_t blob_offset = 0;    // where the page starts in the blob
+			uint32_t stored_size = 0;
+			std::vector<uint8_t> bytes;  // the stored bytes, or empty: stored_size bytes at file_offset of Mesh::file
+			uint64_t file_offset = 0;
+		};
+		std::vector<PagePart> pages;
+	};
+	BlobPlan plan_blob(const Mesh& mesh);
+
+	// The rest of the blob, from metadata.size() to size, in order and in pieces. Throws if a page cannot be read back.
+	void write_blob_pages(const Mesh& mesh, const BlobPlan& plan, const std::function<void(const uint8_t*, size_t)>& write);
+
 	// keep_pages false leaves Page::data empty (the page sizes and file positions are still set): `data` then only
 	// has to cover metadata_size() bytes, and blob_size is the size of the whole blob the offsets are checked
 	// against. A file older than the parent table needs the page bytes to build it, so it is read with keep_pages

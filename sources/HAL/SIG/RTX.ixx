@@ -269,6 +269,11 @@ struct SelectLocal<T>
 
 		void init_material(material* mat)
 		{
+			// A loaded material's hit library is looked up on first access (shader_with_id): do that here, not in
+			// join_group() under the lock, where every loading material would queue behind it.
+			if (mat->raytracing_lib)
+				(void)mat->raytracing_lib.operator->();
+
 			group_ptr to_build;
 			{
 				std::lock_guard<std::mutex> g(m);
@@ -283,6 +288,9 @@ struct SelectLocal<T>
 				need_recreate = true;
 
 				mat->on_change.register_handler(this, [this, mat]() {
+					if (mat->raytracing_lib)
+						(void)mat->raytracing_lib.operator->();
+
 					group_ptr to_build;
 					{
 						std::lock_guard<std::mutex> g(m);

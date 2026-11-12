@@ -160,24 +160,12 @@ export{
 	private:
 		SERIALIZE()
 		{
-			{
-				PROFILE(L"mesh_part_primitive");
-				ar& NVP(primitive);
-			}
+			ar& NVP(primitive);
 			ar& NVP(material);
 			ar& NVP(node_index);
-			{
-				PROFILE(L"mesh_part_vertex_view");
-				ar& NVP(vertex_buffer_view);
-			}
-			{
-				PROFILE(L"mesh_part_index_view");
-				ar& NVP(index_buffer_view);
-			}
-			{
-				PROFILE(L"mesh_part_meshlet_range");
-				ar& NVP(meshet_view);
-			}
+			ar& NVP(vertex_buffer_view);
+			ar& NVP(index_buffer_view);
+			ar& NVP(meshet_view);
 			ar& NVP(base_meshlet_count);
 			ar& NVP(draw_arguments);
 			ar& NVP(dispatch_mesh_arguments);
@@ -247,6 +235,10 @@ export{
 		virtual void shutdown() override;
 		virtual void save_partitions(FileDataStorage& storage) override;
 		virtual void load_partitions(FileDataStorage& storage, UniversalContext* context) override;
+		// A loaded mesh keeps its Quanta pages in the asset file, and saving writes over that file: before_save() reads
+		// the pages back while the old file is still there, after_save() points the live meshes at the new one.
+		virtual void before_save() override;
+		virtual void after_save(FileDataStorage& storage) override;
 		MeshAsset(std::wstring, AssetLoadingContext::ptr = nullptr);
 		virtual ~MeshAsset();
 		std::shared_ptr<MeshAssetInstance> create_instance();
@@ -268,6 +260,9 @@ export{
 		// cut of its Quanta data. Needs `quanta`, so it runs after that is filled (import, or load_partitions).
 		void build_rt_proxies();
 	private:
+		// Copies of `quanta` with their page bytes in memory, only between before_save() and after_save().
+		std::vector<std::shared_ptr<Quanta::Mesh>> saving_quanta;
+
 		HAL::FenceWaiter blas_ready;
 		std::atomic<bool> blas_pending = false;
 		// Structures replaced by build_rt_proxies while their build may still run on the GPU.

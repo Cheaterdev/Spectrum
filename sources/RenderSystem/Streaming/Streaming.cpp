@@ -650,7 +650,7 @@ namespace Streaming
 	}
 
 	void GpuFeedback::prepare(HAL::CommandList::ptr& list, const HAL::StructuredBufferView<uint>& page_slots, uint32_t page_count,
-		uint32_t epoch, uint32_t eviction_age)
+		uint32_t epoch, uint32_t eviction_age, std::function<void(Requests&&)> sink)
 	{
 		if (!flag_writes.empty() || !flag_singles.empty())
 		{
@@ -702,7 +702,7 @@ namespace Streaming
 		compute.dispatch((int)Math::DivideByMultiple(page_count, 64u), 1, 1);
 
 		list->get_copy().read_buffer(stream_out.resource.get(), 0, uint64_t(OutDwords) * sizeof(uint32_t),
-			[weak = streamer, epoch](std::span<std::byte> bytes)
+			[weak = streamer, epoch, sink = std::move(sink)](std::span<std::byte> bytes)
 			{
 				auto owner = weak.lock();
 				if (!owner || bytes.size() < OutDwords * sizeof(uint32_t))
@@ -724,7 +724,10 @@ namespace Streaming
 					const uint32_t entry = OutEvicts + i * 2;
 					requests.victims.push_back({ data[entry], data[entry + 1] });
 				}
-				owner->submit(std::move(requests));
+				if (sink)
+					sink(std::move(requests));
+				else
+					owner->submit(std::move(requests));
 			});
 	}
 }

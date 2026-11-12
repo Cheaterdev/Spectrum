@@ -34,6 +34,10 @@ export
 		header h;
 
 		std::shared_ptr<std::fstream> ostream_ptr;
+
+		// A save goes to `temp` and takes the file's place in save(), and only if every put() worked.
+		bool failed = false;
+		std::filesystem::path temp;
 	public:
 
 		FileDataStorage(std::filesystem::path path);
@@ -49,7 +53,8 @@ export
 			}
 			catch (const std::exception &e)
 			{
-			 Log::get() << e.what()<<Log::endl;				
+			 Log::get() << e.what()<<Log::endl;
+			 failed = true;
 			}
 
 
@@ -95,7 +100,8 @@ export
 
 		bool has(std::string partition);
 
-		void save();
+		// False if anything went wrong; the file at the path is then what it was before start_save().
+		bool save();
 	};
 
 }
