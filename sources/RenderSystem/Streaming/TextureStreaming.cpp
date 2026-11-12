@@ -398,30 +398,30 @@ namespace TextureStreaming
 			streamed->root_mip--;
 		}
 
-		std::unique_lock<std::mutex> g(m, std::defer_lock);
+		// Everything that belongs to this texture alone is built before the manager's lock is taken: page states (their
+		// parents are texture-local page numbers, the ids are added to base_id later) and the packed mips' copies,
+		// which read the asset file.
 		{
-			PROFILE(L"texture_stream_add_lock_wait");
-			g.lock();
-		}
-		PROFILE(L"texture_stream_add_locked");
+			PROFILE(L"texture_stream_add_prepare");
+			streamed->states.resize(pages);
 
-		streamed->base_id = allocate_ids(pages);
-		streamed->states.resize(pages);
-
-		// A tile waits for the tile of the next coarser mip that covers it.
-		for (uint32_t mip = 0; mip + 1 < standard; mip++)
-		{
-			const auto& finer = streamed->mips[mip];
-			const auto& coarser = streamed->mips[mip + 1];
-			for (uint32_t y = 0; y < finer.tiles_y; y++)
-				for (uint32_t x = 0; x < finer.tiles_x; x++)
-					streamed->states[streamed->page_of(mip, x, y)].parents.push_back(
-						streamed->page_of(mip + 1, std::min(x / 2, coarser.tiles_x - 1), std::min(y / 2, coarser.tiles_y - 1)));
+			// A tile waits for the tile of the next coarser mip that covers it.
+			for (uint32_t mip = 0; mip + 1 < standard; mip++)
+			{
+				const auto& finer = streamed->mips[mip];
+				const auto& coarser = streamed->mips[mip + 1];
+				for (uint32_t y = 0; y < finer.tiles_y; y++)
+					for (uint32_t x = 0; x < finer.tiles_x; x++)
+						streamed->states[streamed->page_of(mip, x, y)].parents.push_back(
+							streamed->page_of(mip + 1, std::min(x / 2, coarser.tiles_x - 1), std::min(y / 2, coarser.tiles_y - 1)));
+			}
 		}
 
 		// The mips below a tile are mapped and filled once, whole.
+		std::optional<Op> packed_op;
 		if (tiled.packed_mip_count)
 		{
+			PROFILE(L"texture_stream_add_read_packed");
 			Op op;
 			op.kind = Op::Kind::Packed;
 			op.owner = streamed.get();
@@ -449,8 +449,19 @@ namespace TextureStreaming
 				}
 				op.copies.push_back(std::move(copy));
 			}
-			ops.push_back(std::move(op));
+			packed_op = std::move(op);
 		}
+
+		std::unique_lock<std::mutex> g(m, std::defer_lock);
+		{
+			PROFILE(L"texture_stream_add_lock_wait");
+			g.lock();
+		}
+		PROFILE(L"texture_stream_add_locked");
+
+		streamed->base_id = allocate_ids(pages);
+		if (packed_op)
+			ops.push_back(std::move(*packed_op));
 
 		texture_count++;
 

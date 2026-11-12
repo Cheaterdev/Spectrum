@@ -150,7 +150,10 @@ export{
 			void _init(Device& device, const ResourceDesc& desc, HeapType heap_type = HeapType::DEFAULT, TextureLayout initialLayout = TextureLayout::UNDEFINED, vec4 clear_value = vec4(0, 0, 0, 0));
 
 
-			void write(GPUBinaryData<true>&);
+			// wait = false only queues the read: several blobs of one resource then load side by side, and
+			// finish_writes() submits them and waits once.
+			void write(GPUBinaryData<true>&, bool wait = true);
+			void finish_writes();
 
 		public:
 			Device& get_device() const { ASSERT(m_device); return *m_device; }

@@ -307,6 +307,19 @@ namespace Quanta
 			for (auto& task : tasks)
 				task.wait();
 
+			if (!fetches.empty())
+			{
+				uint64_t read_bytes = 0, read_pages = 0;
+				for (const auto& fetch : fetches)
+					if (fetch.ok)
+					{
+						read_bytes += fetch.bytes.size();
+						read_pages++;
+					}
+				Log::get() << "Quanta acquire_many: read " << read_pages << " of " << fetches.size() << " root pages, "
+					<< read_bytes / (1024 * 1024) << " MB, in " << chunks.size() << " chunks" << Log::endl;
+			}
+
 			// Decompression is CPU work and fans out; pages stored raw are done.
 			tasks.clear();
 			for (auto& fetch : fetches)

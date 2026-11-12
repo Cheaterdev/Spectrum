@@ -10,7 +10,7 @@ using namespace std;
 struct thread_pool::Impl
 {
 	static constexpr int LaneCount = static_cast<int>(TaskLane::Count);
-	static constexpr int PriorityCount = 3;
+	static constexpr int PriorityCount = 4;
 
 	struct Item
 	{
@@ -154,7 +154,7 @@ struct thread_pool::Impl
 	std::string describe()
 	{
 		static const char* lane_names[] = { "general", "asset", "background" };
-		static const char* priority_names[] = { "low", "normal", "high" };
+		static const char* priority_names[] = { "idle", "low", "normal", "high" };
 
 		std::lock_guard<std::mutex> g(m);
 		std::string out = "thread pool: " + std::to_string(workers.size()) + " workers;";

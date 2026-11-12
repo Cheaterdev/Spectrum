@@ -188,7 +188,8 @@ bool PSOVariant::start()
 	if (!status.compare_exchange_strong(expected, Status::Queued, std::memory_order_acq_rel))
 		return false;
 
-	thread_pool::get().enqueue_detached(TaskOptions{ TaskPriority::LOW, TaskLane::Asset }, [self = shared_from_this()]()
+	// IDLE: a queued asset load always goes first; a draw that needs this variant skips it until then.
+	thread_pool::get().enqueue_detached(TaskOptions{ TaskPriority::IDLE, TaskLane::Asset, L"pso_variant_task" }, [self = shared_from_this()]()
 	{
 		auto queued = Status::Queued;
 		if (self->status.compare_exchange_strong(queued, Status::Creating, std::memory_order_acq_rel))

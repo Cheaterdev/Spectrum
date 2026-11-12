@@ -605,13 +605,20 @@ export
 
 			SERIALIZE()
 			{
-				ar & NVP(resource);
+				{
+					// The first view of a buffer to load deserializes the Buffer itself here.
+					PROFILE(L"view_ser_resource");
+					ar & NVP(resource);
+				}
 				ar & NVP(desc);
 
 				IF_LOAD()
 				{
 					if (resource)
+					{
+						PROFILE(L"view_ser_init");
 						init(resource->get_device().get_static_gpu_data());
+					}
 				}
 			}
 		};

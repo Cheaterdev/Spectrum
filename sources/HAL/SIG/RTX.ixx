@@ -246,7 +246,8 @@ struct SelectLocal<T>
 		// update() links it once `built` is set. The task holds the group and the signatures, never `this`.
 		void start_group_build(group_ptr group)
 		{
-			thread_pool::get().enqueue_detached(TaskOptions{ TaskPriority::LOW, TaskLane::Asset },
+			// IDLE, like the PSO variants: a queued asset load goes first.
+			thread_pool::get().enqueue_detached(TaskOptions{ TaskPriority::IDLE, TaskLane::Asset },
 				[group, global_root = m_root_sig, local_root = m_local_sig]()
 				{
 					HAL::StateObject::ptr collection;

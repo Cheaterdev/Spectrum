@@ -14,8 +14,12 @@ using namespace std;
 export
 {
 
+// Strict: a worker takes nothing of a priority while it has anything higher queued on any lane it serves.
+//   IDLE   only when the worker has nothing else: work that must never delay what is queued (PSO variant creation
+//          behind asset loads). It waits as long as the worker's lanes have a backlog at LOW or above.
 enum class TaskPriority : int
 {
+	IDLE,
 	LOW,
 	NORMAL,
 	HIGH

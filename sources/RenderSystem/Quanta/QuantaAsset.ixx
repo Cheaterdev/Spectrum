@@ -25,13 +25,18 @@ export namespace Quanta
 				UniversalContext& context = cereal::get_user_data<UniversalContext>(ar);
 				std::fstream* stream = context.template get_context<std::fstream*>();
 
+				PROFILE(L"quanta_partition_serialize");
 				meshes.clear();
 				for (uint32_t i = 0; i < count; i++)
 				{
 					uint64_t size = 0;
 					ar& NVP(size);
 
-					uint64_t offset = stream->tellg();
+					uint64_t offset;
+					{
+						PROFILE(L"quanta_partition_tellg");
+						offset = stream->tellg();
+					}
 					auto mesh = std::make_shared<Mesh>();
 
 					std::vector<uint8_t> bytes;
@@ -66,7 +71,10 @@ export namespace Quanta
 							throw std::runtime_error("corrupt Quanta data in asset file");
 					}
 
-					stream->seekg(static_cast<std::streamoff>(offset + size));
+					{
+							PROFILE(L"quanta_partition_seek");
+							stream->seekg(static_cast<std::streamoff>(offset + size));
+						}
 
 					mesh->file = context.template get_context<std::filesystem::path>();
 					meshes.push_back(std::move(mesh));

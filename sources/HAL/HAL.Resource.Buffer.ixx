@@ -60,9 +60,10 @@ export{
 					{
 						GPUBinaryData<true> binary;
 						ar& NVP(binary);
-						Resource::write(binary);
+						Resource::write(binary, false);
 						covered += binary.uncompressed_size;
 					} while (covered < total);
+					Resource::finish_writes();
 					init();
 				}
 				else

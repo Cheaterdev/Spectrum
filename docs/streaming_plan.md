@@ -526,6 +526,25 @@ reused on load. Ids are only unique within the run that handed them out, so load
 gather (which routes draws by pipeline id) dropped one material's draws: the "thin meshes missing, at random" bug.
 `PipelineManager::get_pipeline` now gives a loaded pipeline a fresh id.
 
+## Batch 4 results (measured after R.3, R.4, R.5 removal, 2.1, the coalesced page read and the deferred BLAS wait)
+
+D3D12 only; Vulkan was not run.
+
+| What | Batch 3 | Batch 4 | Verdict |
+|---|---|---|---|
+| `drop_load_asset` | 1252 ms | 961 ms | under the 1200 ms target |
+| `RTX update` after the drop | 82 ms blocked | not in the capture's top scopes | R.3 works; `state_object_create` is 472 ms of thread time on the pool |
+| Mesh `asset_deserialize` | 470 ms | 232 ms | the BLAS wait is gone from it |
+| `mesh_ser_parts` | 185 ms | 183 ms | `mesh_part_vertex_view` alone is 175 ms (1591 parts); the index view and meshlet range are negligible |
+| `quanta_acquire_many` | 206 ms | 267 ms | worse: the coalesced read is slower than the per-page one (10 tasks of 137 to 154 ms, were 85 to 100) |
+| `mesh_load_quanta_partition` | 160 ms | 139 ms | 98 ms of it is self time, outside the `quanta_partition_*` scopes |
+
+**New, from this capture.**
+- `texture_stream_add_lock_wait`: 751 ms of thread time over 224 texture loads. The manager mutex serializes them.
+- The mesh asset's deserialize starts 590 ms into the drop, after its dependencies. During that time the asset lane
+  also runs the 431 PSO variant creations (4.8 s of thread time, about 11 ms each) and the 69 collection builds, so
+  they compete with the loads they were moved out of.
+
 ## Phase L: asset loading time
 
 Independent of the streaming phases. Tasks L.1 to L.4 touch no streaming code and go first, because they are backed by

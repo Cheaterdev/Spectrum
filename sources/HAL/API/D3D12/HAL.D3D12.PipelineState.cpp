@@ -514,8 +514,8 @@ namespace HAL
 
         auto nonCached = creator.get_desc();
 
-        static std::mutex m;
-        std::lock_guard<std::mutex> g(m);
+        // No lock: CreatePipelineState is free-threaded and everything below belongs to this pipeline. A global mutex
+        // here used to serialize every creation across the asset workers (about 1 ms each alone, 10 ms queued).
         if (!cache.empty())
         {
             D3D12_CACHED_PIPELINE_STATE cached;

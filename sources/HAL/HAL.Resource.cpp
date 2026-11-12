@@ -34,7 +34,7 @@ namespace HAL
 	}
 	std::mutex t;
 
-	void Resource::write(GPUBinaryData<true>& data)
+	void Resource::write(GPUBinaryData<true>& data, bool wait)
 	{
 		std::lock_guard<std::mutex> g(t);
 
@@ -60,8 +60,21 @@ namespace HAL
 			}
 			}, data.desc);
 
-		load_waiter = get_device().get_ds_queue().execute(request);
+		const FenceWaiter queued = get_device().get_ds_queue().execute(request);
+		if (!wait)
+		{
+			load_waiter.combine(queued);
+			return;
+		}
 
+		load_waiter = queued;
+		get_device().get_ds_queue().flush();
+		load_waiter.wait();
+	}
+
+	void Resource::finish_writes()
+	{
+		PROFILE(L"resource_finish_writes");
 		get_device().get_ds_queue().flush();
 		load_waiter.wait();
 	}
