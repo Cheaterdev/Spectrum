@@ -203,7 +203,9 @@ export namespace Quanta
 	BlobPlan plan_blob(const Mesh& mesh);
 
 	// The rest of the blob, from metadata.size() to size, in order and in pieces. Throws if a page cannot be read back.
-	void write_blob_pages(const Mesh& mesh, const BlobPlan& plan, const std::function<void(const uint8_t*, size_t)>& write);
+	// `file` is the stream the pages still in Mesh::file are read through, opened here on first use: the meshes of one
+	// asset file can share one.
+	void write_blob_pages(const Mesh& mesh, const BlobPlan& plan, std::ifstream& file, const std::function<void(const uint8_t*, size_t)>& write);
 
 	// keep_pages false leaves Page::data empty (the page sizes and file positions are still set): `data` then only
 	// has to cover metadata_size() bytes, and blob_size is the size of the whole blob the offsets are checked

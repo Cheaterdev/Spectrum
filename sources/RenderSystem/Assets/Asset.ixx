@@ -291,9 +291,12 @@ public:
 		// Called by AssetStorage right after the asset itself is written / read.
 		virtual void save_partitions(FileDataStorage& storage) {}
 
-		// Around AssetStorage::save(). before_save() runs before the file is opened for writing, while what only the old
-		// file holds can still be read; after_save() runs once the new file is complete, to point at the data in it.
+		// Around AssetStorage::save(), which writes a temporary file and then puts it in the old one's place. before_save()
+		// runs before anything is written. before_replace() runs once the new file is written, just before it replaces the
+		// old one: a handle kept open on the old file makes that fail, so it is closed here. after_save() runs once the new
+		// file is in place, to point at the data in it. The last two run with FileDataStorage::relocation_mutex() held.
 		virtual void before_save() {}
+		virtual void before_replace() {}
 		virtual void after_save(FileDataStorage& storage) {}
 		virtual void load_partitions(FileDataStorage& storage, UniversalContext* context) {}
 
@@ -381,6 +384,10 @@ class AssetStorage : public SharedObject<AssetStorage>, public EditObject
 		void set_folder(folder_item* f);
 
 		bool contents_changed = false;
+
+		// Writes only the "editor" partition (the preview) into the asset file, leaving the rest as it is. Nothing to do
+		// while the file does not exist yet: the asset's first save is still to come and takes the preview with it.
+		void save_preview();
 	public:
 		Events::Event<const HAL::Texture::ptr&> on_preview;
 		using ptr = s_ptr<AssetStorage>;
@@ -452,6 +459,11 @@ class AssetManager : public Singleton<AssetManager>, public EditContainer, publi
 
 		void add_preview(Asset::ptr a);
 		SingleThreadExecutor preview_executor;
+
+		// A new asset is written to its file in the background as soon as it is added: until it is, it exists only in
+		// memory (an imported mesh keeps every Quanta page in RAM and cannot stream them from the file). Its preview,
+		// drawn later, is added to the file on its own (AssetStorage::save_preview).
+		void save_new(AssetStorage::ptr storage);
 	public:
 
 		using Singleton<AssetManager>::get;
@@ -541,6 +553,7 @@ class AssetManager : public Singleton<AssetManager>, public EditContainer, publi
 			assets[asset->get_id()] = storage;
 			EditContainer::add(storage.get());
 			on_add_asset(storage.get());
+			save_new(storage);
 			return storage;
 
 		}

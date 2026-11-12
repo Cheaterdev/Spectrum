@@ -222,32 +222,51 @@ export namespace Quanta
 				count = static_cast<uint32_t>(meshes.size());
 				ar& NVP(count);
 
-				std::vector<std::vector<uint8_t>> blobs;
+				// The metadata of every mesh goes first, so each mesh is planned up front; the pages then go straight into
+				// the archive one at a time. A page a loaded mesh left in its file is copied from there as stored, which
+				// is why that file must not be replaced before this has run (AssetStorage::save writes to a temporary
+				// file). Pages in memory are compressed here, and only those are held until the end.
+				std::vector<Quanta::BlobPlan> plans;
 				std::vector<BlobEntry> entries;
-				blobs.reserve(meshes.size());
-				entries.reserve(meshes.size());
-				for (auto& mesh : meshes)
 				{
-					std::vector<uint8_t>& blob = blobs.emplace_back(Quanta::serialize(*mesh));
-
-					// A blob whose header does not give a metadata size, or that needs its pages to load (an older blob
-					// version), is stored whole with the metadata.
-					uint64_t metadata = blob.size();
-					bool needs_pages = false;
-					uint64_t meta = 0;
-					if (blob.size() >= Quanta::FileHeaderBytes && Quanta::metadata_size(blob.data(), meta, needs_pages) && !needs_pages && meta <= blob.size())
-						metadata = meta;
-					entries.push_back({ blob.size(), metadata });
+					PROFILE(L"quanta_partition_plan");
+					plans.reserve(meshes.size());
+					entries.reserve(meshes.size());
+					for (auto& mesh : meshes)
+					{
+						const Quanta::BlobPlan& plan = plans.emplace_back(Quanta::plan_blob(*mesh));
+						entries.push_back({ plan.size, plan.metadata.size() });
+					}
 				}
 
 				if (!entries.empty())
 					ar& NVP(cereal::binary_data(entries.data(), entries.size() * sizeof(BlobEntry)));
-				for (size_t i = 0; i < blobs.size(); i++)
-					if (entries[i].metadata)
-						ar& NVP(cereal::binary_data(blobs[i].data(), entries[i].metadata));
-				for (size_t i = 0; i < blobs.size(); i++)
-					if (entries[i].size > entries[i].metadata)
-						ar& NVP(cereal::binary_data(blobs[i].data() + entries[i].metadata, entries[i].size - entries[i].metadata));
+				{
+					PROFILE(L"quanta_partition_write_metadata");
+					for (auto& plan : plans)
+						if (!plan.metadata.empty())
+							ar& NVP(cereal::binary_data(plan.metadata.data(), plan.metadata.size()));
+				}
+
+				{
+					PROFILE(L"quanta_partition_write_pages");
+					std::ifstream source;
+					std::filesystem::path source_path;
+					for (size_t i = 0; i < meshes.size(); i++)
+					{
+						if (source.is_open() && meshes[i]->file != source_path)
+							source.close();
+						source_path = meshes[i]->file;
+
+						Quanta::write_blob_pages(*meshes[i], plans[i], source, [&](const uint8_t* bytes, size_t count)
+						{
+							ar& NVP(cereal::binary_data(bytes, count));
+						});
+
+						// Its compressed pages are written: no need to hold them while the next meshes are.
+						plans[i] = {};
+					}
+				}
 			}
 		}
 	};

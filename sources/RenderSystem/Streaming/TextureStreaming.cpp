@@ -253,6 +253,12 @@ namespace TextureStreaming
 		stream.close();
 	}
 
+	void TileFile::release()
+	{
+		std::lock_guard<std::mutex> g(file_mutex);
+		stream.close();
+	}
+
 	TileFile::~TileFile()
 	{
 		// DirectStorage keeps the files it reads open: the asset file may be deleted or written over once nothing reads it.

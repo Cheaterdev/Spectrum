@@ -123,10 +123,14 @@ void AssetManager::add_preview(Asset::ptr asset)
 			return true;
 		}
 
-		// Published on the render thread, so resource state tracking is coherent.
+		// Published on the render thread, so resource state tracking is coherent. Written to the file off it: that
+		// reads the texture back and does file IO.
 		add_func([asset, finished = *target]() {
 			asset->holder->editor->preview = finished;
 			asset->holder->on_preview(asset->holder->get_preview());
+
+			if (!Application::test_mode)
+				create_task([storage = asset->holder->get_ptr()]() { storage->save_preview(); });
 		});
 
 		return true;
@@ -220,11 +224,28 @@ void AssetManager::save(EditObject* obj)
 	AssetStorage* asset = static_cast<AssetStorage*>(obj);
 	create_task([asset]()
 		{
-			asset->save();
+			// Cleared first: a change made while the save runs (a preview, an edit) marks it changed again.
 			asset->on_save();
+			asset->save();
 		});
 	//  FileSystem::get().save_data("assets\\" + asset->name + ".asset", Serializer::serialize(asset->get_ptr()));
 	//  });
+}
+
+void AssetManager::save_new(AssetStorage::ptr storage)
+{
+	// Tests and spectrum_tool save what they need themselves: a late background save would change a mesh a test is
+	// checking under it, or write into an assets folder the tool has already copied and removed.
+	if (Application::test_mode)
+		return;
+
+	// The task holds the storage: the asset may be removed before it runs.
+	create_task([storage]()
+		{
+			// Cleared first: an edit made while the save runs marks it changed again.
+			storage->on_save();
+			storage->save();
+		});
 }
 
 void AssetManager::add_listener(AssetListener* l)
@@ -805,21 +826,33 @@ void AssetStorage::save()
 
 		asset->before_save();
 
-		// DirectStorage keeps the asset files its streamed reads use open: it has to let go before the file is rewritten.
-		if (RenderSystem::is_good())
-			RenderSystem::get().device().get_ds_queue().close_file(file_path);
-
 		FileDataStorage storage(file_path);
 
+		// Written to a temporary file: the old one stays readable meanwhile (streamed pages are read from it, and the
+		// save copies them out of it).
 		storage.start_save();
 		storage.put("header", *header.get());
 		storage.put("editor", *editor.get());
 		storage.put("asset", asset);
 		asset->save_partitions(storage);
 
-		if (!storage.save())
-			throw std::runtime_error("the file was not written");
-		asset->after_save(storage);
+		{
+			// From the rename until the asset points at the new layout, nothing may turn an old offset into a read.
+			std::unique_lock<std::shared_mutex> moving(FileDataStorage::relocation_mutex());
+
+			// DirectStorage keeps the asset files its streamed reads use open (which blocks the rename) and reopens them on
+			// the next read: let go only now, under the lock, once its reads in flight are done.
+			if (RenderSystem::is_good())
+				RenderSystem::get().device().get_ds_queue().close_file(file_path);
+			asset->before_replace();
+
+			if (!storage.save())
+				throw std::runtime_error("the file was not written");
+			asset->after_save(storage);
+		}
+
+		std::lock_guard<std::mutex> s(stream_mutex);
+		archive = nullptr;   // it holds the old file's partition table
 		//auto archive = ZipArchive::Create();
 		//
 		//DataPacker::create_entry(archive, "header", Serializer::serialize(*header.get()));
@@ -831,7 +864,28 @@ void AssetStorage::save()
 	catch (const std::exception& e)
 	{
 		Log::get() << Log::LEVEL_ERROR << "Cant save asset" << asset->get_name() << ": " << e.what() << Log::endl;
+		mark_changed();   // still to be saved
 	}
+}
+
+void AssetStorage::save_preview()
+{
+	// Behind a save in progress, whose file it then writes into.
+	std::lock_guard<std::mutex> g(archive_mutex);
+	if (!std::filesystem::exists(file_path))
+		return;
+
+	// DirectStorage keeps the files it reads open, which stops this one being written. It lets go once its reads in
+	// flight are done, and opens the file again on its next read.
+	if (RenderSystem::is_good())
+		RenderSystem::get().device().get_ds_queue().close_file(file_path);
+
+	FileDataStorage storage(file_path);
+	if (!storage.replace("editor", *editor.get()))
+		mark_changed();   // the next save writes it with the rest
+
+	std::lock_guard<std::mutex> s(stream_mutex);
+	archive = nullptr;   // it holds the partition table from before
 }
 
 void AssetManagerHolder::on_add_asset(AssetStorage* a)

@@ -83,6 +83,10 @@ export namespace TextureStreaming
 		// DirectStorage lets go of the file too, so its next tile read opens the new one.
 		void relocate(const TileFile& fresh);
 
+		// Closes the stream kept open on the file (the next read opens it again): an open stream stops the file from
+		// being replaced.
+		void release();
+
 		TileFile() = default;
 		~TileFile();
 

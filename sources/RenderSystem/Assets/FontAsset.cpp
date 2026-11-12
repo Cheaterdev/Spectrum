@@ -169,6 +169,4 @@ void FontAsset::update_preview(HAL::Texture::ptr preview)
 
 	MipMapGenerator::get().generate(list->get_compute(), preview->texture_2d());
 	list->execute();
-
-	mark_changed();
 }

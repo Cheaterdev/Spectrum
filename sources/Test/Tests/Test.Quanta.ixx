@@ -327,6 +327,51 @@ export namespace Test
 		std::filesystem::remove(path);
 	}
 
+	// One partition written again on its own (a new preview): the others, Quanta pages included, stay where they were.
+	TEST(Quanta, ReplacedPartitionLeavesTheRest)
+	{
+		const std::filesystem::path path = std::filesystem::temp_directory_path() / "quanta_replace_partition_test.bin";
+
+		Quanta::AssetPartition written;
+		written.meshes.push_back(std::make_shared<Quanta::Mesh>(build(make_sphere(64, 32))));
+		{
+			FileDataStorage storage(path);
+			storage.start_save();
+			storage.put("editor", std::string("old"));
+			storage.put("quanta", written);
+			ASSERT_TRUE(storage.save());
+		}
+
+		Quanta::AssetPartition before;
+		{
+			FileDataStorage storage(path);
+			ASSERT_TRUE(storage.get("quanta", before));
+		}
+
+		{
+			FileDataStorage storage(path);
+			ASSERT_TRUE(storage.replace("editor", std::string(10000, 'n')));
+		}
+
+		FileDataStorage storage(path);
+		ASSERT_TRUE(storage.get<std::string>("editor") == std::string(10000, 'n'));
+
+		Quanta::AssetPartition after;
+		ASSERT_TRUE(storage.get("quanta", after));
+		ASSERT_EQ(before.meshes.front()->pages.size(), after.meshes.front()->pages.size());
+		for (uint32_t p = 0; p < after.meshes.front()->pages.size(); p++)
+		{
+			ASSERT_EQ(before.meshes.front()->pages[p].file_offset, after.meshes.front()->pages[p].file_offset);
+
+			// A mesh loaded before the replace still reads its pages.
+			std::vector<uint8_t> bytes;
+			ASSERT_TRUE(Quanta::read_page(*before.meshes.front(), p, bytes));
+			ASSERT_TRUE(bytes == written.meshes.front()->pages[p].data);
+		}
+
+		std::filesystem::remove(path);
+	}
+
 	// Resident-only upload: every page and both tables land in the shared GPU buffers where the CPU says they do.
 	TEST(Quanta.Import, ResidencyUploadsPagesAndTables)
 	{
@@ -473,6 +518,56 @@ export namespace Test
 			ASSERT_EQ(asset->quanta[i]->groups.size(), other->quanta[i]->groups.size());
 		}
 
+		// Saved again over the file it was loaded from, the way AssetStorage::save does it. The pages are copied from the
+		// old file without being read into memory; something bigger ahead of them moves them, and the live meshes follow.
+		{
+			std::vector<std::vector<uint64_t>> before(other->quanta.size());
+			for (size_t i = 0; i < other->quanta.size(); i++)
+				for (const auto& page : other->quanta[i]->pages)
+					before[i].push_back(page.file_offset);
+
+			FileDataStorage storage(path);
+			storage.start_save();
+			storage.put("asset", std::string(4096, 'x'));
+			other->save_partitions(storage);
+
+			std::unique_lock<std::shared_mutex> moving(FileDataStorage::relocation_mutex());
+			other->before_replace();
+			ASSERT_TRUE(storage.save());
+			other->after_save(storage);
+
+			for (size_t i = 0; i < other->quanta.size(); i++)
+				for (size_t p = 0; p < other->quanta[i]->pages.size(); p++)
+				{
+					ASSERT_TRUE(other->quanta[i]->pages[p].data.empty());
+					ASSERT_TRUE(other->quanta[i]->pages[p].file_offset != before[i][p]);
+				}
+		}
+		for (const auto& entry : std::filesystem::directory_iterator(path.parent_path()))
+			ASSERT_FALSE(entry.path().filename().string().starts_with(path.filename().string() + ".") && entry.path().extension() == ".tmp");
+		for (size_t i = 0; i < other->quanta.size(); i++)
+			for (uint32_t p = 0; p < other->quanta[i]->pages.size(); p++)
+			{
+				std::vector<uint8_t> bytes;
+				ASSERT_TRUE(Quanta::read_page(*other->quanta[i], p, bytes));
+				ASSERT_TRUE(bytes == asset->quanta[i]->pages[p].data);
+			}
+		{
+			// And the file itself loads to the same pages.
+			auto reloaded = std::make_shared<MeshAsset>(L"resources/sphere.obj");
+			reloaded->quanta.clear();
+			FileDataStorage storage(path);
+			reloaded->load_partitions(storage, nullptr);
+			ASSERT_EQ(asset->quanta.size(), reloaded->quanta.size());
+			for (size_t i = 0; i < reloaded->quanta.size(); i++)
+				for (uint32_t p = 0; p < reloaded->quanta[i]->pages.size(); p++)
+				{
+					std::vector<uint8_t> bytes;
+					ASSERT_TRUE(Quanta::read_page(*reloaded->quanta[i], p, bytes));
+					ASSERT_TRUE(bytes == asset->quanta[i]->pages[p].data);
+				}
+		}
+
 		// An asset file saved before this existed: no entry, nothing loaded, no error.
 		{
 			FileDataStorage storage(path);
@@ -486,6 +581,54 @@ export namespace Test
 			other->load_partitions(storage, nullptr);
 		}
 		ASSERT_TRUE(other->quanta.empty());
+		std::filesystem::remove(path);
+	}
+
+	// An imported mesh holds its pages in memory until its first save, which moves them into the file: from then on it
+	// streams from there like a loaded one.
+	TEST(Quanta.Import, FirstSaveMovesImportedPagesIntoTheFile)
+	{
+		const std::filesystem::path path = std::filesystem::temp_directory_path() / "quanta_mesh_first_save_test.bin";
+
+		auto asset = std::make_shared<MeshAsset>(L"resources/sphere.obj");
+		ASSERT_FALSE(asset->quanta.empty());
+
+		std::vector<std::vector<std::vector<uint8_t>>> original(asset->quanta.size());
+		for (size_t i = 0; i < asset->quanta.size(); i++)
+		{
+			ASSERT_TRUE(asset->quanta[i]->file.empty());
+			for (const auto& page : asset->quanta[i]->pages)
+				original[i].push_back(page.data);
+		}
+
+		{
+			FileDataStorage storage(path);
+			storage.start_save();
+			storage.put("asset", 42);
+			asset->save_partitions(storage);
+
+			std::unique_lock<std::shared_mutex> moving(FileDataStorage::relocation_mutex());
+			asset->before_replace();
+			ASSERT_TRUE(storage.save());
+			asset->after_save(storage);
+		}
+
+		for (size_t i = 0; i < asset->quanta.size(); i++)
+		{
+			const Quanta::Mesh& mesh = *asset->quanta[i];
+			ASSERT_TRUE(mesh.file == path);
+			for (uint32_t p = 0; p < mesh.pages.size(); p++)
+			{
+				ASSERT_TRUE(mesh.pages[p].data.empty());
+				ASSERT_TRUE(mesh.pages[p].file_size != 0);
+
+				std::vector<uint8_t> bytes;
+				ASSERT_TRUE(Quanta::read_page(mesh, p, bytes));
+				ASSERT_TRUE(bytes == original[i][p]);
+			}
+		}
+
+		asset.reset();
 		std::filesystem::remove(path);
 	}
 

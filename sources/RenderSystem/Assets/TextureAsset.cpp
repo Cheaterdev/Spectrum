@@ -179,6 +179,13 @@ void TextureAsset::save_partitions(FileDataStorage& storage)
 	}
 }
 
+void TextureAsset::before_replace()
+{
+	std::lock_guard<std::mutex> g(texture_mutex);
+	if (tiles && !tiles->path.empty())
+		tiles->release();   // before_save()'s read_all() left it open
+}
+
 void TextureAsset::after_save(FileDataStorage& storage)
 {
 	std::lock_guard<std::mutex> g(texture_mutex);
@@ -284,9 +291,6 @@ void TextureAsset::update_preview(HAL::Texture::ptr preview)
 
 	TextureAssetRenderer::get().render(this, preview, list);
 	list->execute();
-	//
-//   c.generate_mipmaps(preview->get_shader_view());
-	mark_changed();
 }
 
 bool TextureAsset::compress()

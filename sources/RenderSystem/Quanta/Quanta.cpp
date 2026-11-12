@@ -249,10 +249,11 @@ namespace Quanta
 	std::vector<uint8_t> serialize(const Mesh& mesh)
 	{
 		BlobPlan plan = plan_blob(mesh);
-		std::vector<uint8_t> out = std::move(plan.metadata);
+		std::vector<uint8_t> out;
 		out.reserve(plan.size);
-		plan.metadata.resize(out.size());   // write_blob_pages only needs to know where the metadata ends
-		write_blob_pages(mesh, plan, [&](const uint8_t* bytes, size_t count) { out.insert(out.end(), bytes, bytes + count); });
+		out.insert(out.end(), plan.metadata.begin(), plan.metadata.end());
+		std::ifstream source;
+		write_blob_pages(mesh, plan, source, [&](const uint8_t* bytes, size_t count) { out.insert(out.end(), bytes, bytes + count); });
 		return out;
 	}
 
@@ -333,11 +334,10 @@ namespace Quanta
 		return plan;
 	}
 
-	void write_blob_pages(const Mesh& mesh, const BlobPlan& plan, const std::function<void(const uint8_t*, size_t)>& write)
+	void write_blob_pages(const Mesh& mesh, const BlobPlan& plan, std::ifstream& file, const std::function<void(const uint8_t*, size_t)>& write)
 	{
 		static const uint8_t padding[BlobAlignment] = {};
 
-		std::ifstream file;
 		std::vector<uint8_t> stored;
 		uint64_t cursor = plan.metadata.size();
 
@@ -527,23 +527,28 @@ namespace Quanta
 	bool read_page(const Mesh& mesh, uint32_t page, std::vector<uint8_t>& out)
 	{
 		const Page& source = mesh.pages[page];
-		if (!source.data.empty())
+		std::vector<uint8_t> stored;
 		{
-			out = source.data;
-			return true;
+			// A save can move the page into the file (dropping `data`) or move it within the file.
+			std::shared_lock<std::shared_mutex> reading(FileDataStorage::relocation_mutex());
+			if (!source.data.empty())
+			{
+				out = source.data;
+				return true;
+			}
+			if (mesh.file.empty() || source.file_size == 0)
+				return false;
+
+			std::ifstream file(mesh.file, std::ios::binary);
+			if (!file)
+				return false;
+
+			stored.resize(source.file_size);
+			file.seekg(static_cast<std::streamoff>(source.file_offset));
+			file.read(reinterpret_cast<char*>(stored.data()), stored.size());
+			if (!file)
+				return false;
 		}
-		if (mesh.file.empty() || source.file_size == 0)
-			return false;
-
-		std::ifstream file(mesh.file, std::ios::binary);
-		if (!file)
-			return false;
-
-		std::vector<uint8_t> stored(source.file_size);
-		file.seekg(static_cast<std::streamoff>(source.file_offset));
-		file.read(reinterpret_cast<char*>(stored.data()), stored.size());
-		if (!file)
-			return false;
 
 		if (source.file_size == source.size)
 		{
@@ -561,6 +566,8 @@ namespace Quanta
 		std::vector<PageFetch*> order(fetches.begin(), fetches.end());
 		for (PageFetch* fetch : order)
 			fetch->ok = false;
+
+		std::shared_lock<std::shared_mutex> reading(FileDataStorage::relocation_mutex());
 
 		// No stream buffer is set: a page is tens of KB, which the C runtime reads straight into the destination. A
 		// pubsetbuf before open() is ignored by MSVC's filebuf (it needs an open file); if it did take effect, every

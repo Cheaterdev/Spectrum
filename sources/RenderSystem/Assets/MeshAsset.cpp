@@ -498,55 +498,37 @@ void MeshAsset::save_partitions(FileDataStorage& storage)
 	if (quanta.empty())
 		return;
 
+	// The live meshes: the writer only reads them, and copies the pages still in the asset file from that file.
 	Quanta::AssetPartition partition;
-	partition.meshes = saving_quanta.empty() ? quanta : saving_quanta;
+	partition.meshes = quanta;
 	storage.put("quanta", partition);
-}
-
-void MeshAsset::before_save()
-{
-	saving_quanta.clear();
-
-	// Copies, not the live meshes: the streamer reads those from other threads and tells a page in the file from one
-	// in memory by whether its bytes are there.
-	std::vector<std::shared_ptr<Quanta::Mesh>> full;
-	full.reserve(quanta.size());
-	bool any = false;
-	for (auto& mesh : quanta)
-	{
-		if (!mesh)
-		{
-			full.push_back(nullptr);
-			continue;
-		}
-
-		auto copy = std::make_shared<Quanta::Mesh>(*mesh);
-		for (uint32_t p = 0; p < copy->pages.size(); p++)
-		{
-			Quanta::Page& page = copy->pages[p];
-			if (!page.data.empty() || page.size == 0)
-				continue;
-			if (!Quanta::read_page(*mesh, p, page.data))
-				throw std::runtime_error("mesh asset " + convert(name) + ": cannot read its Quanta pages back to save them");
-			any = true;
-		}
-		full.push_back(std::move(copy));
-	}
-
-	if (any)
-		saving_quanta = std::move(full);
 }
 
 void MeshAsset::after_save(FileDataStorage& storage)
 {
-	const bool relocate = !saving_quanta.empty();
-	saving_quanta.clear();
-	saving_quanta.shrink_to_fit();
+	const auto in_saved_file = [&](const std::shared_ptr<Quanta::Mesh>& mesh)
+	{
+		if (!mesh || mesh->file.empty())
+			return false;
+		std::error_code ec;
+		return mesh->file == storage.get_path() || std::filesystem::equivalent(mesh->file, storage.get_path(), ec);
+	};
 
-	if (!relocate || !storage.has("quanta"))
+	// A mesh with no file (just imported) moves into the one just written and lets go of its page bytes, like a mesh
+	// loaded from it. Unless the pages are to stay in memory anyway.
+	const auto in_memory_only = [&](const std::shared_ptr<Quanta::Mesh>& mesh)
+	{
+		return mesh && mesh->file.empty() && !Quanta::keep_page_data();
+	};
+
+	// Meshes that read their pages from the file just replaced point into its old layout and take the new one. One
+	// loaded from another file is still right as it is.
+	const bool any = std::any_of(quanta.begin(), quanta.end(), [&](const auto& mesh) { return in_saved_file(mesh) || in_memory_only(mesh); });
+	if (!any || !storage.has("quanta"))
 		return;
 
-	// The pages moved with the rewrite: the live meshes take their new positions from the file just written.
+	// Runs with FileDataStorage::relocation_mutex() held (AssetStorage::save), which every reader of page bytes,
+	// page offsets and Mesh::file holds shared: none sees a mesh half switched.
 	Quanta::AssetPartition fresh;
 	if (!storage.get("quanta", fresh) || fresh.meshes.size() != quanta.size())
 	{
@@ -556,7 +538,9 @@ void MeshAsset::after_save(FileDataStorage& storage)
 
 	for (size_t i = 0; i < quanta.size(); i++)
 	{
-		if (!quanta[i] || !fresh.meshes[i])
+		const bool move = in_saved_file(quanta[i]);
+		const bool adopt = !move && in_memory_only(quanta[i]);
+		if ((!move && !adopt) || !fresh.meshes[i])
 			continue;
 
 		auto& live = quanta[i]->pages;
@@ -567,6 +551,16 @@ void MeshAsset::after_save(FileDataStorage& storage)
 		{
 			live[p].file_offset = saved[p].file_offset;
 			live[p].file_size = saved[p].file_size;
+		}
+
+		if (adopt)
+		{
+			quanta[i]->file = storage.get_path();
+			for (auto& page : live)
+			{
+				page.data.clear();
+				page.data.shrink_to_fit();
+			}
 		}
 	}
 }
@@ -632,7 +626,6 @@ void MeshAsset::update_preview(HAL::Texture::ptr preview)
 	}
 
 	AssetRenderer::get().draw(preview_mesh, preview);
-	mark_changed();
 }
 
 template<class Archive>

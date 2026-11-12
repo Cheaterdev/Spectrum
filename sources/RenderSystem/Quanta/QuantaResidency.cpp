@@ -229,6 +229,7 @@ namespace Quanta
 		{
 			PROFILE(L"quanta_acquire_many_scan");
 			std::lock_guard<std::mutex> g(m);
+			std::shared_lock<std::shared_mutex> reading(FileDataStorage::relocation_mutex());   // reads Page::data
 			std::unordered_set<const Mesh*> seen;
 			for (const auto& shared : meshes)
 			{
@@ -250,6 +251,10 @@ namespace Quanta
 
 		{
 			PROFILE(L"quanta_prefetch_roots");
+
+			// Mesh::file and the offsets are read under the lock. It is let go before the read tasks are waited for: they
+			// take it themselves, and a save waiting for it meanwhile would hold them off.
+			std::shared_lock<std::shared_mutex> reading(FileDataStorage::relocation_mutex());
 
 			// The meshes of one asset share its file: one read task per file, which opens it once and reads in file order.
 			std::map<std::filesystem::path, std::vector<PageFetch*>> by_file;
@@ -296,6 +301,8 @@ namespace Quanta
 					}
 				}
 			}
+
+			reading.unlock();
 
 			std::vector<std::future<void>> tasks;
 			tasks.reserve(chunks.size());
@@ -436,6 +443,9 @@ namespace Quanta
 		const Page& source = resident.mesh->pages[page];
 		const uint64_t dword_offset = pool[slot];
 
+		// The first save of an imported mesh moves its pages into the file and drops `data` (MeshAsset::after_save).
+		std::shared_lock<std::shared_mutex> reading(FileDataStorage::relocation_mutex());
+
 		// The slots' memory must be ready before DirectStorage writes it: the mapping happens on the queue.
 		if (allow_file && g_direct_storage && streamer->pool_mapped() && !resident.mesh->file.empty() && source.file_size != 0)
 		{
@@ -512,6 +522,17 @@ namespace Quanta
 		if (!requests.empty())
 		{
 			PROFILE(L"quanta_direct_storage");
+
+			// plan_load took the offsets earlier: a save of the asset may have moved the pages since. Looked up again and
+			// submitted under the lock, so the reads are queued against the file the offsets belong to (a save closes
+			// DirectStorage's handle only once these are done).
+			std::shared_lock<std::shared_mutex> reading(FileDataStorage::relocation_mutex());
+			for (size_t i = 0; i < requests.size(); i++)
+			{
+				const auto* data = static_cast<const PagePlan*>(direct[i]->backend_data.get());
+				requests[i].file_offset = data->mesh->pages[data->page].file_offset;
+			}
+
 			// One signal and one submit for the batch: every page of it is done together.
 			const HAL::FenceWaiter waiter = RenderSystem::get().device().get_ds_queue().execute(std::span<const HAL::StorageRequest>(requests));
 			for (auto* plan : direct)

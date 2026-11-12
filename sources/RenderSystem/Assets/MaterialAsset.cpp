@@ -45,7 +45,6 @@ void MaterialAsset::update_preview(HAL::Texture::ptr preview)
     }
 
     AssetRenderer::get().draw(self, preview);
-    mark_changed();
 }
 
 namespace materials

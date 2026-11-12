@@ -496,7 +496,12 @@ TEST(TextureStreaming, StreamableAssetSavesAsTiles)
 			storage.start_save();
 			storage.put("asset", std::static_pointer_cast<Asset>(asset));
 			asset->save_partitions(storage);
-			storage.save();
+
+			// What AssetStorage::save does around the replacement.
+			std::unique_lock<std::shared_mutex> moving(FileDataStorage::relocation_mutex());
+			RenderSystem::get().device().get_ds_queue().close_file(path);
+			asset->before_replace();
+			ASSERT_TRUE(storage.save());
 			asset->after_save(storage);
 		}
 

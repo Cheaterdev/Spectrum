@@ -60,6 +60,7 @@
 #include <condition_variable>
 #include <future>
 #include <mutex>
+#include <shared_mutex>
 #include <thread>
 
 // filesystem (formerly stl/filesystem.h)

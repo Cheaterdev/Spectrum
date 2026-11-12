@@ -235,9 +235,8 @@ export{
 		virtual void shutdown() override;
 		virtual void save_partitions(FileDataStorage& storage) override;
 		virtual void load_partitions(FileDataStorage& storage, UniversalContext* context) override;
-		// A loaded mesh keeps its Quanta pages in the asset file, and saving writes over that file: before_save() reads
-		// the pages back while the old file is still there, after_save() points the live meshes at the new one.
-		virtual void before_save() override;
+		// A loaded mesh keeps its Quanta pages in the asset file. Saving copies them from the old file into the new one
+		// (written beside it, then put in its place); after_save() points the live meshes at their new positions.
 		virtual void after_save(FileDataStorage& storage) override;
 		MeshAsset(std::wstring, AssetLoadingContext::ptr = nullptr);
 		virtual ~MeshAsset();
@@ -260,9 +259,6 @@ export{
 		// cut of its Quanta data. Needs `quanta`, so it runs after that is filled (import, or load_partitions).
 		void build_rt_proxies();
 	private:
-		// Copies of `quanta` with their page bytes in memory, only between before_save() and after_save().
-		std::vector<std::shared_ptr<Quanta::Mesh>> saving_quanta;
-
 		HAL::FenceWaiter blas_ready;
 		std::atomic<bool> blas_pending = false;
 		// Structures replaced by build_rt_proxies while their build may still run on the GPU.

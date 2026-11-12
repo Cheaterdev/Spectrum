@@ -38,6 +38,8 @@ export
 		// A save goes to `temp` and takes the file's place in save(), and only if every put() worked.
 		bool failed = false;
 		std::filesystem::path temp;
+
+		bool append(const std::string& partition, const std::string& bytes);
 	public:
 
 		FileDataStorage(std::filesystem::path path);
@@ -100,8 +102,37 @@ export
 
 		bool has(std::string partition);
 
+		// Writes one partition of an existing file again without rewriting the rest: the new copy goes after everything
+		// in the file, followed by a new partition table. Nothing already in the file moves, so offsets into it held
+		// elsewhere (streamed pages) stay right; the old copy is left as unused bytes until the next whole save. Not
+		// with start_save(). False, with the file as it was, if it could not be written.
+		template<class T>
+		bool replace(std::string partition, const T& data)
+		{
+			std::ostringstream bytes(std::ios::binary);
+			try
+			{
+				serialization_oarchive oa(bytes);
+				oa << data;
+			}
+			catch (const std::exception& e)
+			{
+				Log::get() << Log::LEVEL_ERROR << "cannot write " << partition << " of " << path.string() << ": " << e.what() << Log::endl;
+				return false;
+			}
+			return append(partition, bytes.str());
+		}
+
+		const std::filesystem::path& get_path() const { return path; }
+
 		// False if anything went wrong; the file at the path is then what it was before start_save().
 		bool save();
+
+		// Held exclusively from the moment a saved file takes the old one's place until everything that reads ranges of
+		// it has been pointed at the new layout (AssetStorage::save). Code that turns an offset stored in memory into a
+		// read of an asset file holds it shared, from looking the offset up until the read is issued: otherwise it can
+		// read the new file at an offset from the old one.
+		static std::shared_mutex& relocation_mutex();
 	};
 
 }

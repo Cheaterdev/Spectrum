@@ -108,8 +108,5 @@ void BinaryAsset::update_preview(HAL::Texture::ptr preview)
 	MipMapGenerator::get().generate(list->get_compute(), preview->texture_2d());
 	//TextureAssetRenderer::get().render(this, preview, list);
 	list->execute();
-	//
-//   c.generate_mipmaps(preview->get_shader_view());
-	mark_changed();
 }
 

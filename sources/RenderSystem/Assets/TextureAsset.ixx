@@ -92,6 +92,7 @@ export{
 
 		virtual void before_save() override;
 		virtual void save_partitions(FileDataStorage& storage) override;
+		virtual void before_replace() override;
 		virtual void after_save(FileDataStorage& storage) override;
 		virtual void load_partitions(FileDataStorage& storage, UniversalContext* context) override;
 
