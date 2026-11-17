@@ -17,6 +17,107 @@ namespace
     VkDevice                    fault_device      = VK_NULL_HANDLE;
     PFN_vkGetDeviceFaultInfoEXT fn_get_fault_info = nullptr;
     std::atomic_bool            fault_reported    = false;
+    PFN_vkGetQueueCheckpointDataNV fn_get_checkpoints = nullptr;
+
+    struct TrackedBuffer
+    {
+        uint64_t    address = 0;
+        uint64_t    size    = 0;
+        bool        sparse  = false;
+        std::string name;
+    };
+
+    // Kept for writes through a stale address: a buffer freed while the GPU still uses it.
+    constexpr size_t freed_history = 1024;
+
+    std::mutex                                       buffers_mutex;
+    std::unordered_map<const void*, TrackedBuffer>   live_buffers;
+    std::deque<TrackedBuffer>                        freed_buffers;
+
+    std::mutex                                        checkpoint_mutex;
+    std::vector<std::pair<VkQueue, std::string>>      checkpoint_queues;
+    std::deque<std::string>                           checkpoint_labels;   // id -> label; never shrinks
+    std::unordered_map<std::string, uintptr_t>        checkpoint_ids;
+
+    std::string hex(uint64_t v)
+    {
+        std::ostringstream s;
+        s << "0x" << std::hex << v;
+        return s.str();
+    }
+
+    std::string describe(const TrackedBuffer& b)
+    {
+        return "'" + (b.name.empty() ? std::string("<unnamed>") : b.name) + "' [" + hex(b.address) + ", " +
+               hex(b.address + b.size) + ") size " + std::to_string(b.size) + (b.sparse ? ", sparse" : "");
+    }
+
+    // [begin, end) is the fault's address range (reportedAddress at addressPrecision).
+    void log_fault_buffers(uint64_t begin, uint64_t end)
+    {
+        std::lock_guard g(buffers_mutex);
+        bool found = false;
+        const TrackedBuffer* below = nullptr;
+        uint64_t lowest = ~0ull;
+        for (auto& [owner, b] : live_buffers)
+        {
+            if (b.address == 0) continue;
+            lowest = std::min(lowest, b.address);
+            if (b.address < end && b.address + b.size > begin)
+            {
+                found = true;
+                Log::get() << Log::LEVEL_ERROR << "[Vulkan]     in live buffer " << describe(b) << ", offset "
+                           << hex(begin > b.address ? begin - b.address : 0) << Log::endl;
+            }
+            else if (b.address + b.size <= begin && (!below || b.address + b.size > below->address + below->size))
+                below = &b;
+        }
+        for (auto& b : freed_buffers)
+            if (b.address < end && b.address + b.size > begin)
+                Log::get() << Log::LEVEL_ERROR << "[Vulkan]     in recently freed buffer " << describe(b) << ", offset "
+                           << hex(begin > b.address ? begin - b.address : 0) << Log::endl;
+        if (found)
+            return;
+
+        Log::get() << Log::LEVEL_ERROR << "[Vulkan]     no live buffer contains this address" << Log::endl;
+        if (below)
+            Log::get() << Log::LEVEL_ERROR << "[Vulkan]     nearest live buffer below: " << describe(*below) << ", "
+                       << hex(begin - (below->address + below->size)) << " bytes past its end" << Log::endl;
+        if (begin < lowest)
+            Log::get() << Log::LEVEL_ERROR << "[Vulkan]     the address is below every live buffer (lowest " << hex(lowest)
+                       << "): it may be an offset of " << hex(begin) << " from a null (0) base address" << Log::endl;
+    }
+
+    void log_checkpoints()
+    {
+        if (!fn_get_checkpoints)
+        {
+            Log::get() << Log::LEVEL_ERROR << "[Vulkan] no diagnostic checkpoints (VK_NV_device_diagnostic_checkpoints unavailable)" << Log::endl;
+            return;
+        }
+        std::lock_guard g(checkpoint_mutex);
+        for (auto& [queue, name] : checkpoint_queues)
+        {
+            uint32_t count = 0;
+            fn_get_checkpoints(queue, &count, nullptr);
+            std::vector<VkCheckpointDataNV> data(count, VkCheckpointDataNV{ VK_STRUCTURE_TYPE_CHECKPOINT_DATA_NV });
+            fn_get_checkpoints(queue, &count, data.data());
+            Log::get() << Log::LEVEL_ERROR << "[Vulkan] last checkpoints on queue " << name << ": " << count << Log::endl;
+            for (uint32_t i = 0; i < count; i++)
+            {
+                const auto value = reinterpret_cast<uintptr_t>(data[i].pCheckpointMarker);
+                const uintptr_t id = (value >> 1) - 1;
+                const std::string label = value >= 2 && id < checkpoint_labels.size()
+                    ? std::string((value & 1) ? "end " : "begin ") + "'" + checkpoint_labels[id] + "'"
+                    : "marker " + hex(value);
+                // magic_enum cannot name these: the flag values lie outside its enum range.
+                const std::string stage = data[i].stage == VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT    ? "top of pipe"
+                                        : data[i].stage == VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT ? "bottom of pipe"
+                                        : "stage " + hex(data[i].stage);
+                Log::get() << Log::LEVEL_ERROR << "[Vulkan]   " << stage << ": " << label << Log::endl;
+            }
+        }
+    }
 
     void log_device_fault(const char* where)
     {
@@ -58,6 +159,13 @@ namespace
                        << " address 0x" << std::hex << a.reportedAddress
                        << " (range 0x" << (a.reportedAddress & mask) << " +0x" << a.addressPrecision << ")"
                        << std::dec << Log::endl;
+            if (a.addressType != VK_DEVICE_FAULT_ADDRESS_TYPE_INSTRUCTION_POINTER_UNKNOWN_EXT &&
+                a.addressType != VK_DEVICE_FAULT_ADDRESS_TYPE_INSTRUCTION_POINTER_INVALID_EXT &&
+                a.addressType != VK_DEVICE_FAULT_ADDRESS_TYPE_INSTRUCTION_POINTER_FAULT_EXT)
+            {
+                const uint64_t begin = a.reportedAddress & mask;
+                log_fault_buffers(begin, begin + std::max<uint64_t>(a.addressPrecision, 1));
+            }
         }
         for (auto& v : vendors)
             Log::get() << Log::LEVEL_ERROR << "[Vulkan]   vendor: " << v.description
@@ -72,8 +180,57 @@ namespace HAL::API
     {
         if (result != VK_ERROR_DEVICE_LOST) return false;
         if (!fault_reported.exchange(true))
+        {
             log_device_fault(where);
+            log_checkpoints();
+        }
         return true;
+    }
+
+    void track_buffer_address(const void* owner, uint64_t address, uint64_t size, bool sparse, std::string_view name)
+    {
+        std::lock_guard g(buffers_mutex);
+        live_buffers.insert_or_assign(owner, TrackedBuffer{ address, size, sparse, std::string(name) });
+    }
+
+    void name_buffer_address(const void* owner, std::string_view name)
+    {
+        std::lock_guard g(buffers_mutex);
+        if (auto it = live_buffers.find(owner); it != live_buffers.end())
+            it->second.name = name;
+    }
+
+    void untrack_buffer_address(const void* owner)
+    {
+        std::lock_guard g(buffers_mutex);
+        auto it = live_buffers.find(owner);
+        if (it == live_buffers.end())
+            return;
+        freed_buffers.push_back(std::move(it->second));
+        if (freed_buffers.size() > freed_history)
+            freed_buffers.pop_front();
+        live_buffers.erase(it);
+    }
+
+    void track_checkpoint_queue(VkQueue queue, std::string_view name)
+    {
+        std::lock_guard g(checkpoint_mutex);
+        for (auto& [q, n] : checkpoint_queues)
+            if (q == queue)
+            {
+                n += "/" + std::string(name);
+                return;
+            }
+        checkpoint_queues.emplace_back(queue, std::string(name));
+    }
+
+    const void* checkpoint_marker(const std::string& label)
+    {
+        std::lock_guard g(checkpoint_mutex);
+        auto [it, added] = checkpoint_ids.try_emplace(label, checkpoint_labels.size());
+        if (added)
+            checkpoint_labels.push_back(label);
+        return reinterpret_cast<const void*>((it->second + 1) << 1);
     }
 
     // Becomes true at the first VK_ERROR_DEVICE_LOST any submit or wait saw.
@@ -307,6 +464,8 @@ namespace HAL
                 VK_KHR_MAINTENANCE_8_EXTENSION_NAME,
                 // Optional: faulting addresses/vendor info after VK_ERROR_DEVICE_LOST.
                 VK_EXT_DEVICE_FAULT_EXTENSION_NAME,
+                // Optional: the last debug labels each queue reached, after VK_ERROR_DEVICE_LOST.
+                VK_NV_DEVICE_DIAGNOSTIC_CHECKPOINTS_EXTENSION_NAME,
                 // Optional: acceleration structures + inline ray queries (ray_query).
                 VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME,
                 VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME,   // required by acceleration_structure
@@ -586,6 +745,25 @@ namespace HAL
                 fn_get_fault_info = reinterpret_cast<PFN_vkGetDeviceFaultInfoEXT>(
                     vkGetDeviceProcAddr(vk_device, "vkGetDeviceFaultInfoEXT"));
             Log::get() << "[Vulkan] device fault reporting: " << (fn_get_fault_info ? "on" : "unavailable") << Log::endl;
+            Log::get() << "[Vulkan] fault address -> buffer lookup: "
+                       << (fn_get_fault_info ? "on (buffers by device address; images not covered)" : "unavailable (needs VK_EXT_device_fault)")
+                       << Log::endl;
+
+            {
+                std::lock_guard g(checkpoint_mutex);
+                checkpoint_queues.clear();   // a previous device's queues
+            }
+            fn_cmd_set_checkpoint = nullptr;
+            fn_get_checkpoints    = nullptr;
+            if (has_ext(VK_NV_DEVICE_DIAGNOSTIC_CHECKPOINTS_EXTENSION_NAME))
+            {
+                fn_cmd_set_checkpoint = reinterpret_cast<PFN_vkCmdSetCheckpointNV>(vkGetDeviceProcAddr(vk_device, "vkCmdSetCheckpointNV"));
+                fn_get_checkpoints = reinterpret_cast<PFN_vkGetQueueCheckpointDataNV>(vkGetDeviceProcAddr(vk_device, "vkGetQueueCheckpointDataNV"));
+                if (!fn_get_checkpoints)
+                    fn_cmd_set_checkpoint = nullptr;
+            }
+            Log::get() << "[Vulkan] diagnostic checkpoints at debug labels: "
+                       << (fn_cmd_set_checkpoint ? "on (VK_NV_device_diagnostic_checkpoints)" : "unavailable") << Log::endl;
 
             if (ray_query_ok)
             {

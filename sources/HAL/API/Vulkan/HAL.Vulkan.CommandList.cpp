@@ -100,6 +100,7 @@ namespace HAL::API
         VkCommandBufferBeginInfo info{ VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
         info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
         vkBeginCommandBuffer(vk_cmd, &info);
+        checkpoint_stack.clear();
 
         // The barrier compiler (compile_transitions) is written against D3D12's
         // ExecuteCommandLists scope: at a group's first touch it skips a barrier
@@ -1350,6 +1351,12 @@ namespace HAL::API
         std::string label(name.begin(), name.end());
         auto* dev = static_cast<API::Device*>(m_device);
         if (!dev) return;
+        if (dev->fn_cmd_set_checkpoint)
+        {
+            const void* marker = checkpoint_marker(label);
+            dev->fn_cmd_set_checkpoint(vk_cmd, marker);
+            checkpoint_stack.push_back(marker);
+        }
         auto fn = reinterpret_cast<PFN_vkCmdBeginDebugUtilsLabelEXT>(
             vkGetDeviceProcAddr(dev->get_native_device(), "vkCmdBeginDebugUtilsLabelEXT"));
         if (!fn) return;
@@ -1363,6 +1370,11 @@ namespace HAL::API
         if (vk_cmd == VK_NULL_HANDLE) return;
         auto* dev = static_cast<API::Device*>(m_device);
         if (!dev) return;
+        if (dev->fn_cmd_set_checkpoint && !checkpoint_stack.empty())
+        {
+            dev->fn_cmd_set_checkpoint(vk_cmd, reinterpret_cast<const void*>(reinterpret_cast<uintptr_t>(checkpoint_stack.back()) | 1));
+            checkpoint_stack.pop_back();
+        }
         auto fn = reinterpret_cast<PFN_vkCmdEndDebugUtilsLabelEXT>(
             vkGetDeviceProcAddr(dev->get_native_device(), "vkCmdEndDebugUtilsLabelEXT"));
         if (fn) fn(vk_cmd);

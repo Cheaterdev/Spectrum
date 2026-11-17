@@ -23,6 +23,8 @@ export namespace HAL
             friend class HAL::Queue;
 
             VkCommandBuffer vk_cmd      = VK_NULL_HANDLE;
+            // Begin markers of the open debug labels, so end_event() can set the matching end checkpoint.
+            std::vector<const void*> checkpoint_stack;
             // The pool that allocated vk_cmd.  Tracked so begin() can detect when
             // compile() rotates to a different CommandAllocator: in that case we must
             // allocate a fresh buffer from the new pool rather than calling

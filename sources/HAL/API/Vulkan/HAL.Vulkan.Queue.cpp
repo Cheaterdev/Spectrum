@@ -240,6 +240,7 @@ namespace HAL
 
             vkGetDeviceQueue(vk_device, family_idx, api_dev.get_queue_index(static_cast<int>(type)), &vk_queue);
             vk_queue_mutex = &api_dev.get_queue_mutex(static_cast<int>(type));
+            track_checkpoint_queue(vk_queue, magic_enum::enum_name(type));
 
             const int bind_type = api_dev.queue_supports_sparse(static_cast<int>(type))
                 ? static_cast<int>(type) : static_cast<int>(HAL::CommandListType::DIRECT);

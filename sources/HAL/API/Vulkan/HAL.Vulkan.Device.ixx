@@ -33,6 +33,19 @@ export namespace HAL
         // present, acquire and semaphore wait/query.
         bool check_device_lost(VkResult result, const char* where);
 
+        // Live buffers by device address (and the last few freed ones), so the device-loss report can name the
+        // buffer a faulting address falls in. Only that report reads them. `owner` is the key; images have no
+        // device address and are not tracked.
+        void track_buffer_address(const void* owner, uint64_t address, uint64_t size, bool sparse, std::string_view name);
+        void name_buffer_address(const void* owner, std::string_view name);
+        void untrack_buffer_address(const void* owner);
+
+        // VK_NV_device_diagnostic_checkpoints: the queues whose last checkpoints the device-loss report prints, and
+        // the marker for a debug label. A marker is an interned label id, not a pointer (the driver never
+        // dereferences it); the begin marker is even, its end marker is the same value | 1.
+        void track_checkpoint_queue(VkQueue queue, std::string_view name);
+        const void* checkpoint_marker(const std::string& label);
+
         class Device
         {
             std::map<ResourceDesc, ResourceAllocationInfo> alloc_info;
@@ -184,6 +197,9 @@ export namespace HAL
             PFN_vkCmdTraceRaysKHR                    fn_cmd_trace_rays       = nullptr;
             PFN_vkCmdTraceRaysIndirect2KHR           fn_cmd_trace_rays_indirect2 = nullptr;   // null without ray_tracing_maintenance1
             uint32_t rt_max_recursion_depth = 0;
+
+            // VK_NV_device_diagnostic_checkpoints; null where the device lacks it.
+            PFN_vkCmdSetCheckpointNV fn_cmd_set_checkpoint = nullptr;
 
             // D3D12 names an acceleration structure by the GPU address of its
             // storage; Vulkan needs an object over that storage. One object per

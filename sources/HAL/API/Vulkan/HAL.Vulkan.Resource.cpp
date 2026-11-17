@@ -117,6 +117,8 @@ namespace HAL
                     address     = api_heap->get_address() + placement.offset;
                     vk_buffer   = api_heap->get_vk_buffer();
                     vk_buffer_offset = placement.offset;
+                    if (_desc.is_buffer() && address)
+                        track_buffer_address(THIS, address, _desc.as_buffer().SizeInBytes, false, THIS->name);
                     return;
                 }
                 // Case B: DEFAULT heap — bound into the heap's memory below
@@ -218,6 +220,8 @@ namespace HAL
                     VkBufferDeviceAddressInfo dai{ VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO };
                     dai.buffer = vk_buffer;
                     address = vkGetBufferDeviceAddress(device.get_native_device(), &dai);
+                    if (address)
+                        track_buffer_address(THIS, address, bci.size, sparse, THIS->name);
                 }
             }
             else if (_desc.is_texture())
@@ -453,6 +457,8 @@ namespace HAL
     {
         if (!this->name.empty() && name.empty()) return;
         this->name = name;
+        if (get_address())
+            API::name_buffer_address(this, this->name);
         if (!m_device) return;
         auto& api_dev = static_cast<API::Device&>(*m_device);
         VkDevice vk_dev = api_dev.get_native_device();
@@ -587,6 +593,8 @@ namespace HAL
 
     Resource::~Resource()
     {
+        if (get_address())
+            API::untrack_buffer_address(this);
         alloc_handle.Free();
 
         if (vma_alloc || sparse || placed)
