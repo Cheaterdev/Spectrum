@@ -48,10 +48,19 @@ namespace HAL
 
 		for (uint i = 0; i < count; i++)
 		{
-			uint64 offset = range.subresource_offsets[i];
-			tasks.push_back(list->get_copy().read_texture(this, first_subresource + i, [&data, offset](std::span<std::byte> memory, texture_layout layout)
+			const auto s = range.subresources[i];
+			// The readback rows are the backend's copy layout (D3D12: this same footprint; Vulkan: tight rows), so
+			// the rows are moved one by one into the file layout.
+			tasks.push_back(list->get_copy().read_texture(this, first_subresource + i, [&data, s](std::span<std::byte> memory, texture_layout layout)
 				{
-					std::memcpy(data.data() + offset, memory.data(), memory.size());
+					ASSERT(layout.rows_count == s.rows);
+					for (uint z = 0; z < s.depth; z++)
+						for (uint y = 0; y < s.rows; y++)
+						{
+							const uint64 src = uint64(z) * layout.slice_stride + uint64(y) * layout.row_stride;
+							ASSERT(src + s.row_size <= memory.size());
+							std::memcpy(data.data() + s.offset + z * s.slice_pitch + uint64(y) * s.row_pitch, memory.data() + src, s.row_size);
+						}
 				}));
 		}
 

@@ -1,0 +1,5 @@
+gdeflate provides a CPU GDeflate codec (NVIDIA's libdeflate fork) and the
+DirectStorage tile-stream header from Microsoft's GDeflate reference:
+
+    // headers: <gdeflate/libdeflate.h>, <gdeflate/TileStream.h>
+    // library: libgdeflate.a (static)

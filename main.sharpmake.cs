@@ -80,7 +80,8 @@ namespace Spectrum
 
         // Ports only the Android build links directly (Windows has WIC/DirectXTex for these jobs).
         // libpng: PNG encode/decode for the golden-image tests (sources/Platform/Android/png_bridge.cpp).
-        static readonly string[] AndroidOnlyPorts = { "libpng" };
+        // gdeflate: the CPU GDeflate codec (sources/HAL/Android/HAL.GDeflate.cpp), DirectStorage's on Windows.
+        static readonly string[] AndroidOnlyPorts = { "libpng", "gdeflate" };
 
         static readonly JsonSerializerOptions Indented = new JsonSerializerOptions
         {

@@ -875,13 +875,26 @@ void AssetStorage::save_preview()
 	if (!std::filesystem::exists(file_path))
 		return;
 
-	// DirectStorage keeps the files it reads open, which stops this one being written. It lets go once its reads in
-	// flight are done, and opens the file again on its next read.
-	if (RenderSystem::is_good())
-		RenderSystem::get().device().get_ds_queue().close_file(file_path);
-
+	// The new file is built beside the old one (a copy of it with the preview added), with nothing held: that is the
+	// slow part, and streamed reads of the old file go on meanwhile.
 	FileDataStorage storage(file_path);
-	if (!storage.replace("editor", *editor.get()))
+	bool written = storage.stage("editor", *editor.get());
+	if (written)
+	{
+		// Nothing in the file moves, so no offset held elsewhere changes; but the file itself is replaced, and no read
+		// of it may be under way while it is.
+		std::unique_lock<std::shared_mutex> moving(FileDataStorage::relocation_mutex());
+
+		// DirectStorage keeps the files it reads open, which stops this one being replaced. It lets go once its reads in
+		// flight are done, and opens the file again on its next read.
+		if (RenderSystem::is_good())
+			RenderSystem::get().device().get_ds_queue().close_file(file_path);
+		if (asset)
+			asset->before_replace();
+
+		written = storage.commit();
+	}
+	if (!written)
 		mark_changed();   // the next save writes it with the rest
 
 	std::lock_guard<std::mutex> s(stream_mutex);

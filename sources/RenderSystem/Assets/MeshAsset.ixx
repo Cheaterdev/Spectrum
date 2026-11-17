@@ -242,6 +242,8 @@ export{
 		virtual ~MeshAsset();
 		std::shared_ptr<MeshAssetInstance> create_instance();
 		virtual void try_register();
+		// Until it is in its file an imported mesh keeps every Quanta page in memory and cannot stream them.
+		virtual bool save_when_added() const override { return true; }
 
 		virtual Asset_Type get_type();
 		virtual void update_preview(HAL::Texture::ptr preview);

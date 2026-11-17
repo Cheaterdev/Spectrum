@@ -320,6 +320,22 @@ Whichever is chosen:
   file and upload zeros of `uncompressed_size`. Never upload compressed bytes as if they were raw.
 - `StorageRequest::Tiles` stays unsupported on Vulkan (`ASSERT(false)`), since streamed textures are off there.
 
+**Decided 2026-11-16: (b), CPU decode, no GPU decode. Written, not yet built.**
+- The three `HAL::gdeflate_*` functions are defined per platform, `extern "C++"` in `HAL.Device.ixx`:
+  `HAL/Windows/HAL.GDeflate.cpp` (the DirectStorage codec, shared by D3D12 and Vulkan; it needs no device) and
+  `HAL/Android/HAL.GDeflate.cpp` (NVIDIA's libdeflate fork from Microsoft's reference, overlay port
+  `custom-overlay/gdeflate`, MIT and Apache 2.0).
+- The Vulkan stand-in expands a `compressed` request before the upload. It is still synchronous: the batching half
+  of this task is open.
+- Vulkan's `Device::compress` still writes raw bytes; readers tell the two apart by size, so both backends read both.
+- Texture data has one file layout on every backend since 2026-11-17: D3D12's copyable footprints (256-byte row
+  pitch, 512-byte subresource placement), computed without a device by `HAL::copyable_footprints` and pinned by the
+  test `Core.HAL.Texture_FileLayoutPinned`. Before that Vulkan wrote tight rows, so a D3D12 file loaded garbled.
+  Texture data written by an older Vulkan build (`workdir/cache/vulkan/`, assets saved from Vulkan, the Android
+  content) must be regenerated.
+- Not checked on a device: a Windows-written file decoding on the phone. The Android decoder checks tile ranges against
+  the input but, like the reference, can read past the end of the source on corrupt data inside a tile.
+
 **Tests:** `test_vulkan.exe` Quanta and scene-parity tests (the Vulkan test exe has its own name, see memory note
 "FrameGraph tests").
 

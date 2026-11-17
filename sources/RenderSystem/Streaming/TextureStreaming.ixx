@@ -147,6 +147,31 @@ export namespace TextureStreaming
 				}
 				file->seekg(static_cast<std::streamoff>(at), std::ios::beg);
 			}
+			else if (tile_bytes.empty() && packed_bytes.empty() && !path.empty())
+			{
+				// Loaded from a file and not read into memory: the tiles are copied from that file a piece at a time. It
+				// is still there while the new one is written (a save goes to a temporary file first).
+				std::vector<uint8_t> piece;
+				auto copy = [&](uint64_t offset, uint64_t size)
+				{
+					constexpr uint64_t PieceBytes = 16 * TileBytes;
+					while (size)
+					{
+						const uint64_t count = std::min<uint64_t>(size, PieceBytes);
+						piece.resize(count);
+						if (!read(offset, piece.data(), piece.size()))
+							throw std::runtime_error("texture tiles cannot be read back from " + path.string());
+						ar& NVP(cereal::binary_data(piece.data(), piece.size()));
+						offset += count;
+						size -= count;
+					}
+				};
+
+				for (const Mip& mip : mips)
+					copy(mip.offset, uint64_t(mip.tiles_x) * mip.tiles_y * TileBytes);
+				for (const Packed& p : packed)
+					copy(p.offset, p.size);
+			}
 			else
 			{
 				for (size_t i = 0; i < mips.size(); i++)
@@ -319,6 +344,14 @@ export namespace TextureStreaming
 		struct TileBatch
 		{
 			std::vector<HAL::StorageRequest> requests;   // their resources keep the textures alive for the map and the reads
+			// Which tile each request reads: its place in the file is looked up again when the batch is submitted, a
+			// save of the asset may have moved it since the plan was made.
+			struct Source
+			{
+				std::shared_ptr<TileFile> file;
+				uint32_t mip, x, y;
+			};
+			std::vector<Source> sources;
 			HAL::FenceWaiter mapped;
 			HAL::FenceWaiter done;
 			bool requested = false;
@@ -334,6 +367,7 @@ export namespace TextureStreaming
 			bool direct = false;
 			HAL::update_tiling_info map;
 			HAL::StorageRequest request;
+			uint32_t tile_mip = 0, tile_x = 0, tile_y = 0;   // of `request`, in `file`
 
 			// A root of a file texture: start_loads reads the tile into `op`, finish_loads shows it.
 			std::shared_ptr<TileFile> file;

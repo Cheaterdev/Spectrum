@@ -196,6 +196,40 @@ namespace HAL
 	{
 
 	}
+
+	texture_range_layout copyable_footprints(const TextureDesc& desc, uint first_subresource, uint count)
+	{
+		// D3D12_TEXTURE_DATA_PITCH_ALIGNMENT and D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT
+		constexpr uint64 pitch_alignment = 256;
+		constexpr uint64 placement_alignment = 512;
+
+		texture_range_layout result;
+		result.subresources.resize(count);
+		uint64 offset = 0;
+		uint64 end = 0;
+		for (uint i = 0; i < count; i++)
+		{
+			const uint mip = desc.get_mip(first_subresource + i);
+			const uint w = std::max(1u, desc.Dimensions.x >> mip);
+			const uint h = desc.is1D() ? 1u : std::max(1u, desc.Dimensions.y >> mip);
+			const uint d = desc.is3D() ? std::max(1u, desc.Dimensions.z >> mip) : 1u;
+			// Rounds a block-compressed mip smaller than a block up to one block, as the footprints do.
+			const SurfaceInfo info = desc.Format.surface_info({ w, h });
+
+			auto& s = result.subresources[i];
+			s.offset = offset;
+			s.row_size = info.rowBytes;
+			s.row_pitch = static_cast<uint>(Math::AlignUp(static_cast<uint64>(info.rowBytes), pitch_alignment));
+			s.rows = info.numRows;
+			s.depth = d;
+			s.slice_pitch = uint64(s.row_pitch) * s.rows;
+
+			end = offset + s.slice_pitch * (s.depth - 1) + uint64(s.row_pitch) * (s.rows - 1) + s.row_size;
+			offset = Math::AlignUp(end, placement_alignment);
+		}
+		result.total_size = end;
+		return result;
+	}
 	namespace ResourceStates {
 
 		const  ResourceState INDEX_BUFFER = { BarrierSync::INDEX_INPUT, BarrierAccess::INDEX_BUFFER, TextureLayout::UNDEFINED };

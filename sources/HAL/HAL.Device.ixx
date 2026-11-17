@@ -161,11 +161,12 @@ export namespace HAL
 		void free_ca(std::shared_ptr<CommandAllocator>);
 	};
 
-	// GDeflate, the format DirectStorage decompresses on the GPU. They need no device. Where the backend has no such
-	// format, gdeflate_supported() is false, gdeflate_compress() returns nothing and gdeflate_decompress() fails.
-	bool gdeflate_supported();
-	std::vector<uint8_t> gdeflate_compress(const uint8_t* data, size_t size);
-	bool gdeflate_decompress(const uint8_t* source, size_t source_size, uint8_t* dest, size_t dest_size);
+	// GDeflate, the format DirectStorage decompresses. They need no device and are defined per platform (a plain .cpp in
+	// the platform's folder, extern "C++" so it links against a non-module definition). Where the platform has no
+	// codec, gdeflate_supported() is false, gdeflate_compress() returns nothing and gdeflate_decompress() fails.
+	extern "C++" bool gdeflate_supported();
+	extern "C++" std::vector<uint8_t> gdeflate_compress(const uint8_t* data, size_t size);
+	extern "C++" bool gdeflate_decompress(const uint8_t* source, size_t source_size, uint8_t* dest, size_t dest_size);
 
 
 

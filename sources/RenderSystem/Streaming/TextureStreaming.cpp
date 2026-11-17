@@ -642,6 +642,10 @@ namespace TextureStreaming
 
 		auto data = std::make_shared<TilePlan>();
 		data->direct = true;
+		data->file = streamed.file;
+		data->tile_mip = op.mip;
+		data->tile_x = op.x;
+		data->tile_y = op.y;
 
 		HAL::StorageRequest& request = data->request;
 		request.resource = streamed.texture->resource;
@@ -669,6 +673,12 @@ namespace TextureStreaming
 		{
 			if (!mapped.is_completed())
 				return false;
+
+			// Looked up again and submitted under the lock, so each read is queued against the file its offset belongs
+			// to (a save closes DirectStorage's handle only once these are done).
+			std::shared_lock<std::shared_mutex> reading(FileDataStorage::relocation_mutex());
+			for (size_t i = 0; i < requests.size(); i++)
+				sources[i].file->locate_tile(sources[i].mip, sources[i].x, sources[i].y, requests[i].file, requests[i].file_offset);
 
 			done = RenderSystem::get().device().get_ds_queue().execute(std::span<const HAL::StorageRequest>(requests));
 			requested = true;
@@ -766,6 +776,7 @@ namespace TextureStreaming
 				}
 				list->update_tilings(std::move(data->map));
 				batch->requests.push_back(std::move(data->request));
+				batch->sources.push_back({ data->file, data->tile_mip, data->tile_x, data->tile_y });
 				plan.poll = [batch]() { return batch->poll(); };
 				plan.backend_data.reset();   // the batch holds what the map and the read need now
 				continue;

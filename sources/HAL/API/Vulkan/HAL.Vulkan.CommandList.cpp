@@ -1205,6 +1205,14 @@ namespace HAL::API
         VkBufferImageCopy region{};
         region.bufferOffset      = static_cast<const API::Resource&>(*address.resource).get_vk_buffer_offset() + address.resource_offset;
         region.bufferRowLength   = (layout.row_stride / bpt);
+        if (layout.format.is_compressed())
+        {
+            // In texels, but a whole number of 4x4 blocks: rowBytes / width is no per-texel size for a mip whose width
+            // is not a multiple of 4 (a 5-wide BC1 mip gave 85 texels, a 176-byte pitch for a 256-byte one).
+            const uint blocks_wide = std::max(1u, ((uint)box.x + 3) / 4);
+            const uint block_bytes = sinfo.rowBytes / blocks_wide;
+            region.bufferRowLength = (layout.row_stride / block_bytes) * 4;
+        }
         region.bufferImageHeight = 0; // tight vertically: rows = imageExtent.height
         region.imageSubresource  = { aspect,
                                      sub_resource % mips, sub_resource / mips, 1 };

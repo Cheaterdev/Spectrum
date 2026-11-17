@@ -110,22 +110,8 @@ namespace HAL
 
     texture_range_layout Device::get_texture_range_layout(const ResourceDesc& rdesc, UINT first_subresource, UINT count)
     {
-        // No GPU-decompression placement constraint on this backend (Vulkan's
-        // compress() is a no-op -- see below), so subresources are packed
-        // contiguously here rather than mirroring D3D12's GetCopyableFootprints1
-        // alignment. Save and load both go through this same function, so the
-        // exact packing scheme only has to be self-consistent, not bit-exact
-        // with the other backend.
-        texture_range_layout result;
-        result.subresource_offsets.resize(count);
-        uint64 offset = 0;
-        for (UINT i = 0; i < count; i++)
-        {
-            result.subresource_offsets[i] = offset;
-            offset += Math::AlignUp(get_texture_layout(rdesc, first_subresource + i).size, 256ull);
-        }
-        result.total_size = offset;
-        return result;
+        // The D3D12 footprints, not this backend's tight copy rows: the layout is the file format (see texture_range_layout).
+        return copyable_footprints(rdesc.as_texture(), first_subresource, count);
     }
 
     texture_layout Device::get_texture_layout(const ResourceDesc& rdesc, UINT sub_resource, ivec3 box)
@@ -146,10 +132,6 @@ namespace HAL
         dest.assign(source.data(), source.data() + source.size());
         return dest;
     }
-
-    bool gdeflate_supported() { return false; }
-    std::vector<uint8_t> gdeflate_compress(const uint8_t*, size_t) { return {}; }
-    bool gdeflate_decompress(const uint8_t*, size_t, uint8_t*, size_t) { return false; }
 
     HAL::DeviceProperties Device::probe(HAL::Adapter::ptr adapter)
     {

@@ -230,13 +230,41 @@ export namespace Quanta
 				std::vector<BlobEntry> entries;
 				{
 					PROFILE(L"quanta_partition_plan");
-					plans.reserve(meshes.size());
-					entries.reserve(meshes.size());
-					for (auto& mesh : meshes)
+					// Planning compresses the pages a mesh still has in memory (every page of a mesh just imported), one
+					// 64 KB tile each: spread over the pool a slice of meshes at a time. Nothing is shared between meshes.
+					constexpr size_t Slice = 16;
+					plans.resize(meshes.size());
+					std::vector<std::future<void>> tasks;
+					tasks.reserve(meshes.size() / Slice + 1);
+					for (size_t first = 0; first < meshes.size(); first += Slice)
+						tasks.emplace_back(thread_pool::get().enqueue(TaskOptions{ TaskPriority::HIGH }, [this, &plans, first]()
+						{
+							PROFILE(L"quanta_partition_plan_slice");
+							const size_t last = std::min(meshes.size(), first + Slice);
+							for (size_t i = first; i < last; i++)
+								plans[i] = Quanta::plan_blob(*meshes[i]);
+						}));
+
+					// Every task is waited for before a failure is passed on: they write into `plans`.
+					std::exception_ptr failure;
+					for (auto& task : tasks)
 					{
-						const Quanta::BlobPlan& plan = plans.emplace_back(Quanta::plan_blob(*mesh));
-						entries.push_back({ plan.size, plan.metadata.size() });
+						try
+						{
+							task.get();
+						}
+						catch (...)
+						{
+							if (!failure)
+								failure = std::current_exception();
+						}
 					}
+					if (failure)
+						std::rethrow_exception(failure);
+
+					entries.reserve(meshes.size());
+					for (const Quanta::BlobPlan& plan : plans)
+						entries.push_back({ plan.size, plan.metadata.size() });
 				}
 
 				if (!entries.empty())

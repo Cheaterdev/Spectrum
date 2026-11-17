@@ -148,12 +148,8 @@ namespace HAL
 
     HAL::FenceWaiter DirectStorageQueue::execute(StorageRequest srequest)
     {
-        // Vulkan has no DirectStorage — read the cache file and upload via a
-        // staging-buffer command list.  The binary data was written by
-        // TextureResource::read_range with each subresource's no-box
-        // get_texture_layout; the same layouts are used here so the source row
-        // strides match what was stored.  update_texture() handles the mismatch
-        // between that stride and the 256-byte-aligned upload stride internally.
+        // Vulkan has no DirectStorage — read the file and upload via a
+        // staging-buffer command list.
 
         std::ifstream file(srequest.file, std::ios::binary);
         if (!file.is_open())
@@ -165,41 +161,57 @@ namespace HAL
         if (!file)
             return signal();
 
-        // Vulkan compress() is a no-op, so the file data is always uncompressed.
-        // (srequest.compressed will be false; nothing to decompress.)
+        // A file written by Vulkan is raw (compress() is a no-op), one written by D3D12 holds GDeflate data.
+        if (srequest.compressed)
+        {
+            PROFILE(L"gdeflate_decode");
+            std::vector<std::byte> expanded(srequest.uncompressed_size);
+            if (!HAL::gdeflate_decompress(reinterpret_cast<const uint8_t*>(data.data()), data.size(),
+                                          reinterpret_cast<uint8_t*>(expanded.data()), expanded.size()))
+            {
+                Log::get() << Log::LEVEL_ERROR << "[Vulkan] cannot GDeflate-decode " << srequest.file.string() << Log::endl;
+                return signal();
+            }
+            data = std::move(expanded);
+        }
 
         auto list = device.get_upload_list();
 
         std::visit(overloaded{
             [&](const StorageRequest::Buffer& buffer)
             {
-                // Raw bytes, never compressed here; copied through a staging buffer into the range
+                // Raw or already expanded bytes; copied through a staging buffer into the range
                 // the request names.
                 list->get_copy().update_buffer(srequest.resource.get(), buffer.offset,
                     reinterpret_cast<const char*>(data.data()), data.size());
             },
             [&](const StorageRequest::Texture& texture)
             {
-                // One request carries `count` subresources (a whole mip chain),
-                // packed by get_texture_range_layout as TextureResource::read_range
-                // saved them; each keeps its own no-box layout's row stride.
+                // One request carries `count` subresources (a whole mip chain) in the footprint layout of
+                // get_texture_range_layout, the same layout a D3D12 build writes.
                 const auto& desc  = srequest.resource->get_desc();
                 const auto& tdesc = desc.as_texture();
                 const auto  range = device.get_texture_range_layout(desc, texture.subresource, texture.count);
+                if (data.size() < range.total_size)
+                {
+                    Log::get() << Log::LEVEL_ERROR << "[Vulkan] texture data in " << srequest.file.string()
+                               << " is shorter than its layout" << Log::endl;
+                    return;
+                }
                 for (uint i = 0; i < texture.count; ++i)
                 {
                     const uint sub = texture.subresource + i;
-                    auto save_layout = device.get_texture_layout(desc, sub);
-                    auto box = ivec3(tdesc.get_size(tdesc.get_mip(sub)));
+                    const auto& s = range.subresources[i];
+                    auto box = ivec3(tdesc.get_size(sub));
 
                     list->get_copy().update_texture(
                         srequest.resource.get(),
                         ivec3(0, 0, 0),
                         box,
                         sub,
-                        reinterpret_cast<const char*>(data.data() + range.subresource_offsets[i]),
-                        save_layout.row_stride,
-                        save_layout.slice_stride);
+                        reinterpret_cast<const char*>(data.data() + s.offset),
+                        s.row_pitch,
+                        static_cast<UINT>(s.slice_pitch));
                 }
             },
             [](auto) { ASSERT(false); std::unreachable(); }

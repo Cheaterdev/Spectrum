@@ -41,9 +41,17 @@ namespace HAL
 
         texture_range_layout result;
         result.total_size = totalSize;
-        result.subresource_offsets.resize(count);
+        result.subresources.resize(count);
         for (UINT i = 0; i < count; i++)
-            result.subresource_offsets[i] = footprints[i].Offset;
+        {
+            auto& s = result.subresources[i];
+            s.offset = footprints[i].Offset;
+            s.row_pitch = footprints[i].Footprint.RowPitch;
+            s.row_size = static_cast<uint>(rowSizes[i]);
+            s.rows = numRows[i];
+            s.depth = footprints[i].Footprint.Depth;
+            s.slice_pitch = uint64(s.row_pitch) * s.rows;
+        }
 
         return result;
     }
@@ -76,8 +84,12 @@ namespace HAL
 
     std::vector<std::byte> Device::compress(std::span<std::byte> source)
     {
+        // The codec is not thread safe (dstorage.h), and two assets can be saved at once. It spreads one call over
+        // every core itself, so taking turns costs nothing.
+        static std::mutex codec_mutex;
+        std::lock_guard<std::mutex> g(codec_mutex);
+
         std::vector<std::byte> dest;
-        dest.assign(source.data(), source.data() + source.size());
 
         size_t maxSize = g_bufferCompression->CompressBufferBound(static_cast<uint32_t>(source.size()));
 
@@ -96,48 +108,6 @@ namespace HAL
         TEST(*this, compressionResult);
         dest.resize(actualCompressedSize);
         return dest;
-    }
-
-    namespace
-    {
-        // The codec is thread safe; one is shared by everything that compresses or decompresses outside a device.
-        IDStorageCompressionCodec* gdeflate_codec()
-        {
-            static ComPtr<IDStorageCompressionCodec> codec = []() {
-                ComPtr<IDStorageCompressionCodec> created;
-                if (FAILED(DStorageCreateCompressionCodec(DSTORAGE_COMPRESSION_FORMAT_GDEFLATE, 0, IID_PPV_ARGS(&created))))
-                    created.Reset();
-                return created;
-            }();
-            return codec.Get();
-        }
-    }
-
-    bool gdeflate_supported() { return gdeflate_codec() != nullptr; }
-
-    std::vector<uint8_t> gdeflate_compress(const uint8_t* data, size_t size)
-    {
-        auto* codec = gdeflate_codec();
-        if (!codec)
-            return {};
-
-        std::vector<uint8_t> out(codec->CompressBufferBound(static_cast<uint32_t>(size)));
-        size_t compressed = 0;
-        if (FAILED(codec->CompressBuffer(data, static_cast<uint32_t>(size), DSTORAGE_COMPRESSION_BEST_RATIO,
-                                         out.data(), static_cast<uint32_t>(out.size()), &compressed)))
-            return {};
-        out.resize(compressed);
-        return out;
-    }
-
-    bool gdeflate_decompress(const uint8_t* source, size_t source_size, uint8_t* dest, size_t dest_size)
-    {
-        auto* codec = gdeflate_codec();
-        if (!codec)
-            return false;
-
-        size_t written = 0;
-        return SUCCEEDED(codec->DecompressBuffer(source, source_size, dest, dest_size, &written)) && written == dest_size;
     }
 
     namespace API

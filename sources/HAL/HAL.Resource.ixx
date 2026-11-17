@@ -28,18 +28,57 @@ public:
 		std::vector<std::byte> binary_data;
 		uint64 size;
 
+		// Instead of binary_data: `size` bytes that a file already holds in stored form, copied across as they are. A
+		// resource saved again unchanged is then neither read back from the GPU nor compressed again.
+		std::filesystem::path source;
+		uint64 source_offset = 0;
+
+		// Where the bytes start in the file being written, when that is a FileDataStorage (the same position a load of
+		// that file records as load::file_offset).
+		uint64 written_at = 0;
+		bool written_to_storage = false;
 
 		save(std::span<std::byte> uncompressed, HAL::Device& device)
 		{
 			binary_data = device.compress(uncompressed);
 			size = binary_data.size();
 		}
+
+		save(std::filesystem::path file, uint64 offset, uint64 stored_size) : size(stored_size), source(std::move(file)), source_offset(offset)
+		{
+		}
+
 		SERIALIZE_PRETTY(){}
 		SERIALIZE()
 		{
 
 			ar& size;
-			ar& NVP(cereal::binary_data(binary_data.data(), binary_data.size()));
+
+			if (FileDataStorage* storage = FileDataStorage::writing())
+			{
+				written_at = storage->tell();
+				written_to_storage = true;
+			}
+
+			if (source.empty())
+			{
+				ar& NVP(cereal::binary_data(binary_data.data(), binary_data.size()));
+				return;
+			}
+
+			std::ifstream file(source, std::ios::binary);
+			file.seekg(static_cast<std::streamoff>(source_offset));
+
+			std::vector<char> piece(static_cast<size_t>(std::min<uint64>(size, 1024 * 1024)));
+			for (uint64 left = size; left;)
+			{
+				const size_t count = static_cast<size_t>(std::min<uint64>(left, piece.size()));
+				file.read(piece.data(), static_cast<std::streamsize>(count));
+				if (!file)
+					throw std::runtime_error("stored resource bytes cannot be read back from " + source.string());
+				ar& NVP(cereal::binary_data(piece.data(), count));
+				left -= count;
+			}
 		}
 
 	};
@@ -112,6 +151,12 @@ public:
 	}
 
 
+	// Bytes another file already stores for this range (see save::source).
+	GPUBinaryData(Buffer desc, std::filesystem::path file, uint64 file_offset, uint64 stored_size, uint64 uncompressed) requires(!is_load)
+		: desc(desc), operation(std::move(file), file_offset, stored_size), uncompressed_size(uncompressed)
+	{
+	}
+
 	GPUBinaryData(Texture desc, std::span<std::byte> binary_data, HAL::Device& device) requires(!is_load)
 		: desc(desc), operation(binary_data, device), uncompressed_size(binary_data.size_bytes())
 	{
@@ -159,6 +204,13 @@ export{
 			Device& get_device() const { ASSERT(m_device); return *m_device; }
 
 			FenceWaiter load_waiter;
+
+			// Moves whenever a write to the resource is recorded on a command list, or a file is loaded into it. Whoever
+			// keeps a copy of the contents somewhere else (Buffer: the chunks in the asset file it was loaded from)
+			// compares it to know the copy is still what the resource holds.
+			mutable std::atomic<uint64> contents_version = 0;
+			void note_write() const { contents_version.fetch_add(1, std::memory_order_relaxed); }
+
 			bool debug = false;
 			bool debug_transitions = false;
 			bool frame_graph_managed = false;

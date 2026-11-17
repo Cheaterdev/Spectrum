@@ -26,12 +26,35 @@ namespace HAL
 
 	std::vector<std::byte>  Buffer::read()
 	{
+		return read(0, get_size());
+	}
+
+	bool Buffer::stored_chunks_usable(uint64 total) const
+	{
+		// A buffer the CPU can write straight into (upload heap) changes without any command list seeing it.
+		if (stored_chunks.empty() || heap_type != HeapType::DEFAULT || stored_version != contents_version.load())
+			return false;
+
+		uint64 covered = 0;
+		for (const StoredChunk& chunk : stored_chunks)
+		{
+			std::error_code ec;
+			const uint64 file_size = std::filesystem::file_size(chunk.file, ec);
+			if (ec || chunk.file_offset + chunk.stored_size > file_size || chunk.offset != covered)
+				return false;
+			covered += chunk.size;
+		}
+		return covered == total;
+	}
+
+	std::vector<std::byte>  Buffer::read(uint64 offset, uint64 size)
+	{
 		std::vector<std::byte> data;
 
 		auto list = (get_device().get_upload_list());
 		std::future<bool> task;
 		int t = 0;
-		task = list->get_copy().read_buffer(this, 0, get_size(), [&](std::span<std::byte> memory)
+		task = list->get_copy().read_buffer(this, offset, size, [&](std::span<std::byte> memory)
 			{
 				ASSERT(memory.size());
 				data.assign(memory.begin(), memory.end());

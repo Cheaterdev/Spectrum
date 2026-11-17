@@ -60,6 +60,7 @@ namespace HAL
 			}
 			}, data.desc);
 
+		note_write();
 		const FenceWaiter queued = get_device().get_ds_queue().execute(request);
 		if (!wait)
 		{

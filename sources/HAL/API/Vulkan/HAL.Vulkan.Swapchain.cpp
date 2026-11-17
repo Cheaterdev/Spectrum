@@ -156,7 +156,9 @@ namespace HAL
                 { VK_FORMAT_B8G8R8A8_UNORM,      VK_COLOR_SPACE_SRGB_NONLINEAR_KHR },
                 { VK_FORMAT_R16G16B16A16_SFLOAT, VK_COLOR_SPACE_EXTENDED_SRGB_LINEAR_EXT },
             };
-            const auto& preferred = want_sdr ? sdr_first : hdr_first;
+            const std::span<const std::pair<VkFormat, VkColorSpaceKHR>> preferred =
+                want_sdr ? std::span<const std::pair<VkFormat, VkColorSpaceKHR>>(sdr_first)
+                         : std::span<const std::pair<VkFormat, VkColorSpaceKHR>>(hdr_first);
             bool found = false;
             for (auto [want_format, want_space] : preferred)
             {
@@ -675,6 +677,9 @@ namespace HAL
     void SwapChain::refresh_display_info()
     {
     }
+
+    // Resize recreates the swapchain at the exact window size (no oversized capacity), so there is nothing to trim.
+    void SwapChain::trim_if_idle() {}
 
     void SwapChain::resize(ivec2 size)
     {

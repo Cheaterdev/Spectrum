@@ -319,6 +319,28 @@ exception is a genuine multiple-occurrence replacement (renaming a symbol
 throughout a file, etc.) — the native tool's own "replace all" mode is still
 preferred there; reach for a script only when that isn't enough.
 
+## Who writes code
+
+A Fable model does not change code in this repository. Its job is to plan the
+work, orchestrate the models that write it, and review what they produce.
+
+- **Writing** goes to Opus or Sonnet, as a session or a subagent: Sonnet for
+  well-specified tasks, Opus for the ones that need design judgment. Each gets
+  a brief that names its files, what done looks like, and the rules of this
+  file that apply.
+- **Reviewing** stays with the planner. It reads the diff, the logs and the
+  captures itself — reading is not a code change.
+- **A defect found in review is not fixed by the reviewer**, however small. It
+  goes back to the model that wrote the code as a finding and a precise brief.
+  A one-line fix made in passing is still a change nobody was asked to make
+  and nobody else reviewed.
+- "Code" means anything that is built or run: C++, HLSL, Prism definitions,
+  build scripts. Plans, reports, this file and memory notes are the planner's
+  own to write.
+
+Orchestration alone — handing out briefs, collecting reports — does not need
+the strongest model and can run on Sonnet. The review does.
+
 ## Comments
 
 Comment sparingly. Prefer code that doesn't need explaining, and don't restate

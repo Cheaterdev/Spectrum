@@ -601,6 +601,63 @@ export namespace Test
 		}
 	}
 
+	// The texture data layout in asset files and the texture cache. Both backends must produce these exact numbers,
+	// or a file one of them writes loads garbled on the other. On D3D12 they come from GetCopyableFootprints1, so
+	// this also checks HAL::copyable_footprints (Vulkan's layout) against the runtime.
+	TEST(Core.HAL, Texture_FileLayoutPinned)
+	{
+		struct Sub { uint64 offset; uint row_pitch, row_size, rows, depth; };
+		struct Case
+		{
+			const char* name;
+			HAL::ResourceDesc desc;
+			uint first, count;
+			uint64 total;
+			std::vector<Sub> subs;
+		};
+		const std::vector<Case> cases = {
+			{ "RGBA8 100x60, non-power-of-two", HAL::ResourceDesc::Tex2D(HAL::Format::R8G8B8A8_UNORM, { 100, 60 }, 1, 1), 0, 1, 30608,
+				{ { 0, 512, 400, 60, 1 } } },
+			{ "RGBA8 64x64, full chain to 1x1", HAL::ResourceDesc::Tex2D(HAL::Format::R8G8B8A8_UNORM, { 64, 64 }, 1, 7), 0, 7, 32260,
+				{ { 0, 256, 256, 64, 1 }, { 16384, 256, 128, 32, 1 }, { 24576, 256, 64, 16, 1 }, { 28672, 256, 32, 8, 1 },
+				  { 30720, 256, 16, 4, 1 }, { 31744, 256, 8, 2, 1 }, { 32256, 256, 4, 1, 1 } } },
+			{ "BC1 20x12, mips below one block", HAL::ResourceDesc::Tex2D(HAL::Format::BC1_UNORM, { 20, 12 }, 1, 5), 0, 5, 2568,
+				{ { 0, 256, 40, 3, 1 }, { 1024, 256, 24, 2, 1 }, { 1536, 256, 16, 1, 1 }, { 2048, 256, 8, 1, 1 }, { 2560, 256, 8, 1, 1 } } },
+			{ "BC7 256x256", HAL::ResourceDesc::Tex2D(HAL::Format::BC7_UNORM, { 256, 256 }, 1, 1), 0, 1, 65536,
+				{ { 0, 1024, 1024, 64, 1 } } },
+			{ "RGBA16F 3D 24x10x5, two mips", HAL::ResourceDesc::Tex3D(HAL::Format::R16G16B16A16_FLOAT, { 24, 10, 5 }, 2), 0, 2, 15200,
+				{ { 0, 256, 192, 10, 5 }, { 12800, 256, 96, 5, 2 } } },
+			{ "R8 3x3, second array slice alone", HAL::ResourceDesc::Tex2D(HAL::Format::R8_UNORM, { 3, 3 }, 2, 1), 1, 1, 515,
+				{ { 0, 256, 3, 3, 1 } } },
+		};
+
+		auto& device = RenderSystem::get().device();
+		auto check = [](const Case& c, const HAL::texture_range_layout& got, const char* source) {
+			auto fail = [&](const std::string& what) {
+				throw Test::TestFailure(std::string(c.name) + " (" + source + "): " + what);
+			};
+			if (got.total_size != c.total)
+				fail("total " + std::to_string(got.total_size) + ", expected " + std::to_string(c.total));
+			if (got.subresources.size() != c.subs.size())
+				fail("subresource count " + std::to_string(got.subresources.size()));
+			for (size_t i = 0; i < c.subs.size(); i++)
+			{
+				const auto& g = got.subresources[i];
+				const auto& e = c.subs[i];
+				if (g.offset != e.offset || g.row_pitch != e.row_pitch || g.row_size != e.row_size || g.rows != e.rows ||
+					g.depth != e.depth || g.slice_pitch != uint64(e.row_pitch) * e.rows)
+					fail("subresource " + std::to_string(i) + ": offset " + std::to_string(g.offset) + ", pitch " +
+						std::to_string(g.row_pitch) + ", row " + std::to_string(g.row_size) + ", rows " + std::to_string(g.rows) +
+						", depth " + std::to_string(g.depth) + ", slice " + std::to_string(g.slice_pitch));
+			}
+		};
+		for (const auto& c : cases)
+		{
+			check(c, device.get_texture_range_layout(c.desc, c.first, c.count), "device");
+			check(c, HAL::copyable_footprints(c.desc.as_texture(), c.first, c.count), "copyable_footprints");
+		}
+	}
+
 	// Every mip of a loaded texture must reach the GPU as loaded.
 	TEST(Core.HAL, Texture_LoadedMipsUploadIntact)
 	{

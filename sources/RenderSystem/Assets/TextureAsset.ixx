@@ -88,6 +88,8 @@ export{
 		virtual Asset_Type get_type();
 		virtual void update_preview(HAL::Texture::ptr preview);
 		virtual void try_register();
+		// Until it is in its file an imported texture keeps all its texels in memory and cannot stream its tiles.
+		virtual bool save_when_added() const override { return true; }
 		virtual void reload_resource() override;
 
 		virtual void before_save() override;

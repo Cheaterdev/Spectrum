@@ -918,43 +918,24 @@ namespace HAL
 		auto layout = base.get_device().get_texture_layout(resource->get_desc(), sub_resource, box);
 		auto info = base.place_data(layout.size, layout.alignment);
 
-		if (layout.row_stride == row_stride)
 		{
-			if (slice_stride == 0 || slice_stride == row_stride * layout.rows_count)
-			{
-				auto pDestSlice = info.get_cpu_data();
-				auto pSrcSlice = reinterpret_cast<const std::byte*>(data);
-				std::memcpy(pDestSlice,
-				       pSrcSlice,
-				       layout.size);
-			}
+			// Only each row's real bytes are read: a source in the footprint file layout ends at the last row's real
+			// bytes, not at a full pitch, so copying whole pitches would run past the end of the caller's data.
+			const uint64 row_bytes = resource->get_desc().as_texture().Format.surface_info({ static_cast<uint>(box.x), static_cast<uint>(box.y) }).rowBytes;
+			const uint64 src_slice = slice_stride ? slice_stride : uint64(row_stride) * layout.rows_count;
+			const auto* src = reinterpret_cast<const std::byte*>(data);
+			std::byte* dst = info.get_cpu_data();
+			const UINT depth = static_cast<UINT>(box.z);
 
+			if (depth > 0 && layout.row_stride == row_stride && layout.slice_stride == src_slice)
+				std::memcpy(dst, src, uint64(layout.slice_stride) * (depth - 1) + uint64(layout.row_stride) * (layout.rows_count - 1) + row_bytes);
 			else
-			{
-				for (UINT z = 0; z < static_cast<UINT>(box.z); ++z)
-				{
-					auto pDestSlice = info.get_cpu_data() + layout.slice_stride * z;
-					const std::byte* pSrcSlice = reinterpret_cast<const std::byte*>(data) + slice_stride * z;
-					std::memcpy(pDestSlice,
-					       pSrcSlice,
-					       slice_stride);
-				}
-			}
+				for (UINT z = 0; z < depth; ++z)
+					for (UINT y = 0; y < layout.rows_count; ++y)
+						std::memcpy(dst + uint64(layout.slice_stride) * z + uint64(layout.row_stride) * y,
+						            src + src_slice * z + uint64(row_stride) * y,
+						            row_bytes);
 		}
-
-		else
-			for (UINT z = 0; z < static_cast<UINT>(box.z); ++z)
-			{
-				std::byte* pDestSlice = info.get_cpu_data() + layout.slice_stride * z;
-				const std::byte* pSrcSlice = reinterpret_cast<const std::byte*>(data) + slice_stride * z;
-
-				for (UINT y = 0; y < layout.rows_count; ++y)
-				{
-					std::memcpy(pDestSlice + layout.row_stride * y,
-					       pSrcSlice + row_stride * y,
-					       row_stride);
-				}
-			}
 
 
 		list->update_texture(resource, offset, box, sub_resource, info, layout);
@@ -1444,6 +1425,14 @@ namespace HAL
 		uint op_index = operations.back().index;
 
 		auto& state = const_cast<Resource*>(resource)->get_state(this);
+
+		// Every use that can change the contents. Recorded, not executed, is enough: a copy of the contents kept
+		// elsewhere is given up as soon as a write is on its way.
+		const BarrierAccess writes = BarrierAccess::COPY_DEST | BarrierAccess::UNORDERED_ACCESS | BarrierAccess::RENDER_TARGET
+			| BarrierAccess::DEPTH_STENCIL_WRITE | BarrierAccess::RESOLVE_DEST | BarrierAccess::STREAM_OUTPUT
+			| BarrierAccess::RAYTRACING_ACCELERATION_STRUCTURE_WRITE;
+		if (check(usage.state.access & writes))
+			resource->note_write();
 
 		// Unordered access is the one case where re-touching a resource inside
 		// a single operation is a real hazard: two dispatches writing the same

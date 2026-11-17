@@ -30,11 +30,28 @@ void FileDataStorage::start_save()
 {
 	std::filesystem::create_directories(path.parent_path());
 	failed = false;
+	staged.reset();
+	commit_actions.clear();
 
+	// The table read from the old file: a partition this save does not write must not stay in it, pointing into the
+	// new file at where it used to be.
+	h.offsets.clear();
+
+	make_temp_name();
+	ostream_ptr = std::make_shared<std::fstream>(temp, std::ios::binary | std::ios::out);
+}
+
+FileDataStorage*& FileDataStorage::current()
+{
+	static thread_local FileDataStorage* storage = nullptr;
+	return storage;
+}
+
+void FileDataStorage::make_temp_name()
+{
 	// Its own name per writer (two threads can save the same cache entry at once): no two live storages share an address.
 	temp = path;
 	temp += "." + std::to_string(reinterpret_cast<uintptr_t>(this)) + ".tmp";
-	ostream_ptr = std::make_shared<std::fstream>(temp, std::ios::binary | std::ios::out);
 }
 
 std::shared_mutex& FileDataStorage::relocation_mutex()
@@ -43,8 +60,10 @@ std::shared_mutex& FileDataStorage::relocation_mutex()
 	return m;
 }
 
-bool FileDataStorage::append(const std::string& partition, const std::string& bytes)
+bool FileDataStorage::stage_append(const std::string& partition, const std::string& bytes)
 {
+	staged.reset();
+
 	std::error_code ec;
 	const uint64 old_size = std::filesystem::file_size(path, ec);
 	if (ec || h.offsets.empty())
@@ -54,7 +73,6 @@ bool FileDataStorage::append(const std::string& partition, const std::string& by
 	updated.offsets[partition] = old_size;
 	const uint64 header_at = old_size + bytes.size();
 
-	// Everything in one buffer, so the file is touched by a single write after nothing can throw any more.
 	std::ostringstream tail(std::ios::binary);
 	tail.write(bytes.data(), static_cast<std::streamsize>(bytes.size()));
 	{
@@ -64,16 +82,18 @@ bool FileDataStorage::append(const std::string& partition, const std::string& by
 	tail.write(reinterpret_cast<const char*>(&header_at), sizeof(header_at));
 	const std::string out = tail.str();
 
-	bool wrote = false;
+	// Into a copy, never the file itself: the table and the pointer to it are the last bytes of a file, so a write
+	// cut short there (a crash, the power) would leave the asset with no table at all.
+	make_temp_name();
 	bool written = false;
+	if (std::filesystem::copy_file(path, temp, std::filesystem::copy_options::overwrite_existing, ec) && !ec)
 	{
-		std::fstream file(path, std::ios::binary | std::ios::in | std::ios::out);
+		std::fstream file(temp, std::ios::binary | std::ios::in | std::ios::out);
 		if (file)
 		{
 			file.seekp(0, std::ios::end);
-			if (static_cast<uint64>(file.tellp()) == old_size)   // not changed since the table was read
+			if (static_cast<uint64>(file.tellp()) == old_size)   // the file did not change while it was copied
 			{
-				wrote = true;
 				file.write(out.data(), static_cast<std::streamsize>(out.size()));
 				file.flush();
 				written = file.good();
@@ -81,16 +101,46 @@ bool FileDataStorage::append(const std::string& partition, const std::string& by
 		}
 	}
 
-	if (written)
+	if (!written)
 	{
-		h = std::move(updated);
-		return true;
+		std::filesystem::remove(temp, ec);
+		Log::get() << Log::LEVEL_ERROR << "cannot add " << partition << " to " << path.string() << Log::endl;
+		return false;
 	}
 
-	// A part-written tail is cut off again: the old table is still the last thing in the file.
-	if (wrote)
-		std::filesystem::resize_file(path, old_size, ec);
-	Log::get() << Log::LEVEL_ERROR << "cannot add " << partition << " to " << path.string() << Log::endl;
+	staged = std::make_shared<header>(std::move(updated));
+	return true;
+}
+
+bool FileDataStorage::commit()
+{
+	// A virus scanner or the search indexer can hold a file that was just written or read for a moment, which makes
+	// the rename fail with a sharing violation: retried a few times before giving up.
+	std::error_code ec;
+	for (int attempt = 0; attempt < 5; attempt++)
+	{
+		std::filesystem::rename(temp, path, ec);
+		if (!ec)
+		{
+			if (staged)
+				h = std::move(*staged);
+			staged.reset();
+
+			auto actions = std::move(commit_actions);
+			commit_actions.clear();
+			for (auto& action : actions)
+				action();
+			return true;
+		}
+		std::this_thread::sleep_for(std::chrono::milliseconds(20));
+	}
+
+	Log::get() << Log::LEVEL_ERROR << "cannot replace " << path.string() << ": " << ec.message() << Log::endl;
+
+	staged.reset();
+	commit_actions.clear();
+	std::error_code ignored;
+	std::filesystem::remove(temp, ignored);
 	return false;
 }
 
@@ -111,22 +161,11 @@ bool FileDataStorage::save()
 
 	// The file at `path` is replaced only by a complete new one: until here it could still be read (a save may copy
 	// from it), and a save that failed part-way leaves it as it was.
-	std::error_code ec;
 	if (written)
-	{
-		// A virus scanner or the search indexer can hold a file that was just written or read for a moment, which makes
-		// the rename fail with a sharing violation: retried a few times before giving up.
-		for (int attempt = 0; attempt < 5; attempt++)
-		{
-			std::filesystem::rename(temp, path, ec);
-			if (!ec)
-				return true;
-			std::this_thread::sleep_for(std::chrono::milliseconds(20));
-		}
-	}
+		return commit();
 
-	Log::get() << Log::LEVEL_ERROR << (written ? "cannot replace " : "writing failed, left as it was: ") << path.string()
-		<< (written ? ": " + ec.message() : std::string()) << Log::endl;
+	Log::get() << Log::LEVEL_ERROR << "writing failed, left as it was: " << path.string() << Log::endl;
+	commit_actions.clear();
 
 	std::error_code ignored;
 	std::filesystem::remove(temp, ignored);

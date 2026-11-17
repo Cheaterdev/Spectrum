@@ -829,6 +829,66 @@ class GraphRender : public Window, public GUI::user_interface
 {
 	HAL::SwapChain::ptr swap_chain;
 
+	// The UI pipelines are built for an FP16 scRGB target. When the surface is 8-bit (Vulkan on a display that
+	// offers no FP16 surface format) the frame renders into this FP16 target instead, and present_target()
+	// copies it into the swapchain through the CopyTexture pipeline, whose shader gamma-encodes for UNORM targets
+	// (so the swapchain must not be an _SRGB format, which would encode a second time).
+	std::shared_ptr<HAL::TextureResource> ui_target;
+
+	std::shared_ptr<HAL::TextureResource> frame_target()
+	{
+		auto frame = swap_chain->get_current_frame();
+		const auto& desc = frame->get_desc().as_texture();
+		if (desc.Format == HAL::Format::R16G16B16A16_FLOAT)
+		{
+			ui_target.reset();
+			return frame;
+		}
+
+		if (!ui_target || ui_target->get_desc().as_texture().Dimensions.x != desc.Dimensions.x
+		               || ui_target->get_desc().as_texture().Dimensions.y != desc.Dimensions.y)
+		{
+			ui_target = std::make_shared<HAL::TextureResource>(RenderSystem::get().device(),
+				HAL::ResourceDesc::Tex2D(HAL::Format::R16G16B16A16_FLOAT, { (uint)desc.Dimensions.x, (uint)desc.Dimensions.y }, 1, 1,
+					HAL::ResFlags::RenderTarget | HAL::ResFlags::ShaderResource),
+				HAL::HeapType::DEFAULT);
+		}
+		return ui_target;
+	}
+
+	void copy_ui_target_to_swapchain()
+	{
+		if (!ui_target)
+			return;
+
+		auto& device = RenderSystem::get().device();
+		auto target = swap_chain->get_current_frame();
+
+		auto list = device.get_queue(HAL::CommandListType::DIRECT)->get_free_list();
+		list->begin(L"ui_target_to_swapchain");
+		auto& gfx = list->get_graphics();
+
+		HAL::Texture2DView src_view(ui_target, *list);
+		HAL::Texture2DView sc_view(target, *list);
+		HAL::Format sc_format = target->get_desc().as_texture().Format;
+
+		gfx.set_pipeline<PSOS::Utility::CopyTexture>(PSOS::Utility::CopyTexture::Format(sc_format));
+		gfx.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::STRIP);
+		gfx.set_viewport(sc_view.get_viewport());
+		gfx.set_scissor(sc_view.get_scissor());
+
+		Slots::Utility::CopyTexture copy;
+		copy.GetSrcTex() = src_view.texture2D;
+		gfx.set(copy);
+
+		RT::Frame::SingleColor rt;
+		rt.GetColor() = sc_view.renderTarget;
+		gfx.set_rtv(rt);
+		gfx.draw(4);
+
+		list->execute();
+	}
+
 	// Opens a file in a Code editor tab; see where it is assigned (menu setup).
 	std::function<void(std::string file_name, int line, int column)> open_code_editor;
 
@@ -1174,7 +1234,12 @@ public:
 			// Register the swapchain as a passed resource only after all passes
 			// exist: max_passes (used to pre-size per-state append storage) is
 			// captured from passes.size() at resource-creation time.
-			graph.builder.pass_texture(FrameGraph::ResourceID::swapchain, swap_chain->get_current_frame(), swap_chain->get_fence(), ResourceFlags::Required);
+			{
+				auto frame = swap_chain->get_current_frame();
+				auto render_target = frame_target();
+				graph.builder.pass_texture(FrameGraph::ResourceID::swapchain, render_target,
+					render_target == frame ? swap_chain->get_fence() : HAL::FenceWaiter{}, ResourceFlags::Required);
+			}
 
 			// This pipeline's [PreSetup] passes' real side effects (PreScene's
 			// raytrace_scene->new_frame(), NRD_REBLUR_Execute's ensure_pools(),
@@ -1225,6 +1290,7 @@ public:
 			tp_g_render = tclk::now();
 
 			auto fence = graph.commit_command_lists();
+			copy_ui_target_to_swapchain();
 			tp_graph = tclk::now();
 			g_replayed = replayed;
 

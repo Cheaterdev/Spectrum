@@ -38,8 +38,17 @@ export
 		// A save goes to `temp` and takes the file's place in save(), and only if every put() worked.
 		bool failed = false;
 		std::filesystem::path temp;
+		// The table of a staged replace, taken over by commit().
+		std::shared_ptr<header> staged;
 
-		bool append(const std::string& partition, const std::string& bytes);
+		void make_temp_name();
+		bool stage_append(const std::string& partition, const std::string& bytes);
+
+		// Run by commit() once the new file is in place; dropped if it never gets there.
+		std::vector<std::function<void()>> commit_actions;
+
+		// The storage whose put() is serializing on this thread, for writing().
+		static FileDataStorage*& current();
 	public:
 
 		FileDataStorage(std::filesystem::path path);
@@ -47,9 +56,11 @@ export
 		template<class T>
 		void put(std::string partition, const T& data)
 		{			 			uint64 pos = ostream_ptr->tellp();
+			FileDataStorage* const outer = current();
+			current() = this;
 			try
 			{
-				  
+
 			serialization_oarchive oa(*ostream_ptr);
 			oa << data;
 			}
@@ -58,10 +69,19 @@ export
 			 Log::get() << e.what()<<Log::endl;
 			 failed = true;
 			}
+			current() = outer;
 
 
 			h.offsets[partition] = pos;
 		}
+
+		// For an object being serialized by put(): the storage it is going into, or null when it is being serialized
+		// some other way. With it the object can note where its bytes land (tell(), the position in the file once
+		// saved) and ask to be told when that file is really there (on_commit): a save can still fail, and until it
+		// has not, the old file is the one that holds the object's bytes.
+		static FileDataStorage* writing() { return current(); }
+		uint64 tell() { return static_cast<uint64>(ostream_ptr->tellp()); }
+		void on_commit(std::function<void()> action) { commit_actions.push_back(std::move(action)); }
 
 		void start_save();
 
@@ -102,12 +122,16 @@ export
 
 		bool has(std::string partition);
 
-		// Writes one partition of an existing file again without rewriting the rest: the new copy goes after everything
+		// Writes one partition of an existing file again without serializing the rest: the new copy goes after everything
 		// in the file, followed by a new partition table. Nothing already in the file moves, so offsets into it held
 		// elsewhere (streamed pages) stay right; the old copy is left as unused bytes until the next whole save. Not
-		// with start_save(). False, with the file as it was, if it could not be written.
+		// with start_save().
+		//
+		// In two steps, because the file is never written in place (see stage_append): stage() builds the new file beside
+		// the old one, which costs a copy of it, and commit() puts it in the old one's place. A caller with handles open
+		// on the file closes them between the two. False, with the file as it was, if a step fails.
 		template<class T>
-		bool replace(std::string partition, const T& data)
+		bool stage(std::string partition, const T& data)
 		{
 			std::ostringstream bytes(std::ios::binary);
 			try
@@ -120,7 +144,16 @@ export
 				Log::get() << Log::LEVEL_ERROR << "cannot write " << partition << " of " << path.string() << ": " << e.what() << Log::endl;
 				return false;
 			}
-			return append(partition, bytes.str());
+			return stage_append(partition, bytes.str());
+		}
+
+		// The temporary file written by stage() (or, inside save(), by the put() calls) takes the place of the old one.
+		bool commit();
+
+		template<class T>
+		bool replace(std::string partition, const T& data)
+		{
+			return stage(partition, data) && commit();
 		}
 
 		const std::filesystem::path& get_path() const { return path; }

@@ -776,11 +776,30 @@ struct texture_layout
 // subresource (see HAL::TextureResource::SERIALIZE and DirectStorageQueue::
 // execute's MULTIPLE_SUBRESOURCES_RANGE comment -- a single-subresource BC
 // tail mip below the 4x4 compression block trips D3D12 error #858).
+//
+// It is the texture data layout of asset files and the texture cache on every backend, so a file written by one loads
+// on the other: D3D12's copyable footprints, which DirectStorage decompresses straight into the texture. Rows are
+// padded to a 256-byte pitch, each subresource starts 512-byte aligned, and a subresource ends at the real bytes of
+// its last row, not at a full pitch.
 struct texture_range_layout
 {
+	struct Subresource
+	{
+		uint64 offset;      // from the start of the range
+		uint row_pitch;
+		uint row_size;      // bytes of one row (a row of blocks for block-compressed formats)
+		uint rows;          // per depth slice
+		uint depth;
+		uint64 slice_pitch; // row_pitch * rows
+	};
+
 	uint64 total_size;
-	std::vector<uint64> subresource_offsets; // one entry per subresource in the range
+	std::vector<Subresource> subresources;   // one per subresource in the range
 };
+
+// The layout above computed from the format alone, as GetCopyableFootprints computes it for single-plane formats
+// (two-plane depth-stencil formats get a 512-byte pitch there and are not covered).
+texture_range_layout copyable_footprints(const TextureDesc& desc, uint first_subresource, uint count);
 
 
 		enum class counterType :int

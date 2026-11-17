@@ -23,8 +23,8 @@ export{
 		//	std::vector<std::byte> read();
 		std::vector<std::byte> read(uint i);
 		// Reads [first_subresource, first_subresource+count) into one buffer laid
-		// out per Device::get_texture_range_layout, so the whole range can be
-		// compressed as a single blob (see SERIALIZE below).
+		// out per Device::get_texture_range_layout (the same on every backend), so
+		// the whole range can be compressed as a single blob (see SERIALIZE below).
 		std::vector<std::byte> read_range(uint first_subresource, uint count);
 		public:
 			using ptr = std::shared_ptr<TextureResource>;

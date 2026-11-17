@@ -150,10 +150,11 @@ void TextureAsset::before_save()
 
 	if (tiles && !tiles->path.empty())
 	{
-		// Loaded from a file that is about to be written over: its tiles and texels are read first.
+		// Loaded from a file: its texels are read here, its tiles stay where they are and are copied from that file
+		// while the new one is written (TileFile's save).
 		saving_data = std::make_shared<HAL::texture_data>();
 		FileDataStorage storage(tiles->path);
-		if (!tiles->read_all() || !storage.has("texdata") || !storage.get("texdata", *saving_data))
+		if (!storage.has("texdata") || !storage.get("texdata", *saving_data))
 			throw std::runtime_error("texture asset " + convert(name) + ": cannot read its tiles back to save them");
 		saving_tiled = true;
 	}
@@ -183,7 +184,7 @@ void TextureAsset::before_replace()
 {
 	std::lock_guard<std::mutex> g(texture_mutex);
 	if (tiles && !tiles->path.empty())
-		tiles->release();   // before_save()'s read_all() left it open
+		tiles->release();   // copying the tiles into the new file left it open
 }
 
 void TextureAsset::after_save(FileDataStorage& storage)
